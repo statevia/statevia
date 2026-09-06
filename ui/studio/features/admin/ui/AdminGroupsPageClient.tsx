@@ -8,6 +8,8 @@ import { Toast } from "@/shared/ui/Toast";
 import { apiGet, apiPost } from "@/shared/api";
 import type { AdminGroupListItem } from "../types";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
+import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
+import { ASCII_LABEL_DEFAULT_MAX_LENGTH, ASCII_LABEL_PATTERN } from "@/shared/lib/validation/formRules";
 import { useAdminGroupsUiText } from "@/shared/i18n/uiTextContext";
 
 /**
@@ -43,8 +45,17 @@ export function AdminGroupsPageClient() {
     event.preventDefault();
     setSubmitting(true);
     setToast(null);
+    const trimmedName = name.trim();
+    if (
+      !isWithinMaxLength(trimmedName, ASCII_LABEL_DEFAULT_MAX_LENGTH) ||
+      !matchesPattern(trimmedName, ASCII_LABEL_PATTERN)
+    ) {
+      setToast({ tone: "error", message: pageUi.nameInvalidFormat });
+      setSubmitting(false);
+      return;
+    }
     try {
-      await apiPost("/admin/groups", { name: name.trim() });
+      await apiPost("/admin/groups", { name: trimmedName });
       setName("");
       await loadGroups();
     } catch (error) {

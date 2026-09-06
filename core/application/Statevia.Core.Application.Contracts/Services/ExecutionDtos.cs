@@ -17,7 +17,7 @@ public sealed record CommandRequestContext(
     Guid? ParentExecutionId = null);
 
 /// <summary>POST /v1/executions のリクエスト本文。</summary>
-public class StartExecutionRequest
+public class StartExecutionRequest : IValidatableObject
 {
     /// <summary>開始に用いる定義 ID（display または UUID）。</summary>
     [Required(ErrorMessage = "definitionId is required")]
@@ -41,6 +41,17 @@ public class StartExecutionRequest
     /// </summary>
     [JsonPropertyName("initialState")]
     public string? InitialState { get; set; }
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrWhiteSpace(InitialState))
+            yield break;
+
+        var trimmedState = InitialState.Trim();
+        if (!IdentifierConstraints.IsValid(trimmedState, IdentifierConstraints.TopicMaxLength))
+            yield return new ValidationResult(IdentifierConstraints.FormatErrorMessage, [nameof(InitialState)]);
+    }
 }
 
 /// <summary>POST …/events のリクエスト本文。</summary>
@@ -49,6 +60,8 @@ public class PublishEventRequest
     /// <summary>発行するイベント名。</summary>
     [Required(ErrorMessage = "name is required")]
     [NotWhitespace(ErrorMessage = "name is required")]
+    [MaxLength(IdentifierConstraints.EventNameMaxLength)]
+    [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string Name { get; set; } = "";
 }
 
@@ -269,6 +282,8 @@ public sealed class ResumeNodeRequest
     /// <summary>Wait を再開するイベント名（Engine.ResumeWaitNode に渡す）。</summary>
     [Required(ErrorMessage = "resumeKey is required")]
     [NotWhitespace(ErrorMessage = "resumeKey is required")]
+    [MaxLength(IdentifierConstraints.EventNameMaxLength)]
+    [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string ResumeKey { get; init; } = "";
 }
 

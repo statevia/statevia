@@ -7,6 +7,8 @@ import { Toast } from "@/shared/ui/Toast";
 import { apiGet, apiPatch, apiPost, apiPut } from "@/shared/api";
 import type { AdminUserListItem } from "../types";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, USER_EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH, USERNAME_PATTERN } from "@/shared/auth/userIdentity";
+import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
+import { ASCII_LABEL_DISPLAY_NAME_MAX_LENGTH, ASCII_LABEL_PATTERN } from "@/shared/lib/validation/formRules";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
@@ -68,7 +70,17 @@ export function AdminUsersPageClient() {
     };
     if (trimmedEmail) body.email = trimmedEmail;
     const trimmedDisplay = displayName.trim();
-    if (trimmedDisplay) body.displayName = trimmedDisplay;
+    if (trimmedDisplay) {
+      if (
+        !isWithinMaxLength(trimmedDisplay, ASCII_LABEL_DISPLAY_NAME_MAX_LENGTH) ||
+        !matchesPattern(trimmedDisplay, ASCII_LABEL_PATTERN)
+      ) {
+        setToast({ tone: "error", message: uiText.admin.users.displayNameInvalidFormat });
+        setSubmitting(false);
+        return;
+      }
+      body.displayName = trimmedDisplay;
+    }
 
     try {
       await apiPost<AdminUserListItem>("/admin/users", body);

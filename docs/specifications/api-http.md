@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.21 |
-| 更新日 | 2026-09-03 |
+| Version | 1.22 |
+| 更新日 | 2026-09-05 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -16,7 +16,8 @@
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{id}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
 - **MUST**: 入力検証失敗は **422**、`error.code = VALIDATION_ERROR`（[data-integration.md](data-integration.md) §7）。
-- **SHOULD**: ミューテーションに `X-Idempotency-Key` を付与する。
+- **MUST**: 定義名・イベント名・topic / 非空 key / resumeKey / 指定時の initialState は ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。表示名（ユーザー / グループ / API キー / テナント）は ASCII ラベル（先頭末尾英数字。途中のみスペース可）。パスワードと実行 payload は文字種制限しない。既存の非 ASCII 識別子は GET では落ちず、次回 write で 422。
+- **SHOULD**: ミューテーションに `X-Idempotency-Key` を付与する（印字可能 ASCII。制御文字は 422）。
 - **SHOULD**: Start 時の `input` / state `output` を一覧・GET で既定返却しない（[io-log-masking.md](platform/io-log-masking.md)）。
 
 運用叙述・SSE・Read-model の注意は本書 § 以降。エンドポイントの機械可読な正本は OpenAPI（[api-openapi.md](../reference/api-openapi.md)）。
@@ -24,6 +25,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.22（2026-09-05）**: 識別子・表示名を ASCII allowlist で検証する。定義名 100、イベント / resumeKey 64、topic / 非空 key 256。`X-Idempotency-Key` は印字可能 ASCII。パスワードと payload は対象外。既存行の GET は落とさない。
 
 **Version 1.21（2026-09-03）**: `POST /v1/definitions/validate` を追加。catalog へ保存しない dry-run。権限は `definitions.write`。成功は 200（`valid` / `name`）。冪等ヘッダは使わない。
 
@@ -139,7 +142,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
 **POST /v1/definitions** — リクエスト / 応答スキーマは OpenAPI の `CreateDefinitionRequest` / `DefinitionResponse`（`201 Created`）を参照。
 
-- `name` / `yaml` 必須。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
+- `name` / `yaml` 必須。`name` は ASCII 識別子（1〜100。先頭英字）。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
 
 ### 2.1.0 定義検証（dry-run）
 
@@ -403,7 +406,7 @@ Request:
 }
 ```
 
-- `name`: イベント名。必須。不正時は 400。
+- `name`: イベント名。必須。ASCII 識別子（1〜64）。不正時は 422。
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
@@ -421,7 +424,7 @@ Request（JSON）:
 }
 ```
 
-- **`resumeKey`**: 必須。Wait の **許可イベント名**（`allowedEvents` / `WaitEventRouteTable` のキー）。空白のみは 400/422。
+- **`resumeKey`**: 必須。Wait の **許可イベント名**（`allowedEvents` / `WaitEventRouteTable` のキー）。ASCII 識別子（1〜64）。空白のみ・非 ASCII は 422。
 - **`nodeId`**: パス上の実行グラフノード ID（待機中 Wait）。
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。
@@ -441,7 +444,7 @@ Request:
 }
 ```
 
-- `topic`: 必須。`key` 省略・空白は `""`。`payload` はこの段階では再開値に反映しない。
+- `topic`: 必須。ASCII 識別子（1〜256）。`key` 省略・空白は `""`。非空 `key` も ASCII 識別子（1〜256）。`payload` はこの段階では再開値に反映しない（文字種検査なし）。
 - **必須**: Principal（JWT または `X-Api-Key`）と **`executions.write`**。不足は **403**（`PERMISSION_DENIED`）。Resume work item を積まない。
 - 照合は現在テナントの購読だけ（他テナントへ Resume は乗らない）。
 - Response: **204 No Content**（一致 0 件でも 204。成功パスは維持）。
@@ -502,16 +505,16 @@ Request:
 | --- | --- | --- |
 | GET | `/permissions` | 権限カタログ（`permission_definitions`） |
 | GET | `/users` | ユーザー一覧 |
-| POST | `/users` | ユーザー作成（`username` 1〜64 文字・先頭末尾は英数字、`password` は 8〜128 文字・空白なし（記号可）、`email?` 最大 256、`displayName?`, `isTenantAdmin`, `groupIds?`） |
+| POST | `/users` | ユーザー作成（`username` 1〜64 文字・先頭末尾は英数字、`password` は 8〜128 文字・空白なし（記号可。文字種制限なし）、`email?` 最大 256、`displayName?` は ASCII ラベル最大 256、`isTenantAdmin`, `groupIds?`） |
 | PATCH | `/users/{userId}` | 有効化/無効化・管理者フラグ（`isActive?`, `isTenantAdmin?`）。パスワードは含めない |
 | PUT | `/users/{userId}/password` | パスワード上書き（`newPassword` は 8〜128 文字・空白なし。記号可。現行パスワード不要。無効ユーザーも可。対象なし 404。成功 204） |
 | GET | `/groups` | グループ一覧 |
-| POST | `/groups` | グループ作成（`name`） |
+| POST | `/groups` | グループ作成（`name` は ASCII ラベル最大 128） |
 | GET | `/groups/{groupId}` | グループ詳細（メンバー・権限キー） |
 | PUT | `/groups/{groupId}/members` | メンバー置換（`userIds`） |
 | PUT | `/groups/{groupId}/permissions` | 権限置換（`permissionKeys`。`tenant.admin` は不可） |
 | GET | `/api-keys` | API キー一覧（平文なし。`keyPrefix` / `allowedScopes` / `expiresAt` / `lastUsedAt`） |
-| POST | `/api-keys` | API キー発行（`name`, `allowedScopes`, `expiresAt?`）。`allowedScopes` は catalog の assignable key（`tenant.admin` 除外。`modules.reload` / `modules.read` を含む）。応答の `plainKey` は **一度だけ** |
+| POST | `/api-keys` | API キー発行（`name` は ASCII ラベル最大 128, `allowedScopes`, `expiresAt?`）。`allowedScopes` は catalog の assignable key（`tenant.admin` 除外。`modules.reload` / `modules.read` を含む）。応答の `plainKey` は **一度だけ** |
 | DELETE | `/api-keys/{apiKeyId}` | API キー失効（紐づく Principal を無効化） |
 | GET | `/modules` | Action Module の load catalog 一覧（`AdminModuleListItemDto[]`）。テナント管理者 JWT **または** `modules.read` |
 

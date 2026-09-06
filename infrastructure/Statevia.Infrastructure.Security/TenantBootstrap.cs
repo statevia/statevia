@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Statevia.Core.Application.Contracts.Services;
+using Statevia.Core.Application.Contracts.Validation;
 
 namespace Statevia.Infrastructure.Security;
 
@@ -54,8 +55,8 @@ internal sealed class TenantBootstrap
             ? normalizedKey
             : displayName.Trim();
 
-        if (normalizedDisplayName.Length > 256)
-            throw new ArgumentException("displayName must be at most 256 characters.", nameof(displayName));
+        if (!AsciiLabelConstraints.IsValid(normalizedDisplayName, AsciiLabelConstraints.DisplayNameMaxLength))
+            throw new ArgumentException(AsciiLabelConstraints.FormatErrorMessage, nameof(displayName));
 
         var existing = await _platformDataAccess
             .FindTenantByKeyAsync(normalizedKey, cancellationToken)

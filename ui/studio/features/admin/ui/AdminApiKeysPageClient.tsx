@@ -11,6 +11,8 @@ import type {
   PermissionDefinitionDto
 } from "../types";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
+import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
+import { ASCII_LABEL_DEFAULT_MAX_LENGTH, ASCII_LABEL_PATTERN } from "@/shared/lib/validation/formRules";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
 type CreateApiKeyBody = {
@@ -94,8 +96,17 @@ export function AdminApiKeysPageClient() {
     setSubmitting(true);
     setToast(null);
     setCopied(false);
+    const trimmedName = name.trim();
+    if (
+      !isWithinMaxLength(trimmedName, ASCII_LABEL_DEFAULT_MAX_LENGTH) ||
+      !matchesPattern(trimmedName, ASCII_LABEL_PATTERN)
+    ) {
+      setToast({ tone: "error", message: uiText.admin.apiKeys.nameInvalidFormat });
+      setSubmitting(false);
+      return;
+    }
     const body: CreateApiKeyBody = {
-      name: name.trim(),
+      name: trimmedName,
       allowedScopes: [...selectedScopes]
     };
     if (expiresAt.trim()) {

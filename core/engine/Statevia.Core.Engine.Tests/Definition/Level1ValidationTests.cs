@@ -810,4 +810,32 @@ public class Level1ValidationTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.Contains("op 'exists' must not define value", StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>日本語の状態名は Level1 で失敗することを検証する。</summary>
+    [Fact]
+    public void Validate_JapaneseStateName_Fails()
+    {
+        // Arrange
+        var def = new WorkflowDefinition
+        {
+            Name = "Test",
+            States = new Dictionary<string, StateDefinition>
+            {
+                ["開始"] = new StateDefinition
+                {
+                    On = new Dictionary<string, TransitionDefinition>
+                    {
+                        ["Completed"] = new TransitionDefinition { End = true }
+                    }
+                }
+            }
+        };
+
+        // Act
+        var result = Level1Validator.Validate(def);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("ASCII identifier", StringComparison.OrdinalIgnoreCase));
+    }
 }

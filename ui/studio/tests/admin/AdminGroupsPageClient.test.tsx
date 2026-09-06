@@ -69,6 +69,17 @@ describe("AdminGroupsPageClient", () => {
     expect(apiGet).toHaveBeenCalledTimes(2);
   });
 
+  it("日本語のグループ名は送信せずエラー表示する", async () => {
+    renderWithUiText(<AdminGroupsPageClient />);
+    await screen.findByText("Operators");
+
+    fireEvent.change(screen.getByLabelText("グループ名"), { target: { value: "運用" } });
+    fireEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(await screen.findByText(uiText.admin.groupManagement.nameInvalidFormat)).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+  });
+
   it("一覧取得失敗時にエラー状態を表示する", async () => {
     vi.mocked(apiGet).mockRejectedValue(new Error("network"));
 

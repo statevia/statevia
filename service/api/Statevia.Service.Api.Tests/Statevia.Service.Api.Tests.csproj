@@ -51,6 +51,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\engine\Statevia.Core.Engine\Statevia.Core.Engine.csproj" />
     <ProjectReference Include="..\..\..\core\application\Statevia.Core.Application.Contracts\Statevia.Core.Application.Contracts.csproj" />
     <ProjectReference Include="..\..\..\core\application\Statevia.Core.Application\Statevia.Core.Application.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\Statevia.Infrastructure.Common\Statevia.Infrastructure.Common.csproj" />

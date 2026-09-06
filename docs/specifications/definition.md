@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.8 |
-| 更新日 | 2026-09-02 |
+| Version | 1.5.9 |
+| 更新日 | 2026-09-05 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -17,6 +17,7 @@
 - **MUST**: `wait` または `join` を持つ状態に `action` を併記してはならない。
 - **MUST**: Wait の正本は `wait.events`（イベント名 → 遷移先）。`events` は非空で、遷移先が定義内に存在すること。
 - **MUST**: 同一 Wait 内のイベント名重複、予約語（`Completed` / `Failed` / `Cancelled` / `Joined`）、自己遷移を拒否する（422）。
+- **MUST**: 状態名・ノード名・イベント名・module alias・action の各セグメントは ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。YAML コメントと `description` / `label` / `ui` / `metadata` / `tags` は対象外。
 - **MUST**: module alias は大文字小文字を区別せずテナント内で一意であること。
 - **SHOULD**: 定義は states 形式で記述し、nodes 形式は UI 編集後に正規化する。
 - **禁止**: 実行中に定義版を上書きすること（新版は append のみ）。詳細は [data-integration.md](data-integration.md)。
@@ -62,9 +63,9 @@ states:
       all: [<StateName>, ...]
 ```
 
-- **workflow.name**: ワークフロー名（任意、デフォルト "Unnamed"）。
-- **workflow.modules**: 任意。module alias（キー）→ ModuleId（値）のマップ。`action: mail.send` のように alias 付き action 参照を解決する。alias は **大文字小文字を区別せず一意**（重複・空キー・空 ModuleId は Loader 構文エラー）。現状 ModuleId に version 指定はできない（同一 moduleId の複数版共存・版レンジ解決は**未実装**）。
-- **states**: 状態名 → 状態定義のマップ。各状態は `on`（遷移）、`wait`（待機）、`join`（合流）のいずれかまたは組み合わせを持つ。
+- **workflow.name**: ワークフロー名（任意、デフォルト "Unnamed"）。HTTP の定義名（`CreateDefinitionRequest.name`）は ASCII 識別子（1〜100）。
+- **workflow.modules**: 任意。module alias（キー）→ ModuleId（値）のマップ。`action: mail.send` のように alias 付き action 参照を解決する。alias は **ASCII 識別子**かつ **大文字小文字を区別せず一意**（重複・空キー・空 ModuleId・非 ASCII は Loader 構文エラー）。現状 ModuleId に version 指定はできない（同一 moduleId の複数版共存・版レンジ解決は**未実装**）。
+- **states**: 状態名 → 状態定義のマップ。状態名は ASCII 識別子。各状態は `on`（遷移）、`wait`（待機）、`join`（合流）のいずれかまたは組み合わせを持つ。コメントと `description` の日本語は許可する。
 - **action**: 任意。定義登録時に Service API が Catalog へ照合し、未登録の ID はエラーになる。**省略時**は implicit noop（canonical: `statevia.action.builtin.execution.noop`、即時完了）と同等。**FQCN** または `workflow.modules` の alias 参照のみを記述する（§1.1.1）。短名（`noop` / `sleep` / `rest` 等）は受理しない。**`wait` または `join` を指定する状態では `action` と併記できない**。
 
 ### 1.1.1 Action ID（canonical 形式と解決）
@@ -293,7 +294,7 @@ Phase 2（未実装）: wait ノード直下に `duration` / `signal` / `event` 
 
 Wait は **Signal**（`events`）と **Subscribe**（`subscribe`）の二モードで、**同時指定不可**（どちらか一方が必須）。
 
-- **wait.events**（Signal）: マップ形式。キーが受付イベント名、値が遷移先状態名。
+- **wait.events**（Signal）: マップ形式。キーが受付イベント名（ASCII 識別子）、値が遷移先状態名。
   - コンパイル後は **`WaitEventRouteTable`**（compiled JSON: `waitEventRouteTable`）になる。
   - 再開の HTTP 正本は `POST …/nodes/{nodeId}/resume` で **`resumeKey` = イベント名**（Engine: `ResumeWaitNode`）。
   - Join 互換のため Wait 完了時の FSM 事実は **`Completed`** のまま。次状態の解決は route table（イベント名）が行う。詳細は [execution/wait-cancel.md](execution/wait-cancel.md) / [execution/fsm.md](execution/fsm.md)。
@@ -411,7 +412,7 @@ SimpleJsonPath のプロパティ参照に加え、次の**完全一致**の関�
 
 State / action ノード完了時に、action 戻り値を `$.vars` へ代入する。
 
-- 許可: `$.vars` または `$.vars.<seg>…`（SimpleJsonPath の識別子／引用キー）
+- 許可: `$.vars` または `$.vars.<seg>…`（SimpleJsonPath の識別子／引用キー）。未引用セグメントは ASCII（`A-Za-z_` で始まり英数字と `_`）。引用キー（`$["ユーザー"]`）は文字種制限なし
 - 禁止: `$.sys…` / `$.sys.now("…")` 等の CallPath / `$.states…` / `$.input…` / 配列インデックス付き（例: `$.vars.users[0]`）等（Level1 error）
 - 未指定: `$.states` のみ更新し、`$.vars` は変更しない
 - `output` 指定時も `$.states.<Name>.output` への記録は常に行う

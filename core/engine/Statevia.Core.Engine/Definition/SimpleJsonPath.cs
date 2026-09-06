@@ -120,25 +120,26 @@ public static class SimpleJsonPath
     private static bool TryReadIdentifierSegment(string path, ref int pos, List<PathSegment> list)
     {
         var start = pos;
-        while (pos < path.Length)
-        {
-            var ch = path[pos];
-            if (!(char.IsLetterOrDigit(ch) || ch == '_'))
-            {
-                break;
-            }
-
-            pos++;
-        }
-
-        if (pos == start)
+        if (pos >= path.Length || !IsPathIdentifierStart(path[pos]))
         {
             return false;
+        }
+
+        pos++;
+        while (pos < path.Length && IsPathIdentifierContinue(path[pos]))
+        {
+            pos++;
         }
 
         list.Add(PathSegment.ForIdentifier(path[start..pos]));
         return true;
     }
+
+    private static bool IsPathIdentifierStart(char ch) =>
+        ch is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or '_';
+
+    private static bool IsPathIdentifierContinue(char ch) =>
+        IsPathIdentifierStart(ch) || ch is >= '0' and <= '9';
 
     private static bool TryReadBracketSegment(string path, ref int pos, List<PathSegment> list)
     {

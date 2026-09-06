@@ -1004,5 +1004,56 @@ public class StateWorkflowDefinitionLoaderTests
 
         Assert.Contains("duplicate alias 'mail'", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>日本語コメントのみの YAML は識別子が ASCII なら Level1 を通ることを検証する。</summary>
+    [Fact]
+    public void Load_JapaneseCommentOnly_Level1Succeeds()
+    {
+        // Arrange
+        var yaml = """
+            # 日本語コメント
+            workflow:
+              name: HelloWorkflow
+              description: 説明は日本語
+
+            states:
+              Start:
+                on:
+                  Completed:
+                    end: true
+            """;
+        var loader = new StateWorkflowDefinitionLoader();
+
+        // Act
+        var def = loader.Load(yaml);
+        var result = Level1Validator.Validate(def);
+
+        // Assert
+        Assert.True(result.IsValid, string.Join("; ", result.Errors));
+    }
+
+    /// <summary>日本語 module alias はロード時に拒否することを検証する。</summary>
+    [Fact]
+    public void Load_JapaneseModuleAlias_Throws()
+    {
+        // Arrange
+        var yaml = """
+            workflow:
+              name: HelloWorkflow
+              modules:
+                メール: com.company.mail
+            states:
+              Start:
+                action: メール.send
+                on:
+                  Completed:
+                    end: true
+            """;
+        var loader = new StateWorkflowDefinitionLoader();
+
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentException>(() => loader.Load(yaml));
+        Assert.Contains("ASCII identifier", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }
 

@@ -168,4 +168,32 @@ public class SimpleJsonPathTests
         Assert.Equal(PathSegmentKind.QuotedKey, keySegments[1].Kind);
         Assert.Equal("0", keySegments[1].Name);
     }
+
+    /// <summary>未引用の日本語セグメントは無効であることを検証する。</summary>
+    [Fact]
+    public void IsValid_UnquotedJapaneseSegment_ReturnsFalse()
+    {
+        // Arrange
+        const string path = "$.vars.ユーザー";
+
+        // Act
+        var ok = SimpleJsonPath.IsValid(path);
+
+        // Assert
+        Assert.False(ok);
+    }
+
+    /// <summary>引用キーの日本語はパーサとして成功することを検証する。</summary>
+    [Fact]
+    public void IsValid_QuotedJapaneseKey_ReturnsTrue()
+    {
+        // Arrange
+        const string path = "$[\"ユーザー\"]";
+
+        // Act
+        var ok = SimpleJsonPath.IsValid(path);
+
+        // Assert
+        Assert.True(ok);
+    }
 }

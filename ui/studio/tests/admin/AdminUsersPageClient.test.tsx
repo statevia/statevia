@@ -81,6 +81,25 @@ describe("AdminUsersPageClient", () => {
     expect(apiGet).toHaveBeenCalledTimes(2);
   });
 
+  it("日本語の displayName は送信せずエラー表示する", async () => {
+    renderWithUiText(<AdminUsersPageClient />);
+    await screen.findByText("admin");
+
+    fireEvent.change(screen.getByLabelText("ユーザー名"), {
+      target: { value: "ops" }
+    });
+    fireEvent.change(screen.getByLabelText("初期パスワード"), {
+      target: { value: "password123" }
+    });
+    fireEvent.change(screen.getByLabelText("表示名（任意）"), {
+      target: { value: "運用者" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(await screen.findByText(uiText.admin.users.displayNameInvalidFormat)).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+  });
+
   it("有効ユーザーを無効化する", async () => {
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");

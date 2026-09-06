@@ -25,9 +25,12 @@ public static class Level1Validator
         var stateNames = new HashSet<string>(definition.States.Keys, StringComparer.OrdinalIgnoreCase);
         var terminalTransitionCount = 0;
 
+        ValidateModuleAliases(definition, errors);
+
         foreach (var (stateName, stateDef) in definition.States)
         {
             ValidateStateName(stateName, errors);
+            ValidateActionSegments(stateName, stateDef, errors);
             ValidateActionAndWait(stateName, stateDef, errors);
             ValidateActionAndJoin(stateName, stateDef, errors);
             WaitEventsValidator.Validate(stateName, stateDef, stateNames, errors);
@@ -52,7 +55,47 @@ public static class Level1Validator
         if (string.IsNullOrWhiteSpace(stateName))
         {
             errors.Add("State name cannot be empty.");
+            return;
         }
+
+        var trimmedName = stateName.Trim();
+        if (!IdentifierCharset.IsValid(trimmedName))
+        {
+            errors.Add($"State name '{trimmedName}' must be an ASCII identifier.");
+        }
+    }
+
+    /// <summary>module alias が Identifier であることを検証する。</summary>
+    private static void ValidateModuleAliases(WorkflowDefinition definition, List<string> errors)
+    {
+        if (definition.Modules is null)
+            return;
+
+        foreach (var alias in definition.Modules.Keys)
+        {
+            var trimmedAlias = alias.Trim();
+            if (!IdentifierCharset.IsValid(trimmedAlias))
+            {
+                errors.Add($"workflow.modules alias '{trimmedAlias}' must be an ASCII identifier.");
+            }
+        }
+    }
+
+    /// <summary>action の各ドット区切りセグメントが Identifier であることを検証する。</summary>
+    private static void ValidateActionSegments(string stateName, StateDefinition stateDef, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(stateDef.Action))
+            return;
+
+        var invalidSegments = stateDef.Action.Split('.')
+            .Select(static segment => segment.Trim())
+            .Where(static segment => !IdentifierCharset.IsValid(segment))
+            .ToList();
+        if (invalidSegments.Count == 0)
+            return;
+
+        errors.Add(
+            $"State '{stateName}' action '{stateDef.Action}' contains a non-ASCII identifier segment.");
     }
 
     /// <summary>同一状態で <c>action</c> と <c>wait</c> が同時指定されていないことを検証する。</summary>

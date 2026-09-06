@@ -105,4 +105,21 @@ public sealed class TenantBootstrapTests
                 skipIfExists: false,
                 CancellationToken.None));
     }
+
+    /// <summary>表示名の日本語は例外。</summary>
+    [Fact]
+    public async Task CreateTenantAsync_JapaneseDisplayName_Throws()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var bootstrap = new TenantBootstrap(database.Factory, new PlatformDataAccess(database.Factory, new DefaultIdGenerator()), new DefaultIdGenerator());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            bootstrap.CreateTenantAsync(
+                "acme-corp",
+                "株式会社",
+                skipIfExists: false,
+                CancellationToken.None));
+    }
 }
