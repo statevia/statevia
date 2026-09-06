@@ -10,6 +10,8 @@ public sealed class CreateDefinitionRequest
     /// <summary>定義名。</summary>
     [Required(ErrorMessage = "Definition name is required.")]
     [NotWhitespace(ErrorMessage = "Definition name is required.")]
+    [MaxLength(IdentifierConstraints.DefinitionNameMaxLength)]
+    [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string Name { get; set; } = "";
 
     /// <summary>定義ソース YAML。</summary>
@@ -19,15 +21,27 @@ public sealed class CreateDefinitionRequest
 }
 
 /// <summary>永続化しない定義検証リクエスト。</summary>
-public sealed class ValidateDefinitionRequest
+public sealed class ValidateDefinitionRequest : IValidatableObject
 {
     /// <summary>任意の定義名。省略時は YAML のコンパイル結果名を使う。</summary>
+    [MaxLength(IdentifierConstraints.DefinitionNameMaxLength)]
     public string? Name { get; set; }
 
     /// <summary>定義ソース YAML。</summary>
     [Required(ErrorMessage = "Definition YAML is required.")]
     [NotWhitespace(ErrorMessage = "Definition YAML is required.")]
     public string Yaml { get; set; } = "";
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+            yield break;
+
+        var trimmedName = Name.Trim();
+        if (!IdentifierConstraints.IsValid(trimmedName, IdentifierConstraints.DefinitionNameMaxLength))
+            yield return new ValidationResult(IdentifierConstraints.FormatErrorMessage, [nameof(Name)]);
+    }
 }
 
 /// <summary>永続化しない定義検証の成功応答。</summary>
@@ -48,6 +62,8 @@ public sealed class UpdateDefinitionRequest
     /// <summary>定義名。</summary>
     [Required(ErrorMessage = "Definition name is required.")]
     [NotWhitespace(ErrorMessage = "Definition name is required.")]
+    [MaxLength(IdentifierConstraints.DefinitionNameMaxLength)]
+    [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string Name { get; set; } = "";
 
     /// <summary>定義ソース YAML。</summary>

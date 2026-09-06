@@ -1,4 +1,5 @@
 using Statevia.Core.Engine.Abstractions;
+using Statevia.Core.Engine.Definition.Validation;
 using System.Collections;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -181,6 +182,11 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
             if (alias.Length == 0)
             {
                 throw new ArgumentException("workflow.modules contains an empty alias key.");
+            }
+
+            if (!IdentifierCharset.IsValid(alias))
+            {
+                throw new ArgumentException($"workflow.modules alias '{alias}' must be an ASCII identifier.");
             }
 
             if (!seenAliases.Add(alias))

@@ -44,7 +44,9 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(typeof(ExecutionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ExecutionResponse>> Create(
         [FromBody] StartExecutionRequest request,
-        [FromHeader(Name = IdempotencyKeyHeaderName)] string? idempotencyKey = null,
+        [FromHeader(Name = IdempotencyKeyHeaderName)]
+        [RegularExpression(PrintableAsciiConstraints.AllowedPattern, ErrorMessage = PrintableAsciiConstraints.FormatErrorMessage)]
+        string? idempotencyKey = null,
         CancellationToken ct = default)
     {
         var created = await _executions.StartAsync(
@@ -171,7 +173,9 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> Cancel(
         string id,
-        [FromHeader(Name = IdempotencyKeyHeaderName)] string? idempotencyKey = null,
+        [FromHeader(Name = IdempotencyKeyHeaderName)]
+        [RegularExpression(PrintableAsciiConstraints.AllowedPattern, ErrorMessage = PrintableAsciiConstraints.FormatErrorMessage)]
+        string? idempotencyKey = null,
         CancellationToken ct = default)
     {
         var resolvedIdempotencyKey = idempotencyKey;
@@ -194,7 +198,9 @@ public class ExecutionsController : ControllerBase
         [NotWhitespace(ErrorMessage = "nodeId is required")]
         string nodeId,
         [FromBody] ResumeNodeRequest body,
-        [FromHeader(Name = IdempotencyKeyHeaderName)] string? idempotencyKey = null,
+        [FromHeader(Name = IdempotencyKeyHeaderName)]
+        [RegularExpression(PrintableAsciiConstraints.AllowedPattern, ErrorMessage = PrintableAsciiConstraints.FormatErrorMessage)]
+        string? idempotencyKey = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(body);
@@ -215,7 +221,9 @@ public class ExecutionsController : ControllerBase
     public async Task<ActionResult> PublishEvent(
         string id,
         [FromBody] PublishEventRequest body,
-        [FromHeader(Name = IdempotencyKeyHeaderName)] string? idempotencyKey = null,
+        [FromHeader(Name = IdempotencyKeyHeaderName)]
+        [RegularExpression(PrintableAsciiConstraints.AllowedPattern, ErrorMessage = PrintableAsciiConstraints.FormatErrorMessage)]
+        string? idempotencyKey = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(body);

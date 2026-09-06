@@ -14,6 +14,8 @@ export const adminUiTextEn: AdminFeatureUiText = {
       passwordLabel: "Initial password",
       passwordPolicyHint: "8–128 characters with no whitespace (symbols allowed; mixed case is not required)",
       displayNameLabel: "Display name (optional)",
+      displayNameInvalidFormat:
+        "Display name must be ASCII letters or digits; space, hyphen, underscore, and dot are allowed only between them.",
       isTenantAdminLabel: "Tenant administrator",
       createSubmit: "Create",
       creating: "Creating…",
@@ -38,6 +40,8 @@ export const adminUiTextEn: AdminFeatureUiText = {
       description: "Create groups and assign members and permissions.",
       createTitle: "Create group",
       nameLabel: "Group name",
+      nameInvalidFormat:
+        "Group name must be ASCII letters or digits; space, hyphen, underscore, and dot are allowed only between them.",
       createSubmit: "Create",
       creating: "Creating…",
       membersTitle: "Members",
@@ -60,6 +64,8 @@ export const adminUiTextEn: AdminFeatureUiText = {
       description: "Issue and revoke API keys for server-to-server and CI use. Plain keys are shown only once at issuance.",
       createTitle: "Issue API key",
       nameLabel: "Display name",
+      nameInvalidFormat:
+        "Display name must be ASCII letters or digits; space, hyphen, underscore, and dot are allowed only between them.",
       scopesTitle: "Allowed scopes",
       expiresAtLabel: "Expires at (optional)",
       expiresAtHint: "Leave empty for no expiry.",

@@ -1,3 +1,4 @@
+using Statevia.Core.Application.Contracts.Validation;
 using Statevia.Core.Engine.Definition;
 
 namespace Statevia.Service.Api.Application.Actions.Resolution;
@@ -63,6 +64,7 @@ internal static class ActionNameResolver
         {
             var alias = actionRef[..dotIndex];
             var actionName = actionRef[(dotIndex + 1)..];
+            EnsureIdentifierSegments(actionRef);
 
             if (string.IsNullOrWhiteSpace(actionName))
             {
@@ -86,5 +88,17 @@ internal static class ActionNameResolver
 
         throw new ArgumentException(
             $"Unknown action '{actionRef}': short names are not supported; use FQCN or moduleAlias.actionName.");
+    }
+
+    private static void EnsureIdentifierSegments(string actionRef)
+    {
+        var invalid = actionRef.Split('.')
+            .Select(static segment => segment.Trim())
+            .Any(static segment => !IdentifierConstraints.IsValid(segment, IdentifierConstraints.TopicMaxLength));
+        if (invalid)
+        {
+            throw new ArgumentException(
+                $"Invalid action '{actionRef}': each segment must be an ASCII identifier.");
+        }
     }
 }

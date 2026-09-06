@@ -1,4 +1,6 @@
+using Statevia.Core.Application.Contracts.Validation;
 using Statevia.Service.Api.Contracts;
+using Statevia.Service.Api.Contracts.Admin;
 using Statevia.Service.Api.Contracts.Auth;
 using System.ComponentModel.DataAnnotations;
 
@@ -205,6 +207,76 @@ public sealed class RequestDtoValidationTests
 
         // Assert
         Assert.Empty(results);
+    }
+
+    /// <summary>定義名に日本語があると検証失敗する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenNameJapanese_FailsValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest { Name = "ユーザー定義", Yaml = "workflow: {}" };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateDefinitionRequest.Name)));
+    }
+
+    /// <summary>許可文字の定義名は検証成功する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenNameAsciiIdentifier_PassesValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest { Name = "Order_v2.start", Yaml = "workflow: {}" };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
+    /// <summary>ingress topic に日本語があると検証失敗する。</summary>
+    [Fact]
+    public void EventIngressRequest_WhenTopicJapanese_FailsValidation()
+    {
+        // Arrange
+        var request = new EventIngressRequest { Topic = "在庫" };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(EventIngressRequest.Topic)));
+    }
+
+    /// <summary>パスワード欄は Identifier の RegularExpression を持たない。</summary>
+    [Fact]
+    public void PasswordRequestProperties_DoNotUseIdentifierPattern()
+    {
+        // Arrange
+        var password = typeof(CreateAdminUserRequest).GetProperty(nameof(CreateAdminUserRequest.Password));
+        var newPassword = typeof(ChangeOwnPasswordRequest).GetProperty(nameof(ChangeOwnPasswordRequest.NewPassword));
+
+        // Act
+        var passwordPatterns = password!
+            .GetCustomAttributes(typeof(RegularExpressionAttribute), inherit: true)
+            .Cast<RegularExpressionAttribute>()
+            .Select(a => a.Pattern)
+            .ToList();
+        var newPasswordPatterns = newPassword!
+            .GetCustomAttributes(typeof(RegularExpressionAttribute), inherit: true)
+            .Cast<RegularExpressionAttribute>()
+            .Select(a => a.Pattern)
+            .ToList();
+
+        // Assert
+        Assert.DoesNotContain(IdentifierConstraints.AllowedPattern, passwordPatterns);
+        Assert.DoesNotContain(AsciiLabelConstraints.AllowedPattern, passwordPatterns);
+        Assert.DoesNotContain(IdentifierConstraints.AllowedPattern, newPasswordPatterns);
+        Assert.DoesNotContain(AsciiLabelConstraints.AllowedPattern, newPasswordPatterns);
+        Assert.Contains(PasswordConstraints.AllowedPattern, passwordPatterns);
     }
 
     private static List<ValidationResult> Validate(object instance)

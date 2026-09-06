@@ -101,6 +101,13 @@ public sealed class CreateAdminUserRequest : IValidatableObject
             else if (!new EmailAddressAttribute().IsValid(trimmedEmail))
                 yield return new ValidationResult("email must be a valid email address.", [nameof(Email)]);
         }
+
+        if (!string.IsNullOrWhiteSpace(DisplayName))
+        {
+            var trimmedDisplayName = DisplayName.Trim();
+            if (!AsciiLabelConstraints.IsValid(trimmedDisplayName, AsciiLabelConstraints.DisplayNameMaxLength))
+                yield return new ValidationResult(AsciiLabelConstraints.FormatErrorMessage, [nameof(DisplayName)]);
+        }
     }
 }
 
@@ -182,8 +189,8 @@ public sealed class CreateAdminGroupRequest : IValidatableObject
         var trimmedName = Name.Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
             yield return new ValidationResult("name is required.", [nameof(Name)]);
-        else if (trimmedName.Length > MaxNameLength)
-            yield return new ValidationResult("name must be at most 128 characters.", [nameof(Name)]);
+        else if (!AsciiLabelConstraints.IsValid(trimmedName, MaxNameLength))
+            yield return new ValidationResult(AsciiLabelConstraints.FormatErrorMessage, [nameof(Name)]);
     }
 }
 
@@ -251,8 +258,8 @@ public sealed class CreateAdminApiKeyRequest : IValidatableObject
         var trimmedName = Name.Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
             yield return new ValidationResult("name is required.", [nameof(Name)]);
-        else if (trimmedName.Length > MaxNameLength)
-            yield return new ValidationResult("name must be at most 128 characters.", [nameof(Name)]);
+        else if (!AsciiLabelConstraints.IsValid(trimmedName, MaxNameLength))
+            yield return new ValidationResult(AsciiLabelConstraints.FormatErrorMessage, [nameof(Name)]);
 
         if (AllowedScopes is null || AllowedScopes.Count == 0)
             yield return new ValidationResult("allowedScopes must contain at least one scope.", [nameof(AllowedScopes)]);

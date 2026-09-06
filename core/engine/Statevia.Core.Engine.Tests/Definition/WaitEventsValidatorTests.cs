@@ -278,4 +278,26 @@ public sealed class WaitEventsValidatorTests
         // Assert
         Assert.Empty(errors);
     }
+
+    /// <summary>日本語のイベント名は失敗することを検証する。</summary>
+    [Fact]
+    public void Validate_JapaneseEventName_Fails()
+    {
+        // Arrange
+        var errors = new List<string>();
+        var stateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Wait", "Next" };
+        var state = new StateDefinition
+        {
+            Wait = new WaitDefinition
+            {
+                Events = new Dictionary<string, string> { ["承認"] = "Next" }
+            }
+        };
+
+        // Act
+        WaitEventsValidator.Validate("Wait", state, stateNames, errors);
+
+        // Assert
+        Assert.Contains(errors, e => e.Contains("ASCII identifier", StringComparison.OrdinalIgnoreCase));
+    }
 }

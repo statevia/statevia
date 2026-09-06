@@ -3,13 +3,17 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.4 |
-| 更新日 | 2026-09-03 |
+| Version | 1.5 |
+| 更新日 | 2026-09-05 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
 ---
 
 Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を publish して実行するまでの最短手順。定義 YAML の例は [samples/](../samples/)。
+
+定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
+
+**Version 1.5（2026-09-05）**: 定義名・状態名・イベント名は ASCII 識別子。既存の非 ASCII 識別子は次回 write で 422。
 
 **Version 1.4（2026-09-03）**: ログイン失敗ロックを 5 回 / 15 分窓 / 15 分ロック（PostgreSQL 共有）に更新。
 

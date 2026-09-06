@@ -13,6 +13,7 @@ export type AdminFeatureUiText = {
       passwordLabel: string;
       passwordPolicyHint: string;
       displayNameLabel: string;
+      displayNameInvalidFormat: string;
       isTenantAdminLabel: string;
       createSubmit: string;
       creating: string;
@@ -37,6 +38,7 @@ export type AdminFeatureUiText = {
       description: string;
       createTitle: string;
       nameLabel: string;
+      nameInvalidFormat: string;
       createSubmit: string;
       creating: string;
       membersTitle: string;
@@ -59,6 +61,7 @@ export type AdminFeatureUiText = {
       description: string;
       createTitle: string;
       nameLabel: string;
+      nameInvalidFormat: string;
       scopesTitle: string;
       expiresAtLabel: string;
       expiresAtHint: string;

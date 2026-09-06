@@ -115,4 +115,42 @@ public sealed class AdminContractsValidationTests
         Assert.Contains(blankResults, r => r.MemberNames.Contains(nameof(CreateAdminApiKeyRequest.ExpiresAt)));
         Assert.Contains(longResults, r => r.MemberNames.Contains(nameof(CreateAdminApiKeyRequest.Name)));
     }
+
+    /// <summary>ユーザー displayName の日本語は拒否する。</summary>
+    [Fact]
+    public void CreateAdminUserRequest_Validate_RejectsJapaneseDisplayName()
+    {
+        // Arrange
+        var request = new CreateAdminUserRequest
+        {
+            Username = "ops",
+            Password = "password1",
+            DisplayName = "運用者"
+        };
+
+        // Act
+        var results = request.Validate(new ValidationContext(request)).ToList();
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateAdminUserRequest.DisplayName)));
+    }
+
+    /// <summary>displayName に Acme Corporation は許可する。</summary>
+    [Fact]
+    public void CreateAdminUserRequest_Validate_AcceptsAsciiLabelDisplayName()
+    {
+        // Arrange
+        var request = new CreateAdminUserRequest
+        {
+            Username = "ops",
+            Password = "password1",
+            DisplayName = "Acme Corporation"
+        };
+
+        // Act
+        var results = request.Validate(new ValidationContext(request)).ToList();
+
+        // Assert
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CreateAdminUserRequest.DisplayName)));
+    }
 }

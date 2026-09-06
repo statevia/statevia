@@ -81,6 +81,11 @@ public static class WaitEventsValidator
             }
 
             var trimmedEvent = eventName.Trim();
+            if (!IdentifierCharset.IsValid(trimmedEvent))
+            {
+                errors.Add($"State '{stateName}' wait.events key '{trimmedEvent}' must be an ASCII identifier.");
+            }
+
             if (!seenEventNames.Add(trimmedEvent))
             {
                 errors.Add($"State '{stateName}' wait.events has duplicate event name '{trimmedEvent}'.");
@@ -109,6 +114,15 @@ public static class WaitEventsValidator
             if (string.IsNullOrWhiteSpace(entry.Topic))
             {
                 errors.Add($"State '{stateName}' wait.subscribe[{i}].topic must not be empty.");
+            }
+            else if (!IdentifierCharset.IsValid(entry.Topic.Trim()))
+            {
+                errors.Add($"State '{stateName}' wait.subscribe[{i}].topic must be an ASCII identifier.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Key) && !IdentifierCharset.IsValid(entry.Key.Trim()))
+            {
+                errors.Add($"State '{stateName}' wait.subscribe[{i}].key must be an ASCII identifier.");
             }
 
             ValidateNextState(stateName, $"wait.subscribe[{i}]", entry.Next, stateNames, errors);
