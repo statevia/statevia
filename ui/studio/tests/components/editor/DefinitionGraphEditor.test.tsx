@@ -269,6 +269,92 @@ nodes:
     expect(screen.getByDisplayValue("ng")).toBeInTheDocument();
   });
 
+  it("wait.subscribe をインスペクタで追加・編集できる", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "s", type: "start", next: "w1" },
+        { name: "w1", type: "wait", subscribe: [{ topic: "orders.created", next: "ok" }] },
+        { name: "ok", type: "end" }
+      ]
+    };
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByText(definitionGraphEditorTestLabels.waitSubscribeSectionTitle)).toBeInTheDocument();
+    expect(screen.queryByText(definitionGraphEditorTestLabels.waitEventsSectionTitle)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitSubscribeAdd }));
+
+    expect(onDocumentChange).toHaveBeenCalled();
+    const afterAdd = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterAdd.nodes.find((node) => node.name === "w1")?.subscribe).toEqual([
+      { topic: "orders.created", next: "ok" },
+      { topic: "", next: "" }
+    ]);
+    expect(afterAdd.nodes.find((node) => node.name === "w1")?.events).toBeUndefined();
+  });
+
+  it("wait.subscribe YAML を開くとインスペクタに topic が出る", async () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: w1
+  - name: w1
+    type: wait
+    subscribe:
+      - topic: orders.created
+        key: "$.id"
+        next: ok
+      - topic: orders.cancelled
+        next: ng
+  - name: ok
+    type: end
+  - name: ng
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByDisplayValue("orders.created")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("orders.cancelled")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("$.id")).toBeInTheDocument();
+    expect(screen.queryByText(definitionGraphEditorTestLabels.waitEventsSectionTitle)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitSwitchToEvents }));
+    const afterSwitch = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterSwitch.nodes.find((node) => node.name === "w1")).toEqual({
+      name: "w1",
+      type: "wait",
+      events: { resume: "" }
+    });
+  });
+
   it("action 変更時に input をクリアする", async () => {
     const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
     expect(parsed.document).not.toBeNull();

@@ -6,7 +6,7 @@ function refTargetsRenamedName(value: string | undefined, fromName: string): boo
 
 /**
  * ノード名を変更し、`next` / `edges[].to` / fork の `branches[]` /
- * wait の `events` 遷移先および `meta.layout` のキーを同期する。
+ * wait の `events` / `subscribe[].next` 遷移先および `meta.layout` のキーを同期する。
  *
  * `edges[].to` はパース後は常に文字列（`to: { name }` は解決済み）を前提とする。
  */
@@ -34,6 +34,12 @@ export function renameNodeNameInDocument(
               refTargetsRenamedName(target, fromName) ? toName : target
             ])
           );
+    const subscribe =
+      node.subscribe === undefined
+        ? undefined
+        : node.subscribe.map((entry) =>
+            refTargetsRenamedName(entry.next, fromName) ? { ...entry, next: toName } : entry
+          );
 
     return {
       ...node,
@@ -42,7 +48,8 @@ export function renameNodeNameInDocument(
       error,
       branches,
       edges,
-      events
+      events,
+      subscribe
     };
   });
 

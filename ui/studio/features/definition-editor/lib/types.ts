@@ -22,6 +22,16 @@ export type DefinitionGraphEdge = {
   default?: boolean;
 };
 
+/**
+ * Wait Subscribe 行（nodes YAML の `subscribe[]`）。
+ * `topic` / `next` は検証で必須。`key` は任意で、空なら YAML では省略する。
+ */
+export type DefinitionGraphWaitSubscribeEntry = {
+  topic: string;
+  key?: string;
+  next: string;
+};
+
 /** 定義グラフドキュメント内のノード。 */
 export type DefinitionGraphNode = {
   /** 定義内で一意なノード名（YAML `name`、実行時の StateName と一致） */
@@ -33,6 +43,11 @@ export type DefinitionGraphNode = {
   event?: string;
   /** wait: イベント名 → 遷移先ノード名（新形式。event+next より優先） */
   events?: Record<string, string>;
+  /**
+   * wait: Subscribe 配列。プロパティがある（空配列含む）ときは Subscribe モード。
+   * `events` との併用は conflict。
+   */
+  subscribe?: DefinitionGraphWaitSubscribeEntry[];
   next?: string;
   branches?: string[];
   edges?: DefinitionGraphEdge[];

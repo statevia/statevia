@@ -5,6 +5,7 @@ import type {
   DefinitionGraphEdge,
   DefinitionGraphMeta,
   DefinitionGraphNode,
+  DefinitionGraphWaitSubscribeEntry,
   EdgeCondition,
   NodeType,
   ParseDefinitionYamlResult
@@ -111,6 +112,36 @@ function applyWaitEventsField(node: DefinitionGraphNode, value: Record<string, u
   node.events = events;
 }
 
+/**
+ * nodes YAML の `subscribe` 配列をドキュメントへ載せる。
+ * 非オブジェクト要素は空 topic / next の行として残し、ファイル全体は失敗させない。
+ */
+function applyWaitSubscribeField(node: DefinitionGraphNode, value: Record<string, unknown>): void {
+  if (!Array.isArray(value.subscribe)) {
+    return;
+  }
+  node.subscribe = value.subscribe.map((entry) => parseWaitSubscribeEntry(entry));
+}
+
+/**
+ * Subscribe 配列要素を文字列フィールドとして保持する。
+ *
+ * @param entry YAML の 1 要素
+ * @returns topic / key / next。非オブジェクトは空行
+ */
+function parseWaitSubscribeEntry(entry: unknown): DefinitionGraphWaitSubscribeEntry {
+  if (!isRecord(entry)) {
+    return { topic: "", next: "" };
+  }
+  const topic = typeof entry.topic === "string" ? entry.topic : "";
+  const next = typeof entry.next === "string" ? entry.next : "";
+  const key = typeof entry.key === "string" ? entry.key : undefined;
+  if (key === undefined || key.trim().length === 0) {
+    return { topic, next };
+  }
+  return { topic, key, next };
+}
+
 /** join.mode が all のときのみ設定する。 */
 function applyJoinModeField(node: DefinitionGraphNode, value: Record<string, unknown>): void {
   if (node.type !== "join") {
@@ -131,6 +162,7 @@ function applyOptionalNodeFields(node: DefinitionGraphNode, value: Record<string
     node.event = value.event;
   }
   applyWaitEventsField(node, value);
+  applyWaitSubscribeField(node, value);
   if (typeof value.next === "string") {
     node.next = value.next;
   }

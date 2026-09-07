@@ -61,4 +61,30 @@ describe("renameNodeNameInDocument", () => {
       reject: "finished"
     });
   });
+
+  it("wait.subscribe の遷移先ノード名を同期する", () => {
+    // Arrange
+    const before = doc({
+      nodes: [
+        {
+          name: "w1",
+          type: "wait",
+          subscribe: [
+            { topic: "orders.created", next: "done" },
+            { topic: "orders.cancelled", next: "done" }
+          ]
+        },
+        { name: "done", type: "end" }
+      ]
+    });
+
+    // Act
+    const after = renameNodeNameInDocument(before, "done", "finished");
+
+    // Assert
+    expect(after.nodes.find((node) => node.name === "w1")?.subscribe).toEqual([
+      { topic: "orders.created", next: "finished" },
+      { topic: "orders.cancelled", next: "finished" }
+    ]);
+  });
 });
