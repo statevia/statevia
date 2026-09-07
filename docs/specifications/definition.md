@@ -12,10 +12,10 @@
 ## Normative 要約
 
 - **MUST**: Fork の各枝は **Fork（Start）–任意ノード–Join（End）の単一 Definition** である。兄弟枝 Body は互いに素。領域外への出入は拒否する。
-- **MUST**: Join 供給は `next` / `wait.events` / `edges` の **1 経路**で足りる。`error` / `on.Failed` は供給に数えない。
+- **MUST**: Join 供給は `next` / `wait.events` / `wait.subscribe[].next` / `edges` の **1 経路**で足りる。`error` / `on.Failed` は供給に数えない。
 - **MUST**: publish 時に参照する `action` ID は Catalog に存在すること。未登録はエラー。
 - **MUST**: `wait` または `join` を持つ状態に `action` を併記してはならない。
-- **MUST**: Wait の正本は `wait.events`（イベント名 → 遷移先）。`events` は非空で、遷移先が定義内に存在すること。
+- **MUST**: Wait は `wait.events`（Signal）または `wait.subscribe`（Subscribe）の一方。いずれも非空で、遷移先が定義内に存在すること。
 - **MUST**: 同一 Wait 内のイベント名重複、予約語（`Completed` / `Failed` / `Cancelled` / `Joined`）、自己遷移を拒否する（422）。
 - **MUST**: 状態名・ノード名・イベント名・module alias・action の各セグメントは ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。YAML コメントと `description` / `label` / `ui` / `metadata` / `tags` は対象外。
 - **MUST**: module alias は大文字小文字を区別せずテナント内で一意であること。
@@ -610,7 +610,8 @@ Definition Editor は YAML 編集とグラフ編集で同じドキュメント�
 
 - **workflow**: `id` / `name` / `description`。`name` が無く `id` だけの場合、ローダーはワークフロー名に `id` を使うため、エディタも表示名を同様に解決し、`id` を別フィールドとして保持する。
 - **action.input**: 文字列（`$` / `$.` パスやリテラル）またはオブジェクト（キー→パス／リテラル）。グラフのノードインスペクターからも編集できる。
-- **wait.events**: グラフの Wait ノードインスペクタでイベント行（イベント名 → 遷移先ノード名）を追加・変更・削除できる。新規 Wait は `events` 形式を既定とする。旧形式（`event` + `next` / `edges`）は閲覧・単一 event 編集と、明示的な `events` への変換を維持する。
+- **wait.events**: グラフの Wait ノードインスペクタでイベント行（イベント名 → 遷移先ノード名）を追加・変更・削除できる。新規 Wait は `events` 形式（Signal）を既定とする。旧形式（`event` + `next` / `edges`）は閲覧・単一 event 編集と、明示的な `events` への変換を維持する。Subscribe への自動変換はしない。
+- **wait.subscribe**: グラフの Wait ノードインスペクタで購読行（`topic` / 任意 `key` / `next`）を追加・変更・削除できる。YAML と往復しても `subscribe` は欠落しない。空の `key` は YAML では省略する。`events` との併用は保存前検証でエラー（黙って片方を捨てない）。モード切替は破壊的で、イベント名と topic の機械変換はしない。
 - **edges[].to**: 文字列、または **`{ name: "<nodeName>" }`**。パース時にエディタは常に遷移先ノード名文字列へ正規化する。
 - **join.mode**: 省略可能（省略時に UI が `mode: all` を自動付与しない）。明示したときのみ `all` を保持する。
 
@@ -623,18 +624,18 @@ Service API の **`GET /v1/definitions/schema/nodes`** が返すスキーマに�
 | start  | next               | 開始ノード。1 つのみ。 |
 | end    | —                  | 終端ノード。 |
 | action | action, next       | input, error, label 等（`onError` は現行変換では使用しない）。 |
-| wait   | `events`（1 件以上） | 旧 `event`+`next` は Loader が `events` へ正規化。timeout / onTimeout は現行変換では未使用。 |
+| wait   | `events` または `subscribe`（どちらか一方・1 件以上） | 旧 `event`+`next` は Loader が `events` へ正規化。timeout / onTimeout は現行変換では未使用。 |
 | fork   | branches           | 2 要素以上の配列。 |
 | join   | next               | mode: all 等。 |
 
 - **start**: `next` で次ノード名。
 - **end**: `next` なし。
 - **action**: `action` はアクション参照（§1.1.1。例: `mail.send`、`statevia.action.builtin.execution.noop`）。`next` で通常遷移先、`error` で失敗時遷移先（action のみ）。`input` で入力マップ（§1.1.2）。
-- **wait**: 正本は **`events`**（イベント名 → 次ノード名）。単一イベントの旧形式 `event` + `next` も受理し、Loader が `events` へ正規化する。`timeout`（ISO 8601 duration）は現行変換では未使用。
+- **wait**: Signal 正本は **`events`**（イベント名 → 次ノード名）。Subscribe 正本は **`subscribe`**（`topic` / 任意 `key` / `next` の配列）。同時指定不可。単一イベントの旧形式 `event` + `next` も受理し、Loader が `events` へ正規化する。`timeout`（ISO 8601 duration）は現行変換では未使用。
 - **fork**: `branches` に並列ブランチのノード名の配列。
 - **join**: すべてのブランチの完了を待ち、`next` へ進む。
-  - Join と Fork の対応: 各枝先頭が当該 Join を**供給**する一意の Fork を選ぶ。供給は **1 経路**で足り、次を含む。(1) 枝の `next` が直接 Join。(2) `wait.events` または `edges` を辿って Join に着く。(3) 枝先頭または枝内の内側 Fork で、その内側 Join の出口が当該 Join に到達する（ネスト。出口が他 Join のときは、その Join とペアの Fork が一段外側への供給を担う。3 段以上も各段が直近のペアだけを見る）。`error` は供給に数えない。`Join.all` は外側 Fork の枝先頭集合になる。例: [`docs/samples/ui-nested-fork.yaml`](../samples/ui-nested-fork.yaml)。Fork 再到達（循環）の例: [`docs/samples/ui-cyclic-fork.yaml`](../samples/ui-cyclic-fork.yaml)。
-  - 枝 Body は互いに素。Join 前の兄弟 `$.states…` 参照、領域外への出入（`wait.events` の一部が領域外を含む場合を含む）は拒否する。`error` は枝内または当該 Join へ戻す（領域外へ出してはならない）。
+  - Join と Fork の対応: 各枝先頭が当該 Join を**供給**する一意の Fork を選ぶ。供給は **1 経路**で足り、次を含む。(1) 枝の `next` が直接 Join。(2) `wait.events` / `wait.subscribe[].next` または `edges` を辿って Join に着く。(3) 枝先頭または枝内の内側 Fork で、その内側 Join の出口が当該 Join に到達する（ネスト。出口が他 Join のときは、その Join とペアの Fork が一段外側への供給を担う。3 段以上も各段が直近のペアだけを見る）。`error` は供給に数えない。`Join.all` は外側 Fork の枝先頭集合になる。例: [`docs/samples/ui-nested-fork.yaml`](../samples/ui-nested-fork.yaml)。Fork 再到達（循環）の例: [`docs/samples/ui-cyclic-fork.yaml`](../samples/ui-cyclic-fork.yaml)。
+  - 枝 Body は互いに素。Join 前の兄弟 `$.states…` 参照、領域外への出入（`wait.events` / `wait.subscribe[].next` の一部が領域外を含む場合を含む）は拒否する。`error` は枝内または当該 Join へ戻す（領域外へ出してはならない）。
 
 ### 2.3 例（Nodes 形式・抜粋）
 
@@ -824,8 +825,8 @@ Nodes 形式は、実行前に **states 形式の CompiledWorkflowDefinition に
 **ForkRegion**
 
 - 枝＝単一 Definition（侵入・脱出・兄弟横断・ネスト横断）
-- Join 供給（`next` / `wait.events` / `edges` の 1 経路。`error` は供給に数えない）
-- 禁止パターン（他枝 `$.states`、領域外 `wait.events`）
+- Join 供給（`next` / `wait.events` / `wait.subscribe[].next` / `edges` の 1 経路。`error` は供給に数えない）
+- 禁止パターン（他枝 `$.states`、領域外 `wait.events` / `wait.subscribe[].next`）
 - フェーズ内は **Weight 昇順**のうえ **全件収集**
 
 Nodes 形式は変換後の states に対して同じ検証を適用する。Loader の Join 照合も同じ供給定義（`JoinSupply`）を使う。

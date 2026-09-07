@@ -21,6 +21,12 @@ export type ValidateGraphDocumentMessageOptions = {
   waitEventsAndEventTogether: (nodeName: string) => string;
   waitEventsCannotHaveEdges: (nodeName: string) => string;
   waitEventTargetRequired: (nodeName: string, eventName: string) => string;
+  waitEventsAndSubscribeTogether: (nodeName: string) => string;
+  waitSubscribeAndEventTogether: (nodeName: string) => string;
+  waitSubscribeCannotHaveEdges: (nodeName: string) => string;
+  waitSubscribeRequired: (nodeName: string) => string;
+  waitSubscribeTopicRequired: (nodeName: string, index: number) => string;
+  waitSubscribeNextRequired: (nodeName: string, index: number) => string;
   forkBranchesRequired: (nodeName: string) => string;
   joinRequiresTransition: (nodeName: string) => string;
   joinModeInvalid: (nodeName: string) => string;
@@ -55,12 +61,18 @@ function collectForkBranchTargets(node: DefinitionGraphNode): string[] {
 }
 
 function collectWaitEventTargets(node: DefinitionGraphNode): string[] {
-  if (node.type !== "wait" || !node.events) {
+  if (node.type !== "wait") {
     return [];
   }
-  return Object.values(node.events)
-    .map((targetName) => targetName?.trim())
+  const fromEvents = node.events
+    ? Object.values(node.events)
+        .map((targetName) => targetName?.trim())
+        .filter((targetName): targetName is string => Boolean(targetName))
+    : [];
+  const fromSubscribe = (node.subscribe ?? [])
+    .map((entry) => entry.next?.trim())
     .filter((targetName): targetName is string => Boolean(targetName));
+  return [...fromEvents, ...fromSubscribe];
 }
 
 function collectEdgeTargets(node: DefinitionGraphNode): string[] {
@@ -137,6 +149,36 @@ function validateWaitEventTargets(
     }
     messages.push(options.waitEventTargetRequired(nodeName, trimmedName));
   }
+}
+
+/**
+ * wait.subscribe の併用禁止・非空配列・topic / next 必須を検証する。
+ */
+function validateWaitSubscribeNode({
+  node,
+  nodeName,
+  hasEdges,
+  messages,
+  options
+}: NodeValidationContext): void {
+  if (node.event?.trim()) {
+    messages.push(options.waitSubscribeAndEventTogether(nodeName));
+  }
+  if (hasEdges) {
+    messages.push(options.waitSubscribeCannotHaveEdges(nodeName));
+  }
+  if (!node.subscribe || node.subscribe.length === 0) {
+    messages.push(options.waitSubscribeRequired(nodeName));
+    return;
+  }
+  node.subscribe.forEach((entry, index) => {
+    if (!entry.topic?.trim()) {
+      messages.push(options.waitSubscribeTopicRequired(nodeName, index));
+    }
+    if (!entry.next?.trim()) {
+      messages.push(options.waitSubscribeNextRequired(nodeName, index));
+    }
+  });
 }
 
 /**
@@ -296,6 +338,17 @@ const nodeTypeValidators: Record<DefinitionGraphNode["type"], NodeTypeValidator>
     }
   },
   wait: (context) => {
+    const hasSubscribe = context.node.subscribe !== undefined;
+    if (hasSubscribe && hasEventsProperty(context.node)) {
+      context.messages.push(context.options.waitEventsAndSubscribeTogether(context.nodeName));
+    }
+    if (hasSubscribe) {
+      validateWaitSubscribeNode(context);
+      if (hasEventsProperty(context.node)) {
+        validateWaitEventsMapNode(context);
+      }
+      return;
+    }
     if (hasEventsProperty(context.node)) {
       validateWaitEventsMapNode(context);
       return;
