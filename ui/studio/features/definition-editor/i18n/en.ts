@@ -63,18 +63,6 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
         `Node '${nodeName}': wait cannot use edges with events; put targets in events.`,
       waitEventTargetRequired: (nodeName: string, eventName: string) =>
         `Node '${nodeName}': events['${eventName}'] requires a next node name.`,
-      waitEventsAndSubscribeTogether: (nodeName: string) =>
-        `Node '${nodeName}': wait cannot use both events and subscribe.`,
-      waitSubscribeAndEventTogether: (nodeName: string) =>
-        `Node '${nodeName}': wait cannot use both subscribe and event.`,
-      waitSubscribeCannotHaveEdges: (nodeName: string) =>
-        `Node '${nodeName}': wait cannot use edges with subscribe; put targets in subscribe[].next.`,
-      waitSubscribeRequired: (nodeName: string) =>
-        `Node '${nodeName}': wait.subscribe requires at least one entry.`,
-      waitSubscribeTopicRequired: (nodeName: string, index: number) =>
-        `Node '${nodeName}': subscribe[${index}].topic is required.`,
-      waitSubscribeNextRequired: (nodeName: string, index: number) =>
-        `Node '${nodeName}': subscribe[${index}].next is required.`,
       forkBranchesRequired: (nodeName: string) => `Node '${nodeName}': fork requires at least two branches.`,
       joinRequiresTransition: (nodeName: string) => `Node '${nodeName}': join requires next or edges.`,
       joinModeInvalid: (nodeName: string) => `Node '${nodeName}': join.mode must be 'all'.`,
@@ -130,18 +118,6 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       waitConvertToEvents: "Convert to events",
       waitEventsConflictHint:
         "Cannot edit while both events and event are set. Fix YAML or convert to events.",
-      waitSubscribeSectionTitle: "subscribe (topic → target)",
-      waitSubscribeTopicLabel: "topic",
-      waitSubscribeKeyLabel: "key (optional)",
-      waitSubscribeNextLabel: "Target node name",
-      waitSubscribeAdd: "Add subscribe row",
-      waitSubscribeRemove: "Remove row",
-      waitSwitchToSubscribe: "Switch to Subscribe (discards events)",
-      waitSwitchToEvents: "Switch to Signal (discards subscribe)",
-      waitResolveToSubscribe: "Keep subscribe",
-      waitSubscribeConflictHint:
-        "Cannot edit while both events and subscribe are set. Resolve to one mode.",
-      waitSubscribeUntitledTopic: "(topic)",
     },
     saved: {
       completePrefix: "Saved:",

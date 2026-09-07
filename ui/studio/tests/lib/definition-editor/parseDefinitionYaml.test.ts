@@ -192,46 +192,4 @@ nodes:
       reject: "ng"
     });
   });
-
-  it("wait.subscribe 2 件（key あり・なし）を保持し往復できる", () => {
-    const yaml = `version: 1
-workflow:
-  name: W
-nodes:
-  - name: s
-    type: start
-    next: w1
-  - name: w1
-    type: wait
-    subscribe:
-      - topic: orders.created
-        key: "$.id"
-        next: ok
-      - topic: orders.cancelled
-        next: ng
-  - name: ok
-    type: end
-  - name: ng
-    type: end
-`;
-    const r = parseDefinitionYaml(yaml, parseOpts);
-    expect(r.document?.nodes.find((n) => n.name === "w1")?.subscribe).toEqual([
-      { topic: "orders.created", key: "$.id", next: "ok" },
-      { topic: "orders.cancelled", next: "ng" }
-    ]);
-    expect(r.document?.nodes.find((n) => n.name === "w1")?.events).toBeUndefined();
-
-    if (!r.document) {
-      throw new Error("document should not be null");
-    }
-    const round = serializeDefinitionYaml(r.document);
-    expect(round).toContain("subscribe:");
-    expect(round).not.toMatch(/key:\s*["']?\s*["']?\s*$/m);
-    const again = parseDefinitionYaml(round, parseOpts);
-    expect(again.document?.nodes.find((n) => n.name === "w1")?.subscribe).toEqual([
-      { topic: "orders.created", key: "$.id", next: "ok" },
-      { topic: "orders.cancelled", next: "ng" }
-    ]);
-    expect(again.document?.nodes.find((n) => n.name === "w1")?.events).toBeUndefined();
-  });
 });

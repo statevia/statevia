@@ -18,8 +18,7 @@ export function setWaitEvents(
     events: { ...events },
     event: undefined,
     next: undefined,
-    edges: undefined,
-    subscribe: undefined
+    edges: undefined
   }));
 }
 
@@ -39,8 +38,7 @@ export function setLegacyWaitEvent(
   return mapWaitNode(document, nodeName, (node) => ({
     ...node,
     event,
-    events: undefined,
-    subscribe: undefined
+    events: undefined
   }));
 }
 
@@ -66,8 +64,7 @@ export function convertLegacyWaitToEvents(
       events: { [eventName]: target },
       event: undefined,
       next: undefined,
-      edges: undefined,
-      subscribe: undefined
+      edges: undefined
     };
   });
 }

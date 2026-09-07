@@ -171,17 +171,12 @@ function waitTargets(node: DefinitionGraphNode): string[] {
   if (node.type !== "wait") {
     return [];
   }
-  const fromEvents = node.events
-    ? Object.values(node.events)
+  if (node.events) {
+    return uniqueNames(
+      Object.values(node.events)
         .map((target) => optionalName(target))
         .filter((to): to is string => Boolean(to))
-    : [];
-  const fromSubscribe = (node.subscribe ?? [])
-    .map((entry) => optionalName(entry.next))
-    .filter((to): to is string => Boolean(to));
-  const collected = [...fromEvents, ...fromSubscribe];
-  if (collected.length > 0) {
-    return uniqueNames(collected);
+    );
   }
   const legacyNext = optionalName(node.next);
   return legacyNext ? [legacyNext] : [];

@@ -19,12 +19,6 @@ function opts(): ValidateGraphDocumentMessageOptions {
     waitEventsAndEventTogether: m("waitBoth"),
     waitEventsCannotHaveEdges: m("waitEdges"),
     waitEventTargetRequired: (nodeName, eventName) => `waitTarget:${nodeName}:${eventName}`,
-    waitEventsAndSubscribeTogether: m("waitSubBoth"),
-    waitSubscribeAndEventTogether: m("waitSubEvent"),
-    waitSubscribeCannotHaveEdges: m("waitSubEdges"),
-    waitSubscribeRequired: m("waitSubReq"),
-    waitSubscribeTopicRequired: (nodeName, index) => `waitSubTopic:${nodeName}:${index}`,
-    waitSubscribeNextRequired: (nodeName, index) => `waitSubNext:${nodeName}:${index}`,
     forkBranchesRequired: m("fork"),
     joinRequiresTransition: m("joinTrans"),
     joinModeInvalid: m("joinMode"),
@@ -307,127 +301,6 @@ describe("validateGraphDocument / wait.events", () => {
   });
 });
 
-describe("validateGraphDocument / wait.subscribe", () => {
-  it("subscribe 配列があれば next/edges なしでも有効", () => {
-    // Arrange
-    const doc: DefinitionGraphDocument = {
-      version: 1,
-      workflow: { name: "w" },
-      nodes: [
-        { name: "s", type: "start", next: "w1" },
-        {
-          name: "w1",
-          type: "wait",
-          subscribe: [
-            { topic: "orders.created", key: "$.id", next: "ok" },
-            { topic: "orders.cancelled", next: "ng" }
-          ]
-        },
-        { name: "ok", type: "action", action: "noop", next: "e" },
-        { name: "ng", type: "action", action: "noop", next: "e" },
-        { name: "e", type: "end" }
-      ]
-    };
-
-    // Act
-    const r = validateGraphDocument(doc, opts());
-
-    // Assert
-    expect(r.isValid).toBe(true);
-  });
-
-  it("events と subscribe の併用は拒否", () => {
-    const doc: DefinitionGraphDocument = {
-      version: 1,
-      workflow: { name: "w" },
-      nodes: [
-        { name: "s", type: "start", next: "w1" },
-        {
-          name: "w1",
-          type: "wait",
-          events: { approve: "e" },
-          subscribe: [{ topic: "orders", next: "e" }]
-        },
-        { name: "e", type: "end" }
-      ]
-    };
-    const r = validateGraphDocument(doc, opts());
-    expect(r.isValid).toBe(false);
-    expect(r.messages.some((x) => x.startsWith("waitSubBoth:"))).toBe(true);
-  });
-
-  it("subscribe と event の併用は拒否", () => {
-    const doc: DefinitionGraphDocument = {
-      version: 1,
-      workflow: { name: "w" },
-      nodes: [
-        { name: "s", type: "start", next: "w1" },
-        {
-          name: "w1",
-          type: "wait",
-          event: "resume",
-          subscribe: [{ topic: "orders", next: "e" }]
-        },
-        { name: "e", type: "end" }
-      ]
-    };
-    const r = validateGraphDocument(doc, opts());
-    expect(r.isValid).toBe(false);
-    expect(r.messages.some((x) => x.startsWith("waitSubEvent:"))).toBe(true);
-  });
-
-  it("subscribe と edges の併用は拒否", () => {
-    const doc: DefinitionGraphDocument = {
-      version: 1,
-      workflow: { name: "w" },
-      nodes: [
-        { name: "s", type: "start", next: "w1" },
-        {
-          name: "w1",
-          type: "wait",
-          subscribe: [{ topic: "orders", next: "e" }],
-          edges: [{ to: "e" }]
-        },
-        { name: "e", type: "end" }
-      ]
-    };
-    const r = validateGraphDocument(doc, opts());
-    expect(r.isValid).toBe(false);
-    expect(r.messages.some((x) => x.startsWith("waitSubEdges:"))).toBe(true);
-  });
-
-  it("空配列・空 topic・空 next を拒否する", () => {
-    const empty = validateGraphDocument(
-      {
-        version: 1,
-        workflow: { name: "w" },
-        nodes: [
-          { name: "s", type: "start", next: "w1" },
-          { name: "w1", type: "wait", subscribe: [] },
-          { name: "e", type: "end" }
-        ]
-      },
-      opts()
-    );
-    expect(empty.messages.some((x) => x.startsWith("waitSubReq:"))).toBe(true);
-
-    const emptyFields = validateGraphDocument(
-      {
-        version: 1,
-        workflow: { name: "w" },
-        nodes: [
-          { name: "s", type: "start", next: "w1" },
-          { name: "w1", type: "wait", subscribe: [{ topic: "", next: "" }] },
-          { name: "e", type: "end" }
-        ]
-      },
-      opts()
-    );
-    expect(emptyFields.messages).toContain("waitSubTopic:w1:0");
-    expect(emptyFields.messages).toContain("waitSubNext:w1:0");
-  });
-});
-
 describe("validateGraphDocument / fork region light", () => {
   it("標準 Fork-Join は有効", () => {
     // Arrange
@@ -515,37 +388,6 @@ describe("validateGraphDocument / fork region light", () => {
           name: "wait2",
           type: "wait",
           events: { Resume: "join1", Timeout: "e" }
-        },
-        { name: "join1", type: "join", next: "e" },
-        { name: "e", type: "end" }
-      ]
-    };
-
-    // Act
-    const r = validateGraphDocument(doc, opts());
-
-    // Assert
-    expect(r.isValid).toBe(false);
-    expect(r.messages).toContain("waitOutside:wait2:e");
-    expect(r.messages).toContain("egress:wait2:e:join1");
-  });
-
-  it("枝内 Subscribe Wait の一方が領域外なら waitOutside", () => {
-    // Arrange
-    const doc: DefinitionGraphDocument = {
-      version: 1,
-      workflow: { name: "D2s" },
-      nodes: [
-        { name: "s", type: "start", next: "fork1" },
-        { name: "fork1", type: "fork", branches: ["left", "wait2"] },
-        { name: "left", type: "action", action: "noop", next: "join1" },
-        {
-          name: "wait2",
-          type: "wait",
-          subscribe: [
-            { topic: "resume", next: "join1" },
-            { topic: "timeout", next: "e" }
-          ]
         },
         { name: "join1", type: "join", next: "e" },
         { name: "e", type: "end" }

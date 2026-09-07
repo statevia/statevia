@@ -28,20 +28,12 @@ import {
   setWaitEventTarget,
   setWaitEvents
 } from "../lib/setWaitEvents";
-import {
-  connectWaitSubscribeTarget,
-  removeWaitSubscribeRow,
-  setWaitSubscribe,
-  setWaitSubscribeTarget,
-  switchWaitMode
-} from "../lib/setWaitSubscribe";
 import type { DefinitionGraphDocument, DefinitionGraphNode, NodeType } from "../lib/types";
 import { buildDocumentAdjacency } from "../lib/definitionGraphAdjacency";
 import { ActionInputCodeEditor } from "@/shared/ui/ActionInputCodeEditor";
 import { ActionIdCombobox } from "./ActionIdCombobox";
 import { SchemaDrivenActionInputForm } from "./SchemaDrivenActionInputForm";
 import { WaitEventsEditor } from "./WaitEventsEditor";
-import { WaitSubscribeEditor } from "./WaitSubscribeEditor";
 import { GraphNodeShell } from "@/shared/ui/GraphNodeShell";
 import { apiGet } from "@/shared/api";
 import { collectUpstreamOutputPathHints } from "../actionSchema/outputSchemaHints";
@@ -206,10 +198,9 @@ type GraphSelection =
   | {
       kind: "edge";
       nodeName: string;
-      edgeKind: "next" | "edge" | "error" | "waitEvent" | "waitSubscribe";
+      edgeKind: "next" | "edge" | "error" | "waitEvent";
       edgeIndex?: number;
       eventName?: string;
-      subscribeIndex?: number;
     }
   | null;
 
@@ -263,17 +254,6 @@ type DefinitionGraphEditorProps = {
     waitLegacyEventLabel: string;
     waitConvertToEvents: string;
     waitEventsConflictHint: string;
-    waitSubscribeSectionTitle: string;
-    waitSubscribeTopicLabel: string;
-    waitSubscribeKeyLabel: string;
-    waitSubscribeNextLabel: string;
-    waitSubscribeAdd: string;
-    waitSubscribeRemove: string;
-    waitSwitchToSubscribe: string;
-    waitSwitchToEvents: string;
-    waitResolveToSubscribe: string;
-    waitSubscribeConflictHint: string;
-    waitSubscribeUntitledTopic: string;
   };
 };
 
@@ -281,10 +261,9 @@ type GraphEdgeMeta = {
   id: string;
   source: string;
   target: string;
-  edgeKind: "next" | "edge" | "branch" | "error" | "waitEvent" | "waitSubscribe";
+  edgeKind: "next" | "edge" | "branch" | "error" | "waitEvent";
   edgeIndex?: number;
   eventName?: string;
-  subscribeIndex?: number;
   parallelIndex?: number;
   parallelCount?: number;
 };
@@ -369,43 +348,7 @@ function appendWaitEventGraphEdges(
   }
 }
 
-/**
- * Subscribe 行からキャンバス辺を出す。id は配列 index（topic は重複し得る）。
- *
- * @param node 起点ノード
- * @param trackParallel 並列辺コレクタ
- * @param untitledTopic 空 topic のラベル
- */
-function appendWaitSubscribeGraphEdges(
-  node: DefinitionGraphNode,
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void,
-  untitledTopic: string
-): void {
-  if (node.type !== "wait" || node.subscribe === undefined) {
-    return;
-  }
-  node.subscribe.forEach((entry, index) => {
-    const trimmedTarget = entry.next?.trim();
-    if (!trimmedTarget) {
-      return;
-    }
-    const topicLabel = entry.topic.trim().length > 0 ? entry.topic.trim() : untitledTopic;
-    trackParallel({
-      id: `waitSubscribe:${node.name}:${index}`,
-      source: node.name,
-      target: trimmedTarget,
-      edgeKind: "waitSubscribe",
-      subscribeIndex: index,
-      eventName: topicLabel
-    });
-  });
-}
-
-function appendNodeGraphEdges(
-  node: DefinitionGraphNode,
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void,
-  untitledTopic: string
-): void {
+function appendNodeGraphEdges(node: DefinitionGraphNode, trackParallel: (edgeMeta: GraphEdgeMeta) => void): void {
   if (node.type === "action" && node.error?.trim()) {
     trackParallel({
       id: `error:${node.name}`,
@@ -447,13 +390,12 @@ function appendNodeGraphEdges(
     });
   }
   appendWaitEventGraphEdges(node, trackParallel);
-  appendWaitSubscribeGraphEdges(node, trackParallel, untitledTopic);
 }
 
-function toGraphEdges(document: DefinitionGraphDocument, untitledTopic: string): GraphEdgeMeta[] {
+function toGraphEdges(document: DefinitionGraphDocument): GraphEdgeMeta[] {
   const collector = createParallelEdgeCollector();
   for (const node of document.nodes) {
-    appendNodeGraphEdges(node, collector.trackParallel, untitledTopic);
+    appendNodeGraphEdges(node, collector.trackParallel);
   }
   return collector.finalize();
 }
@@ -532,7 +474,7 @@ function updateNode(document: DefinitionGraphDocument, nodeName: string, updater
   };
 }
 
-type WaitEditMode = "events" | "subscribe" | "legacy" | "conflict";
+type WaitEditMode = "events" | "legacy" | "conflict";
 
 /**
  * Wait ノードのインスペクタ編集モードを判定する。
@@ -545,25 +487,14 @@ function resolveWaitEditMode(node: DefinitionGraphNode): WaitEditMode {
     return "events";
   }
   const hasEventsProperty = node.events !== undefined;
-  const hasSubscribeProperty = node.subscribe !== undefined;
   const hasLegacyEvent = Boolean(node.event?.trim());
-  const hasEdges = (node.edges?.length ?? 0) > 0;
-  if (hasEventsProperty && hasSubscribeProperty) {
-    return "conflict";
-  }
-  if (hasSubscribeProperty && (hasLegacyEvent || hasEdges)) {
-    return "conflict";
-  }
-  if (hasSubscribeProperty) {
-    return "subscribe";
-  }
   if (hasEventsProperty && hasLegacyEvent) {
     return "conflict";
   }
   if (hasEventsProperty) {
     return "events";
   }
-  if (hasLegacyEvent || node.next?.trim() || hasEdges) {
+  if (hasLegacyEvent || node.next?.trim() || (node.edges?.length ?? 0) > 0) {
     return "legacy";
   }
   return "events";
@@ -652,7 +583,7 @@ export function DefinitionGraphEditor({
         layoutByName: new Map<string, { x: number; y: number; w: number; h: number }>()
       };
     }
-    const sourceEdges = toGraphEdges(document, labels.waitSubscribeUntitledTopic);
+    const sourceEdges = toGraphEdges(document);
     const layout = layoutGraph(
       toLayoutNodes(document),
       sourceEdges.map<LayoutEdgeInput>((edge) => ({
@@ -677,8 +608,6 @@ export function DefinitionGraphEditor({
         label = "branch";
       } else if (edge.edgeKind === "waitEvent") {
         label = edge.eventName ?? "event";
-      } else if (edge.edgeKind === "waitSubscribe") {
-        label = edge.eventName ?? labels.waitSubscribeUntitledTopic;
       }
       return {
         id: edge.id,
@@ -719,7 +648,7 @@ export function DefinitionGraphEditor({
       };
     });
     return { edges, edgeMap, layoutByName };
-  }, [document, labels.waitSubscribeUntitledTopic]);
+  }, [document]);
 
   useEffect(() => {
     if (!document) {
@@ -814,13 +743,8 @@ export function DefinitionGraphEditor({
       setGraphMessage(null);
       return;
     }
-    const waitMode = sourceNode.type === "wait" ? resolveWaitEditMode(sourceNode) : null;
-    if (waitMode === "conflict") {
-      setGraphMessage(labels.waitSubscribeConflictHint);
-      return;
-    }
     const nextDocument = updateNode(document, sourceNode.name, (node) => {
-      if (node.type === "wait" && (node.events !== undefined || node.subscribe !== undefined)) {
+      if (node.type === "wait" && node.events !== undefined) {
         return node;
       }
       if (node.type === "fork") {
@@ -850,9 +774,7 @@ export function DefinitionGraphEditor({
         edges: [...existing, { to: targetNodeName }]
       };
     });
-    if (waitMode === "subscribe") {
-      onDocumentChange(connectWaitSubscribeTarget(document, sourceNode.name, targetNodeName));
-    } else if (sourceNode.type === "wait" && sourceNode.events !== undefined) {
+    if (sourceNode.type === "wait" && sourceNode.events !== undefined) {
       onDocumentChange(connectWaitEventTarget(document, sourceNode.name, targetNodeName));
     } else {
       onDocumentChange(nextDocument);
@@ -929,8 +851,7 @@ export function DefinitionGraphEditor({
                 nodeName: meta.source,
                 edgeKind: meta.edgeKind,
                 edgeIndex: meta.edgeIndex,
-                eventName: meta.eventName,
-                subscribeIndex: meta.subscribeIndex
+                eventName: meta.eventName
               });
             }}
             onPaneClick={() => setSelection(null)}
@@ -1227,95 +1148,32 @@ function GraphNodeInspector({
       )}
       {node.type === "wait" && waitEditMode === "conflict" && (
         <div className="space-y-2">
-          <p className="text-xs text-rose-700">
-            {node.subscribe !== undefined && node.events !== undefined
-              ? labels.waitSubscribeConflictHint
-              : labels.waitEventsConflictHint}
-          </p>
-          {node.events !== undefined && (
-            <button
-              type="button"
-              className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
-              onClick={() => {
-                onDocumentChange(setWaitEvents(document, node.name, node.events ?? {}));
-              }}
-            >
-              {labels.waitConvertToEvents}
-            </button>
-          )}
-          {node.subscribe !== undefined && (
-            <button
-              type="button"
-              className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
-              onClick={() => {
-                onDocumentChange(
-                  setWaitSubscribe(
-                    document,
-                    node.name,
-                    node.subscribe && node.subscribe.length > 0
-                      ? node.subscribe
-                      : [{ topic: "", next: "" }]
-                  )
-                );
-              }}
-            >
-              {labels.waitResolveToSubscribe}
-            </button>
-          )}
+          <p className="text-xs text-rose-700">{labels.waitEventsConflictHint}</p>
+          <button
+            type="button"
+            className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+            onClick={() => {
+              onDocumentChange(setWaitEvents(document, node.name, node.events ?? {}));
+            }}
+          >
+            {labels.waitConvertToEvents}
+          </button>
         </div>
       )}
       {node.type === "wait" && waitEditMode === "events" && (
-        <div className="space-y-2">
-          <WaitEventsEditor
-            events={node.events ?? {}}
-            labels={{
-              waitEventsSectionTitle: labels.waitEventsSectionTitle,
-              waitEventNameLabel: labels.waitEventNameLabel,
-              waitEventTargetLabel: labels.waitEventTargetLabel,
-              waitEventsAdd: labels.waitEventsAdd,
-              waitEventsRemove: labels.waitEventsRemove
-            }}
-            onEventsChange={(events) => {
-              onDocumentChange(setWaitEvents(document, node.name, events));
-            }}
-          />
-          <button
-            type="button"
-            className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
-            onClick={() => {
-              onDocumentChange(switchWaitMode(document, node.name, "subscribe"));
-            }}
-          >
-            {labels.waitSwitchToSubscribe}
-          </button>
-        </div>
-      )}
-      {node.type === "wait" && waitEditMode === "subscribe" && (
-        <div className="space-y-2">
-          <WaitSubscribeEditor
-            entries={node.subscribe ?? []}
-            labels={{
-              waitSubscribeSectionTitle: labels.waitSubscribeSectionTitle,
-              waitSubscribeTopicLabel: labels.waitSubscribeTopicLabel,
-              waitSubscribeKeyLabel: labels.waitSubscribeKeyLabel,
-              waitSubscribeNextLabel: labels.waitSubscribeNextLabel,
-              waitSubscribeAdd: labels.waitSubscribeAdd,
-              waitSubscribeRemove: labels.waitSubscribeRemove
-            }}
-            onEntriesChange={(entries) => {
-              onDocumentChange(setWaitSubscribe(document, node.name, entries));
-            }}
-          />
-          <button
-            type="button"
-            className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
-            onClick={() => {
-              onDocumentChange(switchWaitMode(document, node.name, "events"));
-            }}
-          >
-            {labels.waitSwitchToEvents}
-          </button>
-        </div>
+        <WaitEventsEditor
+          events={node.events ?? {}}
+          labels={{
+            waitEventsSectionTitle: labels.waitEventsSectionTitle,
+            waitEventNameLabel: labels.waitEventNameLabel,
+            waitEventTargetLabel: labels.waitEventTargetLabel,
+            waitEventsAdd: labels.waitEventsAdd,
+            waitEventsRemove: labels.waitEventsRemove
+          }}
+          onEventsChange={(events) => {
+            onDocumentChange(setWaitEvents(document, node.name, events));
+          }}
+        />
       )}
       {node.type === "action" && (
         <label className="block text-xs">
@@ -1624,13 +1482,6 @@ function resolveSelectedEdgeTarget(
       }
       return { to: sourceNode.events[eventName] ?? "" };
     }
-    case "waitSubscribe": {
-      const subscribeIndex = selection.subscribeIndex;
-      if (subscribeIndex === undefined || sourceNode.subscribe === undefined) {
-        return null;
-      }
-      return { to: sourceNode.subscribe[subscribeIndex]?.next ?? "" };
-    }
     default:
       return (sourceNode.edges ?? [])[selection.edgeIndex ?? -1] ?? null;
   }
@@ -1663,11 +1514,6 @@ function applySelectedEdgeTarget(
         return document;
       }
       return setWaitEventTarget(document, sourceNode.name, selection.eventName, nextTarget);
-    case "waitSubscribe":
-      if (selection.subscribeIndex === undefined) {
-        return document;
-      }
-      return setWaitSubscribeTarget(document, sourceNode.name, selection.subscribeIndex, nextTarget);
     default:
       return updateNode(document, sourceNode.name, (node) => ({
         ...node,
@@ -1703,11 +1549,6 @@ function removeSelectedEdge(
         return document;
       }
       return removeWaitEvent(document, sourceNode.name, selection.eventName);
-    case "waitSubscribe":
-      if (selection.subscribeIndex === undefined) {
-        return document;
-      }
-      return removeWaitSubscribeRow(document, sourceNode.name, selection.subscribeIndex);
     default:
       return updateNode(document, sourceNode.name, (node) => ({
         ...node,

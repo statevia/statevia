@@ -60,18 +60,6 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
         `Node '${nodeName}': wait の events と edges は併用できません。遷移先は events に書いてください。`,
       waitEventTargetRequired: (nodeName: string, eventName: string) =>
         `Node '${nodeName}': events['${eventName}'] の遷移先が必須です。`,
-      waitEventsAndSubscribeTogether: (nodeName: string) =>
-        `Node '${nodeName}': wait の events と subscribe は併用できません。`,
-      waitSubscribeAndEventTogether: (nodeName: string) =>
-        `Node '${nodeName}': wait の subscribe と event は併用できません。`,
-      waitSubscribeCannotHaveEdges: (nodeName: string) =>
-        `Node '${nodeName}': wait の subscribe と edges は併用できません。遷移先は subscribe[].next に書いてください。`,
-      waitSubscribeRequired: (nodeName: string) =>
-        `Node '${nodeName}': wait.subscribe は 1 件以上必要です。`,
-      waitSubscribeTopicRequired: (nodeName: string, index: number) =>
-        `Node '${nodeName}': subscribe[${index}].topic は必須です。`,
-      waitSubscribeNextRequired: (nodeName: string, index: number) =>
-        `Node '${nodeName}': subscribe[${index}].next は必須です。`,
       forkBranchesRequired: (nodeName: string) => `Node '${nodeName}': fork は branches を2件以上指定してください。`,
       joinRequiresTransition: (nodeName: string) => `Node '${nodeName}': join は next または edges が必要です。`,
       joinModeInvalid: (nodeName: string) => `Node '${nodeName}': join.mode は 'all' のみ許可されます。`,
@@ -125,18 +113,6 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
       waitConvertToEvents: "events 形式へ変換",
       waitEventsConflictHint:
         "events と event が両方あるため編集できません。YAML を修正するか events 形式へ変換してください。",
-      waitSubscribeSectionTitle: "subscribe（topic → 遷移先）",
-      waitSubscribeTopicLabel: "topic",
-      waitSubscribeKeyLabel: "key（任意）",
-      waitSubscribeNextLabel: "遷移先ノード名",
-      waitSubscribeAdd: "購読行を追加",
-      waitSubscribeRemove: "行を削除",
-      waitSwitchToSubscribe: "Subscribe に切り替える（events は破棄）",
-      waitSwitchToEvents: "Signal に切り替える（subscribe は破棄）",
-      waitResolveToSubscribe: "subscribe 形式へ寄せる",
-      waitSubscribeConflictHint:
-        "events と subscribe を併用しているため編集できません。どちらかへ寄せてください。",
-      waitSubscribeUntitledTopic: "(topic)",
 
       schemaPathPlaceholder: "$.input.x または $.states.A.output.y",
       schemaLiteralOrPathPlaceholder: "リテラルまたは $.input.x",

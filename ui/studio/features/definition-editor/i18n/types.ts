@@ -54,12 +54,6 @@ export type DefinitionEditorFeatureUiText = {
       waitEventsAndEventTogether: (nodeName: string) => string;
       waitEventsCannotHaveEdges: (nodeName: string) => string;
       waitEventTargetRequired: (nodeName: string, eventName: string) => string;
-      waitEventsAndSubscribeTogether: (nodeName: string) => string;
-      waitSubscribeAndEventTogether: (nodeName: string) => string;
-      waitSubscribeCannotHaveEdges: (nodeName: string) => string;
-      waitSubscribeRequired: (nodeName: string) => string;
-      waitSubscribeTopicRequired: (nodeName: string, index: number) => string;
-      waitSubscribeNextRequired: (nodeName: string, index: number) => string;
       forkBranchesRequired: (nodeName: string) => string;
       joinRequiresTransition: (nodeName: string) => string;
       joinModeInvalid: (nodeName: string) => string;
@@ -104,17 +98,6 @@ export type DefinitionEditorFeatureUiText = {
       waitLegacyEventLabel: string;
       waitConvertToEvents: string;
       waitEventsConflictHint: string;
-      waitSubscribeSectionTitle: string;
-      waitSubscribeTopicLabel: string;
-      waitSubscribeKeyLabel: string;
-      waitSubscribeNextLabel: string;
-      waitSubscribeAdd: string;
-      waitSubscribeRemove: string;
-      waitSwitchToSubscribe: string;
-      waitSwitchToEvents: string;
-      waitResolveToSubscribe: string;
-      waitSubscribeConflictHint: string;
-      waitSubscribeUntitledTopic: string;
     };
     saved: {
       completePrefix: string;

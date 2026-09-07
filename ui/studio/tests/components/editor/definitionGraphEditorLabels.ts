@@ -39,16 +39,5 @@ export const definitionGraphEditorTestLabels: ComponentProps<typeof DefinitionGr
   waitEventsRemove: "remove row",
   waitLegacyEventLabel: "legacy event",
   waitConvertToEvents: "convert to events",
-  waitEventsConflictHint: "events and event conflict",
-  waitSubscribeSectionTitle: "subscribe",
-  waitSubscribeTopicLabel: "topic",
-  waitSubscribeKeyLabel: "key",
-  waitSubscribeNextLabel: "next",
-  waitSubscribeAdd: "add subscribe",
-  waitSubscribeRemove: "remove subscribe",
-  waitSwitchToSubscribe: "switch to subscribe",
-  waitSwitchToEvents: "switch to events",
-  waitResolveToSubscribe: "keep subscribe",
-  waitSubscribeConflictHint: "events and subscribe conflict",
-  waitSubscribeUntitledTopic: "(topic)"
+  waitEventsConflictHint: "events and event conflict"
 };
