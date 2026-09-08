@@ -372,13 +372,16 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             return false;
         }
 
-        instance.Dispose();
-
+        // Dispose が ActionCancellationToken をキャンセルするより先に Unload 例外で waiter を閉じる。
+        // 逆順だと RegisterWaitCancellation が TaskCanceledException を先に立て、
+        // Wait が Fact=Cancelled / terminal failure になる。
         if (_eventProviders.TryRemove(executionId, out var eventProvider))
         {
             eventProvider.OnNodeWaitRegistered = null;
             eventProvider.AbortForUnload();
         }
+
+        instance.Dispose();
 
         return true;
     }
@@ -407,7 +410,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                     await NotifyNodeCompletedAsync(instance.ExecutionId).ConfigureAwait(false);
                     return (Fact.Completed, result);
                 }
-                catch (ExecutionUnloadException)
+                catch (OperationCanceledException exception) when (IsParkUnloadCancellation(instance, exception))
                 {
                     return ((string?)null, (object?)null);
                 }
@@ -500,6 +503,15 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 #pragma warning restore CA1031
     }
 
+    /// <summary>
+    /// Unload park 由来のキャンセルか。明示 Cancel の <see cref="OperationCanceledException"/> とは区別する。
+    /// </summary>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="exception">捕捉したキャンセル例外。</param>
+    /// <returns>park（Unload）として完了事実を出さないとき <see langword="true"/>。</returns>
+    private static bool IsParkUnloadCancellation(ExecutionInstance instance, OperationCanceledException exception) =>
+        exception is ExecutionUnloadException || instance.IsUnloaded;
+
     private async Task ScheduleStateAsync(ExecutionInstance instance, EventProvider eventProvider, string stateName, string? fromNodeId, EdgeType? edgeType, object? input)
     {
         var def = instance.Definition;
@@ -569,7 +581,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                 _executionLog.LogStateCompleted(instance.ExecutionId, stateName, nodeId, Fact.Completed, sw.ElapsedMilliseconds);
                 return (Fact.Completed, o);
             }
-            catch (ExecutionUnloadException)
+            catch (OperationCanceledException exception) when (IsParkUnloadCancellation(instance, exception))
             {
                 sw.Stop();
                 return ((string?)null, (object?)null);
