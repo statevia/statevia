@@ -82,6 +82,55 @@ public sealed class ExecutionRuntimeCheckpointTests
         Assert.True(snapshot!.IsCompleted);
     }
 
+    /// <summary>
+    /// Wait 到達後の Unload は同じ Wait を Cancelled 完了せず、terminal failure にもしない。
+    /// </summary>
+    [Fact]
+    public async Task Unload_AfterWaitRegistered_DoesNotCompleteWaitAsCancelled()
+    {
+        // Arrange
+        var definition = CreateSingleWaitDefinition();
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 2);
+        var executionId = engine.Start(definition);
+        await WaitUntilAsync(() => engine.ExportCheckpoint(executionId)?.PendingWaits.Count == 1);
+
+        var completedAfterPark = 0;
+        engine.SetNodeCompletedHandler(_ =>
+        {
+            Interlocked.Increment(ref completedAfterPark);
+            return Task.CompletedTask;
+        });
+
+        // Act
+        Assert.True(engine.Unload(executionId));
+        await Task.Delay(200);
+
+        // Assert
+        Assert.Equal(0, completedAfterPark);
+        Assert.Null(engine.GetSnapshot(executionId));
+    }
+
+    /// <summary>明示 Cancel 中の Wait は従来どおり Cancelled 完了する（Unload park と区別する）。</summary>
+    [Fact]
+    public async Task CancelAsync_DuringWait_CompletesWaitAsCancelled()
+    {
+        // Arrange
+        var definition = CreateSingleWaitDefinition();
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 2);
+        var executionId = engine.Start(definition);
+        await WaitUntilAsync(() => engine.ExportCheckpoint(executionId)?.PendingWaits.Count == 1);
+
+        // Act
+        await engine.CancelAsync(executionId);
+        await WaitUntilAsync(() => engine.GetSnapshot(executionId)?.IsCancelled == true);
+
+        // Assert
+        var snapshot = engine.GetSnapshot(executionId);
+        Assert.NotNull(snapshot);
+        Assert.True(snapshot!.IsCancelled);
+        Assert.Contains("Cancelled", engine.ExportExecutionGraph(executionId), StringComparison.Ordinal);
+    }
+
     private static CompiledWorkflowDefinition CreateTwoStepDefinition() => new()
     {
         Name = "TwoStep",

@@ -42,6 +42,11 @@ public sealed class ExecutionInstance : IDisposable
     /// <summary>協調的キャンセルで停止したか。</summary>
     public bool IsCancelled { get; private set; }
 
+    /// <summary>
+    /// Unload により破棄済みか。park 用の CT キャンセルと明示 Cancel を区別する。
+    /// </summary>
+    internal bool IsUnloaded { get; private set; }
+
     /// <summary>実行中 Action に渡す協調 Cancel 用トークン。Unload 後は破棄済み。</summary>
     internal CancellationToken ActionCancellationToken => _actionCts.Token;
     /// <summary>失敗で停止したか。</summary>
@@ -140,6 +145,7 @@ public sealed class ExecutionInstance : IDisposable
     /// <remarks>Unload / Engine Dispose から呼ぶ。二重呼び出しは CTS 破棄済みとして無視する。</remarks>
     public void Dispose()
     {
+        IsUnloaded = true;
         try
         {
             _actionCts.Cancel();

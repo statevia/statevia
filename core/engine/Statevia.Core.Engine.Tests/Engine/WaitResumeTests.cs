@@ -1,3 +1,4 @@
+using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Engine;
 using Xunit;
 
@@ -146,5 +147,24 @@ public class WaitResumeTests
 
         // Assert
         await Assert.ThrowsAsync<TaskCanceledException>(async () => await waitTask);
+    }
+
+    /// <summary>
+    /// AbortForUnload が先に完了させた waiter は、後から CT をキャンセルしても ExecutionUnloadException のままである。
+    /// </summary>
+    [Fact]
+    public async Task AbortForUnload_ThenTokenCancel_KeepsExecutionUnloadException()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var provider = new EventProvider("wf1");
+        var waitTask = provider.WaitForEventAsync("ApproveTask", ["approve"], cts.Token);
+
+        // Act
+        provider.AbortForUnload();
+        await cts.CancelAsync();
+
+        // Assert
+        await Assert.ThrowsAsync<ExecutionUnloadException>(() => waitTask);
     }
 }

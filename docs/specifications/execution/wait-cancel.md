@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.5 |
-| 更新日 | 2026-09-01 |
+| Version | 1.5.6 |
+| 更新日 | 2026-09-08 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -15,7 +15,7 @@
 - **MUST**: 再開の正本は **ノードスコープ**（`executionId` + `nodeId` + `eventName`）。HTTP では `POST …/nodes/{nodeId}/resume`、`resumeKey` = イベント名。
 - **MUST**: `POST /v1/events` は Principal と `executions.write` 必須。不足は **403**。成功は **204**（0 件でも）。
 - **MUST**: Cancel は協調的とし、エンジンは状態実行を強制終了してはならない。
-- **MUST**: `Cancelled` 事実は実行が実際に停止したときのみ発行する。
+- **MUST**: `Cancelled` 事実は実行が実際に停止したときのみ発行する。durable Wait の Persist / Unload（park）直後に同じ Wait を `Cancelled` 完了してはならない。
 - **SHOULD**: 依存状態はキャンセル伝播の対象とする。
 - **禁止**: 利用者向け文書に `exit` 語彙を出さない。
 
@@ -31,7 +31,7 @@ Wait は定義の許可イベントのいずれかが発生するまで状態実
 - **定義**: `wait.events`（states）または nodes の `events`。コンパイル結果は **`WaitEventRouteTable`**。
 - **再開正本**: Engine `ResumeWaitNode(executionId, nodeId, eventName)`。`EventProvider` はノード単位の `WaitForEventAsync` / `Resume`。
 - **耐久配送**: `execution_work_items` の `Resume`（`mode=event`）は worker が checkpoint を hydrate した上でこの再開正本を呼び出す。HTTP Resume は当面、同じ正本を同期呼び出しする。Worker は Start / Resume をプロセス内 `Statevia:Runtime:Worker:MaxConcurrency`（既定 1）まで同時に claim し、Cancel は独立ループで処理する。処理中は work item / checkpoint 所有の lease を heartbeat 延長する。非 Wait Running が無い無進捗が `NoProgressTimeout`（既定 10 分）を超えたら Unload して work item を Complete する（長い Action は対象外）。プロセス死亡時は heartbeat 停止後に checkpoint `lease_until` 切れを Scheduler が検知し、`Resume mode=recovery` で再割当する。投影キューはグローバル直列のままなので、Worker 並列でも投影は遅延し得る。
-- **checkpoint**: ステップ完了ごとに runtime checkpoint を更新する。durable Wait 到達時は waits 投影・checkpoint 保存のうえ Engine から Unload し所有を解放する（suspend 通知でも同処理）。終端では不要な checkpoint を破棄する。
+- **checkpoint**: ステップ完了ごとに runtime checkpoint を更新する。durable Wait 到達時は waits 投影・checkpoint 保存のうえ Engine から Unload し所有を解放する（suspend 通知でも同処理）。Unload は進行中 Wait を `ExecutionUnloadException` で打ち切り、ノードは未完了のまま残す。`ExportCheckpoint` が null でも、既に Persist した waits / subscriptions を空や `Cancelled` 終端で消してはならない。終端では不要な checkpoint を破棄する。
 - **DelayWait**: 期限到達時は `Resume mode=event` を enqueue し、`eventName` は固定の `statevia.event.delay.completed`（`ExecutionWaitEventNames.DelayCompleted`）。`allowed_events` の先頭要素は使わない。
 - **許可外イベント・非アクティブ Wait・不明 nodeId**: 422（`InvalidOperationException` → API `ApiValidationException`）。
 - **FSM の事実**: 待機解消後に状態実行が正常終了すると、JoinTracker 等へ渡す事実は **`Completed`**。次状態の解決は **イベント名 + route table**（[fsm.md](fsm.md)）。
