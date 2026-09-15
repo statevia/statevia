@@ -1,0 +1,28 @@
+version: 1
+
+workflow:
+  id: capacity.l2.eventWait
+  name: CapacityL2EventWait
+  description: Capacity harness L2. Single-event Wait then resume.
+
+nodes:
+  - name: flow.start
+    type: start
+    label: start
+    next: flow.wait
+
+  - name: flow.wait
+    type: wait
+    label: wait
+    events:
+      go: flow.noop
+
+  - name: flow.noop
+    type: action
+    label: noop
+    action: statevia.action.builtin.execution.noop
+    next: flow.end
+
+  - name: flow.end
+    type: end
+    label: end

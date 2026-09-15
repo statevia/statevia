@@ -9,7 +9,7 @@ namespace Statevia.Core.Application.Services;
 /// Wait / イベント適用（Publish / Resume）と子 Wait リダイレクト入口。
 /// </summary>
 /// <remarks>
-/// <para><see cref="ExecutionService"/> Facade から委譲される。HTTP 契約は変更しない。</para>
+/// <para><see cref="ExecutionService"/> Facade から委譲される。投影がすでに終端の遅い Resume は 204（hydrate しない）。</para>
 /// <para>物理子終端 <c>child.completed</c> の Join 再評価は <see cref="ExecutionForkJoinCoordinator"/> へ委譲する。</para>
 /// <para>checkpoint 寿命の破棄判定は <see cref="ExecutionCheckpointService"/> を利用する。</para>
 /// </remarks>
@@ -340,7 +340,19 @@ internal sealed class ExecutionWaitEventService(
 
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
 
+        // 終端済みの遅い Resume は hydrate 422 にしない（204 冪等）。
+        if (ExecutionProjectionStatuses.IsTerminal(execution.Status))
+            return;
+
         await projection.DrainAsync(uuid.Value, ct).ConfigureAwait(false);
+
+        execution = await executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => executions.GetByIdAsync(uow, tenantId, uuid.Value, innerCt),
+            ct).ConfigureAwait(false);
+        if (execution is null)
+            throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
+        if (ExecutionProjectionStatuses.IsTerminal(execution.Status))
+            return;
 
         var clientEventId = ClientEventIdResolver.FromIdempotencyKey(idempotencyKey, idGenerator);
 

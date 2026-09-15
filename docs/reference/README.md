@@ -3,12 +3,14 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.1 |
-| 更新日 | 2026-07-08 |
+| Version | 1.2 |
+| 更新日 | 2026-09-08 |
 
 ---
 
 **調べ物** の辞書・一覧。Normative 要件は書かず、詳細は Specification へリンクする。
+
+**Version 1.2（2026-09-08）**: サービス容量の暫定指針を追加。
 
 ## ドキュメント
 
@@ -18,6 +20,7 @@
 | ログキー | [`logging-property-keys.md`](logging-property-keys.md) |
 | OpenAPI / Scalar | [`api-openapi.md`](api-openapi.md) |
 | 環境変数・設定（抜粋） | [`environment-variables.md`](environment-variables.md) |
+| サービス容量（暫定） | [`service-capacity.md`](service-capacity.md) |
 | HTTP エラーコード | [`error-codes.md`](error-codes.md) |
 | Permission keys | [`permission-keys.md`](permission-keys.md) |
 

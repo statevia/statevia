@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.22 |
-| 更新日 | 2026-09-05 |
+| Version | 1.23 |
+| 更新日 | 2026-09-09 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -25,6 +25,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.23（2026-09-09）**: `POST …/nodes/{nodeId}/resume` は投影がすでに終端なら 204（hydrate しない）。非終端で Engine 未ロードかつ checkpoint なしは従来どおり 422。
 
 **Version 1.22（2026-09-05）**: 識別子・表示名を ASCII allowlist で検証する。定義名 100、イベント / resumeKey 64、topic / 非空 key 256。`X-Idempotency-Key` は印字可能 ASCII。パスワードと payload は対象外。既存行の GET は落とさない。
 
@@ -427,6 +429,8 @@ Request（JSON）:
 - **`resumeKey`**: 必須。Wait の **許可イベント名**（`allowedEvents` / `WaitEventRouteTable` のキー）。ASCII 識別子（1〜64）。空白のみ・非 ASCII は 422。
 - **`nodeId`**: パス上の実行グラフノード ID（待機中 Wait）。
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
+- 投影 status がすでに終端（`Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
+- 非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（従来どおり）。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。
 - Response: 204 No Content。404 は実行未存在。詳細は `docs/specifications/data-integration.md` §7。
 

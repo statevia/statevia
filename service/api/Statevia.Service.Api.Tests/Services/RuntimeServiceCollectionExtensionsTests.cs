@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Statevia.Core.Application.Contracts.Services;
 using Statevia.Runtime.DependencyInjection;
 using Statevia.Runtime.Services;
 
@@ -34,7 +35,7 @@ public sealed class RuntimeServiceCollectionExtensionsTests
         Assert.Contains(typeof(ExecutionWorkItemWorkerHostedService), hostedImplementations);
     }
 
-    /// <summary>AddStateviaSchedulerHost は Persistence と Scheduler を登録する。</summary>
+    /// <summary>AddStateviaSchedulerHost は Common（IIdGenerator）・Persistence・Scheduler を登録する。</summary>
     [Fact]
     public void AddStateviaSchedulerHost_WithConnectionString_RegistersSchedulers()
     {
@@ -55,6 +56,7 @@ public sealed class RuntimeServiceCollectionExtensionsTests
             .ToList();
         Assert.Contains(typeof(DelayWaitSchedulerHostedService), hostedImplementations);
         Assert.Contains(typeof(ExecutionOwnershipRecoveryHostedService), hostedImplementations);
+        Assert.Contains(services, static descriptor => descriptor.ServiceType == typeof(IIdGenerator));
     }
 
     /// <summary>null 引数は ArgumentNullException になる。</summary>
