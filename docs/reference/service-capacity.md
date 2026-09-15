@@ -146,8 +146,6 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 | Engine ステート並列 | `MaxParallelism` 既定 4 | 同時 execution 数の上限ではない |
 | 投影キュー | 有界・1 コンシューマ・debounce 既定 50ms | `ExecutionProjectionQueue:*` |
 
-
-
 ## 関連設定
 
 | キー | 容量との関係 |
