@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Concept |
-| Version | 1.5.5 |
-| 更新日 | 2026-09-01 |
-| 関連 | [../specifications/data-integration.md](../specifications/data-integration.md), [../specifications/execution/fork-join.md](../specifications/execution/fork-join.md) |
+| Version | 1.5.6 |
+| 更新日 | 2026-09-08 |
+| 関連 | [../specifications/data-integration.md](../specifications/data-integration.md), [../specifications/execution/fork-join.md](../specifications/execution/fork-join.md), [../reference/service-capacity.md](../reference/service-capacity.md) |
 
 ---
+
+**Version 1.5.6（2026-09-08）**: 暫定容量指針と負荷計測ガイドへの導線を追加。
 
 Statevia は実行の進行を **PostgreSQL** 上の projection と **event_store** で支えます。Engine 自体はインメモリで動きますが、Service API がトランザクション境界を持ち、開始・キャンセル・publish 等のミューテーションを durable に記録します。Wait で停止した実行はランタイムチェックポイントから hydrate でき、非同期の再開要求は耐久ワークキューで配送します。
 
@@ -68,3 +70,5 @@ Hosted Fork の詳細は [fork-join.md](../specifications/execution/fork-join.md
 - Fork / Join（物理子・合成読みモデル）: [specifications/execution/fork-join.md](../specifications/execution/fork-join.md)
 - DB スキーマ参照: [reference/database-schema.md](../reference/database-schema.md)
 - Event Store の設計判断: [decisions/event-store.md](../decisions/event-store.md)
+- 暫定容量指針: [reference/service-capacity.md](../reference/service-capacity.md)
+- 負荷・耐久計測: [guides/capacity-load-testing.md](../guides/capacity-load-testing.md)

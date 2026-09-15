@@ -463,6 +463,8 @@ public sealed class ExecutionServiceTests
     {
         public ExecutionRow? ByIdResult { get; set; }
         public ExecutionGraphSnapshotRow? SnapshotByExecutionId { get; set; }
+        public int GetByIdCalls { get; private set; }
+        public Action<ExecutionRow, int>? OnGetById { get; set; }
 
         public List<(ExecutionRow Execution, ExecutionGraphSnapshotRow Snapshot)> Added { get; } = [];
         public List<(Guid ExecutionId, string Status, bool? CancelRequested, string GraphJson)> Updates { get; } = [];
@@ -472,6 +474,9 @@ public sealed class ExecutionServiceTests
         {
             _ = uow;
             await Task.Yield(); // async boundary for coverage
+            GetByIdCalls++;
+            if (ByIdResult is not null)
+                OnGetById?.Invoke(ByIdResult, GetByIdCalls);
             return ByIdResult;
         }
 
@@ -3715,6 +3720,111 @@ public sealed class ExecutionServiceTests
         Assert.Equal("Cancelled", executionRepo.Updates[0].Status);
         Assert.True(executionRepo.Updates[0].CancelRequested);
         Assert.Equal(engine.GraphJsonToReturn, executionRepo.Updates[0].GraphJson);
+    }
+
+    /// <summary>投影がすでに Completed の遅い Resume は 204 相当で終わり、Engine を呼ばない。</summary>
+    [Fact]
+    public async Task ResumeNodeAsync_WhenAlreadyCompleted_DoesNotCallResumeWaitNode()
+    {
+        var executionId = Guid.NewGuid();
+        using var sqlite = new SqliteTestDatabase();
+        var engine = new FakeExecutionEngine { SnapshotToReturn = null };
+        var executionRepo = new FakeExecutionRepository
+        {
+            ByIdResult = new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.T1TenantId,
+                DefinitionId = Guid.NewGuid(),
+                Status = "Completed",
+                StartedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CancelRequested = false,
+                RestartLost = false
+            }
+        };
+
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService { ResolveResultExecution = executionId },
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(Guid.NewGuid()),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = new StubDefinitionRepository(),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+            });
+
+        await sut.ResumeNodeAsync(
+            idOrUuid: "X",
+            nodeId: "node-1",
+            resumeKey: "go",
+            idempotencyKey: null,
+            new CommandRequestContext("POST", "/v1/executions"),
+            CancellationToken.None);
+
+        Assert.Null(engine.ResumeWaitNodeLastExecutionId);
+        Assert.Empty(executionRepo.Updates);
+    }
+
+    /// <summary>Drain 後に Completed になった遅い Resume も hydrate せず終わる。</summary>
+    [Fact]
+    public async Task ResumeNodeAsync_WhenCompletedAfterDrain_DoesNotCallResumeWaitNode()
+    {
+        var executionId = Guid.NewGuid();
+        using var sqlite = new SqliteTestDatabase();
+        var engine = new FakeExecutionEngine { SnapshotToReturn = null };
+        var executionRepo = new FakeExecutionRepository
+        {
+            ByIdResult = new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.T1TenantId,
+                DefinitionId = Guid.NewGuid(),
+                Status = "Running",
+                StartedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CancelRequested = false,
+                RestartLost = false
+            },
+            OnGetById = static (row, call) =>
+            {
+                if (call >= 2)
+                    row.Status = "Completed";
+            }
+        };
+
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService { ResolveResultExecution = executionId },
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(Guid.NewGuid()),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = new StubDefinitionRepository(),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+            });
+
+        await sut.ResumeNodeAsync(
+            idOrUuid: "X",
+            nodeId: "node-1",
+            resumeKey: "go",
+            idempotencyKey: null,
+            new CommandRequestContext("POST", "/v1/executions"),
+            CancellationToken.None);
+
+        Assert.Null(engine.ResumeWaitNodeLastExecutionId);
+        Assert.Empty(executionRepo.Updates);
     }
 
     /// <summary>一覧で表示用識別子が空値の行は識別子文字列を表示値に使う。</summary>

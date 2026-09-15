@@ -74,5 +74,7 @@ Thumbs.db
 
 # --- リポジトリ固有の生成物 ---
 docs/out/
+# 容量計測の生結果（公開しない）
+tools/capacity/results/
 # ビルドで copy するリファレンス Module DLL（実行時配置）
 modules/default/statevia.action.reference.*/

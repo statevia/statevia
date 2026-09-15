@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.6 |
-| 更新日 | 2026-09-08 |
+| Version | 1.5.7 |
+| 更新日 | 2026-09-09 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -34,6 +34,7 @@ Wait は定義の許可イベントのいずれかが発生するまで状態実
 - **checkpoint**: ステップ完了ごとに runtime checkpoint を更新する。durable Wait 到達時は waits 投影・checkpoint 保存のうえ Engine から Unload し所有を解放する（suspend 通知でも同処理）。Unload は進行中 Wait を `ExecutionUnloadException` で打ち切り、ノードは未完了のまま残す。`ExportCheckpoint` が null でも、既に Persist した waits / subscriptions を空や `Cancelled` 終端で消してはならない。終端では不要な checkpoint を破棄する。
 - **DelayWait**: 期限到達時は `Resume mode=event` を enqueue し、`eventName` は固定の `statevia.event.delay.completed`（`ExecutionWaitEventNames.DelayCompleted`）。`allowed_events` の先頭要素は使わない。
 - **許可外イベント・非アクティブ Wait・不明 nodeId**: 422（`InvalidOperationException` → API `ApiValidationException`）。
+- **遅い Resume**: 投影がすでに終端（Completed / Failed / Cancelled）なら 204（hydrate しない）。非終端で Engine 未ロードかつ checkpoint なしは 422。
 - **FSM の事実**: 待機解消後に状態実行が正常終了すると、JoinTracker 等へ渡す事実は **`Completed`**。次状態の解決は **イベント名 + route table**（[fsm.md](fsm.md)）。
 - **監査**: Wait 完了 output に `{ "event": "<eventName>" }` を載せ得る（遷移判定には使わない）。
 

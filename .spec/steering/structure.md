@@ -10,6 +10,7 @@ ui/studio/             # Web ダッシュボード（Next.js — @statevia/studi
 tests/                 # 横断テスト（Architecture.Tests）
 docs/                  # 契約・運用・開発ガイド
 scripts/               # ビルド・運用スクリプト
+tools/capacity/        # 容量計測ハーネス（CI 常時実行外）
 ```
 
 ## Core（`core/`）
@@ -65,6 +66,12 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 - **Application ↔ Infrastructure**: `Application.Contracts` のポート越しのみ。Infrastructure が実装を提供。
 - **Service ↔ Core/Infrastructure**: DI で結合。Service は HTTP/gRPC 境界のみ担当。
 - **UI ↔ Service**: HTTP（プロキシ）のみ。DB に直接接続しない。
+
+## Tools（`tools/`）
+
+| 配置 | 役割 |
+| --- | --- |
+| `tools/capacity/` | Service API 向け容量計測ハーネス。公開件数の正本は `docs/reference/service-capacity.md`。CI 常時実行には載せない |
 
 ## Documentation & Specs
 

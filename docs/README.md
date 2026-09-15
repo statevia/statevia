@@ -45,7 +45,7 @@
 | **実行する** | [getting-started.md](guides/getting-started.md)、[specifications/api-http.md](specifications/api-http.md) |
 | **状態を確認する** | [ui-user-guide.md](guides/ui-user-guide.md)、[specifications/ui/visual.md](specifications/ui/visual.md) |
 | **拡張する（Module / Engine）** | [engine-standalone-guide.md](guides/engine-standalone-guide.md)、[specifications/actions/module-zip-layout.md](specifications/actions/module-zip-layout.md) |
-| **運用する** | [operations-docker.md](guides/operations-docker.md)、[operations-tenant-bootstrap.md](guides/operations-tenant-bootstrap.md) |
+| **運用する** | [operations-docker.md](guides/operations-docker.md)、[operations-tenant-bootstrap.md](guides/operations-tenant-bootstrap.md)、[capacity-load-testing.md](guides/capacity-load-testing.md) |
 
 一覧: [guides/README.md](guides/README.md)
 
@@ -68,6 +68,7 @@ Guide のあと、なぜそうなっているかを理解する。
 | DB スキーマ | [database-schema.md](reference/database-schema.md) |
 | OpenAPI / Scalar | [api-openapi.md](reference/api-openapi.md) |
 | 環境変数（抜粋） | [environment-variables.md](reference/environment-variables.md) |
+| サービス容量（暫定） | [service-capacity.md](reference/service-capacity.md) |
 | HTTP エラーコード | [error-codes.md](reference/error-codes.md) |
 | Permission keys | [permission-keys.md](reference/permission-keys.md) |
 

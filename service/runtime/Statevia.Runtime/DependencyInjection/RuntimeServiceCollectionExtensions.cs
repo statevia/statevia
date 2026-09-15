@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Statevia.Core.Application.Contracts.Security;
 using Statevia.Infrastructure.Common;
+using Statevia.Infrastructure.Common.DependencyInjection;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Runtime.Configuration;
@@ -13,7 +14,7 @@ namespace Statevia.Runtime.DependencyInjection;
 public static class RuntimeServiceCollectionExtensions
 {
     /// <summary>
-    /// Scheduler 専用ホスト向けに Persistence と DelayWait / OwnershipRecovery を登録する。
+    /// Scheduler 専用ホスト向けに Common（IIdGenerator）・Persistence・DelayWait / OwnershipRecovery を登録する。
     /// </summary>
     /// <remarks>
     /// システム全体の wait / ownership をスキャンするためテナントフィルタは無効化する。
@@ -28,6 +29,7 @@ public static class RuntimeServiceCollectionExtensions
         var connectionString = DatabaseConnection.Resolve(configuration);
         services.AddSingleton<ITenantQueryFilterOptions>(DisabledTenantQueryFilterOptions.Instance);
         services.AddSingleton<ITenantContextAccessor>(NullTenantContextAccessor.Instance);
+        services.AddStateviaInfrastructureCommon();
         services.AddStateviaInfrastructurePersistence(connectionString);
         services.AddStateviaRuntimeOptions(configuration);
         services.AddStateviaRuntimeSchedulers();
