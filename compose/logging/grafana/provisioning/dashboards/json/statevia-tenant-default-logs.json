@@ -1,0 +1,412 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "description": "Development シード default テナント（Loki Org = tenants.tenant_id）のコンテナログ。オペレータ Org は statevia ops logs。",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [{
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "fillOpacity": 80,
+                        "showPoints": "never",
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 16,
+                "x": 0,
+                "y": 0
+            },
+            "id": 1,
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "sum by (service) (count_over_time({job=\"statevia\", service=~\"$service\"}[1m]))",
+                "legendFormat": "{{service}}",
+                "queryType": "range",
+                "refId": "A"
+            }],
+            "title": "Log volume (1m)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "noValue": "0",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 0
+            },
+            "id": 3,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "sum(count_over_time({job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"Error|Critical\"[$__range]))",
+                "queryType": "instant",
+                "refId": "A"
+            }],
+            "title": "Error / Critical (range)",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "fillOpacity": 80,
+                        "showPoints": "never",
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 8
+            },
+            "id": 4,
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "sum by (State_statusCode) (count_over_time({job=\"statevia\", service=~\"$service\"} | json | EventId=`4012` [1m]))",
+                "legendFormat": "{{State_statusCode}}",
+                "queryType": "range",
+                "refId": "A"
+            }],
+            "title": "HTTP complete by status (EventId 4012)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "fillOpacity": 80,
+                        "showPoints": "never",
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 8
+            },
+            "id": 5,
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "sum by (LogLevel) (count_over_time({job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"$level\" [1m]))",
+                "legendFormat": "{{LogLevel}}",
+                "queryType": "range",
+                "refId": "A"
+            }],
+            "title": "LogLevel volume (1m)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 16
+            },
+            "id": 6,
+            "options": {
+                "dedupStrategy": "none",
+                "enableLogDetails": true,
+                "prettifyLogMessage": false,
+                "showCommonLabels": false,
+                "showLabels": true,
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "{job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"Error|Critical\" | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\"",
+                "maxLines": 100,
+                "queryType": "range",
+                "refId": "A"
+            }],
+            "title": "Error / Critical logs",
+            "type": "logs"
+        },
+        {
+            "datasource": {
+                "type": "loki",
+                "uid": "${loki}"
+            },
+            "gridPos": {
+                "h": 14,
+                "w": 24,
+                "x": 0,
+                "y": 26
+            },
+            "id": 2,
+            "options": {
+                "dedupStrategy": "none",
+                "enableLogDetails": true,
+                "prettifyLogMessage": false,
+                "showCommonLabels": false,
+                "showLabels": true,
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true
+            },
+            "targets": [{
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "editorMode": "code",
+                "expr": "{job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"$level\" | Category !~ \"$categoryExclude\" | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\"",
+                "maxLines": 200,
+                "queryType": "range",
+                "refId": "A"
+            }],
+            "title": "Logs",
+            "type": "logs"
+        }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "tags": ["statevia", "logging", "tenant"],
+    "templating": {
+        "list": [{
+                "current": {
+                    "text": "statevia-tenant-default",
+                    "value": "statevia-tenant-default"
+                },
+                "hide": 0,
+                "includeAll": false,
+                "label": "Loki",
+                "multi": false,
+                "name": "loki",
+                "options": [],
+                "query": "loki",
+                "refresh": 1,
+                "regex": "/statevia/",
+                "type": "datasource"
+            },
+            {
+                "allValue": ".+",
+                "current": {
+                    "selected": true,
+                    "text": ["All"],
+                    "value": ["$__all"]
+                },
+                "datasource": {
+                    "type": "loki",
+                    "uid": "${loki}"
+                },
+                "definition": "label_values({job=\"statevia\"}, service)",
+                "includeAll": true,
+                "label": "service",
+                "multi": true,
+                "name": "service",
+                "query": "label_values({job=\"statevia\"}, service)",
+                "refresh": 2,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "current": {
+                    "selected": true,
+                    "text": "All",
+                    "value": ".+"
+                },
+                "includeAll": false,
+                "label": "LogLevel",
+                "multi": false,
+                "name": "level",
+                "options": [{
+                        "selected": true,
+                        "text": "All",
+                        "value": ".+"
+                    },
+                    {
+                        "selected": false,
+                        "text": "Error / Critical",
+                        "value": "Error|Critical"
+                    },
+                    {
+                        "selected": false,
+                        "text": "Warning",
+                        "value": "Warning"
+                    },
+                    {
+                        "selected": false,
+                        "text": "Information",
+                        "value": "Information"
+                    },
+                    {
+                        "selected": false,
+                        "text": "Debug",
+                        "value": "Debug"
+                    }
+                ],
+                "query": "All : .+,Error / Critical : Error|Critical,Warning : Warning,Information : Information,Debug : Debug",
+                "type": "custom"
+            },
+            {
+                "current": {
+                    "selected": true,
+                    "text": "Hide EF Core SQL",
+                    "value": "Microsoft.EntityFrameworkCore.*"
+                },
+                "includeAll": false,
+                "label": "Category exclude",
+                "multi": false,
+                "name": "categoryExclude",
+                "options": [{
+                        "selected": true,
+                        "text": "Hide EF Core SQL",
+                        "value": "Microsoft.EntityFrameworkCore.*"
+                    },
+                    {
+                        "selected": false,
+                        "text": "(none)",
+                        "value": ".^"
+                    }
+                ],
+                "query": "Hide EF Core SQL : Microsoft.EntityFrameworkCore.*,(none) : .^",
+                "type": "custom"
+            }
+        ]
+    },
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "statevia default tenant logs",
+    "uid": "statevia-tenant-default-logs",
+    "version": 1
+}

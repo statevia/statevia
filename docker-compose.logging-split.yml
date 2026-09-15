@@ -1,0 +1,36 @@
+# docker-compose.logging.yml の Worker / Scheduler 向け追記。
+# 単独では使わない。split-runtime と同時に指定する。
+#   docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
+#     -f docker-compose.logging.yml -f docker-compose.logging-split.yml up -d
+
+x-fluentd-logging: &fluentd-logging
+  driver: fluentd
+  options: &fluentd-options
+    fluentd-address: ${STATEVIA_FLUENTD_ADDRESS:-localhost:24224}
+    fluentd-async: "true"
+    fluentd-retry-wait: "1s"
+    fluentd-max-retries: "30"
+    fluentd-sub-second-precision: "true"
+
+services:
+  scheduler:
+    environment:
+      Logging__Console__FormatterName: json
+    logging:
+      <<: *fluentd-logging
+      options:
+        <<: *fluentd-options
+        tag: scheduler
+    depends_on:
+      - fluent-bit
+
+  worker:
+    environment:
+      Logging__Console__FormatterName: json
+    logging:
+      <<: *fluentd-logging
+      options:
+        <<: *fluentd-options
+        tag: worker
+    depends_on:
+      - fluent-bit

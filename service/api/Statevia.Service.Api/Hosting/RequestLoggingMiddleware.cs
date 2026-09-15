@@ -40,6 +40,26 @@ internal sealed class RequestLoggingMiddleware
                 (context, traceId));
         }
 
+        if (ShouldSkipRequestLogging(context.Request.Path))
+        {
+            try
+            {
+                await _next(context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                TryLog(() =>
+                    logger.HttpRequestUnhandledException(
+                        ex,
+                        traceId,
+                        ex.GetType().FullName,
+                        ex.Message));
+                throw;
+            }
+
+            return;
+        }
+
         var tenantId = tenantContextAccessor.TenantId;
         var path = (context.Request.PathBase + context.Request.Path).Value ?? "";
         var queryForLog = BuildQueryForLog(context.Request.QueryString, opts);
@@ -301,4 +321,10 @@ internal sealed class RequestLoggingMiddleware
             return false;
         return string.Equals(t, traceId, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// 死活プローブの開始・完了ログを出さない。テナント解決スキップ（login / swagger 等）より狭い。
+    /// </summary>
+    private static bool ShouldSkipRequestLogging(PathString path) =>
+        path.StartsWithSegments("/v1/health", StringComparison.OrdinalIgnoreCase);
 }
