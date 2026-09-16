@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Definition;
@@ -48,6 +49,52 @@ public sealed partial class ExecutionEngineLoggingTests
         Assert.Contains(sink.Entries, e => e.Level == LogLevel.Error && e.Message.Contains("State execute failed", StringComparison.Ordinal));
         Assert.Contains(sink.Entries, e => e.Level == LogLevel.Information && e.Message.Contains("Fact=Failed", StringComparison.Ordinal));
         Assert.Contains(sink.Entries, e => e.Level == LogLevel.Error && e.Message.Contains("Execution terminal failure", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// 協調 Cancel の実行終端は Information であり、terminal failure（Error）を出さないことを検証する。
+    /// エンジンはユーザー操作とサービス起因を区別しない。
+    /// </summary>
+    [Fact]
+    public async Task Logging_Cancel_EmitsInformationAndDoesNotEmitTerminalFailure()
+    {
+        // Arrange
+        var sink = new ListLogger();
+        var def = CreateDefinitionWithCancellableDelayState();
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 1, executionLogger: sink);
+        var id = engine.Start(def);
+        await Task.Delay(50);
+
+        // Act
+        await engine.CancelAsync(id);
+        ExecutionSnapshot? snapshot = null;
+        var elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < TimeSpan.FromSeconds(2))
+        {
+            snapshot = engine.GetSnapshot(id);
+            if (snapshot is { IsCancelled: true, ActiveStates.Count: 0 })
+            {
+                break;
+            }
+
+            await Task.Delay(20);
+        }
+
+        elapsed.Stop();
+
+        // Assert
+        Assert.NotNull(snapshot);
+        Assert.True(snapshot.IsCancelled);
+        Assert.Contains(
+            sink.Entries,
+            e => e.Level == LogLevel.Information && e.Message.Contains("Execution cancel requested", StringComparison.Ordinal));
+        Assert.Contains(
+            sink.Entries,
+            e => e.Level == LogLevel.Information && e.Message.Contains("Execution cancelled", StringComparison.Ordinal) && e.Message.Contains("Fact=Cancelled", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            sink.Entries,
+            e => e.Message.Contains("Execution terminal failure", StringComparison.Ordinal));
+        Assert.DoesNotContain(sink.Entries, e => e.Level == LogLevel.Error);
     }
 
     /// <summary>Join 完了ログに ElapsedMs が含まれないことを検証する。</summary>
@@ -299,6 +346,23 @@ public sealed partial class ExecutionEngineLoggingTests
         })
     };
 
+    private static CompiledWorkflowDefinition CreateDefinitionWithCancellableDelayState() => new()
+    {
+        Name = "Cancel",
+        Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
+        {
+            ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
+        },
+        ForkTable = new Dictionary<string, IReadOnlyList<string>>(),
+        JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
+        WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
+        InitialState = "Start",
+        StateExecutorFactory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>
+        {
+            ["Start"] = DefaultStateExecutor.Create(new CancellableDelayState())
+        })
+    };
+
     private static CompiledWorkflowDefinition CreateDefinitionWithFailingState() => new()
     {
         Name = "Fail",
@@ -362,6 +426,15 @@ public sealed partial class ExecutionEngineLoggingTests
         {
             LogStateContextUserMessage(ctx.Logger);
             return Task.FromResult(Unit.Value);
+        }
+    }
+
+    private sealed class CancellableDelayState : IState<Unit, Unit>
+    {
+        public async Task<Unit> ExecuteAsync(StateContext ctx, Unit _, CancellationToken ct)
+        {
+            await Task.Delay(5000, ct).ConfigureAwait(false);
+            return Unit.Value;
         }
     }
 

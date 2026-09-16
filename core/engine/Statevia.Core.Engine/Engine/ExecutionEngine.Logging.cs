@@ -54,9 +54,15 @@ public sealed partial class ExecutionEngine
             SafeLog(() =>
                 ExecutionLog.ExecutionCompleted(_logger, executionId, definitionName));
 
+        /// <summary>Fact=Failed による実行終端（運用者が対応すべき想定外）。</summary>
         public void LogExecutionTerminalFailure(string executionId, string definitionName, string stateName, string fact) =>
             SafeLog(() =>
                 ExecutionLog.ExecutionTerminalFailure(_logger, executionId, definitionName, stateName, fact));
+
+        /// <summary>Fact=Cancelled による実行終端。エンジンは Cancel 理由を区別しないため Information。</summary>
+        public void LogExecutionCancelled(string executionId, string definitionName, string stateName, string fact) =>
+            SafeLog(() =>
+                ExecutionLog.ExecutionCancelled(_logger, executionId, definitionName, stateName, fact));
 
         /// <summary>state input のフォールバック等、継続可能だが入力品質に注意が必要な状況（入力評価警告）。</summary>
         public void LogWarningInputEvaluation(string executionId, string stateName, string inputKey, string reason) =>

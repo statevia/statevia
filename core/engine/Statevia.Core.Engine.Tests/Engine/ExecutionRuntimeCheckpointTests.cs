@@ -83,7 +83,7 @@ public sealed class ExecutionRuntimeCheckpointTests
     }
 
     /// <summary>
-    /// Wait 到達後の Unload は同じ Wait を Cancelled 完了せず、terminal failure にもしない。
+    /// Wait 到達後の Unload は同じ Wait を Cancelled 完了せず、実行終端ログ（Cancelled / terminal failure）にもしない。
     /// </summary>
     [Fact]
     public async Task Unload_AfterWaitRegistered_DoesNotCompleteWaitAsCancelled()
