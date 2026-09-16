@@ -374,7 +374,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 
         // Dispose が ActionCancellationToken をキャンセルするより先に Unload 例外で waiter を閉じる。
         // 逆順だと RegisterWaitCancellation が TaskCanceledException を先に立て、
-        // Wait が Fact=Cancelled / terminal failure になる。
+        // Wait が Fact=Cancelled で実行終端になる。
         if (_eventProviders.TryRemove(executionId, out var eventProvider))
         {
             eventProvider.OnNodeWaitRegistered = null;
@@ -696,6 +696,28 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 #pragma warning restore CA1031
     }
 
+    /// <summary>
+    /// Failed 終端は Error、Cancelled 終端は Information。エンジンは Cancel 理由を区別しない。
+    /// </summary>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="stateName">終端になった状態名。</param>
+    /// <param name="fact"><see cref="Fact.Failed"/> または <see cref="Fact.Cancelled"/>。</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="fact"/> が Failed / Cancelled 以外。</exception>
+    private void LogTerminalFact(ExecutionInstance instance, string stateName, string fact)
+    {
+        switch (fact)
+        {
+            case Fact.Failed:
+                _executionLog.LogExecutionTerminalFailure(instance.ExecutionId, instance.Definition.Name, stateName, fact);
+                return;
+            case Fact.Cancelled:
+                _executionLog.LogExecutionCancelled(instance.ExecutionId, instance.Definition.Name, stateName, fact);
+                return;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(fact), fact, "Expected Failed or Cancelled.");
+        }
+    }
+
     private void ProcessFact(ExecutionInstance instance, EventProvider eventProvider, string stateName, string fact, object? output, string nodeId)
     {
         var readyJoin = instance.JoinTracker.RecordFact(stateName, fact, output, nodeId);
@@ -718,7 +740,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         {
             instance.MarkFailed();
             instance.MarkCancelled();
-            _executionLog.LogExecutionTerminalFailure(instance.ExecutionId, instance.Definition.Name, stateName, fact);
+            LogTerminalFact(instance, stateName, fact);
             return;
         }
 

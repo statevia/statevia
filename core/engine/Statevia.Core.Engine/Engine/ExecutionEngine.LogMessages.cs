@@ -57,5 +57,8 @@ public sealed partial class ExecutionEngine
 
         [LoggerMessage(EventId = 5015, Level = LogLevel.Information, Message = "Execution cancel suppressed transition ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} Fact={Fact}")]
         public static partial void ExecutionCancelSuppressedTransition(ILogger logger, string executionId, string definitionName, string stateName, string fact);
+
+        [LoggerMessage(EventId = 5016, Level = LogLevel.Information, Message = "Execution cancelled ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} Fact={Fact}")]
+        public static partial void ExecutionCancelled(ILogger logger, string executionId, string definitionName, string stateName, string fact);
     }
 }
