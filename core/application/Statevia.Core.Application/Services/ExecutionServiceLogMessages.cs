@@ -165,8 +165,8 @@ internal static partial class ExecutionServiceLogMessages
     [LoggerMessage(
         EventId = 3006,
         Level = LogLevel.Information,
-        Message = "Persisted runtime checkpoint and unloaded execution after start-sync. ExecutionId={executionId}")]
-    public static partial void CheckpointUnloadedAfterStartSync(this ILogger logger, Guid executionId);
+        Message = "Persisted runtime checkpoint and unloaded execution after start-sync. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void CheckpointUnloadedAfterStartSync(this ILogger logger, Guid executionId, Guid tenantId);
 
     [LoggerMessage(
         EventId = 3007,
@@ -277,30 +277,30 @@ internal static partial class ExecutionServiceLogMessages
     [LoggerMessage(
         EventId = 3022,
         Level = LogLevel.Information,
-        Message = "Terminated unstarted execution as Cancelled without hydrate. ExecutionId={executionId}")]
-    public static partial void UnstartedCancelTerminated(this ILogger logger, Guid executionId);
+        Message = "Terminated unstarted execution as Cancelled without hydrate. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void UnstartedCancelTerminated(this ILogger logger, Guid executionId, Guid tenantId);
 
     [LoggerMessage(
         EventId = 3023,
         Level = LogLevel.Information,
-        Message = "Skipped queued Start because cancel was already accepted or execution is terminal. ExecutionId={executionId}")]
-    public static partial void QueuedStartSkippedAfterCancel(this ILogger logger, Guid executionId);
+        Message = "Skipped queued Start because cancel was already accepted or execution is terminal. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void QueuedStartSkippedAfterCancel(this ILogger logger, Guid executionId, Guid tenantId);
 
     [LoggerMessage(
         EventId = 3025,
         Level = LogLevel.Information,
-        Message = "Skipped queued Start because execution is already hydrated. ExecutionId={executionId}")]
-    public static partial void QueuedStartSkippedAlreadyHydrated(this ILogger logger, Guid executionId);
+        Message = "Skipped queued Start because execution is already hydrated. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void QueuedStartSkippedAlreadyHydrated(this ILogger logger, Guid executionId, Guid tenantId);
 
     [LoggerMessage(
         EventId = 3024,
         Level = LogLevel.Error,
-        Message = "Marked unstarted execution as Failed after a permanent work item failure. ExecutionId={executionId}")]
-    public static partial void UnstartedPermanentFailureMarked(this ILogger logger, Guid executionId);
+        Message = "Marked unstarted execution as Failed after a permanent work item failure. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void UnstartedPermanentFailureMarked(this ILogger logger, Guid executionId, Guid tenantId);
 
     [LoggerMessage(
         EventId = 3026,
         Level = LogLevel.Warning,
-        Message = "Kept checkpoint after unclassified attempt limit on a hydrated execution. ExecutionId={executionId}")]
-    public static partial void HydratedAttemptLimitKeptCheckpoint(this ILogger logger, Guid executionId);
+        Message = "Kept checkpoint after unclassified attempt limit on a hydrated execution. ExecutionId={executionId} TenantId={tenantId}")]
+    public static partial void HydratedAttemptLimitKeptCheckpoint(this ILogger logger, Guid executionId, Guid tenantId);
 }

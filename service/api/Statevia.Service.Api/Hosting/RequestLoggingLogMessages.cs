@@ -53,12 +53,13 @@ internal static partial class RequestLoggingLogMessages
     [LoggerMessage(
         EventId = 4012,
         Level = LogLevel.Information,
-        Message = "HTTP request complete TraceId={traceId} StatusCode={statusCode} ElapsedMs={elapsedMs} ResponseSize={responseSize} ResponseBody={responseBody}")]
+        Message = "HTTP request complete TraceId={traceId} StatusCode={statusCode} ElapsedMs={elapsedMs} ResponseSize={responseSize} ResponseBody={responseBody} TenantId={tenantId}")]
     public static partial void HttpRequestComplete(
         this ILogger logger,
         string traceId,
         int statusCode,
         long elapsedMs,
         long? responseSize,
-        string? responseBody);
+        string? responseBody,
+        Guid? tenantId);
 }

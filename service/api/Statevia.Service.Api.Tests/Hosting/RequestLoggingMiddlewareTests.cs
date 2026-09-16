@@ -16,7 +16,7 @@ public sealed class RequestLoggingMiddlewareTests
     {
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
-        ctx.Request.Path = "/v1/health";
+        ctx.Request.Path = "/v1/executions";
         ctx.Response.StatusCode = 200;
 
         var collector = new LogCollector();
@@ -40,6 +40,49 @@ public sealed class RequestLoggingMiddlewareTests
         Assert.Contains(collector.Entries, e => e.Contains("HTTP request start", StringComparison.Ordinal));
         Assert.Contains(collector.Entries, e => e.Contains("HTTP request complete", StringComparison.Ordinal));
         Assert.Contains(collector.Entries, e => e.Contains("204", StringComparison.Ordinal));
+        Assert.True(ctx.Items.ContainsKey(RequestLogContext.TraceIdItemKey));
+    }
+
+    /// <summary>GET /v1/health では開始・完了ログを出さない。</summary>
+    [Fact]
+    public async Task InvokeAsync_DoesNotLogStartOrComplete_ForHealth()
+    {
+        // Arrange
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "GET";
+        ctx.Request.Path = "/v1/health";
+        ctx.Response.StatusCode = 200;
+
+        var collector = new LogCollector();
+        using var factory = LoggerFactory.Create(b => b.AddProvider(collector));
+        var logger = factory.CreateLogger<RequestLoggingMiddleware>();
+        var opts = Options.Create(new RequestLogOptions
+        {
+            LogRequestBody = false,
+            LogResponseBody = false
+        });
+
+        var nextCalled = false;
+        RequestDelegate next = c =>
+        {
+            nextCalled = true;
+            c.Response.StatusCode = 200;
+            return Task.CompletedTask;
+        };
+
+        var mw = new RequestLoggingMiddleware(next);
+
+        // Act
+        await InvokeAsync(mw, ctx, logger, opts);
+
+        // Assert
+        Assert.True(nextCalled);
+        Assert.DoesNotContain(
+            collector.Entries,
+            e => e.Contains("HTTP request start", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            collector.Entries,
+            e => e.Contains("HTTP request complete", StringComparison.Ordinal));
         Assert.True(ctx.Items.ContainsKey(RequestLogContext.TraceIdItemKey));
     }
 
@@ -138,7 +181,7 @@ public sealed class RequestLoggingMiddlewareTests
         // Arrange
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
-        ctx.Request.Path = "/v1/health";
+        ctx.Request.Path = "/v1/executions";
         ctx.Response.Body = new MemoryStream();
         ctx.Response.ContentLength = 42;
 
@@ -334,7 +377,7 @@ public sealed class RequestLoggingMiddlewareTests
         // Arrange
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
-        ctx.Request.Path = "/v1/health";
+        ctx.Request.Path = "/v1/executions";
         ctx.Request.Headers.UserAgent = new string('u', 300);
         ctx.Response.Body = new MemoryStream();
 
@@ -359,7 +402,7 @@ public sealed class RequestLoggingMiddlewareTests
         // Arrange
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
-        ctx.Request.Path = "/v1/health";
+        ctx.Request.Path = "/v1/executions";
         ctx.Response.Body = new MemoryStream();
         ctx.Response.ContentType = "application/octet-stream";
 
@@ -407,6 +450,35 @@ public sealed class RequestLoggingMiddlewareTests
         // Assert
         var startLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request start", StringComparison.Ordinal));
         Assert.Contains(TestTenantIds.T1TenantId.ToString("D"), startLog, StringComparison.Ordinal);
+        var completeLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request complete", StringComparison.Ordinal));
+        Assert.Contains(TestTenantIds.T1TenantId.ToString("D"), completeLog, StringComparison.Ordinal);
+    }
+
+    /// <summary>TenantContext が Items に残した UUID は完了ログに載る（accessor は _next 後に消える）。</summary>
+    [Fact]
+    public async Task InvokeAsync_LogsTenantIdOnComplete_FromHttpContextItems()
+    {
+        // Arrange
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "GET";
+        ctx.Request.Path = "/v1/executions";
+        ctx.Response.Body = new MemoryStream();
+        ctx.Items["Statevia.TenantId"] = TestTenantIds.DefaultTenantId;
+
+        var collector = new LogCollector();
+        using var factory = LoggerFactory.Create(b => b.AddProvider(collector));
+        var logger = factory.CreateLogger<RequestLoggingMiddleware>();
+        var opts = Options.Create(new RequestLogOptions { LogRequestBody = false, LogResponseBody = false });
+        var middleware = new RequestLoggingMiddleware(_ => Task.CompletedTask);
+
+        // Act
+        await InvokeAsync(middleware, ctx, logger, opts);
+
+        // Assert
+        var completeLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request complete", StringComparison.Ordinal));
+        Assert.Contains(TestTenantIds.DefaultTenantId.ToString("D"), completeLog, StringComparison.Ordinal);
+        var startLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request start", StringComparison.Ordinal));
+        Assert.DoesNotContain(TestTenantIds.DefaultTenantId.ToString("D"), startLog, StringComparison.Ordinal);
     }
 
     private static Task InvokeAsync(

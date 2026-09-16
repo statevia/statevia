@@ -2,7 +2,7 @@
 
 ## 目的
 
-Service API と Engine の構造化ログで、同じ概念に同じキー名を使う。
+Service API / Worker / Application / Engine の構造化ログで、同じ概念に同じキー名を使う。運用者が ingest 時に `TenantId` を保管キーへ写すときも、本辞書のキー名を正とする。
 
 ## 出力手段（必須）
 
@@ -22,7 +22,7 @@ Service API と Engine の構造化ログで、同じ概念に同じキー名を
 | 概念 | ラベル（PascalCase） | 主な出力箇所 | 備考 |
 |------|----------------------|--------------|------|
 | 相関 ID | `TraceId` | API / Engine | `traceparent` / `X-Trace-Id` から解決 |
-| テナント | `TenantId` | API | 解決済み `tenants.tenant_id`（UUID）。未解決パスでは null |
+| テナント | `TenantId` | API / Worker / Application | 解決済み `tenants.tenant_id`（UUID）。未解決パスでは欠落。Org 写像の入力。`TenantKey` は使わない |
 | ワークフロー ID | `ExecutionId` | API enrich / 実行系 / Engine | route `{id}` 由来（display ID の場合あり） |
 | 親ワークフロー ID | `ParentExecutionId` | Fork 展開 | 物理子展開時の親 |
 | Fork ノード ID | `ForkNodeId` | Fork 展開 | 親実行グラフ上の Fork 到達インスタンス |

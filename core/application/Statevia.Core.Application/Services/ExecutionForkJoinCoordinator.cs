@@ -81,6 +81,7 @@ internal sealed class ExecutionForkJoinCoordinator(
                         parentExecutionId,
                         forkNodeId,
                         evaluation.FailureStatus ?? ExecutionProjectionStatuses.Failed,
+                        execution.TenantId,
                         ct)
                     .ConfigureAwait(false);
                 return;
@@ -100,7 +101,7 @@ internal sealed class ExecutionForkJoinCoordinator(
                         forkNodeId,
                         evaluation.JoinState))
                 {
-                    logger.ForkJoinAlreadyCompleted(parentExecutionId, forkNodeId, evaluation.JoinState);
+                    logger.ForkJoinAlreadyCompleted(parentExecutionId, forkNodeId, evaluation.JoinState, execution.TenantId);
                     return;
                 }
 
@@ -208,13 +209,19 @@ internal sealed class ExecutionForkJoinCoordinator(
     }
 
     /// <summary>Join 失敗／キャンセルを親投影へ伝播する（残子 Cancel は親 Cancel カスケードと分岐 Wait の子配送）。</summary>
+    /// <param name="parentExecutionId">親 execution。</param>
+    /// <param name="forkNodeId">Fork ノード ID。</param>
+    /// <param name="failureStatus">親へ載せる失敗 status。</param>
+    /// <param name="tenantId">親実行のテナント UUID（ログ用。既に手元にある値）。</param>
+    /// <param name="ct">キャンセル。</param>
     private async Task FailParentFromJoinAsync(
         Guid parentExecutionId,
         string forkNodeId,
         string failureStatus,
+        Guid tenantId,
         CancellationToken ct)
     {
-        logger.ForkJoinFailedPropagated(parentExecutionId, forkNodeId, failureStatus);
+        logger.ForkJoinFailedPropagated(parentExecutionId, forkNodeId, failureStatus, tenantId);
 
         var snapshot = await executor.ExecuteReadOnlyAsync(
                 (uow, innerCt) => executions.GetSnapshotByExecutionIdAsync(uow, parentExecutionId, innerCt),
@@ -261,7 +268,7 @@ internal sealed class ExecutionForkJoinCoordinator(
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(evaluation.CandidateInputs);
-        logger.ForkJoinSatisfied(parentExecutionId, forkNodeId, evaluation.JoinState);
+        logger.ForkJoinSatisfied(parentExecutionId, forkNodeId, evaluation.JoinState, execution.TenantId);
 
         await engineSession.EnsureEngineRuntimeLoadedForMutationAsync(parentExecutionId, execution, ct).ConfigureAwait(false);
 
@@ -305,7 +312,8 @@ internal sealed class ExecutionForkJoinCoordinator(
             logger.ForkJoinProjectionSkippedAfterUnload(
                 parentExecutionId,
                 forkNodeId,
-                evaluation.JoinState);
+                evaluation.JoinState,
+                execution.TenantId);
             return;
         }
 

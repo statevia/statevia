@@ -79,9 +79,10 @@ internal sealed class ExecutionEngineSession(
         {
             logger.RuntimeCheckpointInvalidForHydrate(
                 executionId,
-                checkpointDocument.CheckpointJson?.Length ?? 0);
+                checkpointDocument.CheckpointJson?.Length ?? 0,
+                execution.TenantId);
             if (parseError is not null)
-                logger.RuntimeCheckpointDeserializeFailed(parseError, executionId);
+                logger.RuntimeCheckpointDeserializeFailed(parseError, executionId, execution.TenantId);
 
             throw new InvalidOperationException(
                 $"Stored runtime checkpoint for execution '{executionId:D}' is empty or invalid and cannot be hydrated.");

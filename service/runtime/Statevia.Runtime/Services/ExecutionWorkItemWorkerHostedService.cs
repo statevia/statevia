@@ -172,6 +172,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
         using var scope = scopeFactory.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var queue = scopedServices.GetRequiredService<IExecutionWorkQueue>();
+        Guid? tenantId = null;
         try
         {
             var platformData = scopedServices.GetRequiredService<IPlatformDataAccess>();
@@ -184,6 +185,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                 return;
             }
 
+            tenantId = tenant.TenantId;
             var accessor = scopedServices.GetRequiredService<ITenantContextAccessor>();
             using (accessor.SetContext(new TenantContextState(
                 tenant.TenantId,
@@ -191,9 +193,10 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                 PrincipalId: null,
                 tenant.Lifecycle,
                 WorkerPermissions)))
+            using (logger.BeginScope(new Dictionary<string, object> { ["TenantId"] = tenant.TenantId }))
             {
                 var executions = scopedServices.GetRequiredService<IExecutionService>();
-                logger.WorkerLocalCancelApplied(item.ExecutionId);
+                logger.WorkerLocalCancelApplied(item.ExecutionId, tenant.TenantId);
                 await executions.CancelAsync(
                         item.ExecutionId.ToString("D"),
                         idempotencyKey: null,
@@ -203,7 +206,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
             }
 
             _ownedRegistry.TryCancelLocal(item.ExecutionId);
-            logger.WorkerLocalCancelInterrupt(item.ExecutionId);
+            logger.WorkerLocalCancelInterrupt(item.ExecutionId, tenant.TenantId);
             await queue.CompleteAsync(item.WorkItemId, _leaseOwner, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -217,6 +220,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                     queue,
                     executions: null,
                     exception,
+                    tenantId,
                     stoppingToken)
                 .ConfigureAwait(false);
         }
@@ -236,6 +240,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
         IExecutionService? executions = null;
         var sessionStarted = false;
         var registered = false;
+        Guid? tenantId = null;
         try
         {
             try
@@ -249,6 +254,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                     return;
                 }
 
+                tenantId = tenant.TenantId;
                 var accessor = scopedServices.GetRequiredService<ITenantContextAccessor>();
                 using (accessor.SetContext(new TenantContextState(
                     tenant.TenantId,
@@ -256,6 +262,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                     PrincipalId: null,
                     tenant.Lifecycle,
                     WorkerPermissions)))
+                using (logger.BeginScope(new Dictionary<string, object> { ["TenantId"] = tenant.TenantId }))
                 {
                     executions = scopedServices.GetRequiredService<IExecutionService>();
                     var generation = await executions.BeginOwnedSessionAsync(
@@ -266,7 +273,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                         .ConfigureAwait(false);
                     if (WorkItemFailureClassifier.IsOwnershipAcquisitionMiss(generation))
                     {
-                        logger.WorkItemOwnershipAcquireFailed(item.WorkItemId, item.ExecutionId);
+                        logger.WorkItemOwnershipAcquireFailed(item.WorkItemId, item.ExecutionId, tenant.TenantId);
                         await queue.ReleaseWithoutCountingAttemptAsync(
                                 item.WorkItemId,
                                 _leaseOwner,
@@ -285,6 +292,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                         executions,
                         item.WorkItemId,
                         item.ExecutionId,
+                        tenant.TenantId,
                         processCts,
                         heartbeatCts.Token);
                     try
@@ -316,6 +324,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                         item,
                         queue,
                         executions,
+                        tenantId,
                         ct)
                     .ConfigureAwait(false);
             }
@@ -326,6 +335,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                         queue,
                         executions,
                         exception,
+                        tenantId,
                         ct)
                     .ConfigureAwait(false);
             }
@@ -345,7 +355,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                 catch (Exception exception)
 #pragma warning restore CA1031
                 {
-                    logger.WorkItemSessionEndFailed(exception, item.WorkItemId);
+                    logger.WorkItemSessionEndFailed(exception, item.WorkItemId, tenantId);
                     await executions.AbandonLocalOwnedSessionAsync(item.ExecutionId).ConfigureAwait(false);
                 }
             }
@@ -363,11 +373,12 @@ public sealed class ExecutionWorkItemWorkerHostedService(
         ExecutionWorkItemRow item,
         IExecutionWorkQueue queue,
         IExecutionService? executions,
+        Guid? tenantId,
         CancellationToken ct)
     {
         if (_ownedRegistry.TryConsumeLocalCancel(item.ExecutionId) && executions is not null)
         {
-            logger.WorkerLocalCancelInterrupt(item.ExecutionId);
+            logger.WorkerLocalCancelInterrupt(item.ExecutionId, tenantId);
             await executions.CancelAsync(
                     item.ExecutionId.ToString("D"),
                     idempotencyKey: null,
@@ -378,7 +389,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
             return true;
         }
 
-        logger.WorkItemLeaseLost(item.WorkItemId);
+        logger.WorkItemLeaseLost(item.WorkItemId, tenantId);
         if (executions is not null)
             await executions.AbandonLocalOwnedSessionAsync(item.ExecutionId).ConfigureAwait(false);
         return false;
@@ -390,6 +401,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
         IExecutionService executions,
         Guid workItemId,
         Guid executionId,
+        Guid? tenantId,
         CancellationTokenSource processCts,
         CancellationToken heartbeatCt)
     {
@@ -424,7 +436,7 @@ public sealed class ExecutionWorkItemWorkerHostedService(
 #pragma warning disable CA1031 // heartbeat 自体の失敗は処理側へ伝播し、lease 喪失として扱う
         catch (Exception exception)
         {
-            logger.WorkItemHeartbeatFailed(exception, workItemId);
+            logger.WorkItemHeartbeatFailed(exception, workItemId, tenantId);
             await processCts.CancelAsync().ConfigureAwait(false);
         }
 #pragma warning restore CA1031
@@ -451,13 +463,14 @@ public sealed class ExecutionWorkItemWorkerHostedService(
         IExecutionWorkQueue queue,
         IExecutionService? executions,
         Exception exception,
+        Guid? tenantId,
         CancellationToken ct)
     {
         var permanent = WorkItemFailureClassifier.IsPermanent(exception);
         var atLimit = item.Attempts >= _worker.MaxAttempts;
         if (!permanent && !atLimit)
         {
-            logger.WorkItemFailed(exception, item.WorkItemId);
+            logger.WorkItemFailed(exception, item.WorkItemId, tenantId);
             await queue.ReleaseAsync(
                     item.WorkItemId,
                     _leaseOwner,
@@ -489,7 +502,8 @@ public sealed class ExecutionWorkItemWorkerHostedService(
             item.WorkItemId,
             item.ExecutionId,
             item.Kind,
-            reason);
+            reason,
+            tenantId);
         await queue.CompleteAsync(item.WorkItemId, _leaseOwner, ct).ConfigureAwait(false);
     }
 

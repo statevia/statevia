@@ -73,7 +73,7 @@ public sealed class ForkExpansionHostHandler(
 
         var result = await coordinator.ExpandForkAsync(request, ct).ConfigureAwait(false);
         if (!result.Succeeded)
-            logger.ForkExpansionFailedParentMarkedFailed(parentExecutionId, evt.SourceNodeId);
+            logger.ForkExpansionFailedParentMarkedFailed(parentExecutionId, evt.SourceNodeId, parent.TenantId);
 
         // 成功時も Join 待ちで Engine に常駐させない。失敗時は Coordinator が親 Failed 済み。
         await executionService

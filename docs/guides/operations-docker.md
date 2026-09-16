@@ -3,13 +3,23 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.6 |
-| 更新日 | 2026-09-10 |
-| 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [environment-variables.md](../reference/environment-variables.md) |
+| Version | 1.12 |
+| 更新日 | 2026-09-16 |
+| 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
 
 リポジトリ直下の `docker-compose.yml` で **PostgreSQL 16**・**Service API（C#）**・**UI（Next.js）**・**Action Host** を起動できます。
+
+**Version 1.12（2026-09-16）**: ログ収集の詳細を [operations-logging.md](operations-logging.md) へ移し、本書は起動コマンドの要約に留める。
+
+**Version 1.10（2026-09-16）**: logging overlay の Grafana を 13.2.1 にする（日本語 UI は 12.0 以降。11.6 には `ja-JP` が無い）。
+
+**Version 1.9（2026-09-16）**: logging overlay の Grafana 既定 UI を日本語（`ja-JP`）にする。
+
+**Version 1.8（2026-09-15）**: logging overlay の Grafana に ops ログ用ダッシュボードを追加（件数・HTTP 完了・LogLevel・本文。既定 6 時間）。
+
+**Version 1.7（2026-09-15）**: 任意の logging overlay（Fluent Bit / Loki / Grafana）の起動コマンドを追記。
 
 **Version 1.6（2026-09-10）**: 分離 Worker の台数（`--scale`）と `STATEVIA_WORKER_*` を追記。
 
@@ -78,6 +88,16 @@ STATEVIA_WORKER_MAX_CONCURRENCY=16 STATEVIA_WORKER_CANCEL_CONCURRENCY=1 \
 docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml down
 docker compose up -d
 ```
+
+## ログ収集例（任意: Fluent Bit / Loki / Grafana）
+
+既定の `docker compose up -d` ではログ基盤は起動しません。手順・Org 写像・JSON パス・保持は [operations-logging.md](operations-logging.md) です。契約は [logging-operations.md](../specifications/platform/logging-operations.md) です。
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+```
+
+Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オペレータ Org）。ランタイム分離と同時なら `docker-compose.logging-split.yml` も並べます。fluentd ドライバが不通なら `STATEVIA_FLUENTD_ADDRESS=host.docker.internal:24224`。
 
 ## ヘルス
 
