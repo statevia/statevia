@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0 |
+| Version | 1.0.2 |
 | 更新日 | 2026-09-16 |
 | 関連 | [logging-operations.md](../specifications/platform/logging-operations.md), [operations-docker.md](operations-docker.md), [logging-property-keys.md](../reference/logging-property-keys.md) |
 
@@ -11,7 +11,7 @@
 
 任意の compose overlay で、コンテナ stdout の JSON を Fluent Bit → Loki → Grafana まで辿る例。製品は特定ベンダーを必須にしない。契約の正本は [logging-operations.md](../specifications/platform/logging-operations.md)。
 
-**Version 1.0（2026-09-16）**: overlay 起動、Org 写像、保持推奨、JSON パス。
+**Version 1.0.2（2026-09-16）**: Grafana Logs は Microsoft `LogLevel` を `info` / `warn` 等へ写して色分けする。
 
 ## 起動
 
@@ -78,6 +78,8 @@ Microsoft JsonConsole（overlay の `Logging__Console__FormatterName=json`）。
 ```
 
 Engine のプレースホルダは PascalCase（`ExecutionId`）。スコープで足したテナントは例えば `"Scopes":[{"TenantId":"..."}]` になる。
+
+JsonConsole は HTML 安全のため、ネストした JSON の引用符を `\u0022` にすることがある（JSON としては正しい）。overlay の Fluent Bit はパース後のフィールドだけを Loki へ送り、Docker が付けた生の `log` 文字列と `State.{OriginalFormat}` は残さない。Grafana の Logs パネルは `LogLevel` / `Category` / `Message` だけを取り出す。行頭の UNK を避けるため、Microsoft の `Information` などを Grafana が色分けする `info` / `warn` / `error` / `debug` / `trace` / `critical` へ写す（フィルタの値は `Information` のまま）。新規 ingest の JSON には同じ写像の `level` も載る。Loki のインデックスラベルにはしない。
 
 `GET /v1/health` の開始・完了ログは出ない。
 
