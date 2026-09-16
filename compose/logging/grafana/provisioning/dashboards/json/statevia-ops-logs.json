@@ -249,7 +249,7 @@
                     "uid": "${loki}"
                 },
                 "editorMode": "code",
-                "expr": "{job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"Error|Critical\" | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\"",
+                "expr": "{job=\"statevia\", service=~\"$service\"} | json LogLevel=\"LogLevel\", Category=\"Category\", Message=\"Message\" | LogLevel=~\"Error|Critical\" | label_format detected_level=`{{ .LogLevel | replace \"Information\" \"info\" | replace \"Warning\" \"warn\" | replace \"Error\" \"error\" | replace \"Critical\" \"critical\" | replace \"Debug\" \"debug\" | replace \"Trace\" \"trace\" }}` | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\" | drop LogLevel, Category, Message",
                 "maxLines": 100,
                 "queryType": "range",
                 "refId": "A"
@@ -285,7 +285,7 @@
                     "uid": "${loki}"
                 },
                 "editorMode": "code",
-                "expr": "{job=\"statevia\", service=~\"$service\"} | json | LogLevel=~\"$level\" | Category !~ \"$categoryExclude\" | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\"",
+                "expr": "{job=\"statevia\", service=~\"$service\"} | json LogLevel=\"LogLevel\", Category=\"Category\", Message=\"Message\" | LogLevel=~\"$level\" | Category !~ \"$categoryExclude\" | label_format detected_level=`{{ .LogLevel | replace \"Information\" \"info\" | replace \"Warning\" \"warn\" | replace \"Error\" \"error\" | replace \"Critical\" \"critical\" | replace \"Debug\" \"debug\" | replace \"Trace\" \"trace\" }}` | line_format \"{{.LogLevel}} {{.Category}} {{.Message}}\" | drop LogLevel, Category, Message",
                 "maxLines": 200,
                 "queryType": "range",
                 "refId": "A"

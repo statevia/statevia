@@ -2,9 +2,18 @@
 -- JsonConsole はプレースホルダを State.tenantId / State.TenantId に置く。
 -- IncludeScopes 時は Scopes 配列にも TenantId が付く（Engine 行などテンプレートに無い場合）。
 -- Docker fluentd の tag（compose サービス名）を service ラベル用に残す。
+-- Microsoft LogLevel は Grafana / Loki が unknown にするため、表示用に syslog 名へ写す（ラベルにはしない）。
 
 local ops = "statevia-ops"
 local uuid_pat = "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$"
+local syslog_level = {
+    Trace = "trace",
+    Debug = "debug",
+    Information = "info",
+    Warning = "warn",
+    Error = "error",
+    Critical = "critical",
+}
 
 local function is_uuid(value)
     if type(value) ~= "string" then
@@ -49,6 +58,17 @@ function set_org_id(tag, timestamp, record)
     end
 
     record["service"] = tag
+
+    local log_level = record["LogLevel"]
+    if type(log_level) == "string" then
+        record["level"] = syslog_level[log_level]
+    end
+
+    -- LoggerMessage のテンプレート文字列。Loki | json で State__OriginalFormat_ になりノイズになる。
+    local state = record["State"]
+    if type(state) == "table" then
+        state["{OriginalFormat}"] = nil
+    end
 
     return 1, timestamp, record
 end
