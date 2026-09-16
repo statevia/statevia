@@ -3,15 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.11 |
+| Version | 1.12 |
 | 更新日 | 2026-09-16 |
-| 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [environment-variables.md](../reference/environment-variables.md) |
+| 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
 
 リポジトリ直下の `docker-compose.yml` で **PostgreSQL 16**・**Service API（C#）**・**UI（Next.js）**・**Action Host** を起動できます。
 
-**Version 1.11（2026-09-16）**: logging overlay の Grafana に default テナント Loki と PostgreSQL のダッシュボードを追加。
+**Version 1.12（2026-09-16）**: ログ収集の詳細を [operations-logging.md](operations-logging.md) へ移し、本書は起動コマンドの要約に留める。
 
 **Version 1.10（2026-09-16）**: logging overlay の Grafana を 13.2.1 にする（日本語 UI は 12.0 以降。11.6 には `ja-JP` が無い）。
 
@@ -91,22 +91,13 @@ docker compose up -d
 
 ## ログ収集例（任意: Fluent Bit / Loki / Grafana）
 
-既定の `docker compose up -d` ではログ基盤は起動しません。stdout を辿る例は override です。製品は特定ベンダーを必須にしません。
+既定の `docker compose up -d` ではログ基盤は起動しません。手順・Org 写像・JSON パス・保持は [operations-logging.md](operations-logging.md) です。契約は [logging-operations.md](../specifications/platform/logging-operations.md) です。
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
 ```
 
-Grafana は `http://localhost:3001`（Studio の 3000 と分ける）。UI の既定言語は日本語です。データソースは `statevia-ops`（オペレータ Org）、`statevia-tenant-default`（シード `tenant_key=default`）、`statevia-postgres`（製品 DB）です。ダッシュボードは [statevia ops logs](http://localhost:3001/d/statevia-ops-logs)、[statevia default tenant logs](http://localhost:3001/d/statevia-tenant-default-logs)、[statevia postgres](http://localhost:3001/d/statevia-postgres-data) です。Explore の `{job="statevia", service="service-api"}` でも見ます。ログ用ダッシュボードは件数・HTTP 完了（EventId 4012）・LogLevel・本文です。既定レンジは 6 時間。`GET /v1/health` のリクエスト開始・完了ログは出ません。PostgreSQL パネルは実行件数・Wait・work item・テーブルサイズです。パスワードハッシュ等は出しません。匿名 Grafana から DB を読む構成はローカル例に限ります。
-
-ランタイム分離と同時に使うときは `docker-compose.logging-split.yml` も並べます（Compose は未定義サービスの部分マージができないため）。
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
-  -f docker-compose.logging.yml -f docker-compose.logging-split.yml up -d
-```
-
-fluentd ドライバが繋がらないときは `STATEVIA_FLUENTD_ADDRESS=host.docker.internal:24224` を付けてコンテナを作り直します。
+Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オペレータ Org）。ランタイム分離と同時なら `docker-compose.logging-split.yml` も並べます。fluentd ドライバが不通なら `STATEVIA_FLUENTD_ADDRESS=host.docker.internal:24224`。
 
 ## ヘルス
 

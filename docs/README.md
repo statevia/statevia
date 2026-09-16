@@ -45,7 +45,7 @@
 | **実行する** | [getting-started.md](guides/getting-started.md)、[specifications/api-http.md](specifications/api-http.md) |
 | **状態を確認する** | [ui-user-guide.md](guides/ui-user-guide.md)、[specifications/ui/visual.md](specifications/ui/visual.md) |
 | **拡張する（Module / Engine）** | [engine-standalone-guide.md](guides/engine-standalone-guide.md)、[specifications/actions/module-zip-layout.md](specifications/actions/module-zip-layout.md) |
-| **運用する** | [operations-docker.md](guides/operations-docker.md)、[operations-tenant-bootstrap.md](guides/operations-tenant-bootstrap.md)、[capacity-load-testing.md](guides/capacity-load-testing.md) |
+| **運用する** | [operations-docker.md](guides/operations-docker.md)、[operations-logging.md](guides/operations-logging.md)、[operations-tenant-bootstrap.md](guides/operations-tenant-bootstrap.md)、[capacity-load-testing.md](guides/capacity-load-testing.md) |
 
 一覧: [guides/README.md](guides/README.md)
 
@@ -74,7 +74,7 @@ Guide のあと、なぜそうなっているかを理解する。
 
 一覧: [reference/README.md](reference/README.md)
 
-ログキー命名はコントリビュータ向けに [logging-property-keys.md](reference/logging-property-keys.md) を残す。
+ログキー命名はコントリビュータと運用者向けに [logging-property-keys.md](reference/logging-property-keys.md) を残す。
 
 ---
 
@@ -89,7 +89,7 @@ Guide のあと、なぜそうなっているかを理解する。
 | データ連携 | [data-integration.md](specifications/data-integration.md) |
 | Engine 実行 | [execution/](specifications/execution/)（fsm, events-and-commands, wait-cancel, fork-join, execution-graph） |
 | Action プラットフォーム | [actions/platform.md](specifications/actions/platform.md)、[module-zip-layout.md](specifications/actions/module-zip-layout.md) |
-| セキュリティ・監査 | [platform/](specifications/platform/) |
+| セキュリティ・監査・運用ログ | [platform/](specifications/platform/)（[logging-operations.md](specifications/platform/logging-operations.md) を含む） |
 | UI | [ui/visual.md](specifications/ui/visual.md)、[ui/push-api.md](specifications/ui/push-api.md) |
 
 一覧: [specifications/README.md](specifications/README.md)

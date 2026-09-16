@@ -450,6 +450,35 @@ public sealed class RequestLoggingMiddlewareTests
         // Assert
         var startLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request start", StringComparison.Ordinal));
         Assert.Contains(TestTenantIds.T1TenantId.ToString("D"), startLog, StringComparison.Ordinal);
+        var completeLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request complete", StringComparison.Ordinal));
+        Assert.Contains(TestTenantIds.T1TenantId.ToString("D"), completeLog, StringComparison.Ordinal);
+    }
+
+    /// <summary>TenantContext が Items に残した UUID は完了ログに載る（accessor は _next 後に消える）。</summary>
+    [Fact]
+    public async Task InvokeAsync_LogsTenantIdOnComplete_FromHttpContextItems()
+    {
+        // Arrange
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Method = "GET";
+        ctx.Request.Path = "/v1/executions";
+        ctx.Response.Body = new MemoryStream();
+        ctx.Items["Statevia.TenantId"] = TestTenantIds.DefaultTenantId;
+
+        var collector = new LogCollector();
+        using var factory = LoggerFactory.Create(b => b.AddProvider(collector));
+        var logger = factory.CreateLogger<RequestLoggingMiddleware>();
+        var opts = Options.Create(new RequestLogOptions { LogRequestBody = false, LogResponseBody = false });
+        var middleware = new RequestLoggingMiddleware(_ => Task.CompletedTask);
+
+        // Act
+        await InvokeAsync(middleware, ctx, logger, opts);
+
+        // Assert
+        var completeLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request complete", StringComparison.Ordinal));
+        Assert.Contains(TestTenantIds.DefaultTenantId.ToString("D"), completeLog, StringComparison.Ordinal);
+        var startLog = Assert.Single(collector.Entries, e => e.Contains("HTTP request start", StringComparison.Ordinal));
+        Assert.DoesNotContain(TestTenantIds.DefaultTenantId.ToString("D"), startLog, StringComparison.Ordinal);
     }
 
     private static Task InvokeAsync(

@@ -481,7 +481,7 @@ internal sealed class ExecutionLifecycleCommandService(
             if (startResult.UnloadAfterCommit)
             {
                 engine.Unload(engineId);
-                logger.CheckpointUnloadedAfterStartSync(resolvedExecutionId);
+                logger.CheckpointUnloadedAfterStartSync(resolvedExecutionId, args.TenantId);
             }
 
             return startResult.Response;
@@ -978,7 +978,7 @@ internal sealed class ExecutionLifecycleCommandService(
     {
         if (ShouldSkipQueuedStart(execution, hasNonEmptyGraph: false, hasValidCheckpoint: false, isEngineHydrated: false))
         {
-            logger.QueuedStartSkippedAfterCancel(execution.ExecutionId);
+            logger.QueuedStartSkippedAfterCancel(execution.ExecutionId, execution.TenantId);
             return await CreateQueuedStartSkipResponseAsync(execution, definitionId, ct).ConfigureAwait(false);
         }
 
@@ -992,7 +992,7 @@ internal sealed class ExecutionLifecycleCommandService(
             return null;
         }
 
-        logger.QueuedStartSkippedAlreadyHydrated(execution.ExecutionId);
+        logger.QueuedStartSkippedAlreadyHydrated(execution.ExecutionId, execution.TenantId);
         return await CreateQueuedStartSkipResponseAsync(execution, definitionId, ct).ConfigureAwait(false);
     }
 
@@ -1176,7 +1176,7 @@ internal sealed class ExecutionLifecycleCommandService(
             },
             ct).ConfigureAwait(false);
 
-        logger.UnstartedCancelTerminated(executionId);
+        logger.UnstartedCancelTerminated(executionId, execution.TenantId);
     }
 
     /// <summary>
@@ -1206,7 +1206,7 @@ internal sealed class ExecutionLifecycleCommandService(
             ct).ConfigureAwait(false);
 
         if (marked)
-            logger.UnstartedPermanentFailureMarked(executionId);
+            logger.UnstartedPermanentFailureMarked(executionId, tenantId);
     }
 
     /// <summary>
@@ -1249,10 +1249,10 @@ internal sealed class ExecutionLifecycleCommandService(
         switch (outcome)
         {
             case AttemptLimitOutcome.RestartLost:
-                logger.HydratedAttemptLimitKeptCheckpoint(executionId);
+                logger.HydratedAttemptLimitKeptCheckpoint(executionId, tenantId);
                 return;
             case AttemptLimitOutcome.Failed:
-                logger.UnstartedPermanentFailureMarked(executionId);
+                logger.UnstartedPermanentFailureMarked(executionId, tenantId);
                 return;
             case AttemptLimitOutcome.None:
                 return;

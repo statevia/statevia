@@ -108,6 +108,9 @@ internal sealed class RequestLoggingMiddleware
         }
         finally
         {
+            if (tenantContextAccessor.TenantId is { } accessorTenantId)
+                context.Items["Statevia.TenantId"] = accessorTenantId;
+
             await LogRequestCompleteAsync(
                 context,
                 logger,
@@ -176,13 +179,17 @@ internal sealed class RequestLoggingMiddleware
         }
 
         var status = context.Response.StatusCode;
+        Guid? completeTenantId = context.Items.TryGetValue("Statevia.TenantId", out var tenantItem) && tenantItem is Guid itemTenantId
+            ? itemTenantId
+            : null;
         TryLog(() =>
             logger.HttpRequestComplete(
                 traceId,
                 status,
                 stopwatch.ElapsedMilliseconds,
                 responseSize,
-                string.IsNullOrEmpty(responseBodyLog) ? null : responseBodyLog));
+                string.IsNullOrEmpty(responseBodyLog) ? null : responseBodyLog,
+                completeTenantId));
     }
 
     private static string BuildQueryForLog(QueryString queryString, RequestLogOptions opts)

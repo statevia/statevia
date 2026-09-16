@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
 namespace Statevia.Core.Application.Services;
@@ -10,24 +11,30 @@ internal static partial class ForkExpansionLogMessages
     [LoggerMessage(
         EventId = 3101,
         Level = LogLevel.Warning,
-        Message = "Fork expansion attempt failed. Attempt={attempt} MaxAttempts={maxAttempts} ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId}")]
+        Message = "Fork expansion attempt failed. Attempt={attempt} MaxAttempts={maxAttempts} ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} TenantId={tenantId}")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S107:Methods should not have too many parameters",
+        Justification = "LoggerMessage のテンプレートはプレースホルダごとに引数が必要。")]
     public static partial void ForkExpansionAttemptFailed(
         this ILogger logger,
         Exception exception,
         int attempt,
         int maxAttempts,
         Guid parentExecutionId,
-        string forkNodeId);
+        string forkNodeId,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3102,
         Level = LogLevel.Error,
-        Message = "Fork expansion exhausted; failing parent and cancelling children. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId}")]
+        Message = "Fork expansion exhausted; failing parent and cancelling children. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} TenantId={tenantId}")]
     public static partial void ForkExpansionExhausted(
         this ILogger logger,
         Exception exception,
         Guid parentExecutionId,
-        string forkNodeId);
+        string forkNodeId,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3103,
@@ -44,11 +51,12 @@ internal static partial class ForkExpansionLogMessages
     [LoggerMessage(
         EventId = 3105,
         Level = LogLevel.Warning,
-        Message = "Fork expansion failed; parent marked Failed. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId}")]
+        Message = "Fork expansion failed; parent marked Failed. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} TenantId={tenantId}")]
     public static partial void ForkExpansionFailedParentMarkedFailed(
         this ILogger logger,
         Guid parentExecutionId,
-        string forkNodeId);
+        string forkNodeId,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3106,
@@ -64,58 +72,64 @@ internal static partial class ForkExpansionLogMessages
     [LoggerMessage(
         EventId = 3107,
         Level = LogLevel.Information,
-        Message = "Fork join satisfied; completing physical join. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState}")]
+        Message = "Fork join satisfied; completing physical join. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState} TenantId={tenantId}")]
     public static partial void ForkJoinSatisfied(
         this ILogger logger,
         Guid parentExecutionId,
         string forkNodeId,
-        string joinState);
+        string joinState,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3108,
         Level = LogLevel.Warning,
-        Message = "Fork join failed; propagating to parent. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} FailureStatus={failureStatus}")]
+        Message = "Fork join failed; propagating to parent. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} FailureStatus={failureStatus} TenantId={tenantId}")]
     public static partial void ForkJoinFailedPropagated(
         this ILogger logger,
         Guid parentExecutionId,
         string forkNodeId,
-        string failureStatus);
+        string failureStatus,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3109,
         Level = LogLevel.Warning,
-        Message = "Runtime checkpoint is empty or invalid for Join hydrate. ParentExecutionId={parentExecutionId} CheckpointLength={checkpointLength}")]
+        Message = "Runtime checkpoint is empty or invalid for Join hydrate. ParentExecutionId={parentExecutionId} CheckpointLength={checkpointLength} TenantId={tenantId}")]
     public static partial void RuntimeCheckpointInvalidForHydrate(
         this ILogger logger,
         Guid parentExecutionId,
-        int checkpointLength);
+        int checkpointLength,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3110,
         Level = LogLevel.Warning,
-        Message = "Runtime checkpoint deserialize failed for Join hydrate. ParentExecutionId={parentExecutionId}")]
+        Message = "Runtime checkpoint deserialize failed for Join hydrate. ParentExecutionId={parentExecutionId} TenantId={tenantId}")]
     public static partial void RuntimeCheckpointDeserializeFailed(
         this ILogger logger,
         Exception exception,
-        Guid parentExecutionId);
+        Guid parentExecutionId,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3111,
         Level = LogLevel.Information,
-        Message = "Fork join already completed; skipping re-entry. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState}")]
+        Message = "Fork join already completed; skipping re-entry. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState} TenantId={tenantId}")]
     public static partial void ForkJoinAlreadyCompleted(
         this ILogger logger,
         Guid parentExecutionId,
         string forkNodeId,
-        string joinState);
+        string joinState,
+        Guid tenantId);
 
     [LoggerMessage(
         EventId = 3112,
         Level = LogLevel.Information,
-        Message = "Fork join projection skipped after Wait unload. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState}")]
+        Message = "Fork join projection skipped after Wait unload. ParentExecutionId={parentExecutionId} ForkNodeId={forkNodeId} JoinState={joinState} TenantId={tenantId}")]
     public static partial void ForkJoinProjectionSkippedAfterUnload(
         this ILogger logger,
         Guid parentExecutionId,
         string forkNodeId,
-        string joinState);
+        string joinState,
+        Guid tenantId);
 }

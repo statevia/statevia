@@ -70,6 +70,7 @@ services:
   service-api:
     environment:
       Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
     logging:
       <<: *fluentd-logging
       options:
@@ -81,6 +82,7 @@ services:
   action-host:
     environment:
       Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
     logging:
       <<: *fluentd-logging
       options:

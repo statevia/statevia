@@ -77,7 +77,8 @@ public sealed class ForkChildExecutionCoordinator(
                     attempt,
                     _options.MaxAttempts,
                     request.ParentExecutionId,
-                    request.ForkNodeId);
+                    request.ForkNodeId,
+                    request.TenantId);
 
                 if (attempt >= _options.MaxAttempts)
                     break;
@@ -558,7 +559,8 @@ public sealed class ForkChildExecutionCoordinator(
         logger.ForkExpansionExhausted(
             lastError ?? new InvalidOperationException("Fork expansion exhausted with no captured exception."),
             request.ParentExecutionId,
-            request.ForkNodeId);
+            request.ForkNodeId,
+            request.TenantId);
 
         var now = DateTime.UtcNow;
         await executor.ExecuteReadCommittedAsync(

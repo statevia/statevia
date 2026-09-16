@@ -16,6 +16,7 @@ services:
   scheduler:
     environment:
       Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
     logging:
       <<: *fluentd-logging
       options:
@@ -27,6 +28,7 @@ services:
   worker:
     environment:
       Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
     logging:
       <<: *fluentd-logging
       options:

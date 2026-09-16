@@ -3,15 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.2 |
-| 更新日 | 2026-09-08 |
+| Version | 1.3 |
+| 更新日 | 2026-09-16 |
 | 関連 | [getting-started.md](getting-started.md), [capacity-load-testing.md](capacity-load-testing.md), [../samples/](../samples/), [../README.md](../README.md) |
 
 ---
 
 **どうやるか** を説明する手順書。利用者の第一入口。第一読者は API / UI / 運用の利用者と Engine ライブラリ利用者。
 
-**Version 1.2（2026-09-08）**: 負荷・耐久計測ガイドへの導線を追加。
+**Version 1.3（2026-09-16）**: ログ収集例ガイドへの導線を追加。
 
 **Version 1.1（2026-09-01）**: 定義 YAML の samples 導線を足す。
 
@@ -26,6 +26,7 @@
 | [`action-host.md`](action-host.md) | OutOfProcess 用 Action Host |
 | [`cli-reference.md`](cli-reference.md) | `statevia` CLI |
 | [`operations-docker.md`](operations-docker.md) | Docker Compose 運用 |
+| [`operations-logging.md`](operations-logging.md) | ログ収集例（Fluent Bit / Loki / Grafana） |
 | [`capacity-load-testing.md`](capacity-load-testing.md) | 負荷・耐久計測（参照構成・L1/L2 ハーネス） |
 | [`operations-tenant-bootstrap.md`](operations-tenant-bootstrap.md) | テナント・管理者ブートストラップ |
 | [`action-module-signing.md`](action-module-signing.md) | Module 署名の運用手順 |
