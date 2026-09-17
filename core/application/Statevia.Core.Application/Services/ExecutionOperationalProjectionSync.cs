@@ -15,6 +15,10 @@ internal static class ExecutionOperationalProjectionSync
     /// 投影フラッシュと同一トランザクション内で cursor / durable wait を同期する。
     /// Publish / Resume 時は <see cref="ExecutionOperationalProjectionSyncRequest.NodeIdToClear"/> で該当 wait を先行削除する。
     /// </summary>
+    /// <remarks>
+    /// durable Wait が一度も無い Running では cursor を INSERT しない。
+    /// 終端の空 <c>ReplaceWaits</c> は行が無いとき no-op（リポジトリ側）。
+    /// </remarks>
     public static async Task SyncAsync(
         ICoreUnitOfWork uow,
         IExecutionCursorRepository cursors,
@@ -38,6 +42,14 @@ internal static class ExecutionOperationalProjectionSync
         }
 
         var now = DateTime.UtcNow;
+        var durableWaits = ExtractDurableWaits(request.ExecutionId, request.GraphJson, now, idGenerator)
+            .Where(row =>
+                string.IsNullOrWhiteSpace(request.NodeIdToClear)
+                || !string.Equals(row.NodeId, request.NodeIdToClear, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (durableWaits.Count == 0)
+            return;
+
         var activeNode = SelectActiveNode(request.GraphJson, request.Snapshot);
         await cursors.UpsertAsync(
             uow,
@@ -53,13 +65,6 @@ internal static class ExecutionOperationalProjectionSync
             },
             ct).ConfigureAwait(false);
 
-        // Resume / Publish 直後はグラフ完了反映が遅れることがある。
-        // NodeIdToClear を除外しないと、削除した wait を古いグラフから即再作成してしまう。
-        var durableWaits = ExtractDurableWaits(request.ExecutionId, request.GraphJson, now, idGenerator)
-            .Where(row =>
-                string.IsNullOrWhiteSpace(request.NodeIdToClear)
-                || !string.Equals(row.NodeId, request.NodeIdToClear, StringComparison.OrdinalIgnoreCase))
-            .ToList();
         await waits.ReplaceWaitsAsync(uow, request.ExecutionId, durableWaits, ct).ConfigureAwait(false);
     }
 

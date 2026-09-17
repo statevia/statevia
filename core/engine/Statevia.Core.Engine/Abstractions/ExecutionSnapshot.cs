@@ -23,4 +23,7 @@ public sealed class ExecutionSnapshot
 
     /// <summary>失敗により停止したか。</summary>
     public required bool IsFailed { get; init; }
+
+    /// <summary>完了・キャンセル・失敗のいずれかで終端したか。</summary>
+    public bool IsTerminal => IsCompleted || IsCancelled || IsFailed;
 }

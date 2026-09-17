@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.7 |
-| 更新日 | 2026-09-03 |
+| Version | 1.8 |
+| 更新日 | 2026-09-17 |
 | Scope | Core-Engine / Service API / UI |
 | 関連 | [concepts/durability.md](../concepts/durability.md), [api-http.md](api-http.md) |
 
@@ -21,6 +21,8 @@
 責務の背景は [Concept: 永続化](../concepts/durability.md) を参照。
 
 ---
+
+**Version 1.8（2026-09-17）**: 投影の graph JSON 未変化 skip。durable Wait が無い Running では `execution_cursors` を書かない。終端の GET graph 鮮度は変えない。
 
 **Version 1.7（2026-09-03）**: 定義検証 `POST /v1/definitions/validate` の 422 details は create / publish と同形。catalog は増やさない。
 
@@ -183,10 +185,10 @@ UIが依存してよいレスポンス形を固定する。
 
 ### 投影更新（コマンド同期経路）
 
-- `POST /v1/executions` / `POST /v1/executions/{id}/cancel` / `POST /v1/executions/{id}/events` の各コマンドで、Engine 呼び出し後にスナップショットと実行グラフを取得し、`executions` + `execution_graph_snapshots` を更新する。HTTP コマンドに付随する `event_store` 追記は、下表の種別に限り、可能な範囲で **同一トランザクション**に載せる。
+- `POST /v1/executions` / `POST /v1/executions/{id}/cancel` / `POST /v1/executions/{id}/events` の各コマンドで、Engine 呼び出し後にスナップショットと実行グラフを取得し、`executions` + `execution_graph_snapshots` を更新する。graph JSON が未変化なら snapshot 行は書かない。status は終端を即時反映する。HTTP コマンドに付随する `event_store` 追記は、下表の種別に限り、可能な範囲で **同一トランザクション**に載せる。
 - 途中失敗時はバッチ全体をロールバックし、再送時のべき等は本節の再送べき等に従う。
-- **Read Model の正本**: `executions` + `execution_graph_snapshots`。UI・SSE の正本は Read API / 投影済み JSON（§5.1）。
-- **`execution_cursors` / `execution_waits`**: 実装済み。cursor は operational projection（GET read-model の正本ではない）。durable wait は初版 EventWait のみ。`Start` / `Cancel` / `Publish` / 投影キューと **同一 tx** で `executions` + `execution_graph_snapshots` と同期する。cursor 行は投影キューと checkpoint 永続化が重なっても PK 単位の原子 upsert で 1 行に収束する。
+- **Read Model の正本**: `executions` + `execution_graph_snapshots`。UI・SSE の正本は Read API / 投影済み JSON（§5.1）。終端後の GET graph は完了ノードを含む（HTTP 受理直後の空グラフは Worker 投影までの現行ギャップ）。
+- **`execution_cursors` / `execution_waits`**: 実装済み。cursor は operational projection（GET read-model の正本ではない）。durable wait は初版 EventWait のみ。durable Wait が無い Running では cursor を INSERT しない。`Start` / `Cancel` / `Publish` / 投影キューと **同一 tx** で `executions` + `execution_graph_snapshots` と同期する。cursor 行は投影キューと checkpoint 永続化が重なっても PK 単位の原子 upsert で 1 行に収束する。
 - 投影キューは HTTP 外のバックグラウンド処理のため、投影更新前に `executions.tenant_id` でテナント境界を設定してから repository を呼ぶ。execution 行が無い場合は投影をスキップする。
 
 SSE（`GET /v1/executions/{id}/stream`）のサーバ挙動（約 2 秒間隔の投影 JSON 比較）は §5.1。

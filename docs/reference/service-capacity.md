@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 0.6 |
-| 更新日 | 2026-09-10 |
+| Version | 0.7 |
+| 更新日 | 2026-09-17 |
 | 関連 | [capacity-load-testing.md](../guides/capacity-load-testing.md), [environment-variables.md](environment-variables.md), [data-integration.md](../specifications/data-integration.md), [wait-cancel.md](../specifications/execution/wait-cancel.md) |
 
 ---
+
+**Version 0.7（2026-09-17）**: L1 1 Worker × スロット 16・512 件を書き込み削減後に再計測。checkpoint UPDATE は 0、完了レートは約 40 exec/s。v0.6 格子の他セルは未再測。
 
 **Version 0.6（2026-09-10）**: Worker プロセス × スロットの縮小格子と C1（一斉 Cancel）を追加。v0.5 の 1 Worker・`MaxConcurrency` 4 表は残す。
 
@@ -16,8 +18,6 @@
 **Version 0.4（2026-09-09）**: D1 合格（8 件）。L3 は HTTP YAML では DelayWait を定義できず未計測（poll 下限 5s は設定値）。
 
 **Version 0.3（2026-09-09）**: L2 上限を 32 同時滞留に更新（Phase 0。遅い Resume を 204 にしたあと再計測。64 は未計測）。
-
-**Version 0.2（2026-09-09）**: `ref-dev` で L1 / L2 を初回計測。L3 / D1 は未計測。
 
 参照構成で測った処理件数・レートの **目安** です。製品 SLA、可用性 %、RPO/RTO、テナント硬クォータは扱いません。手順は [負荷・耐久計測ガイド](../guides/capacity-load-testing.md) です。
 
@@ -115,6 +115,23 @@ C1 角はすべて Cancel 受理 128 / `Cancelled` 128、HTTP 5xx なし。`canc
 - ループ 8 は 1 × 8 で波全体のレートが落ちる（Start スロットと Cancel ループの取り合い）
 - 4 プロセスにしても Cancel レートは伸びない。4 × 64 は波全体が約 2〜3 /s まで落ち、L1 と同じ大域ボトルネックが見える
 
+## L1 1×16 書き込み削減後（v0.7）
+
+v0.6 格子の 1 Worker × スロット 16 と同じセル（count 512、HTTP concurrency 16、`pg_stat_reset()` 直後）を、短寿命のプライマリ書き込み削減後に 1 回測りました。格子の他セルは再測していません。
+
+| 項目 | 改修前（v0.6 格子） | 改修後 |
+| --- | --- | --- |
+| 計測日（UTC） | 2026-09-09〜10 | 2026-09-16 |
+| `execution_runtime_checkpoints` UPDATE / DELETE | 約 3076 / 0 | 0 / 512 |
+| `executions` UPDATE | 約 1540 | 約 1033 |
+| `execution_graph_snapshots` UPDATE | 約 1540 | 1024 |
+| `execution_cursors` | INSERT+DELETE 512 | 0 |
+| 完了 | 512 `Completed` | 512 `Completed`、HTTP 5xx なし |
+| 完了レート | 約 30 exec/s | 約 40 exec/s |
+| Start 受理 p95 | 約 150 ms | 約 371 ms |
+
+短寿命では checkpoint は lease 用 INSERT のあと終端で DELETE し、所有中の JSON refresh は走りません。snapshot は JSON 変化時だけ書くため、実行あたり約 3 UPDATE から 2 になりました。計測直前の Running drain が `pg_stat_reset()` 後に数件分の work item / status 更新を足しているため、`executions` の 1033 と `execution_work_items` INSERT 520 は L1 本体 512 件よりわずかに多いです。
+
 ## 履歴: Phase 0（プロセス同居）
 
 Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Worker / Scheduler は API プロセス内、`MaxConcurrency` 既定 1）でした。2026-09-08〜09 の `ref-dev` 要約:
@@ -132,9 +149,9 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 - **DelayWait。** 期限検知の poll（既定 5s）が下限になります。現行の HTTP Definition では DelayWait を定義できないため、期限〜Resume の実測セルは未計測です。
 - **投影。** キューはグローバル直列です。Worker を並列にしても投影が遅延し得ます。契約は [data-integration.md](../specifications/data-integration.md)、設定キーは [environment-variables.md](environment-variables.md) の `ExecutionProjectionQueue:*` です。
 - **耐久 D1。** 再起動後に Resume でき、投影が壊れないことが合否です。件数の宣伝には使いません。
-- **Worker 格子。** プロセスやスロットを増やしても完了レートは約 30 exec/s で頭打ちです。Start p95 はプロセスを増やすと悪化します。スロット 64 は 1 プロセスでも 512 件が 300 秒以内に揃いません。投影キュー（グローバル直列）または PostgreSQL が先に飽和します。
+- **Worker 格子。** v0.6 ではプロセスやスロットを増やしても完了レートは約 30 exec/s で頭打ちでした。書き込み削減後の 1×16 単セルは約 40 exec/s です（格子の全面再測は未）。Start p95 はプロセスを増やすと悪化します。スロット 64 は 1 プロセスでも 512 件が 300 秒以内に揃いません。投影キュー（グローバル直列）または PostgreSQL が先に飽和し得ます。
 
-上限の解釈に使う現行の実装ボトルネック（本番コードは変えません）:
+上限の解釈に使う実装ボトルネック（v0.6 格子時点。短寿命の checkpoint / snapshot 回数は v0.7 で削減済み）:
 
 | 要因 | 現行の目安 | 設定 / 場所 |
 | --- | --- | --- |

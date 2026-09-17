@@ -20,7 +20,6 @@ namespace Statevia.Core.Application.Services;
 /// <param name="executor">トランザクション実行。</param>
 /// <param name="executions">executions / snapshot 永続化。</param>
 /// <param name="projection">投影オーケストレータ。</param>
-/// <param name="lifecycle">ライフサイクル（checkpoint upsert）。</param>
 /// <param name="logger">構造化ログ。</param>
 /// <param name="forkChildCoordinator">物理 Join 保留判定（任意）。</param>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -34,7 +33,6 @@ internal sealed class ExecutionCheckpointService(
     ICoreTransactionExecutor executor,
     IExecutionRepository executions,
     ExecutionProjectionOrchestrator projection,
-    ExecutionLifecycleCommandService lifecycle,
     ILogger<ExecutionCheckpointService> logger,
     IForkChildExecutionCoordinator? forkChildCoordinator = null)
 {
@@ -48,8 +46,12 @@ internal sealed class ExecutionCheckpointService(
     /// ステップ完了時に checkpoint を保存する（Unload しない）。
     /// </summary>
     /// <remarks>
-    /// Worker 所有中は世代付き upsert（fencing 失敗時はログのみ）。所有外は通常 upsert。
-    /// Engine ID が GUID でない、または export が null のときは no-op。
+    /// <para>
+    /// durable Wait も物理 Join も無いときは書かない。
+    /// 短寿命の同一 claim 終端では seed lease 行以上の runtime JSON 往復を作らない。
+    /// </para>
+    /// <para>Worker 所有中は世代付き upsert（fencing 失敗時はログのみ）。所有外は通常 upsert。</para>
+    /// <para>Engine ID が GUID でない、または export が null のときは no-op。</para>
     /// </remarks>
     /// <param name="engineExecutionId">Engine 辞書キー。</param>
     /// <param name="ct">キャンセル。</param>
@@ -65,6 +67,16 @@ internal sealed class ExecutionCheckpointService(
         var checkpoint = engine.ExportCheckpoint(engineExecutionId);
         if (checkpoint is null)
             return;
+
+        if (checkpoint.PendingWaits.Count == 0)
+        {
+            var pendingJoin = forkChildCoordinator is not null
+                && await forkChildCoordinator
+                    .HasPendingPhysicalJoinBranchesAsync(executionId, ct)
+                    .ConfigureAwait(false);
+            if (!pendingJoin)
+                return;
+        }
 
         var json = JsonSerializer.Serialize(checkpoint, JsonSerializerProfiles.CamelCase);
         var updatedAt = DateTime.UtcNow;
@@ -113,8 +125,8 @@ internal sealed class ExecutionCheckpointService(
     /// <remarks>
     /// 保持理由は <see cref="RuntimeCheckpointRetainReasons"/> のみ
     ///（PendingWaits / PendingPhysicalJoin）。
-    /// Worker 所有 lease は同列にせず、破棄候補でも
-    /// <see cref="DiscardOrRefreshRuntimeCheckpointAsync"/> が Delete を抑止する。
+    /// Worker 所有 lease は同列にしない。終端では所有中でも
+    /// <see cref="DiscardOrRefreshRuntimeCheckpointAsync"/> が Delete する。
     /// </remarks>
     public async Task<bool> ShouldDiscardRuntimeCheckpointAsync(
         Guid executionId,
@@ -155,10 +167,13 @@ internal sealed class ExecutionCheckpointService(
     }
 
     /// <summary>
-    /// 内容破棄候補の checkpoint を削除するか、Worker 所有中なら runtime JSON のみ更新する。
+    /// 内容破棄候補の checkpoint を削除する。終端は Worker 所有中でも Delete する。
     /// </summary>
     /// <remarks>
-    /// <para>所有（OwnedLease）は寿命表の保持理由ではない。Worker 都合で行を残し refresh する別層。</para>
+    /// <para>
+    /// 終端では所有中でも行を残さない（短寿命 L1 の Completed 後残りと refresh UPDATE を止める）。
+    /// Running かつ所有中は lease seed 行を残し、runtime JSON は refresh しない。
+    /// </para>
     /// <para>
     /// Running 中も保持理由が空なら内容破棄候補になるが、実行中 Engine は落とさない。
     /// 終端のときだけ <see langword="true"/> を返し、投影同期後の Unload を許可する。
@@ -166,7 +181,7 @@ internal sealed class ExecutionCheckpointService(
     /// </remarks>
     /// <returns>
     /// 投影同期後に Engine を Unload してよいとき <see langword="true"/>
-    ///（checkpoint 削除後かつ Engine が終端）。所有中 refresh や Running 中の削除のみは
+    ///（終端で checkpoint 削除後）。Running 中の所有維持や非所有 Delete のみは
     /// <see langword="false"/>。
     /// </returns>
     public async Task<bool> DiscardOrRefreshRuntimeCheckpointAsync(
@@ -175,19 +190,22 @@ internal sealed class ExecutionCheckpointService(
         Guid executionId,
         CancellationToken ct)
     {
+        var snapshot = engine.GetSnapshot(engineExecutionId);
+        var isTerminal = snapshot is { IsTerminal: true };
+
+        if (isTerminal)
+        {
+            await checkpointStore.DeleteAsync(uow, executionId, ct).ConfigureAwait(false);
+            return true;
+        }
+
         if (ownership.TryGet(executionId, out _, out _))
         {
-            // Worker 所有中。寿命表上は破棄候補でも lease 行は残し runtime だけ更新する。
-            _ = await lifecycle.UpsertRuntimeCheckpointAsync(uow, engineExecutionId, executionId, ct)
-                .ConfigureAwait(false);
             return false;
         }
 
         await checkpointStore.DeleteAsync(uow, executionId, ct).ConfigureAwait(false);
-
-        // Running（保持理由なし）でも内容は捨てるが、進行中 Load は投影から落とさない。
-        var snapshot = engine.GetSnapshot(engineExecutionId);
-        return snapshot is { IsCompleted: true } or { IsCancelled: true } or { IsFailed: true };
+        return false;
     }
 
     /// <summary>
@@ -460,7 +478,7 @@ internal sealed class ExecutionCheckpointService(
         ExecutionRuntimeCheckpoint incoming,
         ExecutionRuntimeCheckpoint stored)
     {
-        if (incoming.IsCompleted || incoming.IsCancelled || incoming.IsFailed)
+        if (incoming.IsTerminal)
             return false;
 
         if (incoming.Graph.Nodes.Count < stored.Graph.Nodes.Count)

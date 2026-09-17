@@ -74,6 +74,13 @@ internal sealed class ExecutionRepository : IExecutionRepository
         uow.GetDb().ExecutionGraphSnapshots.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct);
 
+    /// <summary>
+    /// executions の status を更新し、graph JSON が変わったときだけ snapshot を書く。
+    /// </summary>
+    /// <remarks>
+    /// <para>status は <c>ExecuteUpdate</c>。snapshot は Ordinal 比較で未変化なら UPDATE しない（TOAST 回避）。</para>
+    /// <para>変化した graph は終端時も含めて必ず書く。</para>
+    /// </remarks>
     public async Task UpdateExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -82,23 +89,41 @@ internal sealed class ExecutionRepository : IExecutionRepository
         string graphJson,
         CancellationToken ct)
     {
-        var w = await uow.GetDb().Executions.FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct).ConfigureAwait(false);
-        if (w is not null)
+        var db = uow.GetDb();
+        var now = DateTime.UtcNow;
+
+        var snapshot = await db.ExecutionGraphSnapshots
+            .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct)
+            .ConfigureAwait(false);
+        if (snapshot is not null
+            && !string.Equals(snapshot.GraphJson, graphJson, StringComparison.Ordinal))
         {
-            w.Status = status;
-            w.UpdatedAt = DateTime.UtcNow;
-            if (cancelRequested is not null)
-            {
-                w.CancelRequested = cancelRequested.Value;
-            }
+            snapshot.GraphJson = graphJson;
+            snapshot.UpdatedAt = now;
         }
 
-        var g = await uow.GetDb().ExecutionGraphSnapshots.FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct).ConfigureAwait(false);
-        if (g is not null)
+        if (cancelRequested is { } cancel)
         {
-            g.GraphJson = graphJson;
-            g.UpdatedAt = DateTime.UtcNow;
+            await db.Executions
+                .Where(x => x.ExecutionId == executionId)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, status)
+                        .SetProperty(x => x.UpdatedAt, now)
+                        .SetProperty(x => x.CancelRequested, cancel),
+                    ct)
+                .ConfigureAwait(false);
+            return;
         }
+
+        await db.Executions
+            .Where(x => x.ExecutionId == executionId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.Status, status)
+                    .SetProperty(x => x.UpdatedAt, now),
+                ct)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />

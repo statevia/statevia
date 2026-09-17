@@ -678,7 +678,7 @@ internal sealed class ExecutionWaitEventService(
             if (snapshot is null)
                 return;
 
-            if (snapshot.IsCompleted || snapshot.IsCancelled || snapshot.IsFailed)
+            if (snapshot.IsTerminal)
                 return;
 
             // ContinueRestoredWait は次 Task を ActiveStates に載せてから Wait を外すため、

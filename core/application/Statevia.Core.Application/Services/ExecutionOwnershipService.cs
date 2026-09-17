@@ -190,7 +190,7 @@ internal sealed class ExecutionOwnershipService(
             if (snapshot is null)
                 return;
 
-            if (snapshot.IsCompleted || snapshot.IsCancelled || snapshot.IsFailed)
+            if (snapshot.IsTerminal)
             {
                 // 終端後に Unload すると投影キューが engine 不在でスキップし、
                 // Start 直後の不完全 graph のまま Completed だけ残る。最終投影を先に確定する。
