@@ -10,8 +10,8 @@ namespace Statevia.Core.Application.Services;
 /// <see cref="RuntimeCheckpointRetainReasons.PendingPhysicalJoin"/>）。
 /// </para>
 /// <para>
-    /// Worker 所有 lease は同列にしない。終端では所有中でも行を Delete する。
-    /// Running かつ所有中は lease seed を残し、runtime JSON は refresh しない。
+/// Worker 所有 lease は同列にしない。終端では所有中でも行を Delete する。
+/// Running かつ所有中は lease seed を残し、runtime JSON は refresh しない。
 /// </para>
 /// <para>契約の文章正本は <c>docs/concepts/durability.md</c> および
 /// <c>docs/specifications/execution/fork-join.md</c>。</para>

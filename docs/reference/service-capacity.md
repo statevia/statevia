@@ -3,21 +3,21 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 0.7 |
-| 更新日 | 2026-09-17 |
+| Version | 0.9 |
+| 更新日 | 2026-09-18 |
 | 関連 | [capacity-load-testing.md](../guides/capacity-load-testing.md), [environment-variables.md](environment-variables.md), [data-integration.md](../specifications/data-integration.md), [wait-cancel.md](../specifications/execution/wait-cancel.md) |
 
 ---
+
+**Version 0.9（2026-09-18）**: 空 Claim EXISTS skip 後に L1 1×16・512 件を再計測。完了レートは約 47 exec/s。アイドル 30 秒で `execution_work_items` の UPDATE は 0。
+
+**Version 0.8（2026-09-18）**: 未完了 work item が無い Claim は EXISTS のみ（空 UPDATE なし）。poll は 1 秒のまま。
 
 **Version 0.7（2026-09-17）**: L1 1 Worker × スロット 16・512 件を書き込み削減後に再計測。checkpoint UPDATE は 0、完了レートは約 40 exec/s。v0.6 格子の他セルは未再測。
 
 **Version 0.6（2026-09-10）**: Worker プロセス × スロットの縮小格子と C1（一斉 Cancel）を追加。v0.5 の 1 Worker・`MaxConcurrency` 4 表は残す。
 
 **Version 0.5（2026-09-10）**: 参照構成を `split-runtime` に差し替え再計測。Phase 0 数値は履歴。
-
-**Version 0.4（2026-09-09）**: D1 合格（8 件）。L3 は HTTP YAML では DelayWait を定義できず未計測（poll 下限 5s は設定値）。
-
-**Version 0.3（2026-09-09）**: L2 上限を 32 同時滞留に更新（Phase 0。遅い Resume を 204 にしたあと再計測。64 は未計測）。
 
 参照構成で測った処理件数・レートの **目安** です。製品 SLA、可用性 %、RPO/RTO、テナント硬クォータは扱いません。手順は [負荷・耐久計測ガイド](../guides/capacity-load-testing.md) です。
 
@@ -132,6 +132,25 @@ v0.6 格子の 1 Worker × スロット 16 と同じセル（count 512、HTTP co
 
 短寿命では checkpoint は lease 用 INSERT のあと終端で DELETE し、所有中の JSON refresh は走りません。snapshot は JSON 変化時だけ書くため、実行あたり約 3 UPDATE から 2 になりました。計測直前の Running drain が `pg_stat_reset()` 後に数件分の work item / status 更新を足しているため、`executions` の 1033 と `execution_work_items` INSERT 520 は L1 本体 512 件よりわずかに多いです。
 
+## L1 1×16 空 Claim 削減後（v0.9）
+
+同じセル（count 512、HTTP concurrency 16、1 Worker × スロット 16、`pg_stat_reset()` 直後）を、空 Claim の EXISTS skip 後に再測しました。Worker イメージは第二段の `ClaimAsync` を含みます。
+
+| 項目 | 第一段後（v0.7） | 第二段後 |
+| --- | --- | --- |
+| 計測日（UTC） | 2026-09-16 | 2026-09-17 |
+| `execution_runtime_checkpoints` UPDATE / DELETE | 0 / 512 | 0 / 512 |
+| `executions` UPDATE | 約 1033 | 1024 |
+| `execution_graph_snapshots` UPDATE | 1024 | 1022 |
+| `execution_work_items` INSERT / UPDATE / DELETE | 520 / 512 / 512 | 512 / 512 / 512 |
+| `execution_cursors` | 0 | 0 |
+| 完了 | 512 `Completed` | 512 `Completed`、HTTP 5xx なし |
+| 完了レート | 約 40 exec/s | 約 47 exec/s |
+| Start 受理 p95 | 約 371 ms | 約 202 ms |
+| アイドル 30 秒の work item UPDATE | （未測） | 0（タプル更新 0、WAL レコード +3） |
+
+アイドルでは Worker が 1 秒ごとに EXISTS を読むだけです。空の Claim UPDATE は開きません。L1 本体の work item UPDATE 512 は実 claim 分です。
+
 ## 履歴: Phase 0（プロセス同居）
 
 Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Worker / Scheduler は API プロセス内、`MaxConcurrency` 既定 1）でした。2026-09-08〜09 の `ref-dev` 要約:
@@ -157,7 +176,7 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 | --- | --- | --- |
 | Start / Resume のプロセス内同時件数 | 専用 Worker の compose 未設定時は 4（API 内既定は 1。範囲 1〜64）。格子では 16 付近で完了レートが頭打ち | `Statevia:Runtime:Worker:MaxConcurrency` |
 | Cancel 独立ループ | 既定 1（1〜8） | `Statevia:Runtime:Worker:CancelConcurrency` |
-| work item poll / lease | poll 1s、lease 1 分。claim 件数は空きスロット数 | ランタイム Worker |
+| work item poll / lease | poll 1s、lease 1 分。claim 件数は空きスロット数。未完了 item が無いときは EXISTS のみ（空 UPDATE なし） | ランタイム Worker |
 | 無進捗 watchdog | 既定 10 分（長い Action は対象外） | `Statevia:Runtime:Worker:NoProgressTimeout` |
 | DelayWait 掃引 | poll 5s、batch 64 | ランタイム Scheduler |
 | Engine ステート並列 | `MaxParallelism` 既定 4 | 同時 execution 数の上限ではない |

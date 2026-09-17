@@ -9,6 +9,7 @@ namespace Statevia.Infrastructure.Persistence.Repositories;
 /// 単独 DbContext で即コミットする API と、呼び出し側 <see cref="ICoreUnitOfWork"/> に参加する API を提供する。
 /// Fork 子展開など原子性が必要な経路は後者を使う。
 /// 所有 miss の <see cref="ReleaseWithoutCountingAttemptAsync"/> は claim 加算分の attempts を戻す。
+/// 空の <see cref="ClaimAsync"/> は EXISTS のみで、UPDATE トランザクションを開かない。
 /// </remarks>
 internal sealed class ExecutionWorkQueue(IDbContextFactory<CoreDbContext> dbFactory) : IExecutionWorkQueue
 {
@@ -63,8 +64,11 @@ internal sealed class ExecutionWorkQueue(IDbContextFactory<CoreDbContext> dbFact
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
 
         await using var db = await dbFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        var leaseUntil = utcNow.Add(leaseDuration);
         await db.Database.OpenConnectionAsync(ct).ConfigureAwait(false);
+        if (!await HasClaimableWorkAsync(db, utcNow, kinds, ct).ConfigureAwait(false))
+            return [];
+
+        var leaseUntil = utcNow.Add(leaseDuration);
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct)
             .ConfigureAwait(false);
         await using var command = db.Database.GetDbConnection().CreateCommand();
@@ -346,23 +350,61 @@ internal sealed class ExecutionWorkQueue(IDbContextFactory<CoreDbContext> dbFact
         return count;
     }
 
+    /// <summary>
+    /// 取得対象が 1 件でもあるか。書き込みトランザクションは開かない。
+    /// </summary>
+    /// <remarks>
+    /// <c>FOR UPDATE</c> は付けない。真の直後に他 Worker が取るレースでは、後続 UPDATE が 0 行になり得る。
+    /// </remarks>
+    private static async Task<bool> HasClaimableWorkAsync(
+        CoreDbContext db,
+        DateTime utcNow,
+        IReadOnlyList<string>? kinds,
+        CancellationToken ct)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = BuildClaimableExistsSql(command, kinds);
+        AddParameter(command, "utcNow", utcNow);
+        var scalar = await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
+        return IsSqlTrue(scalar);
+    }
+
+    /// <summary>kind 許可リストがあるときだけ IN 句を足す。プレースホルダ名はインデックスのみ。</summary>
+    private static string BuildKindFilterSql(IDbCommand command, IReadOnlyList<string>? kinds)
+    {
+        if (kinds is not { Count: > 0 })
+            return string.Empty;
+
+        var placeholders = new string[kinds.Count];
+        for (var i = 0; i < kinds.Count; i++)
+        {
+            var name = "kind" + i.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            placeholders[i] = "@" + name;
+            AddParameter(command, name, kinds[i]);
+        }
+
+        return " AND kind IN (" + string.Join(", ", placeholders) + ")";
+    }
+
+    /// <summary>空 Claim 判定用。FOR UPDATE は付けない。</summary>
+    private static string BuildClaimableExistsSql(IDbCommand command, IReadOnlyList<string>? kinds)
+    {
+        var kindFilter = BuildKindFilterSql(command, kinds);
+        return """
+            SELECT EXISTS (
+                SELECT 1
+                FROM execution_work_items
+                WHERE available_at <= @utcNow
+                  AND (lease_until IS NULL OR lease_until <= @utcNow)
+            """ + kindFilter + """
+            )
+            """;
+    }
+
     /// <summary>kind 許可リストがあるときだけ IN 句を足す。プレースホルダ名はインデックスのみ。</summary>
     private static string BuildClaimSql(IDbCommand command, IReadOnlyList<string>? kinds)
     {
-        var kindFilter = string.Empty;
-        if (kinds is { Count: > 0 })
-        {
-            var placeholders = new string[kinds.Count];
-            for (var i = 0; i < kinds.Count; i++)
-            {
-                var name = "kind" + i.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                placeholders[i] = "@" + name;
-                AddParameter(command, name, kinds[i]);
-            }
-
-            kindFilter = " AND kind IN (" + string.Join(", ", placeholders) + ")";
-        }
-
+        var kindFilter = BuildKindFilterSql(command, kinds);
         return """
             WITH candidates AS (
                 SELECT work_item_id
@@ -383,6 +425,18 @@ internal sealed class ExecutionWorkQueue(IDbContextFactory<CoreDbContext> dbFact
             RETURNING item.*;
             """;
     }
+
+    /// <summary>PostgreSQL の bool と SQLite の 0/1 を真偽にそろえる。</summary>
+    private static bool IsSqlTrue(object? scalar) =>
+        scalar switch
+        {
+            null => false,
+            System.DBNull => false,
+            bool value => value,
+            byte or sbyte or short or ushort or int or uint or long or ulong =>
+                Convert.ToInt64(scalar, System.Globalization.CultureInfo.InvariantCulture) != 0,
+            _ => Convert.ToBoolean(scalar, System.Globalization.CultureInfo.InvariantCulture)
+        };
 
     /// <summary>DB コマンドへ値を安全にパラメーター追加する。</summary>
     private static void AddParameter(IDbCommand command, string name, object value)

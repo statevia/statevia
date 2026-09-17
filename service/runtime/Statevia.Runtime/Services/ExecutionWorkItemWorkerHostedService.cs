@@ -22,6 +22,10 @@ namespace Statevia.Runtime.Services;
 /// Cancel は独立ループ。処理中は work item lease と checkpoint 所有 lease を heartbeat 延長する。
 /// </para>
 /// <para>同一プロセス所有中の Cancel は先に Engine CancelAsync を呼び、その後 process CTS を IRQ する。</para>
+/// <para>
+/// 未完了 work item が無いときの Claim は書き込みトランザクションを開かない。
+/// poll 間隔は 1 秒のままにし、Enqueue 後の取りこぼしを増やさない。
+/// </para>
 /// <para>未分類の試行上限は <see cref="IExecutionService.MarkUnclassifiedAttemptLimitAsync"/> に任せ、恒久 Restore だけ Failed を呼ぶ。</para>
 /// </remarks>
 /// <param name="scopeFactory">スロットごとの DI スコープを作る。</param>

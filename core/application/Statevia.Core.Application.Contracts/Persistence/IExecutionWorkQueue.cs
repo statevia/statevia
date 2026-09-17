@@ -32,6 +32,10 @@ public interface IExecutionWorkQueue
     /// <summary>
     /// 処理可能で未 lease または期限切れの項目を排他取得する。
     /// </summary>
+    /// <remarks>
+    /// 取得対象が無いときは書き込みトランザクションを開かない（空 UPDATE の COMMIT を避ける）。
+    /// 対象が現れてから次の poll までの遅れは Worker の既存間隔（1 秒）に収める。
+    /// </remarks>
     /// <param name="leaseOwner">取得ワーカー ID。</param>
     /// <param name="utcNow">現在 UTC 時刻。</param>
     /// <param name="leaseDuration">lease 有効期間。</param>
