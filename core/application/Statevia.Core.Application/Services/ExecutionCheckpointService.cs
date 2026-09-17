@@ -177,6 +177,7 @@ internal sealed class ExecutionCheckpointService(
     /// <para>
     /// Running 中も保持理由が空なら内容破棄候補になるが、実行中 Engine は落とさない。
     /// 終端のときだけ <see langword="true"/> を返し、投影同期後の Unload を許可する。
+    /// 投影 tx は書いた status が終端のときだけ本メソッドを呼ぶ（Running 書き込み後に live 終端を見て Unload しない）。
     /// </para>
     /// </remarks>
     /// <returns>
