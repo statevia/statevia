@@ -189,9 +189,14 @@ internal sealed class ExecutionProjectionOrchestrator(
 
                 // durable Wait / 物理 Join 待ちが無い／終端なら checkpoint を削除する。
                 // ただし Worker 所有中は lease / fencing 行を消さない（Heartbeat が世代不一致で落ちる）。
+                // Unload / 終端 Delete は「書いた投影 status」が終端のときだけ。live snapshot がこの tx 中に終端しても、
+                // Running の graph を書いたあとに Engine を落とすと AwaitLocal が最終投影できない。
                 if (await shouldDiscardRuntimeCheckpointAsync(executionId, status, graphJson, innerCt)
                         .ConfigureAwait(false))
                 {
+                    if (!ExecutionProjectionStatuses.IsTerminal(status))
+                        return false;
+
                     return await discardOrRefreshRuntimeCheckpointAsync(
                             uow,
                             engineExecutionId,

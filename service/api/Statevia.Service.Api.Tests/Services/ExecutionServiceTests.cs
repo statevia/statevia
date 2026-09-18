@@ -191,7 +191,11 @@ public sealed class ExecutionServiceTests
             return Task.FromResult(ApplyResult.Applied);
         }
 
-        public ExecutionSnapshot? GetSnapshot(string executionId) => SnapshotToReturn;
+        /// <summary>指定時は <see cref="GetSnapshot"/> がこの順で返す。尽きたら <see cref="SnapshotToReturn"/>。</summary>
+        public Queue<ExecutionSnapshot?> SnapshotReads { get; } = new();
+
+        public ExecutionSnapshot? GetSnapshot(string executionId) =>
+            SnapshotReads.Count > 0 ? SnapshotReads.Dequeue() : SnapshotToReturn;
 
         public string ExportExecutionGraph(string executionId) => GraphJsonToReturn;
 
@@ -2494,6 +2498,167 @@ public sealed class ExecutionServiceTests
         Assert.Equal("Cancelled", executionRepo.Updates[0].Status);
         Assert.True(executionRepo.Updates[0].CancelRequested.GetValueOrDefault());
         Assert.Equal(engine.GraphJsonToReturn, executionRepo.Updates[0].GraphJson);
+    }
+
+    /// <summary>所有中の終端投影は checkpoint 行を Delete する。</summary>
+    [Fact]
+    public async Task UpdateProjectionFromEngineAsync_WhenOwnedAndTerminal_DeletesCheckpoint()
+    {
+        // Arrange
+        var executionId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var ownership = new ExecutionOwnershipTracker();
+        ownership.Set(executionId, "worker-1", 1);
+        var checkpointStore = new FakeExecutionCheckpointStore
+        {
+            DocumentById = new ExecutionCheckpointDocument
+            {
+                ExecutionId = executionId,
+                CheckpointJson = "{}",
+                SchemaVersion = 1,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = new ExecutionSnapshot
+            {
+                ExecutionId = executionId.ToString(),
+                WorkflowName = "wf",
+                ActiveStates = Array.Empty<string>(),
+                IsCompleted = true,
+                IsCancelled = false,
+                IsFailed = false
+            },
+            GraphJsonToReturn = "{\"nodes\":[]}"
+        };
+        var executionRepo = new FakeExecutionRepository
+        {
+            ByIdResult = new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.T1TenantId,
+                DefinitionId = Guid.NewGuid(),
+                Status = "Running",
+                StartedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CancelRequested = false,
+                RestartLost = false
+            }
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService(),
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = new StubDefinitionRepository(),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                CheckpointStore = checkpointStore,
+                OwnershipTracker = ownership,
+            });
+
+        // Act
+        await sut.UpdateProjectionFromEngineAsync(executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, checkpointStore.DeleteCalls);
+        Assert.Equal(0, checkpointStore.GenerationUpsertCalls);
+        Assert.Null(checkpointStore.DocumentById);
+    }
+
+    /// <summary>
+    /// Running 投影を書いたあとに live snapshot が終端でも checkpoint を消さず Unload しない。
+    /// </summary>
+    [Fact]
+    public async Task UpdateProjectionFromEngineAsync_WhenOwnedRunningProjectionThenLiveTerminal_DoesNotUnload()
+    {
+        // Arrange
+        var executionId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var ownership = new ExecutionOwnershipTracker();
+        ownership.Set(executionId, "worker-1", 1);
+        var checkpointStore = new FakeExecutionCheckpointStore
+        {
+            DocumentById = new ExecutionCheckpointDocument
+            {
+                ExecutionId = executionId,
+                CheckpointJson = "{}",
+                SchemaVersion = 1,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+        var runningSnapshot = new ExecutionSnapshot
+        {
+            ExecutionId = executionId.ToString(),
+            WorkflowName = "wf",
+            ActiveStates = ["flow.noop"],
+            IsCompleted = false,
+            IsCancelled = false,
+            IsFailed = false
+        };
+        var terminalSnapshot = new ExecutionSnapshot
+        {
+            ExecutionId = executionId.ToString(),
+            WorkflowName = "wf",
+            ActiveStates = Array.Empty<string>(),
+            IsCompleted = true,
+            IsCancelled = false,
+            IsFailed = false
+        };
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = terminalSnapshot,
+            GraphJsonToReturn = """{"nodes":[{"nodeName":"flow.noop","nodeType":"Task","startedAt":"2026-09-17T15:21:24Z"}]}"""
+        };
+        engine.SnapshotReads.Enqueue(runningSnapshot);
+        engine.SnapshotReads.Enqueue(terminalSnapshot);
+        var executionRepo = new FakeExecutionRepository
+        {
+            ByIdResult = new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.T1TenantId,
+                DefinitionId = Guid.NewGuid(),
+                Status = "Running",
+                StartedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CancelRequested = false,
+                RestartLost = false
+            }
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService(),
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = new StubDefinitionRepository(),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                CheckpointStore = checkpointStore,
+                OwnershipTracker = ownership,
+            });
+
+        // Act
+        await sut.UpdateProjectionFromEngineAsync(executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Running", executionRepo.Updates[0].Status);
+        Assert.Equal(0, checkpointStore.DeleteCalls);
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.NotNull(checkpointStore.DocumentById);
     }
 
     /// <summary>イベント公開で冪等一致かつ有効行があるとき副作用なく即時終了する。</summary>
@@ -5145,7 +5310,6 @@ public sealed class ExecutionServiceTests
             executor,
             executions,
             projection,
-            lifecycle,
             NullLogger<ExecutionCheckpointService>.Instance,
             forkChildCoordinator);
         var forkJoin = new ExecutionForkJoinCoordinator(
@@ -5766,7 +5930,7 @@ public sealed class ExecutionServiceTests
         var checkpointStore = new FakeExecutionCheckpointStore { GenerationUpsertResult = false };
         var engine = new FakeExecutionEngine
         {
-            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString())
+            CheckpointToExport = CreateCheckpointWithPendingWait(executionId.ToString())
         };
         using var sqlite = new SqliteTestDatabase();
         var sut = BuildExecutionService(
@@ -6248,7 +6412,7 @@ public sealed class ExecutionServiceTests
         var checkpointStore = new FakeExecutionCheckpointStore();
         var engine = new FakeExecutionEngine
         {
-            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString())
+            CheckpointToExport = CreateCheckpointWithPendingWait(executionId.ToString())
         };
         using var sqlite = new SqliteTestDatabase();
         var sut = BuildExecutionService(
@@ -6287,7 +6451,7 @@ public sealed class ExecutionServiceTests
         var checkpointStore = new FakeExecutionCheckpointStore();
         var engine = new FakeExecutionEngine
         {
-            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString())
+            CheckpointToExport = CreateCheckpointWithPendingWait(executionId.ToString())
         };
         using var sqlite = new SqliteTestDatabase();
         var sut = BuildExecutionService(
@@ -6314,6 +6478,43 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.Equal(1, checkpointStore.GenerationUpsertCalls);
         Assert.Equal(0, checkpointStore.UpsertCalls);
+    }
+
+    /// <summary>Wait も物理 Join も無い KeepLoaded は checkpoint を書かない。</summary>
+    [Fact]
+    public async Task PersistCheckpointKeepLoadedAsync_WhenNoPendingWaits_SkipsPersist()
+    {
+        // Arrange
+        var executionId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        var engine = new FakeExecutionEngine
+        {
+            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString())
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService(),
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = new FakeExecutionRepository(),
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(Guid.NewGuid(), TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                CheckpointStore = checkpointStore,
+            });
+
+        // Act
+        await sut.PersistCheckpointKeepLoadedAsync(executionId.ToString(), CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, checkpointStore.UpsertCalls);
+        Assert.Equal(0, checkpointStore.GenerationUpsertCalls);
     }
 
     /// <summary>不正な executionId の KeepLoaded は何もしない。</summary>
@@ -6972,7 +7173,7 @@ public sealed class ExecutionServiceTests
         var checkpointStore = new FakeExecutionCheckpointStore();
         var engine = new FakeExecutionEngine
         {
-            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString()),
+            CheckpointToExport = CreateCheckpointWithPendingWait(executionId.ToString()),
             SnapshotToReturn = new ExecutionSnapshot
             {
                 ExecutionId = executionId.ToString(),
@@ -7111,6 +7312,34 @@ public sealed class ExecutionServiceTests
             },
             PendingWaits = Array.Empty<CheckpointPendingWait>()
         };
+
+    /// <summary>KeepLoaded が省略されない Wait 付き checkpoint。</summary>
+    private static ExecutionRuntimeCheckpoint CreateCheckpointWithPendingWait(string executionId)
+    {
+        var baseline = CreateMinimalCheckpoint(executionId);
+        return new()
+        {
+            ExecutionId = baseline.ExecutionId,
+            DefinitionName = baseline.DefinitionName,
+            ActiveStates = baseline.ActiveStates,
+            StateAttempts = baseline.StateAttempts,
+            StateOutputs = baseline.StateOutputs,
+            AppliedPublishClientEventIds = baseline.AppliedPublishClientEventIds,
+            AppliedCancelClientEventIds = baseline.AppliedCancelClientEventIds,
+            Context = baseline.Context,
+            Graph = baseline.Graph,
+            Join = baseline.Join,
+            PendingWaits =
+            [
+                new CheckpointPendingWait
+                {
+                    NodeId = "wait-1",
+                    NodeName = "Wait1",
+                    AllowedEvents = ["go"]
+                }
+            ]
+        };
+    }
 
     /// <summary>未分類上限テスト用の Lifecycle 依存を組み立てる。</summary>
     private static (ExecutionService Sut, FakeExecutionRepository Executions, FakeExecutionCheckpointStore Checkpoints) BuildAttemptLimitSut(

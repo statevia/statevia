@@ -136,7 +136,7 @@ internal sealed class ExecutionForkJoinCoordinator(
             return false;
         }
 
-        if (checkpoint.IsCompleted || checkpoint.IsCancelled || checkpoint.IsFailed)
+        if (checkpoint.IsTerminal)
             return true;
 
         if (checkpoint.PendingWaits.Count > 0)
@@ -403,7 +403,7 @@ internal sealed class ExecutionForkJoinCoordinator(
             if (snapshot is null)
                 return;
 
-            if (snapshot.IsCompleted || snapshot.IsCancelled || snapshot.IsFailed)
+            if (snapshot.IsTerminal)
                 return;
 
             var graphJson = engine.ExportExecutionGraph(engineExecutionId);

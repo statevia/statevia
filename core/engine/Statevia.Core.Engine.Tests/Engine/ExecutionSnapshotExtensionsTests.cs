@@ -40,6 +40,37 @@ public class ExecutionSnapshotExtensionsTests
         Assert.True(snapshot.IsCompleted);
         Assert.False(snapshot.IsCancelled);
         Assert.False(snapshot.IsFailed);
+        Assert.True(snapshot.IsTerminal);
+    }
+
+    /// <summary>IsTerminal は Completed / Cancelled / Failed のいずれかで真になる。</summary>
+    [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, false, true, true)]
+    [InlineData(false, false, false, false)]
+    public void IsTerminal_ReflectsEndFlags(
+        bool completed,
+        bool cancelled,
+        bool failed,
+        bool expected)
+    {
+        // Arrange
+        var snapshot = new ExecutionSnapshot
+        {
+            ExecutionId = "e1",
+            WorkflowName = "wf",
+            ActiveStates = Array.Empty<string>(),
+            IsCompleted = completed,
+            IsCancelled = cancelled,
+            IsFailed = failed
+        };
+
+        // Act
+        var isTerminal = snapshot.IsTerminal;
+
+        // Assert
+        Assert.Equal(expected, isTerminal);
     }
 
     /// <summary>インスタンスが null のとき <see cref="ArgumentNullException"/> をスローすることを検証する。</summary>

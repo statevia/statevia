@@ -15,6 +15,21 @@ internal sealed class ExecutionWaitRepository(
         CancellationToken ct)
     {
         var db = uow.GetDb();
+        if (waits.Count == 0)
+        {
+            var hasWaits = await db.ExecutionWaits
+                .AnyAsync(x => x.ExecutionId == executionId, ct)
+                .ConfigureAwait(false);
+            if (!hasWaits)
+            {
+                var hasSubscriptions = await db.ExecutionWaitSubscriptions
+                    .AnyAsync(x => x.ExecutionId == executionId, ct)
+                    .ConfigureAwait(false);
+                if (!hasSubscriptions)
+                    return;
+            }
+        }
+
         var existingRows = await db.ExecutionWaits
             .Where(x => x.ExecutionId == executionId)
             .ToListAsync(ct)

@@ -110,10 +110,10 @@ public sealed class ExecutionOperationalProjectionSyncTests
     }
 
     /// <summary>
-    /// 許可イベント未設定の Wait は cursor 優先候補にせず、他の実行中ノードを選ぶ。
+    /// 許可イベント未設定の Wait だけでは durable wait / cursor を書かない。
     /// </summary>
     [Fact]
-    public async Task SyncAsync_SkipsWaitWithoutEvents_WhenSelectingCursor()
+    public async Task SyncAsync_DoesNotWriteCursorOrWaits_WhenWaitHasNoEvents()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -151,9 +151,7 @@ public sealed class ExecutionOperationalProjectionSyncTests
 
         // Assert
         await using var verify = new CoreDbContext(db.Options);
-        var cursor = await verify.ExecutionCursors.SingleAsync(x => x.ExecutionId == executionId);
-        Assert.Equal("task1", cursor.CurrentNodeId);
-        Assert.Equal("worker-prepare", cursor.CurrentWorkerId);
+        Assert.False(await verify.ExecutionCursors.AnyAsync(x => x.ExecutionId == executionId));
         Assert.False(await verify.ExecutionWaits.AnyAsync(x => x.ExecutionId == executionId));
     }
 
@@ -272,9 +270,9 @@ public sealed class ExecutionOperationalProjectionSyncTests
         Assert.Equal("wait-other", nodeIds[0]);
     }
 
-    /// <summary>Wait 以外の実行中ノードは ActiveStates から cursor 位置を選ぶ。</summary>
+    /// <summary>Wait が無い Running では cursor を INSERT しない。</summary>
     [Fact]
-    public async Task SyncAsync_SelectsActiveStateNode_WhenRunningTaskMatchesSnapshot()
+    public async Task SyncAsync_DoesNotWriteCursor_WhenRunningWithoutDurableWaits()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -311,15 +309,13 @@ public sealed class ExecutionOperationalProjectionSyncTests
 
         // Assert
         await using var verify = new CoreDbContext(db.Options);
-        var cursor = await verify.ExecutionCursors.SingleAsync(x => x.ExecutionId == executionId);
-        Assert.Equal("task1", cursor.CurrentNodeId);
-        Assert.Equal("worker-prepare", cursor.CurrentWorkerId);
+        Assert.False(await verify.ExecutionCursors.AnyAsync(x => x.ExecutionId == executionId));
         Assert.False(await verify.ExecutionWaits.AnyAsync(x => x.ExecutionId == executionId));
     }
 
-    /// <summary>ActiveStates が空のときは startedAt 最新の実行中ノードを cursor にする。</summary>
+    /// <summary>終端で waits / cursor 行が無いときは空 Replace を no-op する。</summary>
     [Fact]
-    public async Task SyncAsync_SelectsLatestRunningNode_WhenSnapshotHasNoActiveStates()
+    public async Task SyncAsync_DoesNotTouchWaits_WhenTerminalAndNoExistingRows()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -327,39 +323,29 @@ public sealed class ExecutionOperationalProjectionSyncTests
         var executionId = Guid.NewGuid();
         await SeedExecutionAsync(db, executionId);
 
-        var graphJson =
-            """
-            {"nodes":[
-              {"nodeId":"task-old","nodeName":"A","nodeType":"Task","startedAt":"2026-05-26T00:00:00Z","workerId":"w-old"},
-              {"nodeId":"task-new","nodeName":"B","nodeType":"Task","startedAt":"2026-05-26T00:00:02Z","workerId":"w-new"}
-            ]}
-            """;
         var request = new ExecutionOperationalProjectionSyncRequest(
             executionId,
             TestTenantIds.T1TenantId,
-            "Running",
-            new ExecutionSnapshot
-            {
-                ExecutionId = executionId.ToString(),
-                WorkflowName = "wf",
-                ActiveStates = Array.Empty<string>(),
-                IsCompleted = false,
-                IsCancelled = false,
-                IsFailed = false
-            },
-            graphJson,
+            "Completed",
+            Snapshot: null,
+            GraphJson: """{"nodes":[{"nodeId":"task1","nodeName":"N","nodeType":"Task","fact":"Completed"}]}""",
             NodeIdToClear: null);
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
-        await ExecutionOperationalProjectionSync.SyncAsync(uow, new ExecutionCursorRepository(), new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator()), request, new DefaultIdGenerator(), CancellationToken.None);
+        await ExecutionOperationalProjectionSync.SyncAsync(
+            uow,
+            new ExecutionCursorRepository(),
+            new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator()),
+            request,
+            new DefaultIdGenerator(),
+            CancellationToken.None);
         await uow.SaveChangesAsync(CancellationToken.None);
 
         // Assert
         await using var verify = new CoreDbContext(db.Options);
-        var cursor = await verify.ExecutionCursors.SingleAsync(x => x.ExecutionId == executionId);
-        Assert.Equal("task-new", cursor.CurrentNodeId);
-        Assert.Equal("w-new", cursor.CurrentWorkerId);
+        Assert.False(await verify.ExecutionCursors.AnyAsync(x => x.ExecutionId == executionId));
+        Assert.False(await verify.ExecutionWaits.AnyAsync(x => x.ExecutionId == executionId));
     }
 
     /// <summary>wait.subscribe のグラフでも durable wait と購読行が残る。</summary>

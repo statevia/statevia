@@ -3,13 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.12 |
-| 更新日 | 2026-09-16 |
+| Version | 1.13 |
+| 更新日 | 2026-09-18 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
 
-リポジトリ直下の `docker-compose.yml` で **PostgreSQL 16**・**Service API（C#）**・**UI（Next.js）**・**Action Host** を起動できます。
+**Version 1.13（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 にする（API 内既定 1 は据え置き）。
 
 **Version 1.12（2026-09-16）**: ログ収集の詳細を [operations-logging.md](operations-logging.md) へ移し、本書は起動コマンドの要約に留める。
 
@@ -19,19 +19,7 @@
 
 **Version 1.8（2026-09-15）**: logging overlay の Grafana に ops ログ用ダッシュボードを追加（件数・HTTP 完了・LogLevel・本文。既定 6 時間）。
 
-**Version 1.7（2026-09-15）**: 任意の logging overlay（Fluent Bit / Loki / Grafana）の起動コマンドを追記。
-
-**Version 1.6（2026-09-10）**: 分離 Worker の台数（`--scale`）と `STATEVIA_WORKER_*` を追記。
-
-**Version 1.5（2026-09-10）**: 容量の現行参照構成をランタイム分離に更新。
-
-**Version 1.4（2026-09-08）**: 容量・負荷計測への導線を追加。数値は複製しない。
-
-**Version 1.3（2026-09-05）**: Production では EF Core の SQL 本文ログを出さない（Development の compose では出る）。
-
-**Version 1.2（2026-09-03）**: 専用 Worker は JWT 署名鍵を要求しない。split-runtime のローカル compose は `DOTNET_ENVIRONMENT=Development`。
-
-**Version 1.1（2026-09-01）**: compose の Action Host 接続を現行として書く。作業番号を外す。
+リポジトリ直下の `docker-compose.yml` で **PostgreSQL 16**・**Service API（C#）**・**UI（Next.js）**・**Action Host** を起動できます。
 
 ## 前提
 
@@ -74,11 +62,12 @@ docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
 | scheduler | 期限切れ DelayWait の排他 claim+Resume enqueue、checkpoint 所有 recovery |
 | worker | `execution_work_items` の claim と Start / Resume / Cancel / recovery 実行 |
 
-`worker` には `container_name` が無いので、台数は `--scale worker=N` で増やせます。プロセス内スロットと Cancel ループは環境変数です（未設定時は 4 と 1。許容範囲は [environment-variables.md](../reference/environment-variables.md)）。
+`worker` には `container_name` が無いので、台数は `--scale worker=N` で増やせます。プロセス内スロットと Cancel ループは環境変数です（未設定時は 16 と 1。許容範囲は [environment-variables.md](../reference/environment-variables.md)）。
+
+スロットは未設定時 16 です。変えるときだけ `STATEVIA_WORKER_MAX_CONCURRENCY` を付けます。
 
 ```bash
-STATEVIA_WORKER_MAX_CONCURRENCY=16 STATEVIA_WORKER_CANCEL_CONCURRENCY=1 \
-  docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
+docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
   up -d --scale worker=2 --force-recreate worker
 ```
 
@@ -132,7 +121,7 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 | service-api | `DATABASE_URL`（`POSTGRES_*` から組み立て）, `ASPNETCORE_URLS`, `ASPNETCORE_ENVIRONMENT`（compose では `Development`）。分離時は override で `Statevia__Runtime__EnableInProcess*=false`。ブラウザから API へ直叩きする場合のみ `Statevia__Cors__AllowedOrigins__0`（未設定時はクロスオリジン不許可。Studio はプロキシ） |
 | postgres    | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`（`.env` / `.env.example`） |
 | action-host | `ASPNETCORE_URLS`（compose では `http://+:5001`）, `STATEVIA_MODULES_PATH`（`/app/modules`） |
-| scheduler / worker | `DATABASE_URL`（`docker-compose.split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__BaseUrl` も共有。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 4。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
+| scheduler / worker | `DATABASE_URL`（`docker-compose.split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__BaseUrl` も共有。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 16。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
 | ui-studio  | `SERVICE_API_INTERNAL_BASE` |
 
 詳細は `docker-compose.yml` / `docker-compose.split-runtime.yml` と [environment-variables.md](../reference/environment-variables.md) を参照してください。

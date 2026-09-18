@@ -32,6 +32,9 @@ public sealed class ExecutionRuntimeCheckpoint
     /// <summary>失敗フラグ。</summary>
     public bool IsFailed { get; init; }
 
+    /// <summary>完了・キャンセル・失敗のいずれかで終端したか。</summary>
+    public bool IsTerminal => IsCompleted || IsCancelled || IsFailed;
+
     /// <summary>アクティブ状態名。</summary>
     public required IReadOnlyList<string> ActiveStates { get; init; }
 

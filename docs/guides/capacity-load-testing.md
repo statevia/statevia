@@ -3,21 +3,21 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 0.6 |
-| 更新日 | 2026-09-10 |
+| Version | 0.8 |
+| 更新日 | 2026-09-18 |
 | 関連 | [service-capacity.md](../reference/service-capacity.md), [operations-docker.md](operations-docker.md), [http-request-examples.md](http-request-examples.md) |
 
 ---
+
+**Version 0.8（2026-09-18）**: L1O（builtin sleep 500ms のスロット占有）を追加。数表は Reference。
+
+**Version 0.7（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 に合わせる。数表は Reference。
 
 **Version 0.6（2026-09-10）**: C1（一斉 Cancel）と Worker 格子手順を追加。数表は Reference。
 
 **Version 0.5（2026-09-10）**: 参照構成を split-runtime に差し替え。Phase 0 は履歴。D1 は API のみ再起動。
 
 **Version 0.4（2026-09-09）**: D1 再起動手順と L3 プローブ（DelayWait は HTTP 未定義）を追加。
-
-**Version 0.3（2026-09-09）**: 終端済みの遅い Resume は 204。L2 の失敗は非 2xx のみ。
-
-**Version 0.2（2026-09-09）**: p95 倍率 N=3 を初回計測で確定。L3 / D1 は定義のみ。
 
 同じ手順で限界点を測り、[サービス容量（暫定指針）](../reference/service-capacity.md) を更新するためのランブックです。数値の正本は Reference です。本 Guide に件数を複製しません。
 
@@ -38,7 +38,7 @@ UI は計測対象外です。
 | トポロジ ID | `split-runtime` |
 | PostgreSQL | 1 |
 | Service API | 1（プロセス内 HostedService は Off） |
-| Worker | 1（compose の `MaxConcurrency` は 4） |
+| Worker | 1（compose の `MaxConcurrency` は 16） |
 | Scheduler | 1（DelayWait / Ownership Recovery） |
 | Action Host | L1 / L2 の builtin `noop` では不要 |
 | 対象外 | Studio UI、複数 API レプリカ |
@@ -64,14 +64,15 @@ Version 0.4 までは `phase0-single-api`（既定 compose・プロセス同居�
 | ID | 目的 | ワークロード | 主要メトリクス | ハーネス |
 | --- | --- | --- | --- | --- |
 | L1 | 短寿命スループット | 即完了 Definition を並列 Start | Start 受理 / 完了 rate、p50/p95、HTTP エラー | 実装済み |
+| L1O | スロット占有スループット | builtin `sleep` 500ms を並列 Start | Start 受理 / 完了 rate、p50/p95、HTTP エラー | 実装済み |
 | L2 | Wait 滞留スケール | Start → EventWait → ノード Resume | 滞留 waits、Resume rate、p50/p95 | 実装済み |
 | L3 | Timer | `wait.timeout` 付き Wait を Start し、HTTP Resume 無しで完了するか見る | 自動完了の有無、滞留、Cancel した leftover | 実装済み（プローブ） |
 | D1 | プロセス耐久 | L2 の途中で API 再起動 | Resume 可否、投影の非破壊（合否） | 実装済み |
 | C1 | Cancel スループット | Wait 定義を Start し settle 後に一斉 Cancel | Cancel 受理 / Cancelled rate、p50/p95 | 実装済み |
 
-L1 / L2 / D1 の Definition はハーネスに同梱します（`statevia.action.builtin.execution.noop` と単一イベント Wait）。L3 は同じ Wait に `timeout: PT2S` を付けたプローブです。HTTP 契約は [api-http.md](../specifications/api-http.md) です。Wait 再開の正本はノード Resume です。
+L1 / L1O / L2 / D1 の Definition はハーネスに同梱します（`statevia.action.builtin.execution.noop`、`execution.sleep` 500ms、単一イベント Wait）。L3 は同じ Wait に `timeout: PT2S` を付けたプローブです。HTTP 契約は [api-http.md](../specifications/api-http.md) です。Wait 再開の正本はノード Resume です。
 
-## ハーネス（L1 / L2 / L3 / D1 / C1）
+## ハーネス（L1 / L1O / L2 / L3 / D1 / C1）
 
 リポジトリの `tools/capacity/` です。詳細な引数は同ディレクトリの README を見てください。
 
@@ -113,7 +114,7 @@ dotnet run --project tools/capacity/Statevia.Tools.Capacity -- `
   --output tools/capacity/results/l1.json
 ```
 
-L2 は `--scenario L2`、L3 は `--scenario L3`、D1 は `--scenario D1`、C1 は `--scenario C1` です。出力は JSON と、同名の CSV です。トークン・パスワードはファイルに書きません。
+L2 は `--scenario L2`、L1O は `--scenario L1O`、L3 は `--scenario L3`、D1 は `--scenario D1`、C1 は `--scenario C1` です。出力は JSON と、同名の CSV です。トークン・パスワードはファイルに書きません。
 
 C1 は L2 と同じ Wait 定義を Start し、`--settle-ms`（既定 3000）のあと受理済み実行を Cancel します。GET `/waits` の WAITING が揃うのは待ちません（32 件ウェーブで snapshot 待ちがタイムアウトするため）。すでに `Completed` の行は Cancel しません。
 
@@ -159,7 +160,7 @@ L2 は Resume の非 2xx を失敗と数えます。失敗が出た直前ステ�
 
 | 項目 | 意味 |
 | --- | --- |
-| `scenarioId` | `L1` / `L2` / `L3` / `D1` / `C1` |
+| `scenarioId` | `L1` / `L1O` / `L2` / `L3` / `D1` / `C1` |
 | `measuredAtUtc` | 計測開始（UTC） |
 | `gitSha` | 対象コードの SHA |
 | `hwLabel` | `ref-dev` または `ref-cloud-small` |

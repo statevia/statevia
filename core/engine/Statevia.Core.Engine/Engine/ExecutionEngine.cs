@@ -348,7 +348,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         _instances[executionId] = instance;
         _eventProviders[executionId] = eventProvider;
 
-        if (checkpoint.IsCompleted || checkpoint.IsCancelled || checkpoint.IsFailed)
+        if (checkpoint.IsTerminal)
         {
             return;
         }

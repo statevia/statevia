@@ -1,0 +1,24 @@
+version: 1
+
+workflow:
+  id: capacity.l1.occupiedSleep
+  name: CapacityL1OccupiedSleep
+  description: Capacity harness L1 occupied. Builtin sleep 500ms then complete.
+
+nodes:
+  - name: flow.start
+    type: start
+    label: start
+    next: flow.sleep
+
+  - name: flow.sleep
+    type: action
+    label: sleep
+    action: statevia.action.builtin.execution.sleep
+    input:
+      duration: 500ms
+    next: flow.end
+
+  - name: flow.end
+    type: end
+    label: end

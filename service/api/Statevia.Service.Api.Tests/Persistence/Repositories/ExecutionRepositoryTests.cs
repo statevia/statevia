@@ -394,48 +394,60 @@ public sealed class ExecutionRepositoryTests
     public async Task UpdateExecutionAndSnapshotAsync_UpdatesStatusAndGraphJson_AndKeepsCancelRequested_WhenNull()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var repo = new ExecutionRepository();
+        var wfId = Guid.NewGuid();
+        await SeedExecutionForSnapshotUpdateAsync(
+            db,
+            wfId,
+            graphJson: "{\"nodes\":[1]}");
 
         // Act
-        var tenantId = TestTenantIds.T1TenantId;
-        var defId = Guid.NewGuid();
-        var wfId = Guid.NewGuid();
-
-        await using (var ctx = new CoreDbContext(db.Options))
-        {
-            ctx.Executions.Add(new ExecutionRow
-            {
-                ExecutionId = wfId,
-                TenantId = tenantId,
-                DefinitionId = defId,
-                Status = "Running",
-                StartedAt = DateTime.UtcNow.AddMinutes(-10),
-                UpdatedAt = DateTime.UtcNow.AddMinutes(-10),
-                CancelRequested = false,
-                RestartLost = false
-            });
-            ctx.ExecutionGraphSnapshots.Add(new ExecutionGraphSnapshotRow
-            {
-                ExecutionId = wfId,
-                GraphJson = "{\"nodes\":[1]}",
-                UpdatedAt = DateTime.UtcNow.AddMinutes(-10)
-            });
-            await ctx.SaveChangesAsync(CancellationToken.None);
-        }
-
         await using var uow = await uowFactory.CreateAsync();
         await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Completed", null, "{\"nodes\":[2]}", default);
         await uow.SaveChangesAsync(CancellationToken.None);
 
         await using var verify = new CoreDbContext(db.Options);
-        // Assert
         var w = await verify.Executions.FirstAsync(x => x.ExecutionId == wfId);
         var g = await verify.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId);
+
+        // Assert
         Assert.Equal("Completed", w.Status);
         Assert.False(w.CancelRequested);
         Assert.Equal("{\"nodes\":[2]}", g.GraphJson);
+    }
+
+    /// <summary>graph JSON が未変化なら snapshot 行を UPDATE しない。</summary>
+    [Fact]
+    public async Task UpdateExecutionAndSnapshotAsync_WhenGraphUnchanged_DoesNotTouchSnapshotUpdatedAt()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var wfId = Guid.NewGuid();
+        var originalGraph = "{\"nodes\":[1]}";
+        var originalSnapshotAt = new DateTime(2026, 5, 16, 11, 0, 0, DateTimeKind.Utc);
+        await SeedExecutionForSnapshotUpdateAsync(
+            db,
+            wfId,
+            graphJson: originalGraph,
+            snapshotUpdatedAt: originalSnapshotAt);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Completed", null, originalGraph, default);
+        await uow.SaveChangesAsync(CancellationToken.None);
+
+        await using var verify = new CoreDbContext(db.Options);
+        var w = await verify.Executions.FirstAsync(x => x.ExecutionId == wfId);
+        var g = await verify.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId);
+
+        // Assert
+        Assert.Equal("Completed", w.Status);
+        Assert.Equal(originalGraph, g.GraphJson);
+        Assert.Equal(originalSnapshotAt, g.UpdatedAt);
     }
 
     /// <summary>
@@ -445,31 +457,30 @@ public sealed class ExecutionRepositoryTests
     public async Task UpdateExecutionAndSnapshotAsync_WhenExecutionMissing_StillUpdatesSnapshot()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var repo = new ExecutionRepository();
-
-        // Act
         var wfId = Guid.NewGuid();
-
-        await using (var ctx = new CoreDbContext(db.Options))
+        await using (var ctx = db.Factory.CreateDbContext())
         {
             ctx.ExecutionGraphSnapshots.Add(new ExecutionGraphSnapshotRow
             {
                 ExecutionId = wfId,
                 GraphJson = "{\"nodes\":[1]}",
-                UpdatedAt = DateTime.UtcNow.AddMinutes(-10)
+                UpdatedAt = new DateTime(2026, 5, 16, 11, 0, 0, DateTimeKind.Utc)
             });
             await ctx.SaveChangesAsync(CancellationToken.None);
         }
 
+        // Act
         await using var uow = await uowFactory.CreateAsync();
         await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Completed", true, "{\"nodes\":[2]}", default);
         await uow.SaveChangesAsync(CancellationToken.None);
 
         await using var verify = new CoreDbContext(db.Options);
-        // Assert
         var g = await verify.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId);
+
+        // Assert
         Assert.Equal("{\"nodes\":[2]}", g.GraphJson);
     }
 
@@ -480,43 +491,112 @@ public sealed class ExecutionRepositoryTests
     public async Task UpdateExecutionAndSnapshotAsync_WhenSnapshotMissing_StillUpdatesExecutionOnly()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var repo = new ExecutionRepository();
+        var wfId = Guid.NewGuid();
+        await SeedExecutionForSnapshotUpdateAsync(db, wfId, graphJson: null);
 
         // Act
-        var tenantId = TestTenantIds.T1TenantId;
-        var defId = Guid.NewGuid();
-        var wfId = Guid.NewGuid();
-
-        await using (var ctx = new CoreDbContext(db.Options))
-        {
-            ctx.Executions.Add(new ExecutionRow
-            {
-                ExecutionId = wfId,
-                TenantId = tenantId,
-                DefinitionId = defId,
-                Status = "Running",
-                StartedAt = DateTime.UtcNow.AddMinutes(-10),
-                UpdatedAt = DateTime.UtcNow.AddMinutes(-10),
-                CancelRequested = false,
-                RestartLost = false
-            });
-            await ctx.SaveChangesAsync(CancellationToken.None);
-        }
-
         await using var uow = await uowFactory.CreateAsync();
         await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Completed", true, "{\"nodes\":[2]}", default);
         await uow.SaveChangesAsync(CancellationToken.None);
 
         await using var verify = new CoreDbContext(db.Options);
-        // Assert
         var w = await verify.Executions.FirstAsync(x => x.ExecutionId == wfId);
+        var snapshotCount = await verify.ExecutionGraphSnapshots.CountAsync(x => x.ExecutionId == wfId);
+
+        // Assert
         Assert.Equal("Completed", w.Status);
         Assert.True(w.CancelRequested);
-
-        var snapshotCount = await verify.ExecutionGraphSnapshots.CountAsync(x => x.ExecutionId == wfId);
         Assert.Equal(0, snapshotCount);
+    }
+
+    /// <summary>終端 status を Running で上書きせず、graph も戻さない。</summary>
+    [Fact]
+    public async Task UpdateExecutionAndSnapshotAsync_WhenTerminal_DoesNotRegressToRunning()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var wfId = Guid.NewGuid();
+        var completedGraph = "{\"nodes\":[\"end\"]}";
+        await SeedExecutionForSnapshotUpdateAsync(db, wfId, graphJson: "{\"nodes\":[1]}");
+        await using (var setup = await uowFactory.CreateAsync())
+        {
+            await repo.UpdateExecutionAndSnapshotAsync(setup, wfId, "Completed", null, completedGraph, default);
+            await setup.SaveChangesAsync(CancellationToken.None);
+        }
+
+        DateTime snapshotAt;
+        await using (var peek = new CoreDbContext(db.Options))
+        {
+            snapshotAt = (await peek.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId)).UpdatedAt;
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Running", null, "{\"nodes\":[\"wait\"]}", default);
+        await uow.SaveChangesAsync(CancellationToken.None);
+
+        await using var verify = new CoreDbContext(db.Options);
+        var execution = await verify.Executions.FirstAsync(x => x.ExecutionId == wfId);
+        var snapshot = await verify.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId);
+
+        // Assert
+        Assert.Equal("Completed", execution.Status);
+        Assert.Equal(completedGraph, snapshot.GraphJson);
+        Assert.Equal(snapshotAt, snapshot.UpdatedAt);
+    }
+
+    /// <summary>
+    /// ExecuteUpdate 検証用に、定義 FK 付きの実行行と任意の snapshot を投入する。
+    /// </summary>
+    private static async Task SeedExecutionForSnapshotUpdateAsync(
+        SqliteTestDatabase db,
+        Guid executionId,
+        string? graphJson,
+        DateTime? snapshotUpdatedAt = null)
+    {
+        var tenantId = TestTenantIds.T1TenantId;
+        var definitionId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var now = new DateTime(2026, 5, 16, 12, 0, 0, DateTimeKind.Utc);
+
+        await using var ctx = db.Factory.CreateDbContext();
+        ProjectTestData.AddDefaultProject(ctx, tenantId, "t1", projectId);
+        DefinitionTestData.AddDefinitionWithVersion(
+            ctx,
+            tenantId,
+            definitionId,
+            "wf-exec-repo",
+            projectId,
+            versionId: versionId);
+        ctx.Executions.Add(new ExecutionRow
+        {
+            ExecutionId = executionId,
+            TenantId = tenantId,
+            DefinitionId = definitionId,
+            DefinitionVersionId = versionId,
+            Status = "Running",
+            StartedAt = now,
+            UpdatedAt = now,
+            CancelRequested = false,
+            RestartLost = false
+        });
+        if (graphJson is not null)
+        {
+            ctx.ExecutionGraphSnapshots.Add(new ExecutionGraphSnapshotRow
+            {
+                ExecutionId = executionId,
+                GraphJson = graphJson,
+                UpdatedAt = snapshotUpdatedAt ?? now
+            });
+        }
+
+        await ctx.SaveChangesAsync(CancellationToken.None);
     }
 }
 
