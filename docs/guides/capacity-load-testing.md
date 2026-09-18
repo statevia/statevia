@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 0.6 |
-| 更新日 | 2026-09-10 |
+| Version | 0.7 |
+| 更新日 | 2026-09-18 |
 | 関連 | [service-capacity.md](../reference/service-capacity.md), [operations-docker.md](operations-docker.md), [http-request-examples.md](http-request-examples.md) |
 
 ---
+
+**Version 0.7（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 に合わせる。数表は Reference。
 
 **Version 0.6（2026-09-10）**: C1（一斉 Cancel）と Worker 格子手順を追加。数表は Reference。
 
@@ -16,8 +18,6 @@
 **Version 0.4（2026-09-09）**: D1 再起動手順と L3 プローブ（DelayWait は HTTP 未定義）を追加。
 
 **Version 0.3（2026-09-09）**: 終端済みの遅い Resume は 204。L2 の失敗は非 2xx のみ。
-
-**Version 0.2（2026-09-09）**: p95 倍率 N=3 を初回計測で確定。L3 / D1 は定義のみ。
 
 同じ手順で限界点を測り、[サービス容量（暫定指針）](../reference/service-capacity.md) を更新するためのランブックです。数値の正本は Reference です。本 Guide に件数を複製しません。
 
@@ -38,7 +38,7 @@ UI は計測対象外です。
 | トポロジ ID | `split-runtime` |
 | PostgreSQL | 1 |
 | Service API | 1（プロセス内 HostedService は Off） |
-| Worker | 1（compose の `MaxConcurrency` は 4） |
+| Worker | 1（compose の `MaxConcurrency` は 16） |
 | Scheduler | 1（DelayWait / Ownership Recovery） |
 | Action Host | L1 / L2 の builtin `noop` では不要 |
 | 対象外 | Studio UI、複数 API レプリカ |

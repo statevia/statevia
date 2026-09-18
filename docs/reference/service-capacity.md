@@ -3,21 +3,21 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 0.9 |
+| Version | 0.12 |
 | 更新日 | 2026-09-18 |
 | 関連 | [capacity-load-testing.md](../guides/capacity-load-testing.md), [environment-variables.md](environment-variables.md), [data-integration.md](../specifications/data-integration.md), [wait-cancel.md](../specifications/execution/wait-cancel.md) |
 
 ---
 
+**Version 0.12（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 にする。v0.5 暫定上限は当時 4 の計測のまま。
+
+**Version 0.11（2026-09-18）**: 書き込み削減後に Worker プロセス × スロット格子を再計測。L1 最高は約 51 exec/s（3×8）。1×64 は完了。3×64 のみタイムアウト。
+
+**Version 0.10（2026-09-18）**: Running 投影後の誤 Unload 修正込みで L1 1×16・512 件を再計測。512 Completed、完了レートは約 41 exec/s。アイドル 30 秒の work item UPDATE は 0。
+
 **Version 0.9（2026-09-18）**: 空 Claim EXISTS skip 後に L1 1×16・512 件を再計測。完了レートは約 47 exec/s。アイドル 30 秒で `execution_work_items` の UPDATE は 0。
 
 **Version 0.8（2026-09-18）**: 未完了 work item が無い Claim は EXISTS のみ（空 UPDATE なし）。poll は 1 秒のまま。
-
-**Version 0.7（2026-09-17）**: L1 1 Worker × スロット 16・512 件を書き込み削減後に再計測。checkpoint UPDATE は 0、完了レートは約 40 exec/s。v0.6 格子の他セルは未再測。
-
-**Version 0.6（2026-09-10）**: Worker プロセス × スロットの縮小格子と C1（一斉 Cancel）を追加。v0.5 の 1 Worker・`MaxConcurrency` 4 表は残す。
-
-**Version 0.5（2026-09-10）**: 参照構成を `split-runtime` に差し替え再計測。Phase 0 数値は履歴。
 
 参照構成で測った処理件数・レートの **目安** です。製品 SLA、可用性 %、RPO/RTO、テナント硬クォータは扱いません。手順は [負荷・耐久計測ガイド](../guides/capacity-load-testing.md) です。
 
@@ -37,7 +37,7 @@
 | 計測日（UTC） | 2026-09-09（split-runtime 再計測） |
 | git | `fdb57c2`（ハーネスが読んだ HEAD。計測時の Scheduler イメージは再ビルド済み） |
 | HW ラベル | `ref-dev`（Windows、論理プロセッサ 16、メモリ約 80 GiB） |
-| トポロジ | `split-runtime`（`docker-compose.split-runtime.yml`。Worker / Scheduler は別プロセス。Worker `MaxConcurrency` は compose で **4**） |
+| トポロジ | `split-runtime`（`docker-compose.split-runtime.yml`。Worker / Scheduler は別プロセス。Worker `MaxConcurrency` は v0.5 計測時 compose **4**。現行既定は **16**） |
 | p95 ベースライン倍率 N | **3**（L1 ベースラインはウォームアップ後 count=8 の Start 受理 p95） |
 
 `ref-cloud-small` は未計測です。
@@ -48,7 +48,7 @@
 | --- | --- | --- |
 | PostgreSQL 16 | 1 | 既定 compose |
 | Service API | 1 | プロセス内 HostedService は Off。UI は計測対象外 |
-| Worker | 1 | `execution_work_items`。compose の `MaxConcurrency` は 4 |
+| Worker | 1 | `execution_work_items`。compose の `MaxConcurrency` は 16（v0.5 表は当時 4） |
 | Scheduler | 1 | DelayWait 掃引と Ownership Recovery |
 | Action Host | 0 または 1 | L1 / L2 の builtin `noop` では不要 |
 
@@ -71,19 +71,55 @@ Compose に `cpus` / `mem_limit` が無いため、実効 vCPU / メモリは計
 | L3 DelayWait | 期限〜Resume 遅延 | 未計測 | HTTP YAML では DelayWait を定義できない（`wait.timeout` 未使用、投影の wait_kind は常に EventWait）。掃引 poll **5s** は設定下限であり TimerFire の実測ではない |
 | D1 再起動耐久 | 合否 | 合格 | 8 件。`docker compose restart service-api` のみ（Worker / Scheduler は存続）。waits 8・Resume 8/8・投影エラー 0。再起動直後 Resume p95 は約 872 ms |
 
-## Worker プロセス × スロット格子（v0.6）
+## Worker プロセス × スロット格子（v0.11）
 
-v0.5 表は 1 Worker・`MaxConcurrency` 4・L1 128 件です。利用者がプロセス数とスロットを決める材料として、同じ `ref-dev` / `split-runtime` で縮小格子を測りました。L2 は入れていません（32 件で GET `/waits` 待ちがタイムアウトするため）。
+v0.5 表は 1 Worker・`MaxConcurrency` 4・L1 128 件です。利用者がプロセス数とスロットを決める材料として、書き込み削減後の同じ `ref-dev` / `split-runtime` で縮小格子を再測しました。L2 は入れていません（32 件で GET `/waits` 待ちがタイムアウトするため）。
 
 | 項目 | 値 |
 | --- | --- |
-| 計測日（UTC） | 2026-09-09〜10 |
-| git | `fdb57c2` |
+| 計測日（UTC） | 2026-09-17〜18 |
+| git | `8252a5d2` |
 | L1 | count 512、HTTP concurrency 16、制限 300 秒 |
 | C1 | count 128、settle 3 秒、HTTP concurrency 16。WAITING snapshot は待たない |
 | Worker | `--scale worker=N` と `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` |
 
-L1 本体は `CancelConcurrency` 1。値は完了レート（exec/s）と Start 受理 p95（ms）。512 件すべて `Completed` にならなかったセルはタイムアウトです。
+L1 本体は `CancelConcurrency` 1。値は完了レート（exec/s）と Start 受理 p95（ms）。512 件すべて `Completed` にならなかったセルはタイムアウトです。完了してもレートが大きく落ちたセルは数値のまま載せます。
+
+| プロセス \ スロット | 8 | 16 | 32 | 64 |
+| --- | --- | --- | --- | --- |
+| 1 | 約 32 / 286 | 約 42 / 141 | 約 41 / 150 | 約 41 / 150 |
+| 2 | 約 44 / 172 | 約 46 / 173 | 約 43 / 210 | 約 7 / 301 |
+| 3 | 約 51 / 238 | 約 47 / 240 | 約 7 / 279 | タイムアウト |
+| 4 | 約 42 / 322 | 約 40 / 383 | 約 4 / 396 | 約 4 / 502 |
+
+読み方:
+
+- 最高完了レートは **約 51 exec/s**（3 プロセス × 8 スロット）。v0.6 の天井約 30〜32 を上回る
+- 1 プロセス × 16 は約 42 / 141。単セル再測（v0.10 約 41 / 182）と整合する
+- 1 プロセスではスロット 16 以上で完了レートは約 41 で頭打ち。1 × 64 は完了する（v0.6 はタイムアウト）
+- 2〜3 プロセスは 8〜16 スロットで約 44〜51 まで伸びる。Start p95 はプロセス増で悪化する
+- 同時スロットが多いセル（2 × 64、3 × 32、4 × 32、4 × 64）は 512 `Completed` でも完了レートが約 4〜7 に落ちる
+- 3 × 64 のみ 300 秒タイムアウト（残留 Running 1）
+- 4 プロセスは 3 × 8 を超えず、p95 だけ悪化する
+
+C1 角はすべて Cancel 受理 128 / `Cancelled` 128、HTTP 5xx なし。`cancelledRate` は Start + settle 3 秒 + Cancel 待ちを含む壁時計なので、純 Cancel TPS ではありません。下表は Cancel 受理 p95（ms）と、その壁時計レート（1/s）。
+
+| プロセス × スロット | ループ 1 | ループ 2 | ループ 4 | ループ 8 |
+| --- | --- | --- | --- | --- |
+| 1 × 8 | 32 / 13 | 32 / 16 | 35 / 16 | 84 / 8.1 |
+| 1 × 64 | 37 / 14 | 32 / 16 | 32 / 16 | 35 / 11 |
+| 4 × 8 | 127 / 14 | 110 / 15 | 36 / 14 | 35 / 9.7 |
+| 4 × 64 | 137 / 2.7 | 178 / 2.0 | 39 / 3.0 | 109 / 1.8 |
+
+読み方:
+
+- 1 プロセスではループ 2〜4 が波全体レート最大（約 16 /s）。Cancel HTTP p95 は約 32〜37 ms
+- ループ 8 は 1 × 8 で波全体のレートが約 8 /s に落ちる（Start スロットと Cancel ループの取り合い）
+- 4 プロセスにしても Cancel レートは伸びない。4 × 64 は約 2〜3 /s まで落ち、L1 と同じ大域ボトルネックが見える
+
+### 履歴: v0.6 格子
+
+書き込み削減前（2026-09-09〜10、git `fdb57c2`）。L1 は完了レート / Start p95。C1 は Cancel p95 / 壁時計レート。
 
 | プロセス \ スロット | 8 | 16 | 32 | 64 |
 | --- | --- | --- | --- | --- |
@@ -92,28 +128,12 @@ L1 本体は `CancelConcurrency` 1。値は完了レート（exec/s）と Start 
 | 3 | 約 30 / 270 | 約 31 / 323 | タイムアウト | タイムアウト |
 | 4 | 約 30 / 415 | 不安定 | タイムアウト | タイムアウト |
 
-読み方:
-
-- 天井は **約 30〜32 exec/s**（1 プロセス × 16 スロット付近で到達。2 プロセス × 8 が最高）
-- それ以上のプロセスやスロットは完了レートを伸ばさず、Start p95 だけ悪化する
-- スロット 64 は 1 プロセスでも 300 秒以内に 512 件が揃わない（再測でも同じ）。残留 Running は数件
-- 3 プロセス × 16 は初回タイムアウト、drain 後の再測で約 31 / 323
-- 4 プロセス × 16 は初回約 8 exec/s、再測はタイムアウト。頭打ち境界として不安定
-
-C1 角はすべて Cancel 受理 128 / `Cancelled` 128、HTTP 5xx なし。`cancelledRate` は Start + settle 3 秒 + Cancel 待ちを含む壁時計なので、純 Cancel TPS ではありません。下表は Cancel 受理 p95（ms）と、その壁時計レート（1/s）。
-
 | プロセス × スロット | ループ 1 | ループ 2 | ループ 4 | ループ 8 |
 | --- | --- | --- | --- | --- |
 | 1 × 8 | 145 / 11 | 54 / 13 | 57 / 15 | 47 / 7.5 |
 | 1 × 64 | 103 / 11 | 133 / 12 | 70 / 14 | 48 / 15 |
 | 4 × 8 | 161 / 12 | 78 / 12 | 121 / 12 | 167 / 9 |
 | 4 × 64 | 137 / 3.0 | 138 / 2.5 | 71 / 2.0 | 104 / 2.1 |
-
-読み方:
-
-- 1 プロセスでは Cancel ループ 2〜4 で Cancel HTTP p95 が下がる
-- ループ 8 は 1 × 8 で波全体のレートが落ちる（Start スロットと Cancel ループの取り合い）
-- 4 プロセスにしても Cancel レートは伸びない。4 × 64 は波全体が約 2〜3 /s まで落ち、L1 と同じ大域ボトルネックが見える
 
 ## L1 1×16 書き込み削減後（v0.7）
 
@@ -149,7 +169,26 @@ v0.6 格子の 1 Worker × スロット 16 と同じセル（count 512、HTTP co
 | Start 受理 p95 | 約 371 ms | 約 202 ms |
 | アイドル 30 秒の work item UPDATE | （未測） | 0（タプル更新 0、WAL レコード +3） |
 
-アイドルでは Worker が 1 秒ごとに EXISTS を読むだけです。空の Claim UPDATE は開きません。L1 本体の work item UPDATE 512 は実 claim 分です。
+アイドルでは Worker が 1 秒ごとに EXISTS を読むだけです。空の Claim UPDATE は開きません。L1 本体の work item UPDATE 512 は実 claim 分です。v0.9 の完了レート約 47 は、511 件タイムアウト後の再走です。
+
+## L1 1×16 Unload 修正後（v0.10）
+
+同じセルを、Running 投影のあとに live 終端で Engine を落とさない修正込みで再測しました（git `8252a5d2`）。1 回目のウェーブで 512 `Completed` です。
+
+| 項目 | 第二段後（v0.9 再走） | Unload 修正後 |
+| --- | --- | --- |
+| 計測日（UTC） | 2026-09-17 | 2026-09-17 |
+| `execution_runtime_checkpoints` UPDATE / DELETE | 0 / 512 | 0 / 512 |
+| `executions` UPDATE | 1024 | 1026 |
+| `execution_graph_snapshots` UPDATE | 1022 | 1024 |
+| `execution_work_items` INSERT / UPDATE / DELETE | 512 / 512 / 512 | 512 / 512 / 512 |
+| `execution_cursors` | 0 | 0 |
+| 完了 | 512 `Completed` | 512 `Completed`、HTTP 5xx なし |
+| 完了レート | 約 47 exec/s | 約 41 exec/s |
+| Start 受理 p95 | 約 202 ms | 約 182 ms |
+| アイドル 30 秒の work item UPDATE | 0（WAL +3） | 0（タプル更新 0、WAL レコード +1） |
+
+完了レートは第一段後の約 40 exec/s を下回っていません。v0.9 の 47 との差はウェーブ間のばらつきとして読みます。
 
 ## 履歴: Phase 0（プロセス同居）
 
@@ -168,13 +207,13 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 - **DelayWait。** 期限検知の poll（既定 5s）が下限になります。現行の HTTP Definition では DelayWait を定義できないため、期限〜Resume の実測セルは未計測です。
 - **投影。** キューはグローバル直列です。Worker を並列にしても投影が遅延し得ます。契約は [data-integration.md](../specifications/data-integration.md)、設定キーは [environment-variables.md](environment-variables.md) の `ExecutionProjectionQueue:*` です。
 - **耐久 D1。** 再起動後に Resume でき、投影が壊れないことが合否です。件数の宣伝には使いません。
-- **Worker 格子。** v0.6 ではプロセスやスロットを増やしても完了レートは約 30 exec/s で頭打ちでした。書き込み削減後の 1×16 単セルは約 40 exec/s です（格子の全面再測は未）。Start p95 はプロセスを増やすと悪化します。スロット 64 は 1 プロセスでも 512 件が 300 秒以内に揃いません。投影キュー（グローバル直列）または PostgreSQL が先に飽和し得ます。
+- **Worker 格子。** v0.11 では 3×8 で約 51 exec/s です。1 プロセスは 16 スロット付近で約 41〜42。同時スロットが多いセルは完了してもレートが約 4〜7 に落ち、3×64 はタイムアウトします。Start p95 はプロセスを増やすと悪化します。投影キュー（グローバル直列）または PostgreSQL が先に飽和し得ます。
 
-上限の解釈に使う実装ボトルネック（v0.6 格子時点。短寿命の checkpoint / snapshot 回数は v0.7 で削減済み）:
+上限の解釈に使う実装ボトルネック（v0.11 格子。短寿命の checkpoint / snapshot 回数は v0.7 以降で削減済み）:
 
 | 要因 | 現行の目安 | 設定 / 場所 |
 | --- | --- | --- |
-| Start / Resume のプロセス内同時件数 | 専用 Worker の compose 未設定時は 4（API 内既定は 1。範囲 1〜64）。格子では 16 付近で完了レートが頭打ち | `Statevia:Runtime:Worker:MaxConcurrency` |
+| Start / Resume のプロセス内同時件数 | 専用 Worker の compose 未設定時は 16（API 内既定は 1。範囲 1〜64）。1 プロセスは 16 付近で完了レートが頭打ち。格子の最高は 3×8 | `Statevia:Runtime:Worker:MaxConcurrency` |
 | Cancel 独立ループ | 既定 1（1〜8） | `Statevia:Runtime:Worker:CancelConcurrency` |
 | work item poll / lease | poll 1s、lease 1 分。claim 件数は空きスロット数。未完了 item が無いときは EXISTS のみ（空 UPDATE なし） | ランタイム Worker |
 | 無進捗 watchdog | 既定 10 分（長い Action は対象外） | `Statevia:Runtime:Worker:NoProgressTimeout` |
@@ -203,3 +242,4 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 - **プロセス分離後**は、Phase 0（プロセス同居・単一 API）の表を履歴として残し、新しい参照構成の表に差し替えます。本 Version 0.5 で実施済みです。
 - 未計測のまま公開してかまいません。推測でセルを埋めません。
 - **Version 0.6** で Worker 格子を追加しました。1 Worker 固定の v0.5 表は、ウェーブサイズが違うため差し替えず併記します。
+- **Version 0.11** で書き込み削減後の格子を差し替えました。v0.6 表は履歴に残します。

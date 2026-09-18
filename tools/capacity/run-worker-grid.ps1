@@ -272,6 +272,6 @@ foreach ($cell in $cells) {
     Invoke-GridCell -CellId $cell.Id -Scenario $cell.Scenario -Replicas $cell.Replicas -Slots $cell.Slots -Loops $cell.Loops -Count $cell.Count
 }
 
-Write-Host 'restore worker replicas=1 slots=4 loops=1'
-Set-WorkerTopology -Replicas 1 -Slots 4 -Loops 1
+Write-Host 'restore worker replicas=1 slots=16 loops=1'
+Set-WorkerTopology -Replicas 1 -Slots 16 -Loops 1
 Write-Host "done. summary: $SummaryPath"
