@@ -3,7 +3,7 @@ namespace Statevia.Tools.Capacity;
 /// <summary>ハーネス起動オプション。</summary>
 internal sealed class CapacityCliOptions
 {
-    /// <summary>シナリオ ID（L1 / L2 / L3 / D1 / C1）。</summary>
+    /// <summary>シナリオ ID（L1 / L1O / L2 / L3 / D1 / C1）。</summary>
     public required string ScenarioId { get; init; }
 
     /// <summary>Service API の基点 URL。</summary>

@@ -57,7 +57,22 @@ internal static class CapacityCli
 
                 run = options.ScenarioId switch
                 {
-                    "L1" => await RunL1Async(api, options, measuredAt, cts.Token).ConfigureAwait(false),
+                    "L1" => await RunL1Async(
+                            api,
+                            options,
+                            measuredAt,
+                            ScenarioDefinitions.L1ResourceName,
+                            "capacity-l1",
+                            cts.Token)
+                        .ConfigureAwait(false),
+                    "L1O" => await RunL1Async(
+                            api,
+                            options,
+                            measuredAt,
+                            ScenarioDefinitions.L1OccupiedResourceName,
+                            "capacity-l1o",
+                            cts.Token)
+                        .ConfigureAwait(false),
                     "L2" => await RunL2Async(api, options, measuredAt, cts.Token).ConfigureAwait(false),
                     "L3" => await RunL3Async(api, options, measuredAt, cts.Token).ConfigureAwait(false),
                     "C1" => await RunC1Async(api, options, measuredAt, cts.Token).ConfigureAwait(false),
@@ -105,15 +120,25 @@ internal static class CapacityCli
         await api.LoginAsync(options.TenantKey, options.Username, options.Password, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>短寿命または sleep 占有の Start → Completed 待ち。</summary>
+    /// <param name="api">認証済み API。</param>
+    /// <param name="options">CLI オプション。</param>
+    /// <param name="measuredAt">計測開始時刻。</param>
+    /// <param name="definitionResourceName">埋め込み YAML 名。</param>
+    /// <param name="definitionNamePrefix">登録する Definition 名の接頭辞。</param>
+    /// <param name="cancellationToken">打ち切り。</param>
+    /// <returns>ハーネス結果。</returns>
     private static async Task<CapacityRunResult> RunL1Async(
         CapacityApi api,
         CapacityCliOptions options,
         DateTimeOffset measuredAt,
+        string definitionResourceName,
+        string definitionNamePrefix,
         CancellationToken cancellationToken)
     {
-        var yaml = ScenarioDefinitions.ReadYaml(ScenarioDefinitions.L1ResourceName);
+        var yaml = ScenarioDefinitions.ReadYaml(definitionResourceName);
         var definitionId = await api.CreateDefinitionAsync(
-                $"capacity-l1-{measuredAt.ToUnixTimeMilliseconds()}",
+                $"{definitionNamePrefix}-{measuredAt.ToUnixTimeMilliseconds()}",
                 yaml,
                 cancellationToken)
             .ConfigureAwait(false);
@@ -995,12 +1020,12 @@ internal static class CapacityCli
             }
         }
 
-        if (string.IsNullOrWhiteSpace(scenario) || scenario is not ("L1" or "L2" or "L3" or "D1" or "C1"))
+        if (string.IsNullOrWhiteSpace(scenario) || scenario is not ("L1" or "L1O" or "L2" or "L3" or "D1" or "C1"))
         {
-            throw new ArgumentException("--scenario must be L1, L2, L3, D1, or C1.");
+            throw new ArgumentException("--scenario must be L1, L1O, L2, L3, D1, or C1.");
         }
 
-        if ((scenario == "D1" || scenario == "C1") && !timeoutSpecified)
+        if ((scenario is "D1" or "C1" or "L1O") && !timeoutSpecified)
         {
             timeoutSeconds = 300;
         }
@@ -1088,8 +1113,8 @@ internal static class CapacityCli
 
     private static void PrintHelp()
     {
-        Console.Error.WriteLine("Statevia capacity harness (L1 / L2 / L3 / D1 / C1). Do not pass secrets to stdout.");
-        Console.Error.WriteLine("  --scenario L1|L2|L3|D1|C1");
+        Console.Error.WriteLine("Statevia capacity harness (L1 / L1O / L2 / L3 / D1 / C1). Do not pass secrets to stdout.");
+        Console.Error.WriteLine("  --scenario L1|L1O|L2|L3|D1|C1");
         Console.Error.WriteLine("  --base-url http://localhost:8080");
         Console.Error.WriteLine("  --tenant default");
         Console.Error.WriteLine("  --username admin   (or --token / --api-key)");
@@ -1098,6 +1123,7 @@ internal static class CapacityCli
         Console.Error.WriteLine("  --hw-label ref-dev --hw-notes \"vCPU/memory\" --topology phase0-single-api");
         Console.Error.WriteLine("  D1: --restart-service service-api (docker compose restart). Default timeout 300s.");
         Console.Error.WriteLine("  L3: probes DelayWait via wait.timeout; current Loader does not author DelayWait over HTTP.");
+        Console.Error.WriteLine("  L1O: Start builtin sleep 500ms defs and wait for Completed. Default timeout 300s.");
         Console.Error.WriteLine("  C1: Start wait defs, settle, Cancel. Does not wait for WAITING snapshot. Default timeout 300s.");
         Console.Error.WriteLine("  Record-only: --worker-replicas --worker-max-concurrency --worker-cancel-concurrency --settle-ms");
     }

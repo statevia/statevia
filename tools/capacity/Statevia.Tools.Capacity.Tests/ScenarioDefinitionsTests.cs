@@ -15,6 +15,19 @@ public sealed class ScenarioDefinitionsTests
         Assert.DoesNotContain("type: wait", yaml, StringComparison.Ordinal);
     }
 
+    /// <summary>L1O YAML に builtin sleep 500ms が含まれる。</summary>
+    [Fact]
+    public void ReadYaml_L1Occupied_ContainsSleepAction()
+    {
+        var yaml = ScenarioDefinitions.ReadYaml(ScenarioDefinitions.L1OccupiedResourceName);
+
+        Assert.Contains("statevia.action.builtin.execution.sleep", yaml, StringComparison.Ordinal);
+        Assert.Contains("duration: 500ms", yaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("statevia.action.builtin.execution.noop", yaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("type: wait", yaml, StringComparison.Ordinal);
+        Assert.Equal(TimeSpan.FromMilliseconds(500), ScenarioDefinitions.L1OccupiedSleep);
+    }
+
     /// <summary>L2 YAML に単一イベント go がある。</summary>
     [Fact]
     public void ReadYaml_L2_ContainsGoEvent()

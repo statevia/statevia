@@ -6,9 +6,13 @@ namespace Statevia.Tools.Capacity;
 internal static class ScenarioDefinitions
 {
     internal const string L1ResourceName = "Statevia.Tools.Capacity.Definitions.l1-short-lived.yaml";
+    internal const string L1OccupiedResourceName = "Statevia.Tools.Capacity.Definitions.l1-occupied-sleep.yaml";
     internal const string L2ResourceName = "Statevia.Tools.Capacity.Definitions.l2-event-wait.yaml";
     internal const string L3ResourceName = "Statevia.Tools.Capacity.Definitions.l3-delay-wait.yaml";
     internal const string L2ResumeEvent = "go";
+
+    /// <summary>L1O の sleep 占有時間。スロットを握るが CPU は焼かない。</summary>
+    internal static readonly TimeSpan L1OccupiedSleep = TimeSpan.FromMilliseconds(500);
 
     /// <summary>L3 YAML の timeout（現行 Loader では未使用）。観測窓の目安。</summary>
     internal static readonly TimeSpan L3YamlTimeout = TimeSpan.FromSeconds(2);
