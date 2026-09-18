@@ -419,6 +419,49 @@ internal sealed class ExecutionWaitEventService(
         string PubGraphJson,
         string PublishedPayload);
 
+    /// <summary>
+    /// persist 直前の live Engine / 既存 DB 終端を優先し、キャプチャ済み Running で上書きしない。
+    /// </summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="request">Resume 開始時に撮った投影。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>tx に書く投影。</returns>
+    private async Task<WaitResumePersistRequest> RefreshWaitResumePersistRequestAsync(
+        ICoreUnitOfWork uow,
+        WaitResumePersistRequest request,
+        CancellationToken ct)
+    {
+        var (liveStatus, liveCancel, liveGraphJson) = projection.BuildProjectionFromEngineForQueue(request.ExecutionId);
+        if (liveStatus is not null && liveGraphJson is not null)
+        {
+            return request with
+            {
+                EngineStillLoaded = true,
+                PubStatus = liveStatus,
+                PubCancel = liveCancel,
+                PubGraphJson = liveGraphJson,
+            };
+        }
+
+        var row = await executions.GetByExecutionIdAsync(uow, request.ExecutionId, ct).ConfigureAwait(false);
+        var snapshot = await executions.GetSnapshotByExecutionIdAsync(uow, request.ExecutionId, ct).ConfigureAwait(false);
+        if (row is not null
+            && ExecutionProjectionStatuses.IsTerminal(row.Status)
+            && snapshot is not null
+            && !string.IsNullOrWhiteSpace(snapshot.GraphJson))
+        {
+            return request with
+            {
+                EngineStillLoaded = false,
+                PubStatus = row.Status,
+                PubCancel = row.CancelRequested,
+                PubGraphJson = snapshot.GraphJson,
+            };
+        }
+
+        return request with { EngineStillLoaded = false };
+    }
+
     /// <summary>Wait Resume 後の投影・checkpoint・event_store・dedup を同一 tx で永続化する。</summary>
     private async Task PersistWaitResumeSideEffectsAsync(
         WaitResumePersistRequest request,
@@ -430,38 +473,40 @@ internal sealed class ExecutionWaitEventService(
             request.ClientEventId,
             async (uow, ctInner) =>
             {
+                var persist = await RefreshWaitResumePersistRequestAsync(uow, request, ctInner)
+                    .ConfigureAwait(false);
                 await executions
                     .UpdateExecutionAndSnapshotAsync(
                         uow,
-                        request.ExecutionId,
-                        request.PubStatus,
-                        request.PubCancel,
-                        request.PubGraphJson,
+                        persist.ExecutionId,
+                        persist.PubStatus,
+                        persist.PubCancel,
+                        persist.PubGraphJson,
                         ctInner)
                     .ConfigureAwait(false);
                 await projection.SyncOperationalProjectionAsync(
                         uow,
-                        request.ExecutionId,
-                        request.TenantId,
-                        request.PubStatus,
-                        request.PubGraphJson,
-                        nodeIdToClear: request.NodeId,
+                        persist.ExecutionId,
+                        persist.TenantId,
+                        persist.PubStatus,
+                        persist.PubGraphJson,
+                        nodeIdToClear: persist.NodeId,
                         ctInner)
                     .ConfigureAwait(false);
 
-                if (request.EngineStillLoaded)
+                if (persist.EngineStillLoaded)
                 {
                     if (await checkpoints.ShouldDiscardRuntimeCheckpointAsync(
-                            request.ExecutionId,
-                            request.PubStatus,
-                            request.PubGraphJson,
+                            persist.ExecutionId,
+                            persist.PubStatus,
+                            persist.PubGraphJson,
                             ctInner)
                         .ConfigureAwait(false))
                     {
                         await checkpoints.DiscardOrRefreshRuntimeCheckpointAsync(
                                 uow,
-                                request.EngineId,
-                                request.ExecutionId,
+                                persist.EngineId,
+                                persist.ExecutionId,
                                 ctInner)
                             .ConfigureAwait(false);
                     }
@@ -469,8 +514,8 @@ internal sealed class ExecutionWaitEventService(
                     {
                         await lifecycle.UpsertRuntimeCheckpointAsync(
                                 uow,
-                                request.EngineId,
-                                request.ExecutionId,
+                                persist.EngineId,
+                                persist.ExecutionId,
                                 ctInner)
                             .ConfigureAwait(false);
                     }
@@ -479,13 +524,13 @@ internal sealed class ExecutionWaitEventService(
                 await eventStore
                     .AppendAsync(
                         uow,
-                        request.ExecutionId,
+                        persist.ExecutionId,
                         EventStoreEventType.EventPublished,
-                        request.PublishedPayload,
+                        persist.PublishedPayload,
                         ctInner)
                     .ConfigureAwait(false);
 
-                if (request.DedupKey is { } saveKey)
+                if (persist.DedupKey is { } saveKey)
                 {
                     var now = DateTime.UtcNow;
                     await dedup.SaveAsync(
@@ -507,9 +552,9 @@ internal sealed class ExecutionWaitEventService(
                 var nowUtc = DateTime.UtcNow;
                 await eventDeliveryDedup.TryUpdateStatusAsync(
                     uow,
-                    request.TenantId,
-                    request.ExecutionId,
-                    request.ClientEventId,
+                    persist.TenantId,
+                    persist.ExecutionId,
+                    persist.ClientEventId,
                     new EventDeliveryDedupStatusUpdate(
                         EventDeliveryDedupStatuses.Applied,
                         nowUtc,

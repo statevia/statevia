@@ -512,6 +512,44 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal(0, snapshotCount);
     }
 
+    /// <summary>終端 status を Running で上書きせず、graph も戻さない。</summary>
+    [Fact]
+    public async Task UpdateExecutionAndSnapshotAsync_WhenTerminal_DoesNotRegressToRunning()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var wfId = Guid.NewGuid();
+        var completedGraph = "{\"nodes\":[\"end\"]}";
+        await SeedExecutionForSnapshotUpdateAsync(db, wfId, graphJson: "{\"nodes\":[1]}");
+        await using (var setup = await uowFactory.CreateAsync())
+        {
+            await repo.UpdateExecutionAndSnapshotAsync(setup, wfId, "Completed", null, completedGraph, default);
+            await setup.SaveChangesAsync(CancellationToken.None);
+        }
+
+        DateTime snapshotAt;
+        await using (var peek = new CoreDbContext(db.Options))
+        {
+            snapshotAt = (await peek.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId)).UpdatedAt;
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        await repo.UpdateExecutionAndSnapshotAsync(uow, wfId, "Running", null, "{\"nodes\":[\"wait\"]}", default);
+        await uow.SaveChangesAsync(CancellationToken.None);
+
+        await using var verify = new CoreDbContext(db.Options);
+        var execution = await verify.Executions.FirstAsync(x => x.ExecutionId == wfId);
+        var snapshot = await verify.ExecutionGraphSnapshots.FirstAsync(x => x.ExecutionId == wfId);
+
+        // Assert
+        Assert.Equal("Completed", execution.Status);
+        Assert.Equal(completedGraph, snapshot.GraphJson);
+        Assert.Equal(snapshotAt, snapshot.UpdatedAt);
+    }
+
     /// <summary>
     /// ExecuteUpdate 検証用に、定義 FK 付きの実行行と任意の snapshot を投入する。
     /// </summary>

@@ -3,21 +3,21 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 0.15 |
+| Version | 0.16 |
 | 更新日 | 2026-09-18 |
 | 関連 | [capacity-load-testing.md](../guides/capacity-load-testing.md), [environment-variables.md](environment-variables.md), [data-integration.md](../specifications/data-integration.md), [wait-cancel.md](../specifications/execution/wait-cancel.md) |
 
 ---
 
-**Version 0.15（2026-09-18）**: 1×16 で L1 / L2 / L3 / C1 / D1 を再計測。L1 は 512 Completed・約 58 exec/s。L2 は 16/16。C1 は Cancel 128/128。D1 は 2 回とも 300s タイムアウト（不合格）。
+**Version 0.16（2026-09-18）**: D1 の終端 status 逆行禁止と persist 直前の live 再読込のあと、1×16・8 件を再計測して合格。Resume 8/8、投影エラー 0、Resume p95 約 696 ms。
+
+**Version 0.15（2026-09-18）**: 1×16 で L1 / L2 / L3 / C1 / D1 を再計測。L1 は 512 Completed・約 58 exec/s。L2 は 16/16。C1 は Cancel 128/128。D1 は修正前に 300s タイムアウト（不合格）。
 
 **Version 0.14（2026-09-18）**: L1O 1×16・512 件を初計測。512 Completed、完了レートは約 7.5 exec/s。
 
 **Version 0.13（2026-09-18）**: L1O（builtin sleep 500ms のスロット占有）をハーネスに追加。
 
 **Version 0.12（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 にする。v0.5 暫定上限は当時 4 の計測のまま。
-
-**Version 0.11（2026-09-18）**: 書き込み削減後に Worker プロセス × スロット格子を再計測。L1 最高は約 51 exec/s（3×8）。1×64 は完了。3×64 のみタイムアウト。
 
 参照構成で測った処理件数・レートの **目安** です。製品 SLA、可用性 %、RPO/RTO、テナント硬クォータは扱いません。手順は [負荷・耐久計測ガイド](../guides/capacity-load-testing.md) です。
 
@@ -70,7 +70,7 @@ Compose に `cpus` / `mem_limit` が無いため、実効 vCPU / メモリは計
 | L2 Wait 滞留 | Resume 受理 p50 / p95 | 26 / 303 ms | 同上。v0.5 の 58 / 473 ms（slots 4）より短い |
 | L3 DelayWait | 期限〜Resume 遅延 | 未計測 | HTTP YAML では DelayWait を定義できない（`wait.timeout` 未使用、投影の wait_kind は常に EventWait）。掃引 poll **5s** は設定下限であり TimerFire の実測ではない。v0.15 プローブも autoCompleted 0 |
 | L1O スロット占有 | 実行完了 rate | 約 7.5 exec/s | 1 Worker × スロット 16、512 件。HTTP 5xx なし。理論上限（16 / 0.5s ≒ 32）は下回る。破断点ではない |
-| D1 再起動耐久 | 合否 | 不合格（v0.15） | 8 件を 2 回。API restart と health 復帰は成功。グラフ snapshot は数秒で Completed。`executions.status` が追いつかず 300s タイムアウト。履歴の合格は v0.5 |
+| D1 再起動耐久 | 合否 | 合格（v0.16） | 8 件。`docker compose restart service-api` のみ。waits 8・Resume 8/8・投影エラー 0。再起動直後 Resume p95 は約 696 ms。v0.15 の不合格は終端 status 逆行 |
 
 ## Worker プロセス × スロット格子（v0.11）
 
@@ -205,7 +205,7 @@ noop の L1 とは別に、builtin `sleep` 500ms でスロットを握るセル�
 
 sleep 以外に work item poll（1s）と終端検知（AwaitLoad 250ms）が乗るため、理論上限には達しません。CPU は焼いていません。
 
-## 1×16 再計測（v0.15）
+## 1×16 再計測（v0.15〜0.16）
 
 L1O と同じセル（`ref-dev` / split-runtime、1 Worker × スロット 16、git `314a519b`）で、残りのハーネスを流しました。格子は再走していません。
 
@@ -215,11 +215,11 @@ L1O と同じセル（`ref-dev` / split-runtime、1 Worker × スロット 16、
 | L2 | 16、HTTP concurrency 8 | waits 16、Resume 16/16、Completed 16。Resume p50 / p95 約 26 / 303 ms。実経過時間約 2 s |
 | L3 | 8 | `delayWaitHttpAuthorable` 0。WAITING 8 のあと leftover を Cancel。TimerFire は起きない |
 | C1 | 128、settle 3 s | Cancel 受理 128、`Cancelled` 128、HTTP 5xx なし。Cancel p50 / p95 約 38 / 67 ms。実経過時間レート約 16 /s |
-| D1 | 8 | 2 回とも不合格。restart / health は成功。300 s で `TaskCanceledException` |
+| D1 | 8 | v0.15 は不合格（status が Running のまま）。v0.16 は合格。Resume 8/8、投影エラー 0、Resume p95 約 696 ms、壁時計約 10 s |
 
 L1 の 1 回目は 300 s タイムアウト（JSON なし）。再走で 512/512 です。v0.11 格子の 1×16 約 42 exec/s との差は、単セルのばらつきとして読みます。
 
-D1 は API 再起動後、グラフ snapshot が数秒で Wait を含む全ノード `Completed` になる一方、`executions.status` はハーネスが Cancel するまで Running のままです。合否は GET execution の status を見るため、投影のずれでタイムアウトします。L2（再起動なし）は 16/16 完了するので、Wait / Resume そのものは生きています。
+v0.15 の D1 は、API 再起動後にグラフ snapshot が Completed でも `executions.status` が Running のままでタイムアウトしました。v0.16 は終端 status を Running で上書きせず、persist 直前に live 投影を取り直します。HEAD `e9cbf5f9` に未コミットのその修正を載せた API イメージで測っています。
 
 ## 履歴: Phase 0（プロセス同居）
 
@@ -238,7 +238,7 @@ Version 0.4 までの参照構成は `phase0-single-api`（既定 compose、Work
 - **Wait / Resume。** 滞留中の実行は Running のまま waits を持ちます。再開の正本は `POST /v1/executions/{id}/nodes/{nodeId}/resume` です。GET `/waits` はグラフ snapshot です。WAITING が揃わないと L2 ウェーブはタイムアウトします。
 - **DelayWait。** 期限検知の poll（既定 5s）が下限になります。現行の HTTP Definition では DelayWait を定義できないため、期限〜Resume の実測セルは未計測です。
 - **投影。** キューはグローバル直列です。Worker を並列にしても投影が遅延し得ます。契約は [data-integration.md](../specifications/data-integration.md)、設定キーは [environment-variables.md](environment-variables.md) の `ExecutionProjectionQueue:*` です。
-- **耐久 D1。** 再起動後に Resume でき、投影が壊れないことが合否です。件数の宣伝には使いません。v0.15 ではグラフ snapshot が Completed でも `executions.status` が遅れると不合格になります。
+- **耐久 D1。** 再起動後に Resume でき、投影が壊れないことが合否です。件数の宣伝には使いません。v0.16 は 8/8 合格です。v0.15 の不合格は、遅れた persist が Completed を Running に戻していたためです。
 - **Worker 格子。** v0.11 では 3×8 で約 51 exec/s です。1 プロセスは 16 スロット付近で約 41〜42（v0.15 単セルは約 58）。同時スロットが多いセルは完了してもレートが約 4〜7 に落ち、3×64 はタイムアウトします。Start p95 はプロセスを増やすと悪化します。投影キュー（グローバル直列）または PostgreSQL が先に飽和し得ます。
 
 上限の解釈に使う実装ボトルネック（v0.11 格子。短寿命の checkpoint / snapshot 回数は v0.7 以降で削減済み）:

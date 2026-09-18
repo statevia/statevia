@@ -28,6 +28,10 @@ public interface IExecutionRepository
     /// <param name="cancelRequested">取消要求。null なら既存値を維持する。</param>
     /// <param name="graphJson">実行グラフ JSON。未変化なら snapshot UPDATE しない。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <remarks>
+    /// 明示の Cancel 以外で、終端 status を <c>Running</c> に戻さない。
+    /// 遅れた persist がキューの Completed を上書きするのを防ぐ。
+    /// </remarks>
     Task UpdateExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
         Guid executionId,

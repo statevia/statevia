@@ -80,6 +80,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
     /// <remarks>
     /// <para>status は <c>ExecuteUpdate</c>。snapshot は Ordinal 比較で未変化なら UPDATE しない（TOAST 回避）。</para>
     /// <para>変化した graph は終端時も含めて必ず書く。</para>
+    /// <para>明示の Cancel 以外で終端 status を Running に戻さない。graph も逆行しない。</para>
     /// </remarks>
     public async Task UpdateExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
@@ -91,6 +92,20 @@ internal sealed class ExecutionRepository : IExecutionRepository
     {
         var db = uow.GetDb();
         var now = DateTime.UtcNow;
+
+        var currentStatus = await db.Executions
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(x => x.ExecutionId == executionId)
+            .Select(x => (string?)x.Status)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        var rejectRunningOverTerminal = cancelRequested is null
+            && string.Equals(status, ExecutionProjectionStatuses.Running, StringComparison.Ordinal)
+            && currentStatus is not null
+            && ExecutionProjectionStatuses.IsTerminal(currentStatus);
+        if (rejectRunningOverTerminal)
+            return;
 
         var snapshot = await db.ExecutionGraphSnapshots
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct)
