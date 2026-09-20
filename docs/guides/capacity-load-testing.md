@@ -3,21 +3,21 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 0.8 |
-| 更新日 | 2026-09-18 |
+| Version | 0.10 |
+| 更新日 | 2026-09-20 |
 | 関連 | [service-capacity.md](../reference/service-capacity.md), [operations-docker.md](operations-docker.md), [http-request-examples.md](http-request-examples.md) |
 
 ---
+
+**Version 0.10（2026-09-20）**: 実行系以外の API 単体 request/sec（ベストエフォート）スクリプトを追加。数表には載せない。
+
+**Version 0.9（2026-09-20）**: 実行系以外の API 単体 TAT（ベストエフォート）スクリプトを追加。数表には載せない。
 
 **Version 0.8（2026-09-18）**: L1O（builtin sleep 500ms のスロット占有）を追加。数表は Reference。
 
 **Version 0.7（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 に合わせる。数表は Reference。
 
 **Version 0.6（2026-09-10）**: C1（一斉 Cancel）と Worker 格子手順を追加。数表は Reference。
-
-**Version 0.5（2026-09-10）**: 参照構成を split-runtime に差し替え。Phase 0 は履歴。D1 は API のみ再起動。
-
-**Version 0.4（2026-09-09）**: D1 再起動手順と L3 プローブ（DelayWait は HTTP 未定義）を追加。
 
 同じ手順で限界点を測り、[サービス容量（暫定指針）](../reference/service-capacity.md) を更新するためのランブックです。数値の正本は Reference です。本 Guide に件数を複製しません。
 
@@ -29,7 +29,7 @@
 - Runtime API を叩ける Principal（Development なら `POST /v1/auth/login`。例は [http-request-examples.md](http-request-examples.md)）
 - 検証用テナントだけを使うこと。本番秘密をリポジトリやハーネス引数の履歴に残さないこと
 
-UI は計測対象外です。
+UI は計測対象外です。実行系以外の API を 1 本ずつ叩いて TAT だけ見る場合は、本 Guide の容量シナリオではなく [`scripts/measure-api-tat.ps1`](../../scripts/measure-api-tat.ps1) を使います。同時呼び出しの混在負荷ではなく、[service-capacity.md](../reference/service-capacity.md) の数表にも載せません。
 
 ## 参照構成（split-runtime）
 
@@ -123,6 +123,24 @@ L3 は DelayWait を HTTP から定義できるかを確認します。現行の
 D1 は git ルートで `docker compose restart service-api` します（`--restart-service` でサービス名を変えられます。既定タイムアウト 300 秒）。split-runtime では Worker / Scheduler は再起動しません。再起動後に `/v1/health` と再ログインし、GET execution / graph / waits が壊れず Resume で `Completed` になれば合格です。compose を起こすときは `-f docker-compose.yml -f docker-compose.split-runtime.yml` を使ってください。`restart` 自体は既存コンテナの環境を保ちます。
 
 JWT または `X-Api-Key` を使う場合は `--token` / `--api-key` を渡します。パスワードをコマンド履歴に残さないでください。
+
+## 実行系以外の API TAT（ベストエフォート）
+
+定義・認証・管理者 API などを **1 本ずつ** 叩き、クライアント観測の TAT（min / p50 / p95 / max）だけを残す場合は `scripts/measure-api-tat.ps1` です。同時呼び出しの混在や破断点探しはしません。[service-capacity.md](../reference/service-capacity.md) の数表にも使いません。
+
+```powershell
+$env:STATEVIA_API_TAT_PASSWORD = 'admin123'
+.\scripts\measure-api-tat.ps1 -Suite Default -Output tools/api-tat/results/tat.json
+```
+
+`-Suite Read` は読み取りと定義検証のみ、`Admin` は管理者 GET と後始末できる書き込み、`All` は削除できないユーザー / グループ作成と Module reload を含みます。実行系（`/v1/executions` / `POST /v1/events`）とパスワード変更は測りません。引数の正本はスクリプトのコメントヘルプです。
+
+同じ API を **1 本ずつ** 同時数付きで叩き、成功 request/sec を見る場合は `scripts/measure-api-rps.ps1` です。既定は GET と login / validate のみです。create / delete のような競合する書き込みは入れません。混在負荷ではなく、数表にも使いません。
+
+```powershell
+$env:STATEVIA_API_TAT_PASSWORD = 'admin123'
+.\scripts\measure-api-rps.ps1 -Suite Read -Concurrency 8 -DurationSeconds 15 -Output tools/api-tat/results/rps.json
+```
 
 ## 負荷ランプ
 
