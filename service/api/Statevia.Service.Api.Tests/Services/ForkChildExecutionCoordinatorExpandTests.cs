@@ -18,7 +18,7 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     public async Task ExpandForkAsync_CreatesChildrenBranchesAndStartWorkItems()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var parentId = Guid.NewGuid();
         var definitionId = Guid.NewGuid();
         var definitionVersionId = Guid.NewGuid();
@@ -56,7 +56,7 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     public async Task ExpandForkAsync_WhenAlreadyExpanded_DoesNotReEnqueueStarts()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var parentId = Guid.NewGuid();
         var definitionId = Guid.NewGuid();
         var definitionVersionId = Guid.NewGuid();
@@ -64,7 +64,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
         var childB = Guid.NewGuid();
         var now = DateTime.UtcNow;
         await SeedParentAsync(db.Options, parentId, definitionId, definitionVersionId, now);
-        await SeedChildAndBranchesAsync(db.Options, parentId, childA, childB, now);
+        await SeedChildAndBranchesAsync(
+            db.Options, parentId, definitionId, definitionVersionId, childA, childB, now);
 
         var workQueue = new CapturingWorkQueue();
         var sut = CreateSut(db, workQueue, new ForkChildExpansionOptions { MaxAttempts = 1, BaseDelayMs = 0 });
@@ -84,14 +85,15 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     public async Task ExpandForkAsync_WhenAttemptsExhausted_FailsParentAndEnqueuesCancel()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var parentId = Guid.NewGuid();
         var definitionId = Guid.NewGuid();
         var definitionVersionId = Guid.NewGuid();
         var childA = Guid.NewGuid();
         var now = DateTime.UtcNow;
         await SeedParentAsync(db.Options, parentId, definitionId, definitionVersionId, now);
-        await SeedPartialChildAsync(db.Options, parentId, childA, now);
+        await SeedPartialChildAsync(
+            db.Options, parentId, definitionId, definitionVersionId, childA, now);
 
         var workQueue = new CapturingWorkQueue();
         var failingBranches = new ThrowingBranchRepository();
@@ -125,7 +127,7 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     public async Task ExpandForkAsync_EmptyBranches_Throws()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var workQueue = new CapturingWorkQueue();
         var sut = CreateSut(db, workQueue, new ForkChildExpansionOptions { MaxAttempts = 1, BaseDelayMs = 0 });
         var parentId = Guid.NewGuid();
@@ -154,7 +156,7 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     public async Task ExpandForkAsync_InvalidMaxAttempts_Throws()
     {
         // Arrange
-        using var db = new InMemoryTestDatabase();
+        using var db = new SqliteTestDatabase();
         var workQueue = new CapturingWorkQueue();
         var sut = CreateSut(db, workQueue, new ForkChildExpansionOptions { MaxAttempts = 0, BaseDelayMs = 0 });
         var parentId = Guid.NewGuid();
@@ -171,7 +173,7 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     }
 
     private static ForkChildExecutionCoordinator CreateSut(
-        InMemoryTestDatabase db,
+        SqliteTestDatabase db,
         IExecutionWorkQueue workQueue,
         ForkChildExpansionOptions options,
         IExecutionBranchRepository? branches = null)
@@ -239,6 +241,15 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
         DateTime now)
     {
         await using var ctx = new CoreDbContext(options);
+        var projectId = Guid.NewGuid();
+        ProjectTestData.AddDefaultProject(ctx, TestTenantIds.T1TenantId, "t1", projectId);
+        DefinitionTestData.AddDefinitionWithVersion(
+            ctx,
+            TestTenantIds.T1TenantId,
+            definitionId,
+            "wf-fork-expand",
+            projectId,
+            versionId: definitionVersionId);
         ctx.Executions.Add(new ExecutionRow
         {
             ExecutionId = parentId,
@@ -264,6 +275,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     private static async Task SeedChildAndBranchesAsync(
         DbContextOptions<CoreDbContext> options,
         Guid parentId,
+        Guid definitionId,
+        Guid definitionVersionId,
         Guid childA,
         Guid childB,
         DateTime now)
@@ -275,8 +288,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
             {
                 ExecutionId = childId,
                 TenantId = TestTenantIds.T1TenantId,
-                DefinitionId = Guid.NewGuid(),
-                DefinitionVersionId = Guid.NewGuid(),
+                DefinitionId = definitionId,
+                DefinitionVersionId = definitionVersionId,
                 Status = ExecutionProjectionStatuses.Running,
                 StartedAt = now,
                 UpdatedAt = now,
@@ -314,6 +327,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
     private static async Task SeedPartialChildAsync(
         DbContextOptions<CoreDbContext> options,
         Guid parentId,
+        Guid definitionId,
+        Guid definitionVersionId,
         Guid childA,
         DateTime now)
     {
@@ -322,8 +337,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
         {
             ExecutionId = childA,
             TenantId = TestTenantIds.T1TenantId,
-            DefinitionId = Guid.NewGuid(),
-            DefinitionVersionId = Guid.NewGuid(),
+            DefinitionId = definitionId,
+            DefinitionVersionId = definitionVersionId,
             Status = ExecutionProjectionStatuses.Running,
             StartedAt = now,
             UpdatedAt = now,

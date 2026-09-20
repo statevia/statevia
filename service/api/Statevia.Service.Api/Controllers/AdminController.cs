@@ -4,7 +4,7 @@ using Statevia.Service.Api.Services;
 
 namespace Statevia.Service.Api.Controllers;
 
-/// <summary>テナント管理者向け users / groups API。</summary>
+/// <summary>テナント管理者向け users / groups / ServiceAccount API。</summary>
 [ApiController]
 [Route("v1/admin")]
 public sealed class AdminController : ControllerBase
@@ -129,6 +129,44 @@ public sealed class AdminController : ControllerBase
         await _administration.RevokeApiKeyAsync(RequirePrincipalId(), apiKeyId, ct).ConfigureAwait(false);
         return NoContent();
     }
+
+    /// <summary>GET /v1/admin/service-accounts — ServiceAccount 一覧（平文なし）。</summary>
+    [HttpGet("service-accounts")]
+    [ProducesResponseType(typeof(IReadOnlyList<AdminServiceAccountListItemDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AdminServiceAccountListItemDto>>> ListServiceAccounts(
+        CancellationToken ct) =>
+        Ok(await _administration.ListServiceAccountsAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
+
+    /// <summary>POST /v1/admin/service-accounts — 資格のない ServiceAccount 作成。</summary>
+    [HttpPost("service-accounts")]
+    [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<AdminServiceAccountListItemDto>> CreateServiceAccount(
+        [FromBody] CreateAdminServiceAccountRequest request,
+        CancellationToken ct)
+    {
+        var created = await _administration.CreateServiceAccountAsync(RequirePrincipalId(), request, ct)
+            .ConfigureAwait(false);
+        return CreatedAtAction(nameof(GetServiceAccount), new { serviceAccountId = created.ServiceAccountId }, created);
+    }
+
+    /// <summary>GET /v1/admin/service-accounts/{serviceAccountId} — ServiceAccount 詳細。</summary>
+    [HttpGet("service-accounts/{serviceAccountId:guid}")]
+    [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AdminServiceAccountListItemDto>> GetServiceAccount(
+        Guid serviceAccountId,
+        CancellationToken ct) =>
+        Ok(await _administration.GetServiceAccountAsync(RequirePrincipalId(), serviceAccountId, ct)
+            .ConfigureAwait(false));
+
+    /// <summary>PATCH /v1/admin/service-accounts/{serviceAccountId} — 有効・表示名・所属の更新。</summary>
+    [HttpPatch("service-accounts/{serviceAccountId:guid}")]
+    [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AdminServiceAccountListItemDto>> UpdateServiceAccount(
+        Guid serviceAccountId,
+        [FromBody] UpdateAdminServiceAccountRequest request,
+        CancellationToken ct) =>
+        Ok(await _administration.UpdateServiceAccountAsync(RequirePrincipalId(), serviceAccountId, request, ct)
+            .ConfigureAwait(false));
 
     private Guid RequirePrincipalId()
     {

@@ -78,7 +78,8 @@ internal sealed class ExecutionRepository : IExecutionRepository
     /// executions の status を更新し、graph JSON が変わったときだけ snapshot を書く。
     /// </summary>
     /// <remarks>
-    /// <para>status は <c>ExecuteUpdate</c>。snapshot は Ordinal 比較で未変化なら UPDATE しない（TOAST 回避）。</para>
+    /// <para>status は <c>ExecuteUpdate</c>（テナント query filter を無視する。Worker など未解決テナントでも ID 指定更新できるようにする）。</para>
+    /// <para>snapshot は Ordinal 比較で未変化なら UPDATE しない（TOAST 回避）。</para>
     /// <para>変化した graph は終端時も含めて必ず書く。</para>
     /// <para>明示の Cancel 以外で終端 status を Running に戻さない。graph も逆行しない。</para>
     /// </remarks>
@@ -120,6 +121,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
         if (cancelRequested is { } cancel)
         {
             await db.Executions
+                .IgnoreQueryFilters()
                 .Where(x => x.ExecutionId == executionId)
                 .ExecuteUpdateAsync(
                     setters => setters
@@ -132,6 +134,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
         }
 
         await db.Executions
+            .IgnoreQueryFilters()
             .Where(x => x.ExecutionId == executionId)
             .ExecuteUpdateAsync(
                 setters => setters

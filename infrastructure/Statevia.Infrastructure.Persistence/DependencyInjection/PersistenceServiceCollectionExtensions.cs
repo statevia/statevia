@@ -36,6 +36,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<ICommandDedupRepository, CommandDedupRepository>();
         services.AddScoped<IEventDeliveryDedupRepository, EventDeliveryDedupRepository>();
         services.AddScoped<IEventStoreRepository, EventStoreRepository>();
+        services.AddScoped<IExecutionScheduleRepository, ExecutionScheduleRepository>();
 
         return services;
     }

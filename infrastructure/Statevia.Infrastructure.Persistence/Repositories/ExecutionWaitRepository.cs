@@ -15,20 +15,8 @@ internal sealed class ExecutionWaitRepository(
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        if (waits.Count == 0)
-        {
-            var hasWaits = await db.ExecutionWaits
-                .AnyAsync(x => x.ExecutionId == executionId, ct)
-                .ConfigureAwait(false);
-            if (!hasWaits)
-            {
-                var hasSubscriptions = await db.ExecutionWaitSubscriptions
-                    .AnyAsync(x => x.ExecutionId == executionId, ct)
-                    .ConfigureAwait(false);
-                if (!hasSubscriptions)
-                    return;
-            }
-        }
+        if (waits.Count == 0 && await HasNoExistingWaitStateAsync(db, executionId, ct).ConfigureAwait(false))
+            return;
 
         var existingRows = await db.ExecutionWaits
             .Where(x => x.ExecutionId == executionId)
@@ -85,6 +73,26 @@ internal sealed class ExecutionWaitRepository(
             .ToList();
         if (subscriptionRows.Count > 0)
             db.ExecutionWaitSubscriptions.AddRange(subscriptionRows);
+    }
+
+    /// <summary>
+    /// wait も subscription も無いときは Replace の読み書きを省略する。
+    /// </summary>
+    private static async Task<bool> HasNoExistingWaitStateAsync(
+        CoreDbContext db,
+        Guid executionId,
+        CancellationToken ct)
+    {
+        var hasWaits = await db.ExecutionWaits
+            .AnyAsync(x => x.ExecutionId == executionId, ct)
+            .ConfigureAwait(false);
+        if (hasWaits)
+            return false;
+
+        var hasSubscriptions = await db.ExecutionWaitSubscriptions
+            .AnyAsync(x => x.ExecutionId == executionId, ct)
+            .ConfigureAwait(false);
+        return !hasSubscriptions;
     }
 
     /// <inheritdoc />

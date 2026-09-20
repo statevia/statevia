@@ -167,8 +167,11 @@ public sealed class AdminGroupDetailDto
     /// <summary>システム予約か。</summary>
     public bool IsSystem { get; set; }
 
-    /// <summary>メンバー Principal ID。</summary>
+    /// <summary>所属ユーザー ID。</summary>
     public IReadOnlyList<Guid> MemberUserIds { get; set; } = Array.Empty<Guid>();
+
+    /// <summary>所属 ServiceAccount ID。</summary>
+    public IReadOnlyList<Guid> ServiceAccountIds { get; set; } = Array.Empty<Guid>();
 
     /// <summary>付与 semantic key。</summary>
     public IReadOnlyList<string> PermissionKeys { get; set; } = Array.Empty<string>();
@@ -292,4 +295,87 @@ public sealed class CreatedAdminApiKeyDto
 
     /// <summary>作成日時（UTC）。</summary>
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>テナント内 ServiceAccount 一覧項目。平文キーは含めない。</summary>
+public sealed class AdminServiceAccountListItemDto
+{
+    /// <summary>ServiceAccount ID。</summary>
+    public Guid ServiceAccountId { get; set; }
+
+    /// <summary>Principal ID。</summary>
+    public Guid PrincipalId { get; set; }
+
+    /// <summary>表示名。</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>Principal が有効か。</summary>
+    public bool IsActive { get; set; }
+
+    /// <summary>未失効の API キー行があるか（キー由来 SA の識別用）。</summary>
+    public bool HasApiKey { get; set; }
+
+    /// <summary>所属グループ ID。</summary>
+    public IReadOnlyList<Guid> GroupIds { get; set; } = Array.Empty<Guid>();
+
+    /// <summary>作成日時（UTC）。</summary>
+    public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>資格のない ServiceAccount 作成要求。</summary>
+public sealed class CreateAdminServiceAccountRequest : IValidatableObject
+{
+    private const int MaxNameLength = 128;
+
+    /// <summary>表示名。</summary>
+    [Required]
+    public string Name { get; set; } = "";
+
+    /// <summary>所属させる既存グループ ID（1 件以上必須）。</summary>
+    [Required]
+    public IReadOnlyList<Guid> GroupIds { get; set; } = Array.Empty<Guid>();
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var trimmedName = Name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+            yield return new ValidationResult("name is required.", [nameof(Name)]);
+        else if (!AsciiLabelConstraints.IsValid(trimmedName, MaxNameLength))
+            yield return new ValidationResult(AsciiLabelConstraints.FormatErrorMessage, [nameof(Name)]);
+
+        if (GroupIds is null || GroupIds.Count == 0)
+            yield return new ValidationResult("groupIds must contain at least one group.", [nameof(GroupIds)]);
+    }
+}
+
+/// <summary>ServiceAccount 更新要求。</summary>
+public sealed class UpdateAdminServiceAccountRequest : IValidatableObject
+{
+    private const int MaxNameLength = 128;
+
+    /// <summary>有効か。false で Principal を無効化する。</summary>
+    public bool? IsActive { get; set; }
+
+    /// <summary>表示名。未指定なら変更しない。</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>所属グループの置換。未指定なら変更しない。空配列は拒否。</summary>
+    public IReadOnlyList<Guid>? GroupIds { get; set; }
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (DisplayName is { } displayName)
+        {
+            var trimmed = displayName.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+                yield return new ValidationResult("displayName is required when specified.", [nameof(DisplayName)]);
+            else if (!AsciiLabelConstraints.IsValid(trimmed, MaxNameLength))
+                yield return new ValidationResult(AsciiLabelConstraints.FormatErrorMessage, [nameof(DisplayName)]);
+        }
+
+        if (GroupIds is { Count: 0 })
+            yield return new ValidationResult("groupIds must contain at least one group.", [nameof(GroupIds)]);
+    }
 }
