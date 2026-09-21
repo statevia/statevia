@@ -15,20 +15,8 @@ internal sealed class ExecutionWaitRepository(
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        if (waits.Count == 0)
-        {
-            var hasWaits = await db.ExecutionWaits
-                .AnyAsync(x => x.ExecutionId == executionId, ct)
-                .ConfigureAwait(false);
-            if (!hasWaits)
-            {
-                var hasSubscriptions = await db.ExecutionWaitSubscriptions
-                    .AnyAsync(x => x.ExecutionId == executionId, ct)
-                    .ConfigureAwait(false);
-                if (!hasSubscriptions)
-                    return;
-            }
-        }
+        if (await CanSkipEmptyReplaceAsync(db, executionId, waits, ct).ConfigureAwait(false))
+            return;
 
         var existingRows = await db.ExecutionWaits
             .Where(x => x.ExecutionId == executionId)
@@ -85,6 +73,28 @@ internal sealed class ExecutionWaitRepository(
             .ToList();
         if (subscriptionRows.Count > 0)
             db.ExecutionWaitSubscriptions.AddRange(subscriptionRows);
+    }
+
+    /// <summary>待ちも購読もない空置換なら DB を触らない。</summary>
+    private static async Task<bool> CanSkipEmptyReplaceAsync(
+        CoreDbContext db,
+        Guid executionId,
+        IReadOnlyList<ExecutionWaitRow> waits,
+        CancellationToken ct)
+    {
+        if (waits.Count != 0)
+            return false;
+
+        var hasWaits = await db.ExecutionWaits
+            .AnyAsync(x => x.ExecutionId == executionId, ct)
+            .ConfigureAwait(false);
+        if (hasWaits)
+            return false;
+
+        var hasSubscriptions = await db.ExecutionWaitSubscriptions
+            .AnyAsync(x => x.ExecutionId == executionId, ct)
+            .ConfigureAwait(false);
+        return !hasSubscriptions;
     }
 
     /// <inheritdoc />
