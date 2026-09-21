@@ -76,5 +76,7 @@ Thumbs.db
 docs/out/
 # 容量計測の生結果（公開しない）
 tools/capacity/results/
+# API 単体 TAT の生結果（公開しない）
+tools/api-tat/results/
 # ビルドで copy するリファレンス Module DLL（実行時配置）
 modules/default/statevia.action.reference.*/
