@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.0.1 |
-| 更新日 | 2026-09-17 |
+| Version | 1.1.0 |
+| 更新日 | 2026-09-21 |
 | 関連 | [io-log-masking.md](io-log-masking.md), [logging-property-keys.md](../../reference/logging-property-keys.md), [operations-logging.md](../../guides/operations-logging.md) |
 
 ---
@@ -16,10 +16,13 @@
 - **必須**: ログ出力前に機微 IO のマスキングを通す（[io-log-masking.md](io-log-masking.md)）。
 - **必須**: 既定の `docker compose up -d` ではログ基盤を起動しない。アプリログを PostgreSQL に入れない。Studio にアプリログ探索 UI を置かない。
 - **必須**: Error は運用者が対応すべき想定外。協調 Cancel による実行終端は Information（エンジンは Cancel 理由を区別しない）。`Fact=Failed` の実行終端は Error。
-- **禁止**: 特定ベンダー（Loki / Grafana / CloudWatch / Datadog 等）を製品必須としない。製品は Loki 上の ACL を強制しない。
+- **禁止**: 特定ベンダー（Loki / Grafana / CloudWatch / Datadog / Sentry 等）を製品必須としない。製品は Loki 上の ACL を強制しない。
 - **禁止**: ホスト / プロセスの資源指標と Action 単位のテナント向け指標を本契約の対象にしない。
 - **推奨**: 保管キーへの写像（例: JSON の `TenantId` UUID → ingest 時のテナント識別子）は運用者が行う。
 - **任意**: 収集・保管・可視化の実装。リポジトリの compose overlay は一例である。
+- **任意**: 想定外例外のエラー監視 SDK。DSN 未設定なら初期化も送信もしない。製品必須にしない。stdout ログ契約の代替ではない。
+
+**Version 1.1.0（2026-09-21）**: 任意のエラー監視 SDK（DSN オプトイン。製品非必須）。Studio クライアント送信は対象外。`Fact=Failed` は監視 SDK に送らない。
 
 **Version 1.0.1（2026-09-17）**: 重大度の原則（協調 Cancel は Information、Failed 終端は Error）。
 
@@ -68,6 +71,27 @@ ingest 時に JSON の `TenantId` が UUID なら、その文字列を保管側�
 テナント保管を分けない運用（オペレータ専用の単一基盤）も許可する。製品は保管基盤上の ACL を強制しない。監査の正本は `event_store` のまま。保持日数は製品 SLA にしない。
 
 OTLP・メトリクス・トレースは本仕様の対象外。
+
+## エラー監視（任意）
+
+製品はエラー監視 SDK を必須にしない。環境変数 `SENTRY_DSN`（または構成 `Sentry:Dsn`）が空なら、SDK を初期化せず送信しない。既定の `docker compose up -d` に受信側を含めない。
+
+送ってよいのは運用者が対応すべき想定外だけである。
+
+- Service API: 契約外の未処理例外（クライアントへは `INTERNAL_ERROR`）
+- Worker: 未分類の work item 失敗
+
+送ってはならない。
+
+- 4xx・検証エラー・協調 Cancel
+- 実行の `Fact=Failed`（stdout は Error のまま。監視 SDK には送らない）
+- スロークエリおよび Performance / DB 計装
+- リクエスト本文・クエリ・Cookie・Authorization
+- 欠けている `TraceId` / `TenantId` / `ExecutionId` / `WorkItemId` を埋めたタグ
+
+タグを付けるときは [logging-property-keys.md](../../reference/logging-property-keys.md) のキー名を使う。stdout の Loki overlay とは別チャネルであり、置き換えない。
+
+Studio のクライアント送信、Error Boundary、BFF の Trace ヘッダ転送はこの契約の対象外（後続スライス）。
 
 ## 健康プローブ
 

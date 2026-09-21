@@ -2,15 +2,22 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging.Abstractions;
+using Statevia.Infrastructure.Persistence;
+using Statevia.Runtime.Observability;
 using Statevia.Service.Api.Application.Actions.Versioning;
 using Statevia.Service.Api.Contracts;
+using Statevia.Service.Api.Hosting;
+using Statevia.Service.Api.Tests.Infrastructure;
 
 namespace Statevia.Service.Api.Tests.Controllers;
 
 public sealed class ApiExceptionFilterTests
 {
-    private static ApiExceptionFilter CreateFilter() =>
-        new(NullLogger<ApiExceptionFilter>.Instance);
+    private static ApiExceptionFilter CreateFilter(IUnexpectedExceptionReporter? reporter = null) =>
+        new(
+            NullLogger<ApiExceptionFilter>.Instance,
+            reporter ?? NullUnexpectedExceptionReporter.Instance,
+            NullTenantContextAccessor.Instance);
 
     private static ExceptionContext CreateContext(DefaultHttpContext http, Exception ex)
     {
@@ -187,6 +194,95 @@ public sealed class ApiExceptionFilterTests
         Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
         var payload = Assert.IsType<ErrorResponse>(result.Value);
         Assert.Equal("INTERNAL_ERROR", payload.Error.Code);
+    }
+
+    /// <summary>想定外 500 はエラー監視へ報告する。</summary>
+    [Fact]
+    public void OnException_WhenInternalError_ReportsUnexpectedException()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        http.Items[RequestLogContext.TraceIdItemKey] = "trace-500";
+        http.Items[RequestLogContext.ExecutionDisplayIdItemKey] = "wf-500";
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var tenant = new SettableTenantContextAccessor();
+        tenant.Set(TestTenantIds.T1Context);
+        var filter = new ApiExceptionFilter(
+            NullLogger<ApiExceptionFilter>.Instance,
+            reporter,
+            tenant);
+        var thrown = new InvalidOperationException("boom");
+        var ctx = CreateContext(http, thrown);
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Same(thrown, report.Exception);
+        Assert.Equal("trace-500", report.Tags.TraceId);
+        Assert.Equal(TestTenantIds.T1TenantId, report.Tags.TenantId);
+        Assert.Equal("wf-500", report.Tags.ExecutionId);
+        Assert.Null(report.Tags.WorkItemId);
+    }
+
+    /// <summary>Trace / Execution が欠ける 500 は空タグで報告する。</summary>
+    [Fact]
+    public void OnException_WhenInternalErrorWithoutContext_ReportsEmptyTags()
+    {
+        // Arrange
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var filter = CreateFilter(reporter);
+        var thrown = new InvalidOperationException("boom");
+        var ctx = CreateContext(new DefaultHttpContext(), thrown);
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Same(thrown, report.Exception);
+        Assert.Null(report.Tags.TraceId);
+        Assert.Null(report.Tags.TenantId);
+        Assert.Null(report.Tags.ExecutionId);
+        Assert.Null(report.Tags.WorkItemId);
+    }
+
+    /// <summary>空文字の Items はタグに載せない。</summary>
+    [Fact]
+    public void OnException_WhenInternalErrorHasEmptyItemStrings_OmitsTags()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        http.Items[RequestLogContext.TraceIdItemKey] = string.Empty;
+        http.Items[RequestLogContext.ExecutionDisplayIdItemKey] = string.Empty;
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var filter = CreateFilter(reporter);
+        var ctx = CreateContext(http, new InvalidOperationException("boom"));
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Null(report.Tags.TraceId);
+        Assert.Null(report.Tags.ExecutionId);
+    }
+
+    /// <summary>契約上の 4xx はエラー監視へ送らない。</summary>
+    [Fact]
+    public void OnException_WhenNotFound_DoesNotReport()
+    {
+        // Arrange
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var filter = CreateFilter(reporter);
+        var ctx = CreateContext(new DefaultHttpContext(), new NotFoundException("missing"));
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        Assert.Empty(reporter.Reports);
     }
 }
 

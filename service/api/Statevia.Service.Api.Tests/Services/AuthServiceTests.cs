@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Statevia.Infrastructure.Persistence;
+using Statevia.Runtime.Observability;
 using Statevia.Service.Api.Contracts;
 using Statevia.Service.Api.Contracts.Auth;
 using Statevia.Service.Api.Services;
@@ -459,7 +461,10 @@ public sealed class AuthServiceTests
         using var database = new SqliteTestDatabase();
         await SecurityTestSeed.SeedUserAsync(database, "admin@example.com", "password123");
         var auth = CreateAuthService(database, new ThrowingIsLockedStore());
-        var filter = new ApiExceptionFilter(NullLogger<ApiExceptionFilter>.Instance);
+        var filter = new ApiExceptionFilter(
+            NullLogger<ApiExceptionFilter>.Instance,
+            NullUnexpectedExceptionReporter.Instance,
+            NullTenantContextAccessor.Instance);
         var actionContext = new ActionContext(
             new DefaultHttpContext(),
             new Microsoft.AspNetCore.Routing.RouteData(),

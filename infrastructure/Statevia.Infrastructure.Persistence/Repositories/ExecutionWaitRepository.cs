@@ -15,7 +15,7 @@ internal sealed class ExecutionWaitRepository(
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        if (waits.Count == 0 && await HasNoExistingWaitStateAsync(db, executionId, ct).ConfigureAwait(false))
+        if (await CanSkipEmptyReplaceAsync(db, executionId, waits, ct).ConfigureAwait(false))
             return;
 
         var existingRows = await db.ExecutionWaits
@@ -75,14 +75,16 @@ internal sealed class ExecutionWaitRepository(
             db.ExecutionWaitSubscriptions.AddRange(subscriptionRows);
     }
 
-    /// <summary>
-    /// wait も subscription も無いときは Replace の読み書きを省略する。
-    /// </summary>
-    private static async Task<bool> HasNoExistingWaitStateAsync(
+    /// <summary>待ちも購読もない空置換なら DB を触らない。</summary>
+    private static async Task<bool> CanSkipEmptyReplaceAsync(
         CoreDbContext db,
         Guid executionId,
+        IReadOnlyList<ExecutionWaitRow> waits,
         CancellationToken ct)
     {
+        if (waits.Count != 0)
+            return false;
+
         var hasWaits = await db.ExecutionWaits
             .AnyAsync(x => x.ExecutionId == executionId, ct)
             .ConfigureAwait(false);
