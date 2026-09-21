@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0.2 |
-| 更新日 | 2026-09-16 |
+| Version | 1.0.3 |
+| 更新日 | 2026-09-21 |
 | 関連 | [logging-operations.md](../specifications/platform/logging-operations.md), [operations-docker.md](operations-docker.md), [logging-property-keys.md](../reference/logging-property-keys.md) |
 
 ---
 
-任意の compose overlay で、コンテナ stdout の JSON を Fluent Bit → Loki → Grafana まで辿る例。製品は特定ベンダーを必須にしない。契約の正本は [logging-operations.md](../specifications/platform/logging-operations.md)。
+任意の compose overlay で、コンテナ stdout の JSON を Fluent Bit → Loki → Grafana まで辿る例。製品は特定ベンダーを必須にしない。契約の正本は [logging-operations.md](../specifications/platform/logging-operations.md)。想定外例外のエラー監視 SDK はこの overlay の対象外である（DSN 未設定なら送信しない）。
+
+**Version 1.0.3（2026-09-21）**: エラー監視 SDK はこの overlay の対象外であると明記する。
 
 **Version 1.0.2（2026-09-16）**: Grafana Logs は Microsoft `LogLevel` を `info` / `warn` 等へ写して色分けする。
 

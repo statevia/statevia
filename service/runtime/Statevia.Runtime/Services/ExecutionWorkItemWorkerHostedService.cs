@@ -8,6 +8,7 @@ using Statevia.Core.Application.Contracts.Services;
 using Statevia.Core.Application.Services;
 using Statevia.Infrastructure.Security;
 using Statevia.Runtime.Configuration;
+using Statevia.Runtime.Observability;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
@@ -32,11 +33,13 @@ namespace Statevia.Runtime.Services;
 /// <param name="logger">構造化ログ。</param>
 /// <param name="idGenerator">lease owner 識別子用。</param>
 /// <param name="workerOptions">並列度と watchdog 閾値。</param>
+/// <param name="unexpectedExceptions">想定外失敗の任意送信先。DSN 未設定時は no-op。</param>
 public sealed class ExecutionWorkItemWorkerHostedService(
     IServiceScopeFactory scopeFactory,
     ILogger<ExecutionWorkItemWorkerHostedService> logger,
     IIdGenerator idGenerator,
-    IOptions<WorkerRuntimeOptions> workerOptions) : BackgroundService
+    IOptions<WorkerRuntimeOptions> workerOptions,
+    IUnexpectedExceptionReporter unexpectedExceptions) : BackgroundService
 {
     private const string WorkerCommandMethod = "WORKER";
     private const string WorkerCommandPath = "/internal/execution-work-items";
@@ -472,6 +475,16 @@ public sealed class ExecutionWorkItemWorkerHostedService(
     {
         var permanent = WorkItemFailureClassifier.IsPermanent(exception);
         var atLimit = item.Attempts >= _worker.MaxAttempts;
+        if (!permanent)
+        {
+            unexpectedExceptions.Report(
+                exception,
+                new UnexpectedExceptionTags(
+                    TenantId: tenantId,
+                    ExecutionId: item.ExecutionId.ToString("D"),
+                    WorkItemId: item.WorkItemId));
+        }
+
         if (!permanent && !atLimit)
         {
             logger.WorkItemFailed(exception, item.WorkItemId, tenantId);

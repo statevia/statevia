@@ -13,8 +13,10 @@ using Statevia.Infrastructure.Modules.DependencyInjection;
 using Statevia.Infrastructure.Notification.DependencyInjection;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Infrastructure.Security.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.DependencyInjection;
+using Statevia.Runtime.Observability;
 using Statevia.Runtime.Services;
 using Statevia.Service.Api.Abstractions.Services;
 using Statevia.Service.Api.Application.Actions.Catalog;
@@ -147,6 +149,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDefinitionCompilerService, DefinitionCompilerService>();
         AddEventDeliveryRetryOptions(services, configuration);
         AddForkChildExpansionOptions(services, configuration);
+        services.TryAddSingleton<IUnexpectedExceptionReporter>(NullUnexpectedExceptionReporter.Instance);
         // Worker でも解決可能にする（HTTP 文脈がなければ空文字）。
         services.AddHttpContextAccessor();
         services.AddScoped<Statevia.Core.Application.Contracts.Services.ICorrelationIdAccessor, Infrastructure.HttpContextCorrelationIdAccessor>();

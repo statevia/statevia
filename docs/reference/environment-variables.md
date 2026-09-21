@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.10 |
-| 更新日 | 2026-09-18 |
+| Version | 1.11 |
+| 更新日 | 2026-09-21 |
 
 ---
+
+**Version 1.11（2026-09-21）**: 任意の `SENTRY_DSN`（未設定ならエラー監視 SDK は動かない）。
 
 **Version 1.10（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時は 16（コード既定 1 は据え置き）。
 
@@ -38,6 +40,7 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | --- | --- |
 | `STATEVIA_ENABLE_API_DOCS` | 本番で OpenAPI / Scalar を有効化 |
 | `STATEVIA_LOG_HTTP_BODIES` | HTTP 本文ログ（機密に注意） |
+| `SENTRY_DSN` | 任意。想定外例外のエラー監視（Sentry 互換）。未設定・空なら SDK を初期化せず送信しない。受信側は製品 compose に含めない |
 | `Logging:LogLevel:Microsoft.EntityFrameworkCore` | 既定 `Warning`。EF の SQL 本文は出さない。失敗したコマンドは Error のまま |
 | `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` | Development のみ `Information`（SQL 本文）。本番で一時確認するときは `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information`。遅いクエリは PostgreSQL 側で分析する |
 | `STATEVIA_MODULES_PATH` | Action Module ルート（未設定時は設定ファイル） |

@@ -36,6 +36,7 @@ services:
       Statevia__Runtime__Worker__MaxConcurrency: ${STATEVIA_WORKER_MAX_CONCURRENCY:-16}
       Statevia__Runtime__Worker__CancelConcurrency: ${STATEVIA_WORKER_CANCEL_CONCURRENCY:-1}
       Statevia__Runtime__Worker__NoProgressTimeout: 00:10:00
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       - postgres
       - action-host
