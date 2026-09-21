@@ -1,6 +1,7 @@
 using Statevia.Service.Api.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.UseStateviaErrorMonitoring();
 builder.Services.AddStateviaServiceApi(builder.Configuration);
 
 var app = builder.Build();

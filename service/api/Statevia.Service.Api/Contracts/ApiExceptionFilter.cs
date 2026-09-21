@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Statevia.Core.Application.Contracts.Security;
+using Statevia.Runtime.Observability;
 using Statevia.Service.Api.Application.Actions.Versioning;
+using Statevia.Service.Api.Hosting;
 
 namespace Statevia.Service.Api.Contracts;
 
@@ -10,10 +13,22 @@ namespace Statevia.Service.Api.Contracts;
 public sealed class ApiExceptionFilter : IExceptionFilter
 {
     private readonly ILogger<ApiExceptionFilter> _logger;
+    private readonly IUnexpectedExceptionReporter _unexpectedExceptions;
+    private readonly ITenantContextAccessor _tenantContext;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
     /// <param name="logger">ロガー。</param>
-    public ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) => _logger = logger;
+    /// <param name="unexpectedExceptions">想定外 500 の任意送信先。</param>
+    /// <param name="tenantContext">解決済みテナント。未解決ならタグに載せない。</param>
+    public ApiExceptionFilter(
+        ILogger<ApiExceptionFilter> logger,
+        IUnexpectedExceptionReporter unexpectedExceptions,
+        ITenantContextAccessor tenantContext)
+    {
+        _logger = logger;
+        _unexpectedExceptions = unexpectedExceptions;
+        _tenantContext = tenantContext;
+    }
 
     /// <summary>
     /// 未処理例外を <see cref="ExceptionContext.Result"/> に変換する。
@@ -43,16 +58,17 @@ public sealed class ApiExceptionFilter : IExceptionFilter
                 "MODULE_VERSION_RESOLUTION_FAILED",
                 versionResolution.Message),
             ArgumentException arg => ApiErrorResult.ValidationError(arg.Message),
-            _ => LogInternalError(ex)
+            _ => LogInternalError(context.HttpContext, ex)
         };
 
         context.Result = result;
         context.ExceptionHandled = true;
     }
 
-    private ObjectResult LogInternalError(Exception exception)
+    private ObjectResult LogInternalError(HttpContext httpContext, Exception exception)
     {
         _logger.UnhandledApiException(exception);
+        _unexpectedExceptions.Report(exception, ReadTags(httpContext));
         return new ObjectResult(new ErrorResponse
         {
             Error = new ApiError
@@ -64,5 +80,29 @@ public sealed class ApiExceptionFilter : IExceptionFilter
         {
             StatusCode = StatusCodes.Status500InternalServerError
         };
+    }
+
+    private UnexpectedExceptionTags ReadTags(HttpContext httpContext)
+    {
+        string? traceId = null;
+        if (httpContext.Items.TryGetValue(RequestLogContext.TraceIdItemKey, out var traceObject)
+            && traceObject is string resolvedTraceId
+            && resolvedTraceId.Length > 0)
+        {
+            traceId = resolvedTraceId;
+        }
+
+        string? executionId = null;
+        if (httpContext.Items.TryGetValue(RequestLogContext.ExecutionDisplayIdItemKey, out var executionObject)
+            && executionObject is string resolvedExecutionId
+            && resolvedExecutionId.Length > 0)
+        {
+            executionId = resolvedExecutionId;
+        }
+
+        return new UnexpectedExceptionTags(
+            TraceId: traceId,
+            TenantId: _tenantContext.TenantId,
+            ExecutionId: executionId);
     }
 }

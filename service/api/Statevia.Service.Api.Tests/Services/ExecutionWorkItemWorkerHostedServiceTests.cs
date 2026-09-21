@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Statevia.Core.Application.Services;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Runtime.Configuration;
+using Statevia.Runtime.Observability;
 using Statevia.Runtime.Services;
 using Statevia.Service.Api.Tests.Infrastructure;
 using System.Text.Json;
@@ -576,6 +577,94 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
         Assert.Equal(0, queue.CompleteCallCount);
     }
 
+    /// <summary>未分類の処理例外はエラー監視へ報告する。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenProcessThrowsUnclassified_ReportsUnexpectedException()
+    {
+        // Arrange
+        var executionId = Guid.Parse("acacacac-acac-acac-acac-acacacacacac");
+        var workItemId = Guid.Parse("adadadad-adad-adad-adad-adadadadadad");
+        var item = new ExecutionWorkItemRow
+        {
+            WorkItemId = workItemId,
+            ExecutionId = executionId,
+            Kind = ExecutionWorkItemKinds.Cancel,
+            Payload = "{}",
+            AvailableAt = DateTime.UtcNow,
+            Attempts = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        var queue = new FakeWorkerQueue { ItemsToClaim = [item] };
+        var thrown = new InvalidOperationException("cancel failed");
+        var executions = new RecordingExecutionService
+        {
+            BeginGenerationToReturn = 1,
+            CancelException = thrown
+        };
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        await using var provider = BuildProvider(queue, executions, new StubPlatformDataAccess());
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var sut = CreateSut(provider, unexpectedExceptions: reporter);
+
+        // Act
+        await sut.StartAsync(cts.Token);
+        await WaitUntilAsync(() => reporter.Reports.Count > 0, TimeSpan.FromSeconds(1.5));
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Same(thrown, report.Exception);
+        Assert.Equal(TestTenantIds.T1TenantId, report.Tags.TenantId);
+        Assert.Equal(executionId.ToString("D"), report.Tags.ExecutionId);
+        Assert.Equal(workItemId, report.Tags.WorkItemId);
+        Assert.Null(report.Tags.TraceId);
+    }
+
+    /// <summary>恒久 Restore 失敗は契約上の終端でありエラー監視へ送らない。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenPermanentRestoreFails_DoesNotReport()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae");
+        var workItemId = Guid.Parse("afafafaf-afaf-afaf-afaf-afafafafafaf");
+        using var inputDoc = JsonDocument.Parse("{}");
+        var payload = JsonSerializer.Serialize(
+            new ExecutionStartWorkItemPayload(
+                executionId,
+                new StartExecutionRequest { DefinitionId = "d1", Input = inputDoc.RootElement }),
+            ExecutionWorkItemPayloadJson.Options);
+        var item = new ExecutionWorkItemRow
+        {
+            WorkItemId = workItemId,
+            ExecutionId = executionId,
+            Kind = ExecutionWorkItemKinds.Start,
+            Payload = payload,
+            AvailableAt = DateTime.UtcNow,
+            Attempts = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        var queue = new FakeWorkerQueue { ItemsToClaim = [item] };
+        var executions = new RecordingExecutionService
+        {
+            BeginGenerationToReturn = 3,
+            ExecuteQueuedStartException = new InvalidOperationException(
+                WorkItemFailureClassifier.StoredDefinitionVersionInvalidMessage)
+        };
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        await using var provider = BuildProvider(queue, executions, new StubPlatformDataAccess());
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var sut = CreateSut(provider, unexpectedExceptions: reporter);
+
+        // Act
+        await sut.StartAsync(cts.Token);
+        await WaitUntilAsync(() => queue.CompleteCallCount > 0, TimeSpan.FromSeconds(1.5));
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(reporter.Reports);
+        Assert.Equal(1, executions.MarkUnstartedPermanentFailureCalls);
+    }
+
     /// <summary>非 Active テナントの work item は Complete してスキップする。</summary>
     [Fact]
     public async Task ExecuteAsync_WhenTenantSuspended_CompletesWithoutSession()
@@ -1102,12 +1191,14 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
 
     private static ExecutionWorkItemWorkerHostedService CreateSut(
         IServiceProvider provider,
-        WorkerRuntimeOptions? worker = null) =>
+        WorkerRuntimeOptions? worker = null,
+        IUnexpectedExceptionReporter? unexpectedExceptions = null) =>
         new(
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<ExecutionWorkItemWorkerHostedService>.Instance,
             new FixedIdGenerator(),
-            Options.Create(worker ?? new WorkerRuntimeOptions()));
+            Options.Create(worker ?? new WorkerRuntimeOptions()),
+            unexpectedExceptions ?? NullUnexpectedExceptionReporter.Instance);
 
     private static async Task WaitUntilAsync(Func<bool> predicate, TimeSpan timeout)
     {
