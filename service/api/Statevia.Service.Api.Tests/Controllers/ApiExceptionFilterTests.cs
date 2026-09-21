@@ -226,6 +226,49 @@ public sealed class ApiExceptionFilterTests
         Assert.Null(report.Tags.WorkItemId);
     }
 
+    /// <summary>Trace / Execution が欠ける 500 は空タグで報告する。</summary>
+    [Fact]
+    public void OnException_WhenInternalErrorWithoutContext_ReportsEmptyTags()
+    {
+        // Arrange
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var filter = CreateFilter(reporter);
+        var thrown = new InvalidOperationException("boom");
+        var ctx = CreateContext(new DefaultHttpContext(), thrown);
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Same(thrown, report.Exception);
+        Assert.Null(report.Tags.TraceId);
+        Assert.Null(report.Tags.TenantId);
+        Assert.Null(report.Tags.ExecutionId);
+        Assert.Null(report.Tags.WorkItemId);
+    }
+
+    /// <summary>空文字の Items はタグに載せない。</summary>
+    [Fact]
+    public void OnException_WhenInternalErrorHasEmptyItemStrings_OmitsTags()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        http.Items[RequestLogContext.TraceIdItemKey] = string.Empty;
+        http.Items[RequestLogContext.ExecutionDisplayIdItemKey] = string.Empty;
+        var reporter = new RecordingUnexpectedExceptionReporter();
+        var filter = CreateFilter(reporter);
+        var ctx = CreateContext(http, new InvalidOperationException("boom"));
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var report = Assert.Single(reporter.Reports);
+        Assert.Null(report.Tags.TraceId);
+        Assert.Null(report.Tags.ExecutionId);
+    }
+
     /// <summary>契約上の 4xx はエラー監視へ送らない。</summary>
     [Fact]
     public void OnException_WhenNotFound_DoesNotReport()

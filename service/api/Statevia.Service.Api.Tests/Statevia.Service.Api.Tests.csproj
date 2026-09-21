@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.10" />
+    <PackageReference Include="Sentry" Version="6.11.0" />
   </ItemGroup>
 
   <ItemGroup>
