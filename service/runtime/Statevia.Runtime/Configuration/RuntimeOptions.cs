@@ -12,6 +12,9 @@ public sealed class RuntimeOptions
     /// <summary>API 内 DelayWait スケジューラーを有効化するか。</summary>
     public bool EnableInProcessDelayWaitScheduler { get; set; } = true;
 
+    /// <summary>API 内の定期実行 Dispatcher を有効化するか。</summary>
+    public bool EnableInProcessScheduleDispatcher { get; set; } = true;
+
     /// <summary>API 内所有権回復スケジューラーを有効化するか。</summary>
     public bool EnableInProcessOwnershipRecovery { get; set; } = true;
 }

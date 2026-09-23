@@ -70,7 +70,8 @@ public static class ServiceCollectionExtensions
             {
                 [$"{RuntimeOptions.SectionName}:EnableInProcessWorker"] = "true",
                 [$"{RuntimeOptions.SectionName}:EnableInProcessDelayWaitScheduler"] = "false",
-                [$"{RuntimeOptions.SectionName}:EnableInProcessOwnershipRecovery"] = "false"
+                [$"{RuntimeOptions.SectionName}:EnableInProcessOwnershipRecovery"] = "false",
+                [$"{RuntimeOptions.SectionName}:EnableInProcessScheduleDispatcher"] = "false"
             })
             .Build();
         return services.AddStateviaExecutionRuntime(workerConfiguration);
@@ -112,6 +113,8 @@ public static class ServiceCollectionExtensions
             services.AddHostedService<DelayWaitSchedulerHostedService>();
         if (runtimeOptions.EnableInProcessOwnershipRecovery)
             services.AddHostedService<ExecutionOwnershipRecoveryHostedService>();
+        if (runtimeOptions.EnableInProcessScheduleDispatcher)
+            services.AddHostedService<ExecutionScheduleDispatcherHostedService>();
         services.AddScoped<IGraphDefinitionService, GraphDefinitionService>();
         services.AddHttpClient();
         services.AddStateviaInfrastructureNotification(configuration);

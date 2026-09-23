@@ -27,6 +27,9 @@ internal interface IPlatformDataAccess
     /// <summary><paramref name="tenantKey"/> でテナントを検索する（フィルタ無視）。</summary>
     Task<TenantRow?> FindTenantByKeyAsync(string tenantKey, CancellationToken cancellationToken);
 
+    /// <summary>テナントを内部 UUID で検索する（フィルタ無視）。</summary>
+    Task<TenantRow?> FindTenantByIdAsync(Guid tenantId, CancellationToken cancellationToken);
+
     /// <summary>ライフサイクルが Active のテナントを <c>tenant_key</c> 昇順で返す（フィルタ無視）。</summary>
     Task<IReadOnlyList<TenantRow>> ListActiveTenantsAsync(CancellationToken cancellationToken);
 
@@ -116,6 +119,17 @@ internal sealed class PlatformDataAccess : IPlatformDataAccess
             .IgnoreQueryFilters()
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.TenantKey == tenantKey, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<TenantRow?> FindTenantByIdAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await db.Tenants
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(tenant => tenant.TenantId == tenantId, cancellationToken)
             .ConfigureAwait(false);
     }
 

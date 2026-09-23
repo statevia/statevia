@@ -5,7 +5,7 @@ namespace Statevia.Core.Application.Scheduling;
 /// <summary>5 フィールド cron と IANA TZ から次の UTC 発火時刻を求める。</summary>
 /// <remarks>
 /// <para>Hangfire / Quartz は使わない。解釈は Cronos に固定する。</para>
-    /// <para>DST: 夏時間への切替で欠損する時刻は次の実在時刻、標準時への切替で重複する時刻は最初の出現（標準時側）を採用する。</para>
+/// <para>DST: 夏時間への切替で欠損する時刻は次の実在時刻、標準時への切替で重複する時刻は最初の出現（標準時側）を採用する。</para>
 /// </remarks>
 public static class CronNextFireCalculator
 {

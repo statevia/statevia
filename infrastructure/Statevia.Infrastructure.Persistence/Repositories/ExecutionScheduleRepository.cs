@@ -33,6 +33,22 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
     }
 
     /// <inheritdoc />
+    public async Task<ExecutionScheduleRow?> GetByNameAsync(
+        Guid tenantId,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await db.ExecutionSchedules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                row => row.TenantId == tenantId && row.Name == name && row.DeletedAt == null,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task AddAsync(ExecutionScheduleRow row, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(row);
@@ -57,6 +73,60 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         db.ExecutionScheduleRuns.Add(row);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task AddRunAsync(ICoreUnitOfWork uow, ExecutionScheduleRunRow row, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        ArgumentNullException.ThrowIfNull(row);
+        uow.GetDb().ExecutionScheduleRuns.Add(row);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<bool> HasNonTerminalStartedRunAsync(
+        ICoreUnitOfWork uow,
+        Guid scheduleId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        var db = uow.GetDb();
+        var executionIds = db.ExecutionScheduleRuns
+            .IgnoreQueryFilters()
+            .Where(run =>
+                run.ScheduleId == scheduleId &&
+                run.Outcome == ExecutionScheduleRunOutcomes.Started &&
+                run.ExecutionId != null)
+            .Select(run => run.ExecutionId!.Value);
+        return db.Executions
+            .IgnoreQueryFilters()
+            .Where(execution => executionIds.Contains(execution.ExecutionId))
+            .AnyAsync(
+                execution =>
+                    execution.Status != ExecutionProjectionStatuses.Completed &&
+                    execution.Status != ExecutionProjectionStatuses.Cancelled &&
+                    execution.Status != ExecutionProjectionStatuses.Failed,
+                cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task AdvanceNextFireAtAsync(
+        ICoreUnitOfWork uow,
+        Guid scheduleId,
+        DateTime nextFireAtUtc,
+        DateTime updatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        return uow.GetDb().ExecutionSchedules
+            .IgnoreQueryFilters()
+            .Where(row => row.ScheduleId == scheduleId)
+            .ExecuteUpdateAsync(
+                updates => updates
+                    .SetProperty(row => row.NextFireAt, nextFireAtUtc)
+                    .SetProperty(row => row.UpdatedAt, updatedAtUtc),
+                cancellationToken);
     }
 
     /// <inheritdoc />
