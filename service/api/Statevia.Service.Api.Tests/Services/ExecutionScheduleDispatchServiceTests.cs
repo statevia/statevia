@@ -34,6 +34,7 @@ public sealed class ExecutionScheduleDispatchServiceTests
         Assert.Equal(runAs, executions.LastPrincipalId);
         Assert.Equal("SCHEDULER", executions.LastContext?.Method);
         Assert.Equal($"/v1/schedules/{scheduleId:D}/fires", executions.LastContext?.Path);
+        Assert.Equal(scheduleId, executions.LastContext?.ScheduleId);
         Assert.Equal($"{scheduleId:N}:{SlotUtc:o}", executions.LastIdempotencyKey);
         await using var verify = db.Factory.CreateDbContext();
         var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();

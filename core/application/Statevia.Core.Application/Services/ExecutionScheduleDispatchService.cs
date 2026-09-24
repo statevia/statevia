@@ -148,7 +148,10 @@ internal sealed class ExecutionScheduleDispatchService(
                 var started = await executions.StartAsync(
                         CreateStartRequest(row),
                         CreateIdempotencyKey(row),
-                        new CommandRequestContext(SchedulerMethod, $"/v1/schedules/{row.ScheduleId:D}/fires"),
+                        new CommandRequestContext(
+                            SchedulerMethod,
+                            $"/v1/schedules/{row.ScheduleId:D}/fires",
+                            ScheduleId: row.ScheduleId),
                         cancellationToken)
                     .ConfigureAwait(false);
                 run.ExecutionId = started.ResourceId;

@@ -10,11 +10,23 @@ internal sealed class EventStoreRepository : IEventStoreRepository
 
     public EventStoreRepository(IIdGenerator ids) => _ids = ids;
 
+    /// <inheritdoc />
+    public Task AppendAsync(
+        ICoreUnitOfWork uow,
+        Guid executionId,
+        EventStoreEventType eventType,
+        string? payloadJson,
+        CancellationToken ct = default) =>
+        AppendAsync(uow, executionId, eventType, payloadJson, actorKind: null, actorId: null, ct);
+
+    /// <inheritdoc />
     public async Task AppendAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
         EventStoreEventType eventType,
         string? payloadJson,
+        string? actorKind,
+        string? actorId,
         CancellationToken ct = default)
     {
         var persistedMax = await uow.GetDb().EventStore
@@ -42,7 +54,9 @@ internal sealed class EventStoreRepository : IEventStoreRepository
             OccurredAt = now,
             SchemaVersion = 1,
             PayloadJson = payloadJson,
-            CreatedAt = now
+            CreatedAt = now,
+            ActorKind = actorKind,
+            ActorId = actorId
         });
     }
 
