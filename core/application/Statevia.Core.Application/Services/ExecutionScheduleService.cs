@@ -14,13 +14,15 @@ namespace Statevia.Core.Application.Services;
 /// <param name="principals">run-as 検証。</param>
 /// <param name="tenantContext">呼び出しテナント。</param>
 /// <param name="ids">スケジュール ID 生成。</param>
+/// <param name="dispatch">手動実行の Start。cron の next は更新しない。</param>
 internal sealed class ExecutionScheduleService(
     IExecutionScheduleRepository schedules,
     ExecutionAuthorizationGuard authorization,
     ExecutionScheduleDefinitionResolver definitions,
     IPrincipalDataAccess principals,
     ITenantContextAccessor tenantContext,
-    IIdGenerator ids) : IExecutionScheduleService
+    IIdGenerator ids,
+    IExecutionScheduleDispatchService dispatch) : IExecutionScheduleService
 {
     private const string ScheduleNotFound = "Schedule not found";
     private const string RunAsInvalid = "runAsPrincipalId must be an active ServiceAccount in the tenant.";
@@ -180,6 +182,24 @@ internal sealed class ExecutionScheduleService(
         row.DeletedAt = now;
         row.UpdatedAt = now;
         await schedules.UpdateAsync(row, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ExecutionResponse> RunNowAsync(
+        Guid scheduleId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
+        var tenantId = tenantContext.GetRequiredTenantId();
+        var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
+        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.DefinitionId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!row.Enabled)
+            throw new ApiValidationException("schedule is disabled.", new { field = "enabled" });
+
+        return await dispatch.RunManuallyAsync(scheduleId, idempotencyKey, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<ExecutionScheduleRow> LoadOwnedOrNotFoundAsync(

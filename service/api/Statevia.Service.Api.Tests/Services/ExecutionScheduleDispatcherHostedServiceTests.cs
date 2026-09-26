@@ -86,5 +86,11 @@ public sealed class ExecutionScheduleDispatcherHostedServiceTests
                 throw new InvalidOperationException("dispatch failed");
             return Task.FromResult(0);
         }
+
+        public Task<ExecutionResponse> RunManuallyAsync(
+            Guid scheduleId,
+            string? idempotencyKey,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

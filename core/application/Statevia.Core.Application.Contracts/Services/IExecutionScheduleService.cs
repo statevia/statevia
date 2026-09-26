@@ -7,7 +7,7 @@ namespace Statevia.Core.Application.Contracts.Services;
 
 /// <summary>定期実行スケジュールの CRUD。</summary>
 /// <remarks>
-/// <para>認可は <c>executions.read</c> / <c>executions.write</c> と定義の project executor。手動 <c>/run</c> は別タスク。</para>
+/// <para>認可は <c>executions.read</c> / <c>executions.write</c> と定義の project executor。手動 <c>/run</c> も同じ書き込み認可。</para>
 /// <para>一覧は機微 <c>input</c> を含めない。ジョブ作成で ServiceAccount は発行しない。</para>
 /// </remarks>
 public interface IExecutionScheduleService
@@ -34,6 +34,20 @@ public interface IExecutionScheduleService
 
     /// <summary>論理削除する。以降 Dispatcher は発火しない。</summary>
     Task DeleteAsync(Guid scheduleId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// 手動で 1 回 Start する。cron の <c>next_fire_at</c> は変えない。
+    /// </summary>
+    /// <param name="scheduleId">対象スケジュール。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c>。空なら呼び出しごとに新しい実行。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>開始した実行。</returns>
+    /// <exception cref="NotFoundException">無い、削除済み、または他テナント。</exception>
+    /// <exception cref="ApiValidationException"><c>enabled</c> が false、または run-as が使えない。</exception>
+    Task<ExecutionResponse> RunNowAsync(
+        Guid scheduleId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>overlap の許可値。</summary>

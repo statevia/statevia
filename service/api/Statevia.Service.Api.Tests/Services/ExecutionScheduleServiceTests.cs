@@ -212,6 +212,78 @@ public sealed class ExecutionScheduleServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(created.ScheduleId, CancellationToken.None));
     }
 
+    /// <summary>手動実行は Dispatcher に委譲し、cron の next は変えない。</summary>
+    [Fact]
+    public async Task RunNowAsync_WhenEnabled_DelegatesWithoutAdvancingNextFire()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var dispatch = new RecordingDispatchService();
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+
+        // Act
+        var started = await sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(dispatch.StartedExecutionId, started.ResourceId);
+        Assert.Equal(1, dispatch.RunCount);
+        Assert.Equal("manual-1", dispatch.LastIdempotencyKey);
+        var detail = await sut.GetAsync(created.ScheduleId, CancellationToken.None);
+        Assert.Equal(created.NextFireAt, detail.NextFireAt);
+    }
+
+    /// <summary>無効スケジュールの手動実行は 422 で Start しない。</summary>
+    [Fact]
+    public async Task RunNowAsync_WhenDisabled_ThrowsValidation()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var dispatch = new RecordingDispatchService();
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        await sut.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { Enabled = false },
+            CancellationToken.None);
+
+        // Act
+        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("enabled", ReadField(ex));
+        Assert.Equal(0, dispatch.RunCount);
+    }
+
+    /// <summary>論理削除後の手動実行は 404。</summary>
+    [Fact]
+    public async Task RunNowAsync_WhenDeleted_ThrowsNotFound()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var dispatch = new RecordingDispatchService();
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        await sut.DeleteAsync(created.ScheduleId, CancellationToken.None);
+
+        // Act
+        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(act);
+        Assert.Equal(0, dispatch.RunCount);
+    }
+
     /// <summary>同一テナントの重複名は 422。</summary>
     [Fact]
     public async Task CreateAsync_WhenNameDuplicated_ThrowsValidation()
@@ -275,7 +347,8 @@ public sealed class ExecutionScheduleServiceTests
         Guid runAsPrincipalId,
         StubPrincipalDataAccess? principals = null,
         TenantContextState? tenant = null,
-        Guid? runAsTenantId = null)
+        Guid? runAsTenantId = null,
+        IExecutionScheduleDispatchService? dispatch = null)
     {
         var tenantState = tenant ?? TestTenantIds.DefaultContext with { PrincipalId = callerPrincipalId };
         var accessor = new SettableTenantContextAccessor();
@@ -308,7 +381,8 @@ public sealed class ExecutionScheduleServiceTests
                 transactionExecutor),
             principalAccess,
             accessor,
-            new DefaultIdGenerator());
+            new DefaultIdGenerator(),
+            dispatch ?? new RecordingDispatchService());
     }
 
     private sealed class GuidParsingDisplayIdService : IDisplayIdService
@@ -354,5 +428,32 @@ public sealed class ExecutionScheduleServiceTests
             Guid principalId,
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<GroupSnapshot>>([]);
+    }
+
+    private sealed class RecordingDispatchService : IExecutionScheduleDispatchService
+    {
+        public int RunCount { get; private set; }
+        public string? LastIdempotencyKey { get; private set; }
+        public Guid StartedExecutionId { get; } = Guid.NewGuid();
+
+        public Task<int> DispatchDueAsync(DateTime utcNow, int limit, CancellationToken cancellationToken) =>
+            Task.FromResult(0);
+
+        public Task<ExecutionResponse> RunManuallyAsync(
+            Guid scheduleId,
+            string? idempotencyKey,
+            CancellationToken cancellationToken)
+        {
+            _ = scheduleId;
+            _ = cancellationToken;
+            RunCount++;
+            LastIdempotencyKey = idempotencyKey;
+            return Task.FromResult(new ExecutionResponse
+            {
+                DisplayId = "exec-manual",
+                ResourceId = StartedExecutionId,
+                Status = "Running"
+            });
+        }
     }
 }

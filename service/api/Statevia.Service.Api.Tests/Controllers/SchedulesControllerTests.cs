@@ -42,6 +42,33 @@ public sealed class SchedulesControllerTests
         Assert.IsType<NoContentResult>(result);
     }
 
+    /// <summary>手動実行は 201 と実行の Location を返す。</summary>
+    [Fact]
+    public async Task Run_ReturnsCreatedExecution()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var service = new FakeScheduleService
+        {
+            Ran = new ExecutionResponse
+            {
+                DisplayId = "exec-manual",
+                ResourceId = executionId,
+                Status = "Running"
+            }
+        };
+        var controller = new SchedulesController(service);
+
+        // Act
+        var result = await controller.Run(Guid.NewGuid(), idempotencyKey: "once", CancellationToken.None);
+
+        // Assert
+        var created = Assert.IsType<CreatedResult>(result.Result);
+        Assert.Equal("/v1/executions/exec-manual", created.Location);
+        var body = Assert.IsType<ExecutionResponse>(created.Value);
+        Assert.Equal(executionId, body.ResourceId);
+    }
+
     private sealed class FakeScheduleService : IExecutionScheduleService
     {
         public ExecutionScheduleDetailDto Created { get; init; } = new();
@@ -65,5 +92,18 @@ public sealed class SchedulesControllerTests
 
         public Task DeleteAsync(Guid scheduleId, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+
+        public ExecutionResponse? Ran { get; init; }
+
+        public Task<ExecutionResponse> RunNowAsync(
+            Guid scheduleId,
+            string? idempotencyKey,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(Ran ?? new ExecutionResponse
+            {
+                DisplayId = "exec-1",
+                ResourceId = scheduleId,
+                Status = "Running"
+            });
     }
 }

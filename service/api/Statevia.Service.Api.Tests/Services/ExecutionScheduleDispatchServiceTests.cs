@@ -176,10 +176,84 @@ public sealed class ExecutionScheduleDispatchServiceTests
         Assert.Equal(0, executions.StartCount);
     }
 
+    /// <summary>手動実行は SA 文脈で Start し、manual run を残して next は変えない。</summary>
+    [Fact]
+    public async Task RunManuallyAsync_StartsOnce_WithoutAdvancingNextFire()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var runAs = Guid.NewGuid();
+        var scheduleId = await SeedDueScheduleAsync(db, runAs);
+        var executions = new FakeExecutionService(db.TenantAccessor);
+        var sut = CreateSut(db, runAs, executions);
+
+        // Act
+        var started = await sut.RunManuallyAsync(scheduleId, "once", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(executions.StartedExecutionId, started.ResourceId);
+        Assert.Equal(1, executions.StartCount);
+        Assert.Equal(runAs, executions.LastPrincipalId);
+        Assert.Equal($"{scheduleId:N}:manual:once", executions.LastIdempotencyKey);
+        Assert.Equal("SCHEDULER", executions.LastContext?.Method);
+        Assert.Equal($"/v1/schedules/{scheduleId:D}/run", executions.LastContext?.Path);
+        Assert.Equal(scheduleId, executions.LastContext?.ScheduleId);
+        await using var verify = db.Factory.CreateDbContext();
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(SlotUtc, schedule.NextFireAt);
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters().SingleAsync();
+        Assert.True(run.Manual);
+        Assert.Null(run.ScheduledFireAt);
+        Assert.Equal(ExecutionScheduleRunOutcomes.Started, run.Outcome);
+        Assert.Equal(executions.StartedExecutionId, run.ExecutionId);
+    }
+
+    /// <summary>無効スケジュールの手動実行は 422 で run を作らない。</summary>
+    [Fact]
+    public async Task RunManuallyAsync_WhenDisabled_ThrowsValidation()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var runAs = Guid.NewGuid();
+        var scheduleId = await SeedDueScheduleAsync(db, runAs, enabled: false);
+        var executions = new FakeExecutionService(db.TenantAccessor);
+        var sut = CreateSut(db, runAs, executions);
+
+        // Act
+        var act = () => sut.RunManuallyAsync(scheduleId, "once", CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal(0, executions.StartCount);
+        await using var verify = db.Factory.CreateDbContext();
+        Assert.Equal(0, await verify.ExecutionScheduleRuns.IgnoreQueryFilters().CountAsync());
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(SlotUtc, schedule.NextFireAt);
+    }
+
+    /// <summary>削除済み ID の手動実行は 404。</summary>
+    [Fact]
+    public async Task RunManuallyAsync_WhenMissing_ThrowsNotFound()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var runAs = Guid.NewGuid();
+        var executions = new FakeExecutionService(db.TenantAccessor);
+        var sut = CreateSut(db, runAs, executions);
+
+        // Act
+        var act = () => sut.RunManuallyAsync(Guid.NewGuid(), "once", CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(act);
+        Assert.Equal(0, executions.StartCount);
+    }
+
     private static async Task<Guid> SeedDueScheduleAsync(
         SqliteTestDatabase db,
         Guid runAs,
-        string overlap = ExecutionScheduleOverlapPolicies.Skip)
+        string overlap = ExecutionScheduleOverlapPolicies.Skip,
+        bool enabled = true)
     {
         var scheduleId = Guid.NewGuid();
         var now = DateTime.UtcNow;
@@ -196,7 +270,7 @@ public sealed class ExecutionScheduleDispatchServiceTests
                 CronExpression = "0 3 * * *",
                 TimeZone = "UTC",
                 OverlapPolicy = overlap,
-                Enabled = true,
+                Enabled = enabled,
                 NextFireAt = SlotUtc,
                 CreatedAt = now,
                 UpdatedAt = now

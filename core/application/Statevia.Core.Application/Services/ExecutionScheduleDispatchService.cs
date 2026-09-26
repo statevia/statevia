@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,9 @@ internal sealed class ExecutionScheduleDispatchService(
     private const string StartFailedCode = "START_FAILED";
     private const string NotFoundCode = "NOT_FOUND";
     private const string ValidationCode = "VALIDATION_ERROR";
+    private const string ScheduleNotFound = "Schedule not found";
+    private const string ScheduleDisabled = "schedule is disabled.";
+    private const string RunAsInvalid = "runAsPrincipalId must be an active ServiceAccount in the tenant.";
 
     /// <inheritdoc />
     public Task<int> DispatchDueAsync(DateTime utcNow, int limit, CancellationToken cancellationToken)
@@ -39,6 +43,82 @@ internal sealed class ExecutionScheduleDispatchService(
         return executor.ExecuteReadCommittedAsync(
             (uow, innerCt) => DispatchDueCoreAsync(uow, now, limit, innerCt),
             cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ExecutionResponse> RunManuallyAsync(
+        Guid scheduleId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var row = await schedules.GetByIdAsync(scheduleId, cancellationToken).ConfigureAwait(false);
+        if (row is null || row.TenantId != tenantContext.GetRequiredTenantId())
+            throw new NotFoundException(ScheduleNotFound);
+        if (!row.Enabled)
+            throw new ApiValidationException(ScheduleDisabled, new { field = "enabled" });
+
+        var tenant = await principals.FindTenantAsync(row.TenantId, cancellationToken).ConfigureAwait(false);
+        var principal = await principals.FindPrincipalAsync(row.RunAsPrincipalId, cancellationToken)
+            .ConfigureAwait(false);
+        if (tenant is null ||
+            tenant.Lifecycle != TenantLifecycle.Active ||
+            !IsUsableServiceAccount(principal, row.TenantId))
+        {
+            throw new ApiValidationException(RunAsInvalid, new { field = "runAsPrincipalId" });
+        }
+
+        Exception? failure = null;
+        ExecutionResponse? response = null;
+        await executor.ExecuteReadCommittedAsync(
+            async (uow, innerCt) =>
+            {
+                var run = NewManualRun(row);
+                await schedules.AddRunAsync(uow, run, innerCt).ConfigureAwait(false);
+                await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
+                var permissions = await principals
+                    .ExpandPrincipalPermissionKeysAsync(row.RunAsPrincipalId, innerCt)
+                    .ConfigureAwait(false);
+                using (tenantContext.SetContext(new TenantContextState(
+                           tenant.TenantId,
+                           tenant.TenantKey,
+                           row.RunAsPrincipalId,
+                           tenant.Lifecycle,
+                           permissions.ToHashSet(StringComparer.Ordinal))))
+                {
+                    try
+                    {
+                        response = await executions.StartAsync(
+                                CreateStartRequest(row),
+                                CreateManualIdempotencyKey(row.ScheduleId, idempotencyKey),
+                                new CommandRequestContext(
+                                    SchedulerMethod,
+                                    $"/v1/schedules/{row.ScheduleId:D}/run",
+                                    ScheduleId: row.ScheduleId),
+                                innerCt)
+                            .ConfigureAwait(false);
+                        run.ExecutionId = response.ResourceId;
+                        await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
+                        logger.ScheduleManualRunStarted(row.ScheduleId, row.TenantId, response.ResourceId);
+                    }
+#pragma warning disable CA1031
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        run.Outcome = ExecutionScheduleRunOutcomes.Failed;
+                        run.ErrorCode = MapErrorCode(exception);
+                        await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
+                        logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
+                        logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, run.ErrorCode);
+                        failure = exception;
+                    }
+#pragma warning restore CA1031
+                }
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (failure is not null)
+            ExceptionDispatchInfo.Capture(failure).Throw();
+
+        return response ?? throw new InvalidOperationException("Manual schedule run did not start.");
     }
 
     private async Task<int> DispatchDueCoreAsync(
@@ -267,6 +347,27 @@ internal sealed class ExecutionScheduleDispatchService(
         var slot = DateTime.SpecifyKind(row.NextFireAt, DateTimeKind.Utc);
         return $"{row.ScheduleId:N}:{slot:o}";
     }
+
+    /// <summary>手動実行の冪等キー。<paramref name="idempotencyKey"/> が空なら新規 ID を接尾辞にする。</summary>
+    private string CreateManualIdempotencyKey(Guid scheduleId, string? idempotencyKey)
+    {
+        var token = string.IsNullOrWhiteSpace(idempotencyKey)
+            ? ids.NewSequentialGuid().ToString("N")
+            : idempotencyKey.Trim();
+        return $"{scheduleId:N}:manual:{token}";
+    }
+
+    private ExecutionScheduleRunRow NewManualRun(ExecutionScheduleRow row) =>
+        new()
+        {
+            ScheduleRunId = ids.NewSequentialGuid(),
+            ScheduleId = row.ScheduleId,
+            TenantId = row.TenantId,
+            ScheduledFireAt = null,
+            Manual = true,
+            Outcome = ExecutionScheduleRunOutcomes.Started,
+            CreatedAt = DateTime.UtcNow
+        };
 
     private static string MapErrorCode(Exception exception) =>
         exception switch

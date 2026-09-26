@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Statevia.Core.Application.Contracts.Services;
+using Statevia.Core.Application.Contracts.Validation;
+using System.ComponentModel.DataAnnotations;
 
 namespace Statevia.Service.Api.Controllers;
 
-/// <summary>定期実行スケジュールの HTTP。手動 <c>/run</c> は含まない。</summary>
+/// <summary>定期実行スケジュールの HTTP。手動 <c>POST /run</c> は cron の next を変えない。</summary>
 /// <param name="schedules">スケジュールユースケース。</param>
 
 [ApiController]
@@ -49,5 +51,19 @@ public sealed class SchedulesController(IExecutionScheduleService schedules) : C
     {
         await schedules.DeleteAsync(scheduleId, ct).ConfigureAwait(false);
         return NoContent();
+    }
+
+    /// <summary>POST /v1/schedules/{scheduleId}/run — 手動 1 回。201 で実行応答。</summary>
+    [HttpPost("{scheduleId:guid}/run")]
+    [ProducesResponseType(typeof(ExecutionResponse), StatusCodes.Status201Created)]
+    public async Task<ActionResult<ExecutionResponse>> Run(
+        Guid scheduleId,
+        [FromHeader(Name = "X-Idempotency-Key")]
+        [RegularExpression(PrintableAsciiConstraints.AllowedPattern, ErrorMessage = PrintableAsciiConstraints.FormatErrorMessage)]
+        string? idempotencyKey,
+        CancellationToken ct)
+    {
+        var started = await schedules.RunNowAsync(scheduleId, idempotencyKey, ct).ConfigureAwait(false);
+        return Created(new Uri($"/v1/executions/{started.DisplayId}", UriKind.Relative), started);
     }
 }

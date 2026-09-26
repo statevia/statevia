@@ -40,6 +40,16 @@ internal static partial class ExecutionScheduleDispatchLogMessages
         string? errorCode);
 
     [LoggerMessage(
+        EventId = 3035,
+        Level = LogLevel.Information,
+        Message = "Schedule manual run started. ScheduleId={scheduleId} TenantId={tenantId} ExecutionId={executionId}")]
+    public static partial void ScheduleManualRunStarted(
+        this ILogger logger,
+        Guid scheduleId,
+        Guid tenantId,
+        Guid executionId);
+
+    [LoggerMessage(
         EventId = 3034,
         Level = LogLevel.Warning,
         Message = "Schedule fire Start failed. ScheduleId={scheduleId} TenantId={tenantId}")]
