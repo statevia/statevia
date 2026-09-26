@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Statevia.Core.Application.Contracts.Services;
+using Statevia.Infrastructure.Persistence;
 using Statevia.Runtime.DependencyInjection;
 using Statevia.Runtime.Services;
 
@@ -32,6 +33,7 @@ public sealed class RuntimeServiceCollectionExtensionsTests
             .ToList();
         Assert.Contains(typeof(DelayWaitSchedulerHostedService), hostedImplementations);
         Assert.Contains(typeof(ExecutionOwnershipRecoveryHostedService), hostedImplementations);
+        Assert.Contains(typeof(ExecutionScheduleDispatcherHostedService), hostedImplementations);
         Assert.Contains(typeof(ExecutionWorkItemWorkerHostedService), hostedImplementations);
     }
 
@@ -56,7 +58,11 @@ public sealed class RuntimeServiceCollectionExtensionsTests
             .ToList();
         Assert.Contains(typeof(DelayWaitSchedulerHostedService), hostedImplementations);
         Assert.Contains(typeof(ExecutionOwnershipRecoveryHostedService), hostedImplementations);
+        Assert.Contains(typeof(ExecutionScheduleDispatcherHostedService), hostedImplementations);
         Assert.Contains(services, static descriptor => descriptor.ServiceType == typeof(IIdGenerator));
+        var tenantAccessor = Assert.Single(services, static descriptor => descriptor.ServiceType == typeof(ITenantContextAccessor));
+        Assert.NotEqual(typeof(NullTenantContextAccessor), tenantAccessor.ImplementationType);
+        Assert.IsNotType<NullTenantContextAccessor>(tenantAccessor.ImplementationInstance);
     }
 
     /// <summary>null 引数は ArgumentNullException になる。</summary>

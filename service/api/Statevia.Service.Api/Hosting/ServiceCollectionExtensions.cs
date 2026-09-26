@@ -35,7 +35,7 @@ namespace Statevia.Service.Api.Hosting;
 /// <summary>
 /// Service API / Worker の DI 登録。
 /// </summary>
-/// <remarks>Worker ホストから <see cref="AddStateviaWorkerHost"/> を参照するため public。</remarks>
+/// <remarks>Worker / Scheduler ホストから <see cref="AddStateviaWorkerHost"/> / <see cref="AddStateviaSchedulerProcess"/> を参照するため public。</remarks>
 #pragma warning disable CA1515 // Worker ホストが参照するため public を維持する
 public static class ServiceCollectionExtensions
 #pragma warning restore CA1515
@@ -76,6 +76,53 @@ public static class ServiceCollectionExtensions
             .Build();
         return services.AddStateviaExecutionRuntime(workerConfiguration);
     }
+
+    /// <summary>
+    /// Scheduler 専用ホスト向けに DelayWait / OwnershipRecovery / スケジュール Dispatcher と Start 受理を登録する。
+    /// </summary>
+    /// <remarks>
+    /// <para>製品の <c>ExecutionEngine</c>、Action Host、Module ロード、通知、投影キューは登録しない。</para>
+    /// <para>
+    /// Start 受理の定義復元は構築時に <see cref="IExecutionEngine"/> と <see cref="IActionExecutor"/> を要求する。
+    /// 呼び出されると失敗する拒否実装だけを置き、enqueue 経路はこれらを呼ばない。
+    /// </para>
+    /// </remarks>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">接続文字列と Runtime Options。</param>
+    /// <returns>チェーン用の <paramref name="services"/>。</returns>
+    public static IServiceCollection AddStateviaSchedulerProcess(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddStateviaSchedulerHost(configuration);
+        services.AddSingleton<IExecutionEngine, SchedulerHostRejectedExecutionEngine>();
+        services.AddSingleton<IActionExecutor, SchedulerHostRejectedActionExecutor>();
+        services.AddStateviaCoreApplication();
+        services.AddScoped<IExecutionMutationPersistence, ExecutionMutationPersistence>();
+        services.AddScoped<DisplayIdServiceImpl>();
+        services.AddScoped<IDisplayIdService>(sp => sp.GetRequiredService<DisplayIdServiceImpl>());
+        services.AddScoped<IDisplayIdWriteService>(sp => sp.GetRequiredService<DisplayIdServiceImpl>());
+        services.AddSingleton<InMemoryActionCatalog>(sp =>
+        {
+            var catalog = new InMemoryActionCatalog();
+            DefinitionCompilerService.RegisterBuiltinActions(catalog);
+            return catalog;
+        });
+        services.AddSingleton<IActionCatalog>(sp => sp.GetRequiredService<InMemoryActionCatalog>());
+        services.AddSingleton<IActionVisibilityResolver, DefaultActionVisibilityResolver>();
+        services.AddSingleton<StateWorkflowDefinitionLoader>();
+        services.AddSingleton<NodesWorkflowDefinitionLoader>();
+        services.AddSingleton<IDefinitionLoadStrategy, DefinitionLoadStrategy>();
+        services.AddSingleton<IDefinitionCompilerService, DefinitionCompilerService>();
+        AddEventDeliveryRetryOptions(services, configuration);
+        AddForkChildExpansionOptions(services, configuration);
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICorrelationIdAccessor, Infrastructure.HttpContextCorrelationIdAccessor>();
+        return services;
+    }
+
     /// <summary>
     /// Persistence / Engine / Actions / Runtime HostedService など実行系 DI を登録する。
     /// </summary>
