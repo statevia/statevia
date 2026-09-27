@@ -846,6 +846,9 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
         public Task<TenantRow?> FindTenantByKeyAsync(string tenantKey, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public Task<TenantRow?> FindTenantByIdAsync(Guid tenantId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<IReadOnlyList<TenantRow>> ListActiveTenantsAsync(CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

@@ -10,6 +10,7 @@ services:
       Statevia__Runtime__EnableInProcessWorker: "false"
       Statevia__Runtime__EnableInProcessDelayWaitScheduler: "false"
       Statevia__Runtime__EnableInProcessOwnershipRecovery: "false"
+      Statevia__Runtime__EnableInProcessScheduleDispatcher: "false"
 
   scheduler:
     build:

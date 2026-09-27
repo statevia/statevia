@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 1.2 |
-| 更新日 | 2026-08-13 |
+| Version | 1.3 |
+| 更新日 | 2026-09-27 |
 | 関連 | [overview.md](overview.md), [data-integration.md](../specifications/data-integration.md) |
+
+**Version 1.3（2026-09-27）**: 定期実行は `ExecutionScheduleService` / `ExecutionScheduleDispatchService`。Start は Facade 経由。
 
 **Version 1.2（2026-08-13）**: Definition の project 認可は `DefinitionService`、永続化は Infrastructure の `IDefinitionRepository`。
 
@@ -106,6 +108,8 @@ flowchart LR
 | `ExecutionForkJoinCoordinator` | 親 Physical Join 完了/失敗と子完了 Resume。Facade からは見えない |
 | `ExecutionAuthorizationGuard` | 実行系入口の認可（read / write / mutation / 定義 Execute） |
 | `ExecutionEngineSession` | ミューテーション前の Engine hydrate。Unload ゲートは持たない |
+| `ExecutionScheduleService` | スケジュール CRUD。発火はしない |
+| `ExecutionScheduleDispatchService` | due claim と手動 run。Start は `IExecutionService` |
 
 `IForkChildExecutionCoordinator` は Fork 展開・親 Cancel カスケード・配送先解決を担う既存資産である。Join 再評価は `ExecutionForkJoinCoordinator` が呼び出す。
 
@@ -114,6 +118,7 @@ flowchart LR
 - `Core-Engine` は純粋ドメインロジック（定義解釈、遷移、グラフ生成）を担当し、I/O は持たない。
 - `Service API` は HTTP アダプタと Composition Root である。Execution のユースケースとトランザクション境界は `core/application` が担い、Engine 結果を永続化モデルへ写像する。
 - HTTP / Worker 入口は `IExecutionService` Facade のみ。Repository / Auth / Engine は Facade が直接持たない。
+- 定期実行の HTTP と Dispatcher（Runtime の HostedService）はスケジュール用サービスへ入る。実行の開始はそこから Facade の Start。work item の kind は Start のまま。Dispatcher は Engine を呼ばない。
 - 投影更新の窓口は `ExecutionProjectionOrchestrator` である。operational sync の実処理は `ExecutionOperationalProjectionSync`。
 - UI の正本は `GET /v1/executions*` が返す Read Model（`executions` / `execution_graph_snapshots`）である。
 - `execution_cursors` / `execution_waits` は運用用投影であり、Read API 正本とは分離される。

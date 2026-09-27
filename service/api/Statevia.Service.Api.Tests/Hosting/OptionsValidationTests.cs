@@ -509,7 +509,8 @@ public sealed class OptionsValidationTests
         {
             ["Statevia:Runtime:EnableInProcessWorker"] = "false",
             ["Statevia:Runtime:EnableInProcessDelayWaitScheduler"] = "false",
-            ["Statevia:Runtime:EnableInProcessOwnershipRecovery"] = "false"
+            ["Statevia:Runtime:EnableInProcessOwnershipRecovery"] = "false",
+            ["Statevia:Runtime:EnableInProcessScheduleDispatcher"] = "false"
         }));
 
         // Act / Assert
@@ -522,6 +523,9 @@ public sealed class OptionsValidationTests
         Assert.DoesNotContain(
             services,
             d => d.ImplementationType == typeof(ExecutionOwnershipRecoveryHostedService));
+        Assert.DoesNotContain(
+            services,
+            d => d.ImplementationType == typeof(ExecutionScheduleDispatcherHostedService));
     }
 
     /// <summary>Worker ホストは実行系のみで API 向けサービスを登録しない。</summary>
@@ -542,6 +546,9 @@ public sealed class OptionsValidationTests
         Assert.DoesNotContain(
             services,
             d => d.ImplementationType == typeof(ExecutionOwnershipRecoveryHostedService));
+        Assert.DoesNotContain(
+            services,
+            d => d.ImplementationType == typeof(ExecutionScheduleDispatcherHostedService));
         Assert.DoesNotContain(
             services,
             d => d.ServiceType == typeof(Statevia.Service.Api.Services.IAuthService));

@@ -3,15 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.23 |
-| 更新日 | 2026-09-09 |
+| Version | 1.24 |
+| 更新日 | 2026-09-27 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
 
 ## Normative 要約
 
-- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/events` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
+- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/schedules` / `/v1/events` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
 - **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。成功は **204**（一致 0 件でも）。
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{id}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
@@ -25,6 +25,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.24（2026-09-27）**: 定期実行 `/v1/schedules` と、資格のない ServiceAccount の `/v1/admin/service-accounts`。スケジュールは `executions.read` / `executions.write`。未認証は他の Runtime API と同じく Middleware で 401。Studio UI は無い。
 
 **Version 1.23（2026-09-09）**: `POST …/nodes/{nodeId}/resume` は投影がすでに終端なら 204（hydrate しない）。非終端で Engine 未ロードかつ checkpoint なしは従来どおり 422。
 
@@ -135,6 +137,12 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 | POST     | /v1/executions/{id}/events | イベント発行（Wait 再開の互換シム） |
 | POST     | /v1/executions/{id}/nodes/{nodeId}/resume | Wait 再開の正本（body: `resumeKey` = イベント名） |
 | POST     | /v1/events                | 集合配送（topic / key。`executions.write`） |
+| GET      | /v1/schedules             | 定期実行一覧（`input` なし） |
+| POST     | /v1/schedules             | 定期実行の作成 |
+| GET      | /v1/schedules/{scheduleId} | 定期実行の取得（`input` あり） |
+| PATCH    | /v1/schedules/{scheduleId} | 定期実行の部分更新 |
+| DELETE   | /v1/schedules/{scheduleId} | 定期実行の論理削除 |
+| POST     | /v1/schedules/{scheduleId}/run | 手動で 1 回 Start |
 
 ---
 
@@ -454,6 +462,36 @@ Request:
 - Response: **204 No Content**（一致 0 件でも 204。成功パスは維持）。
 - 詳細は [execution/wait-cancel.md](execution/wait-cancel.md)。
 
+### 3.12 定期実行スケジュール
+
+定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。ServiceAccount に定義・project の許可リストは無い。
+
+権限は専用キーを増やさない。一覧・取得は `executions.read`。作成・更新・削除・手動実行は `executions.write` と、対象定義の project executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みは 404。
+
+**POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版は 404。
+
+**GET /v1/schedules** — 200。テナント内のみ。`input` は含めない。
+
+**GET /v1/schedules/{scheduleId}** — 200。`input` を含む。
+
+**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。
+
+**DELETE /v1/schedules/{scheduleId}** — 204。論理削除。以降は発火しない。
+
+**POST /v1/schedules/{scheduleId}/run** — 201 で `ExecutionResponse`。`X-Idempotency-Key` は任意（印字可能 ASCII）。cron 枠とは別の冪等キー。`nextFireAt` は進めない。`enabled=false` は 422（`field=enabled`）。前の実行が残っていても overlap skip は適用しない。
+
+発火（Dispatcher）:
+
+- `enabled` かつ `nextFireAt <= now` の行を claim する（1 回あたり最大 64）。run-as の ServiceAccount をテナント文脈に載せて Start する。
+- 成功した実行の Owner（`startedByPrincipalId`）は run-as。作成者ではない。`WorkflowStarted` の `actorKind` は `scheduler`、`actorId` はスケジュール ID。
+- 同一 cron 枠の再 poll は 1 実行に畳む。`schedule_runs.outcome` は `started` / `skipped_overlap` / `failed`。
+- overlap `skip` で同一スケジュール由来の非終端実行がある枠は Start せず `skipped_overlap` を残し、次枠へ進む。`allow` は前が Running でも Start する。
+- 保存枠の次枠もすでに now 以下なら、その枠は Start しない（途中枠は埋めない）。`nextFireAt` は now の次枠。
+- ServiceAccount 無効、またはテナントが Active でないときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
+- 手動実行は `manual=true`、`scheduledFireAt` は null。
+
+資格のない ServiceAccount の作成は §4.1.3。ジョブ作成では発行しない。
+
 ---
 
 ## 4. 共通
@@ -461,7 +499,7 @@ Request:
 ### 4.1 ヘッダ
 
 - **Content-Type**: application/json（Body がある場合）
-- **Authorization**: `Bearer <JWT>`（ログイン後）。Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/events` / `/v1/actions`）では Principal 必須。
+- **Authorization**: `Bearer <JWT>`（ログイン後）。Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/schedules` / `/v1/events` / `/v1/actions`）では Principal 必須。
 - **X-Api-Key**: API キー認証。`api_keys`（prefix + hash）照合で Principal を解決する。
 - **X-Tenant-Id**: 移行専用。JWT あり時は **`tenant_key` と一致必須**。不一致は **403**（`TENANT_HEADER_MISMATCH`）。Runtime API では単独指定を許可せず **401**。
 - **X-Idempotency-Key**: 任意。`POST /v1/executions` では `definitionId + input` を含むリクエストハッシュで冪等キーを分離する（同一キーでも input が異なれば別リクエスト扱い）。
@@ -514,13 +552,17 @@ Request:
 | PUT | `/users/{userId}/password` | パスワード上書き（`newPassword` は 8〜128 文字・空白なし。記号可。現行パスワード不要。無効ユーザーも可。対象なし 404。成功 204） |
 | GET | `/groups` | グループ一覧 |
 | POST | `/groups` | グループ作成（`name` は ASCII ラベル最大 128） |
-| GET | `/groups/{groupId}` | グループ詳細（メンバー・権限キー） |
+| GET | `/groups/{groupId}` | グループ詳細（メンバー・権限キー・`serviceAccountIds`） |
 | PUT | `/groups/{groupId}/members` | メンバー置換（`userIds`） |
 | PUT | `/groups/{groupId}/permissions` | 権限置換（`permissionKeys`。`tenant.admin` は不可） |
 | GET | `/api-keys` | API キー一覧（平文なし。`keyPrefix` / `allowedScopes` / `expiresAt` / `lastUsedAt`） |
 | POST | `/api-keys` | API キー発行（`name` は ASCII ラベル最大 128, `allowedScopes`, `expiresAt?`）。`allowedScopes` は catalog の assignable key（`tenant.admin` 除外。`modules.reload` / `modules.read` を含む）。応答の `plainKey` は **一度だけ** |
 | DELETE | `/api-keys/{apiKeyId}` | API キー失効（紐づく Principal を無効化） |
 | GET | `/modules` | Action Module の load catalog 一覧（`AdminModuleListItemDto[]`）。テナント管理者 JWT **または** `modules.read` |
+| GET | `/service-accounts` | ServiceAccount 一覧（平文キーなし。`hasApiKey`） |
+| POST | `/service-accounts` | 資格のない ServiceAccount 作成（`name` は ASCII ラベル最大 128、`groupIds` は 1 件以上）。API キーは発行しない。201 |
+| GET | `/service-accounts/{serviceAccountId}` | ServiceAccount 詳細 |
+| PATCH | `/service-accounts/{serviceAccountId}` | `isActive?` / `displayName?` / `groupIds?`（指定時は 1 件以上の置換）。無効化すると Principal が inactive。紐づくスケジュールは自動では止めない |
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 
@@ -538,7 +580,7 @@ Response（`GET /v1/admin/modules` の 1 件）: `moduleId`, `name`, `version`, 
 
 ### 4.1.2 Runtime API の認証要件
 
-- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/events`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
+- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/schedules`、`/v1/events`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
 - **必須**: Principal が解決済みであること（JWT または `X-Api-Key`）。
 - **拒否**: `X-Tenant-Id` のみ（Bearer / API キーなし）は **401**（`UNAUTHORIZED`）。
 - **除外パス**: `/v1/auth/login`、`/v1/health`、`/swagger/*`、`/scalar/*`。
@@ -552,8 +594,8 @@ Principal 解決後、サービス層で **semantic permission key** を評価�
 | --- | --- |
 | GET `/v1/definitions*`、`/v1/graphs/*`、`/v1/definitions/schema/nodes`、`/v1/actions/schema*` | `definitions.read` |
 | POST/PUT `/v1/definitions`、`POST /v1/definitions/validate` | `definitions.write` |
-| GET `/v1/executions*`（一覧・詳細・graph・waits・state・events・stream） | `executions.read` |
-| POST start / cancel / publish / resume、**`POST /v1/events`** | `executions.write` |
+| GET `/v1/executions*`（一覧・詳細・graph・waits・state・events・stream）、GET `/v1/schedules*` | `executions.read` |
+| POST start / cancel / publish / resume、**`POST /v1/events`**、スケジュールの作成・更新・削除・手動実行 | `executions.write` |
 
 - **JWT**: グループ権限を Live 展開（`ExpandPrincipalPermissionKeysAsync`）。`is_tenant_admin` は全 catalog key を持つ。
 - **API キー**: `effective = 展開許可 ∩ allowed_scopes` の交差結果のみ（`ITenantContext.EffectivePermissionKeys`）。

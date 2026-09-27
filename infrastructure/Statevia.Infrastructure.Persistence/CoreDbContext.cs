@@ -118,6 +118,19 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string AttemptId = "attempt_id";
         public const string LockedUntil = "locked_until";
         public const string FailedAt = "failed_at";
+        public const string ScheduleId = "schedule_id";
+        public const string ScheduleRunId = "schedule_run_id";
+        public const string RunAsPrincipalId = "run_as_principal_id";
+        public const string CreatedByPrincipalId = "created_by_principal_id";
+        public const string CronExpression = "cron_expression";
+        public const string TimeZone = "time_zone";
+        public const string OverlapPolicy = "overlap_policy";
+        public const string InputJson = "input_json";
+        public const string Enabled = "enabled";
+        public const string NextFireAt = "next_fire_at";
+        public const string ScheduledFireAt = "scheduled_fire_at";
+        public const string Manual = "manual";
+        public const string Outcome = "outcome";
     }
 
     private static class ColumnTypes
@@ -172,6 +185,12 @@ internal class CoreDbContext : DbContext, ICoreDatabase
 
     /// <summary>ログイン失敗時刻行。</summary>
     public DbSet<LoginFailureAttemptRow> LoginFailureAttempts => Set<LoginFailureAttemptRow>();
+
+    /// <summary>定期実行ジョブ。</summary>
+    public DbSet<ExecutionScheduleRow> ExecutionSchedules => Set<ExecutionScheduleRow>();
+
+    /// <summary>定期実行の枠結果。</summary>
+    public DbSet<ExecutionScheduleRunRow> ExecutionScheduleRuns => Set<ExecutionScheduleRunRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -508,8 +527,71 @@ internal class CoreDbContext : DbContext, ICoreDatabase
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        ConfigureScheduleEntities(modelBuilder);
+
         ConfigureTenantScopedFilters(modelBuilder);
         ConfigureSecurityEntities(modelBuilder);
+    }
+
+    /// <summary>定期実行ジョブと枠結果のテーブル。</summary>
+    private static void ConfigureScheduleEntities(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ExecutionScheduleRow>(e =>
+        {
+            e.ToTable("schedules");
+            e.HasKey(x => x.ScheduleId);
+            e.Property(x => x.ScheduleId).HasColumnName(Columns.ScheduleId);
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.DefinitionId).HasColumnName(Columns.DefinitionId);
+            e.Property(x => x.DefinitionVersionId).HasColumnName(Columns.DefinitionVersionId);
+            e.Property(x => x.RunAsPrincipalId).HasColumnName(Columns.RunAsPrincipalId);
+            e.Property(x => x.CreatedByPrincipalId).HasColumnName(Columns.CreatedByPrincipalId);
+            e.Property(x => x.Name).HasMaxLength(128).HasColumnName(Columns.Name);
+            e.Property(x => x.CronExpression).HasMaxLength(128).HasColumnName(Columns.CronExpression);
+            e.Property(x => x.TimeZone).HasMaxLength(64).HasColumnName(Columns.TimeZone);
+            e.Property(x => x.OverlapPolicy).HasMaxLength(16).HasColumnName(Columns.OverlapPolicy);
+            e.Property(x => x.InputJson).HasColumnName(Columns.InputJson);
+            e.Property(x => x.Enabled).HasColumnName(Columns.Enabled);
+            e.Property(x => x.DeletedAt).HasColumnName(Columns.DeletedAt);
+            e.Property(x => x.NextFireAt).HasColumnName(Columns.NextFireAt);
+            e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
+            e.Property(x => x.UpdatedAt).HasColumnName(Columns.UpdatedAt);
+            e.HasIndex(x => new { x.TenantId, x.Name })
+                .IsUnique()
+                .HasFilter("\"deleted_at\" IS NULL");
+            e.HasIndex(x => new { x.Enabled, x.DeletedAt, x.NextFireAt });
+            e.HasIndex(x => x.TenantId);
+            e.HasOne<TenantRow>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExecutionScheduleRunRow>(e =>
+        {
+            e.ToTable("schedule_runs");
+            e.HasKey(x => x.ScheduleRunId);
+            e.Property(x => x.ScheduleRunId).HasColumnName(Columns.ScheduleRunId);
+            e.Property(x => x.ScheduleId).HasColumnName(Columns.ScheduleId);
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.ScheduledFireAt).HasColumnName(Columns.ScheduledFireAt);
+            e.Property(x => x.Manual).HasColumnName(Columns.Manual);
+            e.Property(x => x.Outcome).HasMaxLength(32).HasColumnName(Columns.Outcome);
+            e.Property(x => x.ExecutionId).HasColumnName(Columns.ExecutionId);
+            e.Property(x => x.ErrorCode).HasMaxLength(64).HasColumnName(Columns.ErrorCode);
+            e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
+            e.HasIndex(x => new { x.ScheduleId, x.ScheduledFireAt })
+                .IsUnique()
+                .HasFilter("\"scheduled_fire_at\" IS NOT NULL");
+            e.HasOne<ExecutionScheduleRow>()
+                .WithMany()
+                .HasForeignKey(x => x.ScheduleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<TenantRow>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     /// <summary>
@@ -521,6 +603,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
     private void ConfigureTenantIdEntityFilters(ModelBuilder modelBuilder)
     {
         ConfigureCoreTenantIdEntityFilters(modelBuilder);
+        ConfigureScheduleTenantIdEntityFilters(modelBuilder);
         ConfigureSecurityTenantIdEntityFilters(modelBuilder);
     }
 
@@ -547,6 +630,18 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
 
         modelBuilder.Entity<EventDeliveryDedupRow>().HasQueryFilter(e =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+    }
+
+    /// <summary>schedules / schedule_runs のテナント query filter。</summary>
+    private void ConfigureScheduleTenantIdEntityFilters(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ExecutionScheduleRow>().HasQueryFilter(e =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+
+        modelBuilder.Entity<ExecutionScheduleRunRow>().HasQueryFilter(e =>
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
     }

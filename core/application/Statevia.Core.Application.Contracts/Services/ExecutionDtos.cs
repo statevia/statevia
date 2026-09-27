@@ -8,13 +8,15 @@ namespace Statevia.Core.Application.Contracts.Services;
 /// <summary>
 /// 冪等コマンドの HTTP メタデータ（dedup キー組み立て用）。
 /// </summary>
-/// <param name="Method">HTTP メソッドまたは <c>WORKER</c>。</param>
+/// <param name="Method">HTTP メソッド、<c>WORKER</c>、またはスケジュール発火の <c>SCHEDULER</c>。</param>
 /// <param name="Path">リクエストパス（クエリなし）。</param>
 /// <param name="ParentExecutionId">組み込み workflow Action の親実行 ID。HTTP Start では省略する。</param>
+/// <param name="ScheduleId">スケジュール発火の対象 ID。HTTP / Worker の Start では null。</param>
 public sealed record CommandRequestContext(
     string Method,
     string Path,
-    Guid? ParentExecutionId = null);
+    Guid? ParentExecutionId = null,
+    Guid? ScheduleId = null);
 
 /// <summary>POST /v1/executions のリクエスト本文。</summary>
 public class StartExecutionRequest : IValidatableObject

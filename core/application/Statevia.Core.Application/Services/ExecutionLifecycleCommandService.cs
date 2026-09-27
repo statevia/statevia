@@ -80,12 +80,18 @@ internal sealed class ExecutionLifecycleCommandService(
     /// <summary>HTTP Start 受理時および未 Start 終端で使う空グラフ（Engine 未投影）。</summary>
     private const string EmptyGraphJson = """{"nodes":[],"edges":[]}""";
 
+    /// <summary>スケジュール発火の <see cref="CommandRequestContext.Method"/>。</summary>
+    private const string SchedulerRequestMethod = "SCHEDULER";
+
+    /// <summary>スケジュール発火で <c>event_store.actor_kind</c> に残す値。</summary>
+    private const string SchedulerActorKind = "scheduler";
+
     /// <summary>
     /// 実行を開始する。HTTP 受理時は work queue へ enqueue、Worker / 同期経路は同一プロセスで Engine を起動する。
     /// </summary>
     /// <param name="request">開始リクエスト。</param>
     /// <param name="idempotencyKey">冪等キー（任意）。</param>
-    /// <param name="requestContext">HTTP / Worker 文脈（Method / Path）。</param>
+    /// <param name="requestContext">HTTP / Worker / スケジュール発火の文脈（Method / Path / ScheduleId）。</param>
     /// <param name="ct">キャンセル。</param>
     /// <returns>表示 ID 付きの実行応答。</returns>
     /// <exception cref="NotFoundException">定義またはバージョンが見つからないとき。</exception>
@@ -119,6 +125,7 @@ internal sealed class ExecutionLifecycleCommandService(
         var inherited = requestContext.ParentExecutionId is { } parentExecutionId
             ? await LoadInheritedChildStartAsync(tenantId, parentExecutionId, defUuid.Value, ct).ConfigureAwait(false)
             : null;
+        var startActor = ResolveScheduleStartActor(requestContext);
 
         var versionRow = await ResolveStartDefinitionVersionAsync(tenantId, defUuid.Value, request, ct).ConfigureAwait(false);
         if (versionRow is null)
@@ -130,13 +137,17 @@ internal sealed class ExecutionLifecycleCommandService(
             && !string.Equals(requestContext.Method, "WORKER", StringComparison.Ordinal))
         {
             return await AcceptStartAndEnqueueAsync(
-                    request,
-                    requestHash,
-                    dedupKey,
-                    tenantId,
-                    defUuid.Value,
-                    versionRow,
-                    inherited,
+                    new AcceptStartArgs(
+                        request,
+                        requestHash,
+                        dedupKey,
+                        tenantId,
+                        defUuid.Value,
+                        versionRow,
+                        inherited)
+                    {
+                        StartActor = startActor
+                    },
                     ct)
                 .ConfigureAwait(false);
         }
@@ -150,7 +161,11 @@ internal sealed class ExecutionLifecycleCommandService(
                     defUuid.Value,
                     versionRow,
                     ExecutionId: null,
-                    Inherited: inherited),
+                    Inherited: inherited)
+                {
+                    ActorKind = startActor.Kind,
+                    ActorId = startActor.Id
+                },
                 ct)
             .ConfigureAwait(false);
     }
@@ -158,25 +173,22 @@ internal sealed class ExecutionLifecycleCommandService(
     /// <summary>
     /// 実行行を受理し <see cref="ExecutionWorkItemKinds.Start"/> を enqueue する（Engine は回さない）。
     /// </summary>
-    /// <param name="request">開始リクエスト。</param>
-    /// <param name="requestHash">冪等用リクエストハッシュ。</param>
-    /// <param name="dedupKey">command_dedup キー（任意）。</param>
-    /// <param name="tenantId">テナント ID。</param>
-    /// <param name="definitionId">定義 UUID。</param>
-    /// <param name="versionRow">採用する定義バージョン。</param>
-    /// <param name="inherited">親 snapshot 継承（workflow Action）。HTTP Start では null。</param>
+    /// <param name="args">受理入力。WorkflowStarted の主体は <see cref="AcceptStartArgs.StartActor"/>。</param>
     /// <param name="ct">キャンセル。</param>
     /// <returns>受理直後の実行応答（Running）。</returns>
     private async Task<ExecutionResponse> AcceptStartAndEnqueueAsync(
-        StartExecutionRequest request,
-        string requestHash,
-        CommandDedupKey? dedupKey,
-        Guid tenantId,
-        Guid definitionId,
-        DefinitionVersionRow versionRow,
-        InheritedChildStart? inherited,
+        AcceptStartArgs args,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(args);
+        var request = args.Request;
+        var requestHash = args.RequestHash;
+        var dedupKey = args.DedupKey;
+        var tenantId = args.TenantId;
+        var definitionId = args.DefinitionId;
+        var versionRow = args.VersionRow;
+        var inherited = args.Inherited;
+        var startActor = args.StartActor;
         ArgumentNullException.ThrowIfNull(workQueue);
         try
         {
@@ -251,7 +263,14 @@ internal sealed class ExecutionLifecycleCommandService(
                     },
                     JsonSerializerProfiles.CamelCase);
                 await eventStore
-                    .AppendAsync(uow, executionId, EventStoreEventType.WorkflowStarted, startedPayload, innerCt)
+                    .AppendAsync(
+                        uow,
+                        executionId,
+                        EventStoreEventType.WorkflowStarted,
+                        startedPayload,
+                        startActor.Kind,
+                        startActor.Id,
+                        innerCt)
                     .ConfigureAwait(false);
 
                 if (dedupKey is { } saveKey)
@@ -404,7 +423,14 @@ internal sealed class ExecutionLifecycleCommandService(
 
                         await executions.AddExecutionAndSnapshotAsync(uow, executionRow, snapshotRow, innerCt).ConfigureAwait(false);
                         await eventStore
-                            .AppendAsync(uow, resolvedExecutionId, EventStoreEventType.WorkflowStarted, startedPayload, innerCt)
+                            .AppendAsync(
+                                uow,
+                                resolvedExecutionId,
+                                EventStoreEventType.WorkflowStarted,
+                                startedPayload,
+                                args.ActorKind,
+                                args.ActorId,
+                                innerCt)
                             .ConfigureAwait(false);
 
                         if (args.DedupKey is { } saveKey)
@@ -1297,6 +1323,7 @@ internal sealed class ExecutionLifecycleCommandService(
         ExecutionProjectionStatuses.IsTerminal(status);
 
     /// <summary>同一プロセス Start の入力束。</summary>
+    /// <remarks><see cref="ActorKind"/> と <see cref="ActorId"/> はスケジュール発火の WorkflowStarted だけ設定する。</remarks>
     private sealed record ExecuteStartInProcessArgs(
         StartExecutionRequest Request,
         string RequestHash,
@@ -1305,7 +1332,54 @@ internal sealed class ExecutionLifecycleCommandService(
         Guid DefinitionId,
         DefinitionVersionRow VersionRow,
         Guid? ExecutionId,
-        InheritedChildStart? Inherited = null);
+        InheritedChildStart? Inherited = null)
+    {
+        /// <summary>WorkflowStarted の actor_kind。HTTP / Worker では null。</summary>
+        public string? ActorKind { get; init; }
+
+        /// <summary>WorkflowStarted の actor_id。スケジュール発火ではスケジュール ID。</summary>
+        public string? ActorId { get; init; }
+    }
+
+    /// <summary>キュー受理 Start の入力束。</summary>
+    /// <param name="Request">開始リクエスト。</param>
+    /// <param name="RequestHash">冪等用リクエストハッシュ。</param>
+    /// <param name="DedupKey">command_dedup キー（任意）。</param>
+    /// <param name="TenantId">テナント ID。</param>
+    /// <param name="DefinitionId">定義 UUID。</param>
+    /// <param name="VersionRow">採用する定義バージョン。</param>
+    /// <param name="Inherited">親 snapshot 継承。HTTP Start では null。</param>
+    private sealed record AcceptStartArgs(
+        StartExecutionRequest Request,
+        string RequestHash,
+        CommandDedupKey? DedupKey,
+        Guid TenantId,
+        Guid DefinitionId,
+        DefinitionVersionRow VersionRow,
+        InheritedChildStart? Inherited)
+    {
+        /// <summary>WorkflowStarted に残す主体。HTTP Start では空。</summary>
+        public ScheduleStartActor StartActor { get; init; }
+    }
+
+    /// <summary>スケジュール発火の WorkflowStarted だけ <c>scheduler</c> を残す。HTTP / Worker は空。</summary>
+    /// <param name="requestContext">Start の要求文脈。</param>
+    /// <returns>actor 列に書く種別と ID。対象外は両方 null。</returns>
+    private static ScheduleStartActor ResolveScheduleStartActor(CommandRequestContext requestContext)
+    {
+        if (!string.Equals(requestContext.Method, SchedulerRequestMethod, StringComparison.Ordinal)
+            || requestContext.ScheduleId is not { } scheduleId)
+        {
+            return default;
+        }
+
+        return new ScheduleStartActor(SchedulerActorKind, scheduleId.ToString("D"));
+    }
+
+    /// <summary>WorkflowStarted に残す主体。</summary>
+    /// <param name="Kind"><c>event_store.actor_kind</c>。未設定時は null。</param>
+    /// <param name="Id"><c>event_store.actor_id</c>。未設定時は null。</param>
+    private readonly record struct ScheduleStartActor(string? Kind, string? Id);
 
     /// <summary>workflow Action からの子開始で使う親 snapshot。</summary>
     /// <param name="ParentSnapshot">親実行のセキュリティスナップショット。</param>

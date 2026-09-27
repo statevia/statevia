@@ -121,5 +121,29 @@ public sealed class AdminControllerTests
             Guid apiKeyId,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<IReadOnlyList<AdminServiceAccountListItemDto>> ListServiceAccountsAsync(
+            Guid callerPrincipalId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AdminServiceAccountListItemDto>>(Array.Empty<AdminServiceAccountListItemDto>());
+
+        public Task<AdminServiceAccountListItemDto> CreateServiceAccountAsync(
+            Guid callerPrincipalId,
+            CreateAdminServiceAccountRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<AdminServiceAccountListItemDto> GetServiceAccountAsync(
+            Guid callerPrincipalId,
+            Guid serviceAccountId,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<AdminServiceAccountListItemDto> UpdateServiceAccountAsync(
+            Guid callerPrincipalId,
+            Guid serviceAccountId,
+            UpdateAdminServiceAccountRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 }

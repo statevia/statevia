@@ -19,10 +19,20 @@ internal sealed class PrincipalDataAccessAdapter : IPrincipalDataAccess
 
         return new PrincipalInfo(
             row.PrincipalId,
+            row.TenantId,
             row.PrincipalType,
             row.IsActive,
             row.DisabledAt,
             row.DeletedAt);
+    }
+
+    public async Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var row = await _platform.FindTenantByIdAsync(tenantId, cancellationToken).ConfigureAwait(false);
+        if (row is null)
+            return null;
+
+        return new TenantInfo(row.TenantId, row.TenantKey, row.Lifecycle);
     }
 
     public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken) =>

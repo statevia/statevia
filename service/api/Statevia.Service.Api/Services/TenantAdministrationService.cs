@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace Statevia.Service.Api.Services;
 
-/// <summary>テナント管理者向け users / groups 管理。</summary>
+/// <summary>テナント管理者向け users / groups / ServiceAccount 管理。</summary>
 public interface ITenantAdministrationService
 {
     /// <summary>権限カタログを返す。</summary>
@@ -86,6 +86,30 @@ public interface ITenantAdministrationService
         Guid callerPrincipalId,
         Guid apiKeyId,
         CancellationToken cancellationToken);
+
+    /// <summary>テナント内 ServiceAccount を一覧する（平文キーなし）。</summary>
+    Task<IReadOnlyList<AdminServiceAccountListItemDto>> ListServiceAccountsAsync(
+        Guid callerPrincipalId,
+        CancellationToken cancellationToken);
+
+    /// <summary>資格のない ServiceAccount を作成する（API キーは発行しない）。</summary>
+    Task<AdminServiceAccountListItemDto> CreateServiceAccountAsync(
+        Guid callerPrincipalId,
+        CreateAdminServiceAccountRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>ServiceAccount 詳細を返す。</summary>
+    Task<AdminServiceAccountListItemDto> GetServiceAccountAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken);
+
+    /// <summary>ServiceAccount の有効・表示名・所属グループを更新する。</summary>
+    Task<AdminServiceAccountListItemDto> UpdateServiceAccountAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        UpdateAdminServiceAccountRequest request,
+        CancellationToken cancellationToken);
 }
 
 /// <inheritdoc />
@@ -93,6 +117,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
 {
     private const string UnauthorizedCode = "UNAUTHORIZED";
     private const string ForbiddenCode = "FORBIDDEN";
+    private const string PrincipalNotFoundMessage = "Principal not found.";
     private static readonly JsonSerializerOptions AllowedScopesJsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IDbContextFactory<CoreDbContext> _dbFactory;
@@ -308,7 +333,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
             .FirstOrDefaultAsync(p => p.PrincipalId == link.PrincipalId, cancellationToken)
             .ConfigureAwait(false);
         if (principal is null)
-            throw new NotFoundException("Principal not found.");
+            throw new NotFoundException(PrincipalNotFoundMessage);
 
         var now = DateTime.UtcNow;
         if (request.IsTenantAdmin is { } isTenantAdmin)
@@ -428,6 +453,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
             Name = name,
             IsSystem = false,
             MemberUserIds = Array.Empty<Guid>(),
+            ServiceAccountIds = Array.Empty<Guid>(),
             PermissionKeys = Array.Empty<string>()
         };
     }
@@ -664,7 +690,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
             .FirstOrDefaultAsync(p => p.PrincipalId == apiKey.PrincipalId, cancellationToken)
             .ConfigureAwait(false);
         if (principal is null)
-            throw new NotFoundException("Principal not found.");
+            throw new NotFoundException(PrincipalNotFoundMessage);
 
         var now = DateTime.UtcNow;
         principal.IsActive = false;
@@ -672,6 +698,184 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
         principal.UpdatedAt = now;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AdminServiceAccountListItemDto>> ListServiceAccountsAsync(
+        Guid callerPrincipalId,
+        CancellationToken cancellationToken)
+    {
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await (
+            from account in db.ServiceAccounts.AsNoTracking()
+            join principal in db.Principals.AsNoTracking() on account.PrincipalId equals principal.PrincipalId
+            orderby account.Name
+            select new { account, principal }).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var serviceAccountIds = rows.Select(row => row.account.ServiceAccountId).ToList();
+        var principalIds = rows.Select(row => row.account.PrincipalId).ToList();
+        var memberships = await db.ServiceAccountGroupMembers
+            .AsNoTracking()
+            .Where(member => serviceAccountIds.Contains(member.ServiceAccountId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var keyedPrincipalIds = await db.ApiKeys
+            .AsNoTracking()
+            .Where(key => principalIds.Contains(key.PrincipalId))
+            .Select(key => key.PrincipalId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var keyedSet = keyedPrincipalIds.ToHashSet();
+        var groupsByAccount = memberships
+            .GroupBy(member => member.ServiceAccountId)
+            .ToDictionary(group => group.Key, group => group.Select(member => member.GroupId).ToList() as IReadOnlyList<Guid>);
+
+        return rows.Select(row => new AdminServiceAccountListItemDto
+        {
+            ServiceAccountId = row.account.ServiceAccountId,
+            PrincipalId = row.account.PrincipalId,
+            Name = row.account.Name,
+            IsActive = row.principal.IsActive,
+            HasApiKey = keyedSet.Contains(row.account.PrincipalId),
+            GroupIds = groupsByAccount.GetValueOrDefault(row.account.ServiceAccountId, Array.Empty<Guid>()),
+            CreatedAt = row.account.CreatedAt
+        }).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<AdminServiceAccountListItemDto> CreateServiceAccountAsync(
+        Guid callerPrincipalId,
+        CreateAdminServiceAccountRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+
+        var tenantId = RequireTenantId();
+        var name = request.Name.Trim();
+        var groupIds = DistinctGroupIds(request.GroupIds);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureGroupIdsExistAsync(db, groupIds, cancellationToken).ConfigureAwait(false);
+
+        var principalId = _idGenerator.NewSequentialGuid();
+        var serviceAccountId = _idGenerator.NewSequentialGuid();
+        var now = DateTime.UtcNow;
+        db.Principals.Add(new PrincipalRow
+        {
+            PrincipalId = principalId,
+            TenantId = tenantId,
+            PrincipalScope = PrincipalScope.Tenant,
+            PrincipalType = PrincipalType.ServiceAccount,
+            DisplayName = name,
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.ServiceAccounts.Add(new ServiceAccountRow
+        {
+            ServiceAccountId = serviceAccountId,
+            TenantId = tenantId,
+            PrincipalId = principalId,
+            Name = name,
+            CreatedAt = now
+        });
+        foreach (var groupId in groupIds)
+        {
+            db.ServiceAccountGroupMembers.Add(new ServiceAccountGroupMemberRow
+            {
+                ServiceAccountId = serviceAccountId,
+                GroupId = groupId
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return new AdminServiceAccountListItemDto
+        {
+            ServiceAccountId = serviceAccountId,
+            PrincipalId = principalId,
+            Name = name,
+            IsActive = true,
+            HasApiKey = false,
+            GroupIds = groupIds,
+            CreatedAt = now
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<AdminServiceAccountListItemDto> GetServiceAccountAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken)
+    {
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await LoadServiceAccountDtoAsync(db, serviceAccountId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<AdminServiceAccountListItemDto> UpdateServiceAccountAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        UpdateAdminServiceAccountRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var account = await db.ServiceAccounts
+            .FirstOrDefaultAsync(row => row.ServiceAccountId == serviceAccountId, cancellationToken)
+            .ConfigureAwait(false);
+        if (account is null)
+            throw new NotFoundException("Service account not found.");
+
+        var principal = await db.Principals
+            .FirstOrDefaultAsync(row => row.PrincipalId == account.PrincipalId, cancellationToken)
+            .ConfigureAwait(false);
+        if (principal is null)
+            throw new NotFoundException(PrincipalNotFoundMessage);
+
+        var now = DateTime.UtcNow;
+        if (request.DisplayName is { } displayName)
+        {
+            var trimmed = displayName.Trim();
+            account.Name = trimmed;
+            principal.DisplayName = trimmed;
+        }
+
+        if (request.IsActive is { } isActive)
+        {
+            principal.IsActive = isActive;
+            principal.DisabledAt = isActive ? null : now;
+        }
+
+        if (request.GroupIds is not null)
+        {
+            var groupIds = DistinctGroupIds(request.GroupIds);
+            await EnsureGroupIdsExistAsync(db, groupIds, cancellationToken).ConfigureAwait(false);
+            var existing = await db.ServiceAccountGroupMembers
+                .Where(member => member.ServiceAccountId == serviceAccountId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            db.ServiceAccountGroupMembers.RemoveRange(existing);
+            foreach (var groupId in groupIds)
+            {
+                db.ServiceAccountGroupMembers.Add(new ServiceAccountGroupMemberRow
+                {
+                    ServiceAccountId = serviceAccountId,
+                    GroupId = groupId
+                });
+            }
+        }
+
+        principal.UpdatedAt = now;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return await LoadServiceAccountDtoAsync(db, serviceAccountId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<string>> NormalizeApiKeyAllowedScopesAsync(
@@ -742,6 +946,12 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
             .OrderBy(k => k)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var serviceAccountIds = await db.ServiceAccountGroupMembers
+            .AsNoTracking()
+            .Where(member => member.GroupId == groupId)
+            .Select(member => member.ServiceAccountId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return new AdminGroupDetailDto
         {
@@ -749,8 +959,69 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
             Name = group.Name,
             IsSystem = group.IsSystem,
             MemberUserIds = memberUserIds,
+            ServiceAccountIds = serviceAccountIds,
             PermissionKeys = permissionKeys
         };
+    }
+
+    /// <summary>ServiceAccount 1 件を読み取り DTO にする。</summary>
+    /// <param name="db">テナントフィルタ済みコンテキスト。</param>
+    /// <param name="serviceAccountId">対象 ID。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>一覧と同じ形の DTO。</returns>
+    /// <exception cref="NotFoundException">行または Principal が無いとき。</exception>
+    private static async Task<AdminServiceAccountListItemDto> LoadServiceAccountDtoAsync(
+        CoreDbContext db,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken)
+    {
+        var account = await db.ServiceAccounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.ServiceAccountId == serviceAccountId, cancellationToken)
+            .ConfigureAwait(false);
+        if (account is null)
+            throw new NotFoundException("Service account not found.");
+
+        var principal = await db.Principals
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.PrincipalId == account.PrincipalId, cancellationToken)
+            .ConfigureAwait(false);
+        if (principal is null)
+            throw new NotFoundException(PrincipalNotFoundMessage);
+
+        var groupIds = await db.ServiceAccountGroupMembers
+            .AsNoTracking()
+            .Where(member => member.ServiceAccountId == serviceAccountId)
+            .Select(member => member.GroupId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var hasApiKey = await db.ApiKeys
+            .AsNoTracking()
+            .AnyAsync(key => key.PrincipalId == account.PrincipalId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return new AdminServiceAccountListItemDto
+        {
+            ServiceAccountId = account.ServiceAccountId,
+            PrincipalId = account.PrincipalId,
+            Name = account.Name,
+            IsActive = principal.IsActive,
+            HasApiKey = hasApiKey,
+            GroupIds = groupIds,
+            CreatedAt = account.CreatedAt
+        };
+    }
+
+    /// <summary>空を拒否し、重複グループ ID を除く。</summary>
+    /// <param name="groupIds">要求のグループ ID。</param>
+    /// <returns>1 件以上の一意 ID。</returns>
+    /// <exception cref="ArgumentException">空のとき。</exception>
+    private static List<Guid> DistinctGroupIds(IReadOnlyList<Guid>? groupIds)
+    {
+        var distinct = (groupIds ?? Array.Empty<Guid>()).Distinct().ToList();
+        if (distinct.Count == 0)
+            throw new ArgumentException("groupIds must contain at least one group.");
+        return distinct;
     }
 
     private static IReadOnlyList<string> NormalizeAssignablePermissionKeys(IReadOnlyList<string>? keys)

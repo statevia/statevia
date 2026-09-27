@@ -3,8 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Statevia.Core.Application.Contracts.Security;
 using Statevia.Infrastructure.Common;
 using Statevia.Infrastructure.Common.DependencyInjection;
-using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
+using Statevia.Infrastructure.Security.DependencyInjection;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.Services;
 
@@ -14,11 +14,13 @@ namespace Statevia.Runtime.DependencyInjection;
 public static class RuntimeServiceCollectionExtensions
 {
     /// <summary>
-    /// Scheduler 専用ホスト向けに Common（IIdGenerator）・Persistence・DelayWait / OwnershipRecovery を登録する。
+    /// Scheduler 専用ホスト向けに Common（IIdGenerator）・Persistence・書き込み可能なテナント文脈・
+    /// DelayWait / OwnershipRecovery / スケジュール Dispatcher を登録する。
     /// </summary>
     /// <remarks>
-    /// システム全体の wait / ownership をスキャンするためテナントフィルタは無効化する。
-    /// 実行 Engine / Actions は登録しない。
+    /// <para>システム全体の wait / ownership / due スケジュールをスキャンするためテナントフィルタは無効化する。</para>
+    /// <para>Start 受理が <see cref="ITenantContextAccessor.SetContext"/> できるよう Security の文脈を使う。JWT 発行は登録しない。</para>
+    /// <para>製品の実行 Engine と Action Host は登録しない。Start 受理に必要な拒否実装は API の scheduler プロセス登録が足す。</para>
     /// </remarks>
     public static IServiceCollection AddStateviaSchedulerHost(
         this IServiceCollection services, IConfiguration configuration)
@@ -28,7 +30,7 @@ public static class RuntimeServiceCollectionExtensions
 
         var connectionString = DatabaseConnection.Resolve(configuration);
         services.AddSingleton<ITenantQueryFilterOptions>(DisabledTenantQueryFilterOptions.Instance);
-        services.AddSingleton<ITenantContextAccessor>(NullTenantContextAccessor.Instance);
+        services.AddStateviaInfrastructureSecurity(configuration);
         services.AddStateviaInfrastructureCommon();
         services.AddStateviaInfrastructurePersistence(connectionString);
         services.AddStateviaRuntimeOptions(configuration);
@@ -36,12 +38,17 @@ public static class RuntimeServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>scheduler hosted service を登録する。</summary>
+    /// <summary>DelayWait、OwnershipRecovery、スケジュール Dispatcher を登録する。</summary>
+    /// <remarks>
+    /// 専用 scheduler ホストが常に使う。API プロセス内の Dispatcher は
+    /// <c>EnableInProcessScheduleDispatcher</c> で別途登録し、本メソッドは呼ばない。
+    /// </remarks>
     public static IServiceCollection AddStateviaRuntimeSchedulers(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddHostedService<DelayWaitSchedulerHostedService>();
         services.AddHostedService<ExecutionOwnershipRecoveryHostedService>();
+        services.AddHostedService<ExecutionScheduleDispatcherHostedService>();
         return services;
     }
 

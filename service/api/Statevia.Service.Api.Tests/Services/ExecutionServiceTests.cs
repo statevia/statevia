@@ -733,7 +733,7 @@ public sealed class ExecutionServiceTests
 
     private sealed class FakeEventStoreRepository : IEventStoreRepository
     {
-        public List<(EventStoreEventType Type, Guid ExecutionId, string? Payload)> Appended { get; } = [];
+        public List<(EventStoreEventType Type, Guid ExecutionId, string? Payload, string? ActorKind, string? ActorId)> Appended { get; } = [];
         public List<EventStoreRow> AfterSeqItems { get; set; } = [];
         public bool AfterSeqHasMore { get; set; }
         public long MaxSeq { get; set; }
@@ -743,18 +743,29 @@ public sealed class ExecutionServiceTests
         /// <summary>設定時に追記処理で例外を投げて巻き戻し分岐を通す。</summary>
         public Exception? ThrowFromAppendWithDb { get; set; }
 
+        public Task AppendAsync(
+            ICoreUnitOfWork uow,
+            Guid executionId,
+            EventStoreEventType eventType,
+            string? payloadJson,
+            CancellationToken ct = default) =>
+            AppendAsync(uow, executionId, eventType, payloadJson, actorKind: null, actorId: null, ct);
+
         public async Task AppendAsync(
             ICoreUnitOfWork uow,
             Guid executionId,
             EventStoreEventType eventType,
             string? payloadJson,
+            string? actorKind,
+            string? actorId,
             CancellationToken ct = default)
         {
             _ = uow;
+            _ = ct;
             if (ThrowFromAppendWithDb is { } ex)
                 throw ex;
 
-            Appended.Add((eventType, executionId, payloadJson));
+            Appended.Add((eventType, executionId, payloadJson, actorKind, actorId));
             await Task.Yield(); // async boundary for coverage
         }
 
@@ -774,7 +785,7 @@ public sealed class ExecutionServiceTests
             if (!_clientEventDedupKeys.Add(key))
                 return Task.FromResult(false);
 
-            Appended.Add((eventType, executionId, payloadJson));
+            Appended.Add((eventType, executionId, payloadJson, null, null));
             return Task.FromResult(true);
         }
 
@@ -5847,6 +5858,183 @@ public sealed class ExecutionServiceTests
         Assert.Equal(executionId, response.ResourceId);
         Assert.Single(workQueue.Items);
         Assert.Single(dedupRepo.SavedRows);
+    }
+
+    /// <summary>スケジュール発火のキュー受理は WorkflowStarted に scheduler を残し、Owner は文脈の Principal にする。</summary>
+    [Fact]
+    public async Task StartAsync_WhenSchedulerContextWithWorkQueue_RecordsSchedulerActorAndOwner()
+    {
+        // Arrange
+        var defUuid = Guid.Parse("07070707-0707-0707-0707-070707070707");
+        var executionId = Guid.Parse("08080808-0808-0808-0808-080808080808");
+        var scheduleId = Guid.Parse("09090909-0909-0909-0909-090909090909");
+        var ownerPrincipalId = Guid.Parse("0a0a0a0a-0a0a-0a0a-0a0a-0a0a0a0a0a0a");
+        var eventStore = new FakeEventStoreRepository();
+        var executionRepo = new FakeExecutionRepository();
+        var display = new FakeDisplayIdService
+        {
+            ResolveResultDefinition = defUuid,
+            AllocateResultWorkflow = "WF-SCHED",
+            GetDisplayIdResult = "def-disp"
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = new FakeExecutionEngine(),
+                DisplayIds = display,
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(defUuid, TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = eventStore,
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                WorkQueue = new CapturingWorkQueue(),
+            });
+        sqlite.TenantAccessor.Set(TestTenantIds.T1Context with { PrincipalId = ownerPrincipalId });
+
+        // Act
+        await sut.StartAsync(
+            new StartExecutionRequest { DefinitionId = "def-sched" },
+            idempotencyKey: $"{scheduleId:N}:2026-09-19T03:00:00.0000000Z",
+            new CommandRequestContext(
+                "SCHEDULER",
+                $"/v1/schedules/{scheduleId:D}/fires",
+                ScheduleId: scheduleId),
+            CancellationToken.None);
+
+        // Assert
+        var started = Assert.Single(eventStore.Appended);
+        Assert.Equal(EventStoreEventType.WorkflowStarted, started.Type);
+        Assert.Equal("scheduler", started.ActorKind);
+        Assert.Equal(scheduleId.ToString("D"), started.ActorId);
+        var snapshot = ExecutionSecuritySnapshotJson.TryDeserialize(
+            Assert.Single(executionRepo.Added).Execution.SecuritySnapshotJson);
+        Assert.NotNull(snapshot);
+        Assert.Equal(ownerPrincipalId, snapshot.StartedByPrincipalId);
+    }
+
+    /// <summary>HTTP Start の WorkflowStarted は actor を空のままにする。</summary>
+    [Fact]
+    public async Task StartAsync_WhenHttpContext_LeavesWorkflowStartedActorUnset()
+    {
+        // Arrange
+        var defUuid = Guid.Parse("0b0b0b0b-0b0b-0b0b-0b0b-0b0b0b0b0b0b");
+        var executionId = Guid.Parse("0c0c0c0c-0c0c-0c0c-0c0c-0c0c0c0c0c0c");
+        var eventStore = new FakeEventStoreRepository();
+        var engineSnapshot = new ExecutionSnapshot
+        {
+            ExecutionId = executionId.ToString(),
+            WorkflowName = "wf",
+            ActiveStates = Array.Empty<string>(),
+            IsCompleted = true,
+            IsCancelled = false,
+            IsFailed = false
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResultDefinition = defUuid,
+            AllocateResultWorkflow = "WF-HTTP",
+            GetDisplayIdResult = "def-disp"
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = new FakeExecutionEngine
+                {
+                    SnapshotToReturn = engineSnapshot,
+                    GraphJsonToReturn = "{\"nodes\":[]}"
+                },
+                DisplayIds = display,
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = new FakeExecutionRepository(),
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(defUuid, TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = eventStore,
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+            });
+
+        // Act
+        await sut.StartAsync(
+            new StartExecutionRequest { DefinitionId = "def-http" },
+            idempotencyKey: null,
+            new CommandRequestContext("POST", "/v1/executions"),
+            CancellationToken.None);
+
+        // Assert
+        var started = Assert.Single(eventStore.Appended);
+        Assert.Equal(EventStoreEventType.WorkflowStarted, started.Type);
+        Assert.Null(started.ActorKind);
+        Assert.Null(started.ActorId);
+    }
+
+    /// <summary>キュー無しのスケジュール発火も WorkflowStarted に scheduler を残す。</summary>
+    [Fact]
+    public async Task StartAsync_WhenSchedulerContextInProcess_RecordsSchedulerActor()
+    {
+        // Arrange
+        var defUuid = Guid.Parse("0d0d0d0d-0d0d-0d0d-0d0d-0d0d0d0d0d0d");
+        var executionId = Guid.Parse("0e0e0e0e-0e0e-0e0e-0e0e-0e0e0e0e0e0e");
+        var scheduleId = Guid.Parse("0f0f0f0f-0f0f-0f0f-0f0f-0f0f0f0f0f0f");
+        var eventStore = new FakeEventStoreRepository();
+        var engineSnapshot = new ExecutionSnapshot
+        {
+            ExecutionId = executionId.ToString(),
+            WorkflowName = "wf",
+            ActiveStates = Array.Empty<string>(),
+            IsCompleted = true,
+            IsCancelled = false,
+            IsFailed = false
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResultDefinition = defUuid,
+            AllocateResultWorkflow = "WF-SCHED-SYNC",
+            GetDisplayIdResult = "def-disp"
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = new FakeExecutionEngine
+                {
+                    SnapshotToReturn = engineSnapshot,
+                    GraphJsonToReturn = "{\"nodes\":[]}"
+                },
+                DisplayIds = display,
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = new FakeExecutionRepository(),
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(defUuid, TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = eventStore,
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+            });
+
+        // Act
+        await sut.StartAsync(
+            new StartExecutionRequest { DefinitionId = "def-sched-sync" },
+            idempotencyKey: $"{scheduleId:N}:2026-09-19T03:00:00.0000000Z",
+            new CommandRequestContext(
+                "SCHEDULER",
+                $"/v1/schedules/{scheduleId:D}/fires",
+                ScheduleId: scheduleId),
+            CancellationToken.None);
+
+        // Assert
+        var started = Assert.Single(eventStore.Appended);
+        Assert.Equal(EventStoreEventType.WorkflowStarted, started.Type);
+        Assert.Equal("scheduler", started.ActorKind);
+        Assert.Equal(scheduleId.ToString("D"), started.ActorId);
     }
 
     /// <summary>Owned session 獲得失敗時は null を返す。</summary>

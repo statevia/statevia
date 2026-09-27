@@ -512,6 +512,147 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                     b.ToTable("executions", (string)null);
                 });
 
+            modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ExecutionScheduleRow", b =>
+                {
+                    b.Property<Guid>("ScheduleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("schedule_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByPrincipalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_principal_id");
+
+                    b.Property<string>("CronExpression")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("cron_expression");
+
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("definition_id");
+
+                    b.Property<Guid?>("DefinitionVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("definition_version_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("InputJson")
+                        .HasColumnType("text")
+                        .HasColumnName("input_json");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("NextFireAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_fire_at");
+
+                    b.Property<string>("OverlapPolicy")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("overlap_policy");
+
+                    b.Property<Guid>("RunAsPrincipalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_as_principal_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ScheduleId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"deleted_at\" IS NULL");
+
+                    b.HasIndex("Enabled", "DeletedAt", "NextFireAt");
+
+                    b.ToTable("schedules", (string)null);
+                });
+
+            modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ExecutionScheduleRunRow", b =>
+                {
+                    b.Property<Guid>("ScheduleRunId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("schedule_run_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<Guid?>("ExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("execution_id");
+
+                    b.Property<bool>("Manual")
+                        .HasColumnType("boolean")
+                        .HasColumnName("manual");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("outcome");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("schedule_id");
+
+                    b.Property<DateTime?>("ScheduledFireAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_fire_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("ScheduleRunId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("ScheduleId", "ScheduledFireAt")
+                        .IsUnique()
+                        .HasFilter("\"scheduled_fire_at\" IS NOT NULL");
+
+                    b.ToTable("schedule_runs", (string)null);
+                });
+
             modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ExecutionWaitRow", b =>
                 {
                     b.Property<Guid>("ExecutionId")
@@ -1322,6 +1463,30 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("DefinitionVersionId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ExecutionScheduleRow", b =>
+                {
+                    b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ExecutionScheduleRunRow", b =>
+                {
+                    b.HasOne("Statevia.Core.Application.Contracts.Persistence.ExecutionScheduleRow", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)

@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.21
+Version: 1.22
 Project: 実行型ステートマシン
+
+**Version 1.22（2026-09-27）**: `schedules` / `schedule_runs` を追加（定期実行。定義 YAML には埋め込まない）。
 
 **Version 1.21（2026-09-02）**: `login_failure_locks` / `login_failure_attempts` を追加（ログイン失敗ロック。JWT 前の tenant_key 点取得。QueryFilter なし）。
 
@@ -79,6 +81,8 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | execution_branches | ExecutionSpace | Fork 物理子の親子リンク正本（親 Join 集約用） |
 | execution_runtime_checkpoints | ExecutionSpace | 再開可能なランタイム状態の文書ストア（現行 Postgres 物理テーブル。契約は `IExecutionCheckpointStore`）。Worker 所有・fencing 列を含む |
 | execution_work_items | ExecutionSpace | Start / Resume / Cancel を配送する lease 付き耐久キュー |
+| schedules | ExecutionSpace | 定義の定期 Start（cron・run-as ServiceAccount・次回発火）。論理削除あり |
+| schedule_runs | ExecutionSpace | 枠または手動実行の結果（started / skipped_overlap / failed） |
 | command_dedup | 信頼性 | コマンド冪等（Start 等の `X-Idempotency-Key`） |
 | event_delivery_dedup | 信頼性 | イベント配送冪等（Publish / Cancel の client event id） |
 | tenants | Platform | テナントの truth（内部 UUID・外部 `tenant_key`・ライフサイクル） |
@@ -361,6 +365,49 @@ Hosted Runtime が Fork を物理子 execution に展開したときの親子リ
 | created_at | timestamptz | NOT NULL | 作成日時 |
 
 **インデックス:** `(available_at, lease_until)`。claim は `FOR UPDATE SKIP LOCKED` で競合を避ける。
+
+### 2.10.4 schedules
+
+定義に埋め込まない定期 Start。発火は既存の Start work item（`kind=Start`）を積む。
+
+| カラム | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| schedule_id | uuid | PK, NOT NULL | スケジュール ID |
+| tenant_id | uuid | FK → tenants, NOT NULL | テナント |
+| definition_id | uuid | NOT NULL | 対象定義 |
+| definition_version_id | uuid | NULL | 固定する版。NULL は発火時点の latest |
+| run_as_principal_id | uuid | NOT NULL | 実行 Owner にする ServiceAccount の Principal |
+| created_by_principal_id | uuid | NOT NULL | 作成者。実行 Owner ではない |
+| name | varchar(128) | NOT NULL | テナント内の表示名 |
+| cron_expression | varchar(128) | NOT NULL | 5 フィールド cron |
+| time_zone | varchar(64) | NOT NULL | IANA タイムゾーン |
+| overlap_policy | varchar(16) | NOT NULL | `skip` または `allow` |
+| input_json | text | NULL | Start に渡す input。一覧 API には出さない |
+| enabled | boolean | NOT NULL | false の行は claim しない |
+| deleted_at | timestamptz | NULL | 論理削除。非 NULL は発火しない |
+| next_fire_at | timestamptz | NOT NULL | 次枠（UTC） |
+| created_at | timestamptz | NOT NULL | 作成日時 |
+| updated_at | timestamptz | NOT NULL | 更新日時 |
+
+**インデックス:** `(enabled, deleted_at, next_fire_at)`（due claim）。`UNIQUE (tenant_id, name) WHERE deleted_at IS NULL`。`tenant_id`。
+
+欠発（保存枠の次枠も now 以下）は行を増やさず `next_fire_at` だけ進める。
+
+### 2.10.5 schedule_runs
+
+| カラム | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| schedule_run_id | uuid | PK, NOT NULL | 実行記録 ID |
+| schedule_id | uuid | FK → schedules, NOT NULL | 親スケジュール（削除時 CASCADE） |
+| tenant_id | uuid | FK → tenants, NOT NULL | テナント |
+| scheduled_fire_at | timestamptz | NULL | cron 枠。手動実行は NULL |
+| manual | boolean | NOT NULL | 手動実行なら true |
+| outcome | varchar(32) | NOT NULL | `started` / `skipped_overlap` / `failed` |
+| execution_id | uuid | NULL | Start できた実行。失敗・skip は NULL |
+| error_code | varchar(64) | NULL | 失敗時のコード |
+| created_at | timestamptz | NOT NULL | 記録日時 |
+
+**インデックス:** `UNIQUE (schedule_id, scheduled_fire_at) WHERE scheduled_fire_at IS NOT NULL`（同一 cron 枠は 1 行）。`tenant_id`。
 
 ### 2.11 command_dedup
 
@@ -942,8 +989,38 @@ erDiagram
 - **execution_waits**: 1 Wait ノード = 1 行。複合 PK `(execution_id, node_id)`。
 - **execution_wait_subscriptions**: `(execution_id, node_id)` → `execution_waits` ON DELETE CASCADE。照合は `(topic, correlation_key)` 厳密一致。
 - **execution_runtime_checkpoints**: 文書キー = `execution_id`。`owner_worker_id` / `lease_until` / `owner_generation` で Worker 所有と fencing。Wait 中・未所有は所有者 NULL。
-- **execution_work_items**: `kind` は Start / Resume / Cancel。Resume の `payload.mode` は `event` または `recovery`。claim 用 lease は本テーブル側（checkpoint 所有とは別）。
+- **execution_work_items**: `kind` は Start / Resume / Cancel。Resume の `payload.mode` は `event` または `recovery`。claim 用 lease は本テーブル側（checkpoint 所有とは別）。定期実行も Start を積む（専用 kind は無い）。
 - **event_delivery_dedup**: Publish / Cancel 配送冪等。複合 PK `(tenant_id, execution_id, client_event_id)`。
+
+### 3.4 定期実行
+
+```mermaid
+erDiagram
+  tenants ||--o{ schedules : "tenant_id"
+  schedules ||--o{ schedule_runs : "schedule_id"
+  schedule_runs }o--o| executions : "execution_id"
+
+  schedules {
+    uuid schedule_id PK
+    uuid tenant_id FK
+    uuid definition_id
+    uuid run_as_principal_id
+    timestamptz next_fire_at
+    timestamptz deleted_at
+  }
+
+  schedule_runs {
+    uuid schedule_run_id PK
+    uuid schedule_id FK
+    timestamptz scheduled_fire_at
+    boolean manual
+    string outcome
+    uuid execution_id
+  }
+```
+
+- **schedules.run_as_principal_id** は実行の Owner。作成者列とは別。
+- **schedule_runs.execution_id** は Start できたときだけ。失敗・overlap skip・手動以外の欠発では実行行が無い（欠発は run 行も無い）。
 
 ---
 
@@ -962,6 +1039,9 @@ erDiagram
 | execution_wait_subscriptions | (topic, correlation_key) | INDEX |
 | execution_runtime_checkpoints | lease_until | INDEX |
 | execution_work_items | (available_at, lease_until) | INDEX |
+| schedules | (tenant_id, name) WHERE deleted_at IS NULL | UNIQUE |
+| schedules | (enabled, deleted_at, next_fire_at) | INDEX |
+| schedule_runs | (schedule_id, scheduled_fire_at) WHERE scheduled_fire_at IS NOT NULL | UNIQUE |
 | event_delivery_dedup | (tenant_id, execution_id, batch_id) | INDEX |
 | tenants | tenant_key | UNIQUE |
 | permission_definitions | permission_key | UNIQUE |
@@ -990,6 +1070,7 @@ erDiagram
 | `20260801112928_AddExecutionWaitSubscriptions` | `execution_wait_subscriptions` 追加、`execution_waits` の routing 列削除 |
 | `20260802173232_AddExecutionCheckpointOwnership` | `execution_runtime_checkpoints` に `owner_worker_id` / `lease_until` / `owner_generation` と `lease_until` インデックスを追加 |
 | `20260817140816_AddUserUsername` | `users.username` 追加（varchar(64)）と既存 `email` からのバックフィル。`email` を NULL 可の varchar(256) にし、非 NULL のみテナント内一意 |
+| `20260918172216_AddExecutionSchedules` | `schedules` / `schedule_runs` を追加 |
 
 適用: `cd service/api && dotnet ef database update --project Statevia.Service.Api`
 

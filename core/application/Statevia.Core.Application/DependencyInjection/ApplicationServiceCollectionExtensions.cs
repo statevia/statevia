@@ -39,6 +39,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IEventIngressService, EventIngressService>();
         services.AddScoped<IForkChildExecutionCoordinator, ForkChildExecutionCoordinator>();
         services.AddScoped<IForkExpansionHostHandler, ForkExpansionHostHandler>();
+        services.AddScoped<ExecutionScheduleDefinitionResolver>();
+        services.AddScoped<IExecutionScheduleService, ExecutionScheduleService>();
+        services.AddScoped<IExecutionScheduleDispatchService, ExecutionScheduleDispatchService>();
 
         return services;
     }

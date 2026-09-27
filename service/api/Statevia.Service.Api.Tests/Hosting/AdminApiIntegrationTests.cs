@@ -298,6 +298,89 @@ public sealed class AdminApiIntegrationTests : IClassFixture<SecurityIntegration
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>非管理者は ServiceAccount 作成で 403。</summary>
+    [Fact]
+    public async Task CreateServiceAccount_NonAdmin_ReturnsForbidden()
+    {
+        // Arrange
+        var memberPrincipalId = await _factory.SeedUserPrincipalAsync(
+            "member-sa@example.com", "password", isTenantAdmin: false);
+        using var client = CreateAuthenticatedClient(memberPrincipalId);
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            new Uri("/v1/admin/service-accounts", UriKind.Relative),
+            new { name = "job-runner", groupIds = new[] { Guid.NewGuid() } });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>空の groupIds は 422。</summary>
+    [Fact]
+    public async Task CreateServiceAccount_EmptyGroupIds_ReturnsUnprocessableEntity()
+    {
+        // Arrange
+        var adminPrincipalId = await _factory.SeedUserPrincipalAsync(
+            "admin-sa-empty@example.com", "password", isTenantAdmin: true);
+        using var client = CreateAuthenticatedClient(adminPrincipalId);
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            new Uri("/v1/admin/service-accounts", UriKind.Relative),
+            new { name = "job-runner", groupIds = Array.Empty<Guid>() });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    /// <summary>管理者は資格のない SA を作り無効化できる。</summary>
+    [Fact]
+    public async Task CreateServiceAccount_ThenDisable_ReturnsCreatedThenInactive()
+    {
+        // Arrange
+        var adminPrincipalId = await _factory.SeedUserPrincipalAsync(
+            "admin-sa@example.com", "password", isTenantAdmin: true);
+        using var client = CreateAuthenticatedClient(adminPrincipalId);
+        var groupResponse = await client.PostAsJsonAsync(
+            new Uri("/v1/admin/groups", UriKind.Relative),
+            new CreateAdminGroupRequest { Name = $"sa-ops-{Guid.NewGuid():N}" });
+        var group = await groupResponse.Content.ReadFromJsonAsync<AdminGroupDetailDto>();
+        Assert.NotNull(group);
+
+        // Act
+        var createResponse = await client.PostAsJsonAsync(
+            new Uri("/v1/admin/service-accounts", UriKind.Relative),
+            new CreateAdminServiceAccountRequest
+            {
+                Name = "job-runner",
+                GroupIds = [group!.GroupId]
+            });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<AdminServiceAccountListItemDto>();
+        Assert.NotNull(created);
+        Assert.False(created!.HasApiKey);
+
+        var listResponse = await client.GetAsync(new Uri("/v1/admin/service-accounts", UriKind.Relative));
+        var list = await listResponse.Content.ReadFromJsonAsync<List<AdminServiceAccountListItemDto>>();
+        Assert.Contains(list!, item => item.ServiceAccountId == created.ServiceAccountId && !item.HasApiKey);
+
+        var groupDetail = await (await client.GetAsync(
+            new Uri($"/v1/admin/groups/{group.GroupId}", UriKind.Relative)))
+            .Content.ReadFromJsonAsync<AdminGroupDetailDto>();
+        Assert.Contains(created.ServiceAccountId, groupDetail!.ServiceAccountIds);
+
+        var patchResponse = await client.PatchAsJsonAsync(
+            new Uri($"/v1/admin/service-accounts/{created.ServiceAccountId}", UriKind.Relative),
+            new UpdateAdminServiceAccountRequest { IsActive = false });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, patchResponse.StatusCode);
+        var updated = await patchResponse.Content.ReadFromJsonAsync<AdminServiceAccountListItemDto>();
+        Assert.NotNull(updated);
+        Assert.False(updated!.IsActive);
+    }
+
     private HttpClient CreateAuthenticatedClient(Guid principalId)
     {
         var client = _factory.CreateClient();

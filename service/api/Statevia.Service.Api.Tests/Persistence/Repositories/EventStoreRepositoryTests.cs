@@ -40,6 +40,45 @@ public sealed class EventStoreRepositoryTests
         Assert.Equal(new long[] { 1, 2 }, seqs);
     }
 
+    /// <summary>渡した actor を event_store に保存し、省略時は null のままにする。</summary>
+    [Fact]
+    public async Task AppendAsync_PersistsActor_WhenProvided()
+    {
+        // Arrange
+        using var db = CreateDb();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new EventStoreRepository(new DefaultIdGenerator());
+        var executionId = Guid.NewGuid();
+        var scheduleId = Guid.NewGuid().ToString("D");
+
+        // Act
+        await using (var uow = await uowFactory.CreateAsync())
+        {
+            await repo.AppendAsync(
+                uow,
+                executionId,
+                EventStoreEventType.WorkflowStarted,
+                payloadJson: null,
+                actorKind: "scheduler",
+                actorId: scheduleId,
+                ct: default);
+            await repo.AppendAsync(uow, executionId, EventStoreEventType.EventPublished, payloadJson: "{}", default);
+            await uow.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var ctx = new CoreDbContext(db.Options);
+        var rows = await ctx.EventStore.AsNoTracking()
+            .Where(e => e.ExecutionId == executionId)
+            .OrderBy(e => e.Seq)
+            .ToListAsync();
+
+        // Assert
+        Assert.Equal("scheduler", rows[0].ActorKind);
+        Assert.Equal(scheduleId, rows[0].ActorId);
+        Assert.Null(rows[1].ActorKind);
+        Assert.Null(rows[1].ActorId);
+    }
+
     /// <summary>
     /// 同一 UoW に追加したイベントは SaveChanges 前に永続化されない。
     /// </summary>

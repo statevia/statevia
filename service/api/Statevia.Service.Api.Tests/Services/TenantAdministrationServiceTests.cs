@@ -422,4 +422,171 @@ public sealed class TenantAdministrationServiceTests
         Assert.Equal("ops@example.com", defaultUser.Email);
         Assert.Equal("ops@example.com", t1User.Email);
     }
+
+    /// <summary>非管理者は ServiceAccount 作成を拒否される。</summary>
+    [Fact]
+    public async Task CreateServiceAccountAsync_NonAdmin_ThrowsForbidden()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var memberId = await SecurityTestSeed.SeedUserAsync(database, "member-sa@example.com", "password", isTenantAdmin: false);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, memberId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            service.CreateServiceAccountAsync(
+                memberId,
+                new CreateAdminServiceAccountRequest { Name = "job-runner", GroupIds = [Guid.NewGuid()] },
+                CancellationToken.None));
+    }
+
+    /// <summary>管理者は資格のない SA を作り、平文キーもキー行も無い。</summary>
+    [Fact]
+    public async Task CreateServiceAccountAsync_Admin_CreatesWithoutApiKey()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin-sa@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        var group = await service.CreateGroupAsync(
+            adminId,
+            new CreateAdminGroupRequest { Name = $"sa-ops-{Guid.NewGuid():N}" },
+            CancellationToken.None);
+
+        // Act
+        var created = await service.CreateServiceAccountAsync(
+            adminId,
+            new CreateAdminServiceAccountRequest { Name = "job-runner", GroupIds = [group.GroupId] },
+            CancellationToken.None);
+        var listed = await service.ListServiceAccountsAsync(adminId, CancellationToken.None);
+        var detail = await service.GetGroupAsync(adminId, group.GroupId, CancellationToken.None);
+
+        await using var db = await database.Factory.CreateDbContextAsync();
+        var keyCount = await db.ApiKeys.CountAsync(key => key.PrincipalId == created.PrincipalId);
+
+        // Assert
+        Assert.Equal("job-runner", created.Name);
+        Assert.True(created.IsActive);
+        Assert.False(created.HasApiKey);
+        Assert.Equal(group.GroupId, Assert.Single(created.GroupIds));
+        Assert.Contains(listed, item => item.ServiceAccountId == created.ServiceAccountId && !item.HasApiKey);
+        Assert.Contains(created.ServiceAccountId, detail.ServiceAccountIds);
+        Assert.Equal(0, keyCount);
+    }
+
+    /// <summary>空の groupIds は 422 相当の ArgumentException になる。</summary>
+    [Fact]
+    public async Task CreateServiceAccountAsync_EmptyGroupIds_ThrowsArgumentException()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin-sa-empty@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateServiceAccountAsync(
+                adminId,
+                new CreateAdminServiceAccountRequest { Name = "job-runner", GroupIds = [] },
+                CancellationToken.None));
+    }
+
+    /// <summary>無効化すると Principal が inactive になる。</summary>
+    [Fact]
+    public async Task UpdateServiceAccountAsync_Admin_DeactivatesPrincipal()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin-sa-off@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        var group = await service.CreateGroupAsync(
+            adminId,
+            new CreateAdminGroupRequest { Name = $"sa-off-{Guid.NewGuid():N}" },
+            CancellationToken.None);
+        var created = await service.CreateServiceAccountAsync(
+            adminId,
+            new CreateAdminServiceAccountRequest { Name = "job-runner", GroupIds = [group.GroupId] },
+            CancellationToken.None);
+
+        // Act
+        var updated = await service.UpdateServiceAccountAsync(
+            adminId,
+            created.ServiceAccountId,
+            new UpdateAdminServiceAccountRequest { IsActive = false },
+            CancellationToken.None);
+
+        await using var db = await database.Factory.CreateDbContextAsync();
+        var principal = await db.Principals.AsNoTracking()
+            .SingleAsync(row => row.PrincipalId == created.PrincipalId);
+
+        // Assert
+        Assert.False(updated.IsActive);
+        Assert.False(principal.IsActive);
+        Assert.NotNull(principal.DisabledAt);
+    }
+
+    /// <summary>所属グループの置換が反映される。</summary>
+    [Fact]
+    public async Task UpdateServiceAccountAsync_Admin_ReplacesGroupIds()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin-sa-groups@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        var first = await service.CreateGroupAsync(
+            adminId,
+            new CreateAdminGroupRequest { Name = $"sa-g1-{Guid.NewGuid():N}" },
+            CancellationToken.None);
+        var second = await service.CreateGroupAsync(
+            adminId,
+            new CreateAdminGroupRequest { Name = $"sa-g2-{Guid.NewGuid():N}" },
+            CancellationToken.None);
+        var created = await service.CreateServiceAccountAsync(
+            adminId,
+            new CreateAdminServiceAccountRequest { Name = "job-runner", GroupIds = [first.GroupId] },
+            CancellationToken.None);
+
+        // Act
+        var updated = await service.UpdateServiceAccountAsync(
+            adminId,
+            created.ServiceAccountId,
+            new UpdateAdminServiceAccountRequest { GroupIds = [second.GroupId] },
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(second.GroupId, Assert.Single(updated.GroupIds));
+    }
+
+    /// <summary>API キー由来 SA も一覧に出てきて hasApiKey が true。</summary>
+    [Fact]
+    public async Task ListServiceAccountsAsync_ApiKeyDerived_HasApiKeyTrue()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var platform = new PlatformDataAccess(database.Factory, new DefaultIdGenerator());
+        await platform.EnsurePermissionCatalogAsync(CancellationToken.None);
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin-sa-key@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        await service.CreateApiKeyAsync(
+            adminId,
+            new CreateAdminApiKeyRequest
+            {
+                Name = "CI Runner",
+                AllowedScopes = [WellKnownPermissionKeys.ExecutionsRead]
+            },
+            CancellationToken.None);
+
+        // Act
+        var listed = await service.ListServiceAccountsAsync(adminId, CancellationToken.None);
+
+        // Assert
+        var keyed = Assert.Single(listed, item => item.Name == "CI Runner");
+        Assert.True(keyed.HasApiKey);
+    }
 }
