@@ -140,6 +140,7 @@ internal sealed class TenantContextMiddleware
     private static bool RequiresPrincipal(PathString path) =>
         path.StartsWithSegments("/v1/definitions", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/executions", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/v1/schedules", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/events", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/graphs", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/actions", StringComparison.OrdinalIgnoreCase)
