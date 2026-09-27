@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.3 |
-| 更新日 | 2026-09-01 |
+| Version | 1.2.4 |
+| 更新日 | 2026-09-27 |
 | ステータス | 実装済み（`executions.security_snapshot_json`） |
 | 関連 | [security-runtime.md](security-runtime.md) |
 
@@ -32,7 +32,7 @@ Engine への Snapshot 注入と permission 細分化は未実装（[sse-and-pro
 | **Authorization（Snapshot / Live）** | 操作に必要な semantic permission key を満たすかの評価 |
 | **ExecutionSecuritySnapshot** | Start 成功時に確定する、実行に紐づくセキュリティ文脈の不変（論理）スナップショット |
 | **SecurityEvaluationMode** | **Owner 経路**の Resume / Cancel 認可が Snapshot か Live か（Operator には効かない — 後述） |
-| **Execution Owner** | Start を発行した Principal（`startedByPrincipalId`）。当該 execution の **所有** に相当 |
+| **Execution Owner** | Start を発行した Principal（`startedByPrincipalId`）。当該 execution の **所有** に相当。定期実行では run-as の ServiceAccount |
 | **Execution Operator** | Owner 以外で Resume / Cancel 等を行う Principal。**常に Live 権限**で評価 |
 
 ## ExecutionSecuritySnapshot（論理モデル）

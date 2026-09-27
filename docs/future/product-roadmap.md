@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Future |
-| Version | 1.0.1 |
-| 更新日 | 2026-08-09 |
+| Version | 1.0.2 |
+| 更新日 | 2026-09-27 |
 | 関連 | [platform-architecture.md](platform-architecture.md), [../architecture/overview.md](../architecture/overview.md), [../specifications/execution/fork-join.md](../specifications/execution/fork-join.md), [../specifications/platform/audit-and-repro.md](../specifications/platform/audit-and-repro.md) |
 
 ---
@@ -72,9 +72,9 @@ flowchart LR
 
 | 状態 | 内容 | ギャップ / 備考 |
 | --- | --- | --- |
-| **ある** | FSM、Definition 版管理（immutable append）、Start / Cancel / Resume、Wait 複数イベント、DelayWait、checkpoint / work queue / OwnershipRecovery、論理 Fork / Join、**Hosted 物理 Fork MVP**（`execution_branches`・予約 Resume・Join 後 Context マージ・GET 時合成 graph / events・公開 [fork-join.md](../specifications/execution/fork-join.md)）、Action Catalog / Policy、InProcess / OutOfProcess / Container、Module Source（Filesystem / OCI / S3 / Git）＋署名・TrustLevel、DB projection 正本＋ graph ＋ SSE、Studio（定義・実行・ダッシュボード）、JWT / API キー＋テナント＋ Execution Security Snapshot | 公開契約: [definition.md](../specifications/definition.md)、[api-http.md](../specifications/api-http.md)、[execution/](../specifications/execution/)、[actions/platform.md](../specifications/actions/platform.md)、[security-runtime.md](../specifications/platform/security-runtime.md) |
+| **ある** | FSM、Definition 版管理（immutable append）、Start / Cancel / Resume、Wait 複数イベント、DelayWait、checkpoint / work queue / OwnershipRecovery、論理 Fork / Join、**Hosted 物理 Fork MVP**（`execution_branches`・予約 Resume・Join 後 Context マージ・GET 時合成 graph / events・公開 [fork-join.md](../specifications/execution/fork-join.md)）、定期実行（5 フィールド cron・run-as ServiceAccount・Dispatcher。外部 Cron の `POST /v1/executions` も残る）、Action Catalog / Policy、InProcess / OutOfProcess / Container、Module Source（Filesystem / OCI / S3 / Git）＋署名・TrustLevel、DB projection 正本＋ graph ＋ SSE、Studio（定義・実行・ダッシュボード）、JWT / API キー＋テナント＋ Execution Security Snapshot | 公開契約: [definition.md](../specifications/definition.md)、[api-http.md](../specifications/api-http.md)、[execution/](../specifications/execution/)、[actions/platform.md](../specifications/actions/platform.md)、[security-runtime.md](../specifications/platform/security-runtime.md) |
 | **部分** | 物理 Fork のエッジ（循環再入の Join hydrate、ネスト合成の幽霊枝）、Scheduler / Worker の任意プロセス分離、Action-level retry（定義 parse のみ）、Module 複数版共存（設計確定・実装未）、Graph Editor の `wait.events` UI | 終端時の合成固定は Mid。既定分離切替の判断が残る |
-| **ない** | Wasm ランタイム、Marketplace Module Source、Connectors 製品化、統一 WebSocket Push | [platform-architecture.md](platform-architecture.md) の到達像側 |
+| **ない** | スケジュールの Studio UI と CLI、ServiceAccount の定義・project 許可リスト、overlap queue、欠発の途中枠埋め、秒精度 cron、Wasm ランタイム、Marketplace Module Source、Connectors 製品化、統一 WebSocket Push | [platform-architecture.md](platform-architecture.md) の到達像側 |
 
 ### 4.2 運用・監視・可観測性
 
@@ -89,7 +89,7 @@ flowchart LR
 | 状態 | 内容 | ギャップ / 備考 |
 | --- | --- | --- |
 | **ある** | append-only `event_store`、実行 events API、actor / correlation 列のスキーマ、Execution Security Snapshot、監査・再現性の契約文書 | [audit-and-repro.md](../specifications/platform/audit-and-repro.md)、[execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md) |
-| **部分** | イベント履歴による「何が起きたか」 | actor / correlation / causation の書込が未配線。監査専用テーブルの活用が未整備 |
+| **部分** | イベント履歴による「何が起きたか」 | 定期実行の `WorkflowStarted` は `actor_kind=scheduler` とスケジュール ID を書く。それ以外の actor / correlation / causation は未配線。監査専用テーブルの活用が未整備 |
 | **ない** | hash chain 実装、管理操作（設定・Module 配置等）の監査、夜間 hash 検証ジョブ | Level 2 設計は仕様のみ |
 
 ### 4.4 分析

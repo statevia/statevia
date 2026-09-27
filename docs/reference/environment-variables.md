@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.11 |
-| 更新日 | 2026-09-21 |
+| Version | 1.12 |
+| 更新日 | 2026-09-27 |
 
 ---
+
+**Version 1.12（2026-09-27）**: `EnableInProcessScheduleDispatcher`（API 内の定期実行 Dispatcher。既定 On）。
 
 **Version 1.11（2026-09-21）**: 任意の `SENTRY_DSN`（未設定ならエラー監視 SDK は動かない）。
 
@@ -67,7 +69,7 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | `Auth:Jwt:AccessTokenLifetimeMinutes` | トークン有効期間（分、≥1） | 範囲外 → **起動失敗** |
 | `ExecutionProjectionQueue:*` | Projection キュー（サイズ・リトライ遅延等） | 範囲外・矛盾 → **起動失敗** |
 | `EventDelivery:Retry:*` | イベント配送リトライ | 範囲外・`MaxDelayMs < BaseDelayMs` → **起動失敗** |
-| `Statevia:Runtime:EnableInProcess*` | API 内 Worker / Scheduler / OwnershipRecovery の On/Off | 既定 On |
+| `Statevia:Runtime:EnableInProcess*` | API 内 Worker / DelayWait Scheduler / OwnershipRecovery / ScheduleDispatcher の On/Off。専用 scheduler プロセスはフラグでは止まらない | 既定 On。分離 compose は API 側を false |
 | `Statevia:Runtime:Worker:MaxConcurrency` | Start / Resume のプロセス内同時件数（1〜64、コード既定 1。分離 compose 未設定時 16） | 範囲外 → **起動失敗** |
 | `Statevia:Runtime:Worker:CancelConcurrency` | Cancel 独立ループの同時件数（1〜8、既定 1） | 範囲外 → **起動失敗** |
 | `Statevia:Runtime:Worker:NoProgressTimeout` | 非 Wait Running が無い無進捗の上限（30 秒〜24 時間、既定 10 分） | 範囲外 → **起動失敗** |

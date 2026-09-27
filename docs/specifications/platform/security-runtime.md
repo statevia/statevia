@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.2 |
-| 更新日 | 2026-08-19 |
+| Version | 1.2.3 |
+| 更新日 | 2026-09-27 |
 | 関連 | [decisions/action-module-signing.md](../../decisions/action-module-signing.md), [actions/platform.md](../actions/platform.md) |
 
 ---
@@ -125,8 +125,8 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 | Resume / Cancel | Live | **Owner**: `evaluationMode`（既定 **Snapshot**） / **Operator**: 常に Live |
 | Read | Live | Live（`executions.read`） |
 
-- **Owner** = `startedByPrincipalId`（Start 発行者）。Snapshot 上の `effectivePermissionKeys` で Owner 経路を評価できる（権限剥奪後も Resume / Cancel 可 — Principal が有効な場合）。
-- **Operator** = Owner 以外。常に Live の `executions.write` を要求。
+- **Owner** = `startedByPrincipalId`（Start 発行者）。Snapshot 上の `effectivePermissionKeys` で Owner 経路を評価できる（権限剥奪後も Resume / Cancel 可 — Principal が有効な場合）。定期実行の Start では Owner は run-as の ServiceAccount であり、スケジュール作成者ではない。
+- **Operator** = Owner 以外。常に Live の `executions.write` を要求。人間が定期実行の Resume / Cancel をするときは Operator。
 - スナップショット未保存の execution（移行前データ）は Resume / Cancel で **Live** にフォールバック。
 - Principal 無効化（`disabled_at` / `deleted_at` / `is_active=false`）は Identity で **403**（`PRINCIPAL_INACTIVE`）。
 

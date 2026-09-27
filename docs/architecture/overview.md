@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.3 |
-| 更新日 | 2026-09-01 |
+| Version | 2.4 |
+| 更新日 | 2026-09-27 |
 | 関連 | [domain-model-boundaries.md](domain-model-boundaries.md), [repository-layout.md](repository-layout.md) |
 
 Project: Statevia — Definition Driven Execution Platform
+
+**Version 2.4（2026-09-27）**: 定期実行は `v1/schedules` と Runtime の Dispatcher。Start は `IExecutionService`。Engine のスケジューラレイヤー（§4.5）とは別。
 
 **Version 2.3（2026-09-01）**: Service API の HTTP 面を auth / admin / events / Module reload まで列挙。
 
@@ -131,8 +133,9 @@ flowchart LR
 ### 2.4 Service API（HTTP アダプタ / DB 所有者）
 
 - **v1/auth**: ログイン、現在 Principal、本人パスワード更新
-- **v1/admin**: テナント管理者 API（ユーザー・グループ・API キー・Module catalog）
+- **v1/admin**: テナント管理者 API（ユーザー・グループ・API キー・資格のない ServiceAccount・Module catalog）
 - **v1/definitions**: 定義の登録・publish・一覧・取得
+- **v1/schedules**: 定義の定期 Start。発火は Runtime の Dispatcher が `IExecutionService.StartAsync` を呼ぶ。Engine は回さない
 - **v1/executions**: 実行開始・一覧・取得・グラフ・Wait 一覧・キャンセル・Resume・SSE
 - **v1/events**: durable Wait への集合配送（`executions.write`。不足は 403）
 - **v1/actions/schema**: Action schema（コントローラ認可。Middleware の Principal 必須パスには含めない）

@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.13 |
-| 更新日 | 2026-09-18 |
+| Version | 1.14 |
+| 更新日 | 2026-09-27 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
+
+**Version 1.14（2026-09-27）**: 分離 scheduler が定期実行の claim と Start enqueue を担う。API 側 `EnableInProcessScheduleDispatcher` は overlay で false。
 
 **Version 1.13（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時を 16 にする（API 内既定 1 は据え置き）。
 
@@ -46,7 +48,7 @@ docker compose up -d
 
 ## ランタイム分離（任意: Worker / Scheduler）
 
-既定の compose では **Worker / DelayWait Scheduler / Ownership Recovery は Service API プロセス内**で動作します（`Statevia:Runtime:EnableInProcess*` 既定 `true`）。API 内ワーカーで `MaxConcurrency` を 1 より大きくすると、実行負荷が API プロセスに乗ります。
+既定の compose では **Worker / DelayWait Scheduler / Ownership Recovery / 定期実行 Dispatcher は Service API プロセス内**で動作します（`Statevia:Runtime:EnableInProcess*` 既定 `true`。Dispatcher は `EnableInProcessScheduleDispatcher`）。API 内ワーカーで `MaxConcurrency` を 1 より大きくすると、実行負荷が API プロセスに乗ります。
 
 プロセスを分ける場合は、override ファイル `docker-compose.split-runtime.yml` を追加します。これだけで次の両方が同時に効きます。
 
@@ -59,8 +61,10 @@ docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
 
 | サービス | 役割 |
 | -------- | ---- |
-| scheduler | 期限切れ DelayWait の排他 claim+Resume enqueue、checkpoint 所有 recovery |
+| scheduler | 期限切れ DelayWait の排他 claim+Resume enqueue、checkpoint 所有 recovery、期限到来スケジュールの claim と Start enqueue。Engine と Action Host は動かさない。実行本体は worker |
 | worker | `execution_work_items` の claim と Start / Resume / Cancel / recovery 実行 |
+
+分離 overlay は API の `EnableInProcessScheduleDispatcher` も `false` にします。API 内 Dispatcher を true のまま scheduler コンテナを足すと、同じ枠を二重に claim し得ます。専用 scheduler プロセスは当該フラグでは止まらず、DelayWait・OwnershipRecovery・スケジュール発火を常時担当します。外部 Cron から `POST /v1/executions` する運用は残ります。Studio にスケジュール画面はありません。
 
 `worker` には `container_name` が無いので、台数は `--scale worker=N` で増やせます。プロセス内スロットと Cancel ループは環境変数です（未設定時は 16 と 1。許容範囲は [environment-variables.md](../reference/environment-variables.md)）。
 

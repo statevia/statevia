@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.3 |
-| 更新日 | 2026-09-03 |
+| Version | 1.4 |
+| 更新日 | 2026-09-27 |
 
 ---
 
@@ -24,6 +24,8 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 | `modules.reload` | Reload action modules | `permissions.modulesReload` |
 | `modules.read` | Read action modules | `permissions.modulesRead` |
 
+`schedules.read` / `schedules.write` はカタログに無い。定期実行は `executions.read` / `executions.write` を使う。
+
 - DB の `permission_definitions` テーブルへ `EnsurePermissionCatalogAsync` で seed される。
 - **`tenant.admin`**: テナント管理者（`/v1/admin/*`）。JWT で `is_tenant_admin` の Principal は **全 catalog key** を Live 展開で持つ。
 - **`modules.reload` / `modules.read`**: API キーの `allowed_scopes` およびグループ権限として発行可能（`tenant.admin` は発行対象外）。Module 管理 API での評価は `is_tenant_admin` **または** 当該 key。
@@ -34,8 +36,8 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 | --- | --- |
 | GET `/v1/definitions*`、`/v1/graphs/*`、`/v1/definitions/schema/nodes`、`/v1/actions/schema*` | `definitions.read` |
 | POST / PUT `/v1/definitions`、`POST /v1/definitions/validate` | `definitions.write` |
-| GET `/v1/executions*`（一覧・詳細・graph・state・events・stream） | `executions.read` |
-| POST start / cancel / publish event / resume、**`POST /v1/events`** | `executions.write` |
+| GET `/v1/executions*`（一覧・詳細・graph・state・events・stream）、GET `/v1/schedules*` | `executions.read` |
+| POST start / cancel / publish event / resume、**`POST /v1/events`**、スケジュールの作成・更新・削除・手動実行 | `executions.write` |
 | POST `/internal/modules/reload` | `modules.reload`（または `is_tenant_admin`） |
 | GET `/v1/admin/modules` | `modules.read`（または `is_tenant_admin`） |
 
@@ -59,7 +61,7 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 
 ### Execution Security Snapshot（Resume / Cancel）
 
-- **Owner**（Start 発行者）: Snapshot 上の `effectivePermissionKeys` で評価可（権限剥奪後も — Principal が有効なら）。
+- **Owner**（Start 発行者）: Snapshot 上の `effectivePermissionKeys` で評価可（権限剥奪後も — Principal が有効なら）。定期実行では Owner は run-as の ServiceAccount。作成者や後から Resume する人間は Operator。
 - **Operator**: 常に Live の `executions.write` を要求。
 
 詳細: [security-runtime.md](../specifications/platform/security-runtime.md) Execution Security Snapshot、[execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md)。
