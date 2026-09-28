@@ -24,6 +24,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<IActionSchemaService, ActionSchemaService>();
         services.AddSingleton<IDefinitionSchemaService, DefinitionSchemaService>();
         services.AddSingleton<ExecutionOwnershipTracker>();
+        services.AddScoped<PrincipalResourceGrantAuthorization>();
         services.AddScoped<ExecutionAuthorizationGuard>();
         services.AddScoped<ExecutionEngineSession>();
         services.AddScoped<ExecutionQueryService>();

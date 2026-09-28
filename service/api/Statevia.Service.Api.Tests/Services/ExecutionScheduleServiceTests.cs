@@ -369,7 +369,11 @@ public sealed class ExecutionScheduleServiceTests
             new AllowAllExecutionMutationAuthorization(),
             new AllowAllProjectAuthorizationService(),
             TestRepositoryFactory.CreateDefinitionRepository(),
-            new TestCoreTransactionExecutor(uowFactory));
+            new TestCoreTransactionExecutor(uowFactory),
+            new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                accessor,
+                principalAccess));
 
         var transactionExecutor = new TestCoreTransactionExecutor(uowFactory);
         return new ExecutionScheduleService(

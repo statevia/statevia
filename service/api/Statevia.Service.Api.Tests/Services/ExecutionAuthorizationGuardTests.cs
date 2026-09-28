@@ -135,7 +135,11 @@ public sealed class ExecutionAuthorizationGuardTests
             new AllowAllExecutionMutationAuthorization(),
             projectAuth,
             TestRepositoryFactory.CreateDefinitionRepository(),
-            new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(db.Factory)));
+            new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(db.Factory)),
+            new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                db.TenantAccessor,
+                new MissingPrincipalDataAccess()));
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -143,17 +147,251 @@ public sealed class ExecutionAuthorizationGuardTests
         Assert.Empty(projectAuth.ExecuteCalls);
     }
 
+    /// <summary>許可行が無い Principal はプロジェクト実行権だけで通る。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenNoGrants_Allows()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants: []);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        await act();
+    }
+
+    /// <summary>project 許可の外は RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenProjectOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Project, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>definition 許可の外は RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenDefinitionOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>両方の許可があるときは、片方だけでは通らない。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenBothKindsAndOneMisses_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Project),
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>両方の許可に含まれる定義は通る。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenBothKindsMatch_Allows()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Project),
+            Grant(PrincipalResourceGrantKinds.Definition)
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        await act();
+    }
+
+    /// <summary>System Principal は許可行があっても評価しない。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantAsync_WhenSystemPrincipal_SkipsGrants()
+    {
+        // Arrange
+        var store = new RecordingGrantStore(
+        [
+            Grant(PrincipalResourceGrantKinds.Project, Guid.NewGuid())
+        ]);
+        var sut = CreateGrantSut(store, PrincipalType.System);
+
+        // Act
+        await sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, store.ListCount);
+    }
+
+    private static GrantSut CreateGrantSut(
+        IReadOnlyList<PrincipalResourceGrantRow> grants,
+        PrincipalType principalType = PrincipalType.User) =>
+        CreateGrantSut(new RecordingGrantStore(grants), principalType);
+
+    private static GrantSut CreateGrantSut(
+        RecordingGrantStore store,
+        PrincipalType principalType)
+    {
+        var tenantId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
+        var accessor = new SettableTenantContextAccessor();
+        accessor.Set(new TenantContextState(tenantId, "tenant", principalId, TenantLifecycle.Active));
+        store.Bind(tenantId, principalId, projectId, definitionId);
+        var guard = CreateSut(
+            definitions: new StubDefinitionRepository(projectId),
+            resourceGrants: store,
+            tenantContext: accessor,
+            principals: new FixedPrincipalDataAccess(principalId, tenantId, principalType));
+        return new GrantSut(guard, tenantId, definitionId, projectId);
+    }
+
+    private static PrincipalResourceGrantRow Grant(string kind, Guid? resourceId = null) =>
+        new()
+        {
+            ResourceKind = kind,
+            ResourceId = resourceId ?? Guid.Empty
+        };
+
+    private sealed record GrantSut(
+        ExecutionAuthorizationGuard Guard,
+        Guid TenantId,
+        Guid DefinitionId,
+        Guid ProjectId);
+
     private static ExecutionAuthorizationGuard CreateSut(
         IRuntimePermissionAuthorization? runtimeAuth = null,
         IExecutionMutationAuthorization? mutationAuth = null,
         IProjectAuthorizationService? projectAuth = null,
-        IDefinitionRepository? definitions = null) =>
+        IDefinitionRepository? definitions = null,
+        IPrincipalResourceGrantStore? resourceGrants = null,
+        ITenantContextAccessor? tenantContext = null,
+        IPrincipalDataAccess? principals = null) =>
         new(
             runtimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             mutationAuth ?? new AllowAllExecutionMutationAuthorization(),
             projectAuth ?? new AllowAllProjectAuthorizationService(),
             definitions ?? new StubDefinitionRepository(Guid.NewGuid()),
-            new ImmediateReadOnlyExecutor());
+            new ImmediateReadOnlyExecutor(),
+            new PrincipalResourceGrantAuthorization(
+                resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
+                tenantContext ?? new SettableTenantContextAccessor(),
+                principals ?? new MissingPrincipalDataAccess()));
+
+    private sealed class RecordingGrantStore(IReadOnlyList<PrincipalResourceGrantRow> rows) : IPrincipalResourceGrantStore
+    {
+        private Guid _principalId;
+        private Guid _projectId;
+        private Guid _definitionId;
+
+        public int ListCount { get; private set; }
+
+        public void Bind(Guid tenantId, Guid principalId, Guid projectId, Guid definitionId)
+        {
+            _ = tenantId;
+            _principalId = principalId;
+            _projectId = projectId;
+            _definitionId = definitionId;
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<PrincipalResourceGrantRow>> ListAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            ListCount++;
+            IReadOnlyList<PrincipalResourceGrantRow> matched = rows
+                .Select(row => new PrincipalResourceGrantRow
+                {
+                    PrincipalId = _principalId,
+                    ResourceKind = row.ResourceKind,
+                    ResourceId = ResolveResourceId(row),
+                    CreatedAt = DateTime.UtcNow
+                })
+                .Where(row => row.PrincipalId == principalId)
+                .ToList();
+            return Task.FromResult(matched);
+        }
+
+        /// <inheritdoc />
+        public Task ReplaceAsync(
+            Guid principalId,
+            IReadOnlyCollection<Guid> projectIds,
+            IReadOnlyCollection<Guid> definitionIds,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        private Guid ResolveResourceId(PrincipalResourceGrantRow row)
+        {
+            if (row.ResourceId != Guid.Empty)
+                return row.ResourceId;
+            return row.ResourceKind == PrincipalResourceGrantKinds.Project ? _projectId : _definitionId;
+        }
+    }
+
+    private sealed class FixedPrincipalDataAccess(Guid principalId, Guid tenantId, PrincipalType principalType) : IPrincipalDataAccess
+    {
+        /// <inheritdoc />
+        public Task<PrincipalInfo?> FindPrincipalAsync(Guid id, CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            PrincipalInfo? info = id == principalId
+                ? new PrincipalInfo(principalId, tenantId, principalType, true, null, null)
+                : null;
+            return Task.FromResult(info);
+        }
+
+        /// <inheritdoc />
+        public Task<TenantInfo?> FindTenantAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public Task<bool> IsTenantAdminAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
+            Guid id,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
+            Guid id,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
 
     private sealed class RecordingRuntimePermissionAuthorization : IRuntimePermissionAuthorization
     {

@@ -125,6 +125,8 @@ internal sealed class ExecutionLifecycleCommandService(
         var inherited = requestContext.ParentExecutionId is { } parentExecutionId
             ? await LoadInheritedChildStartAsync(tenantId, parentExecutionId, defUuid.Value, ct).ConfigureAwait(false)
             : null;
+        if (inherited is null)
+            await authorization.EnsureResourceGrantAsync(tenantId, defUuid.Value, ct).ConfigureAwait(false);
         var startActor = ResolveScheduleStartActor(requestContext);
 
         var versionRow = await ResolveStartDefinitionVersionAsync(tenantId, defUuid.Value, request, ct).ConfigureAwait(false);

@@ -5250,7 +5250,11 @@ public sealed class ExecutionServiceTests
             mutationAuth,
             projectAuth,
             definitions,
-            executor);
+            executor,
+            new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                sqlite.TenantAccessor,
+                new MissingPrincipalDataAccess()));
         var checkpointStoreResolved = checkpointStore ?? new FakeExecutionCheckpointStore();
         var engineSession = new ExecutionEngineSession(
             engine,
