@@ -73,6 +73,12 @@ internal sealed class ExecutionScheduleService(
             .ConfigureAwait(false);
         await EnsureActiveServiceAccountAsync(tenantId, request.RunAsPrincipalId, cancellationToken)
             .ConfigureAwait(false);
+        await authorization.EnsureResourceGrantForPrincipalAsync(
+                tenantId,
+                request.RunAsPrincipalId,
+                definitionId,
+                cancellationToken)
+            .ConfigureAwait(false);
         await EnsureUniqueNameAsync(tenantId, name, excludingScheduleId: null, cancellationToken)
             .ConfigureAwait(false);
         var nextFireAt = ComputeNextFireAt(cron, timeZone);
@@ -139,6 +145,13 @@ internal sealed class ExecutionScheduleService(
             await EnsureActiveServiceAccountAsync(tenantId, runAs, cancellationToken).ConfigureAwait(false);
             row.RunAsPrincipalId = runAs;
         }
+
+        await authorization.EnsureResourceGrantForPrincipalAsync(
+                tenantId,
+                row.RunAsPrincipalId,
+                row.DefinitionId,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         if (request.OverlapPolicy is { } overlapRaw && overlapRaw.Length > 0)
             row.OverlapPolicy = NormalizeOverlapPolicy(overlapRaw);

@@ -18,11 +18,26 @@ internal sealed class PrincipalResourceGrantAuthorization(
     /// <param name="definitionId">論理定義 ID。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
-    public async Task EnsureAsync(Guid projectId, Guid definitionId, CancellationToken ct)
+    public Task EnsureAsync(Guid projectId, Guid definitionId, CancellationToken ct)
     {
         if (tenantContext.PrincipalId is not Guid principalId)
-            return;
+            return Task.CompletedTask;
 
+        return EnsureForPrincipalAsync(principalId, projectId, definitionId, ct);
+    }
+
+    /// <summary>指定 Principal の許可集合を評価し、含まれなければ拒否する。</summary>
+    /// <param name="principalId">評価する User または ServiceAccount。</param>
+    /// <param name="projectId">定義が属するプロジェクト。</param>
+    /// <param name="definitionId">論理定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    public async Task EnsureForPrincipalAsync(
+        Guid principalId,
+        Guid projectId,
+        Guid definitionId,
+        CancellationToken ct)
+    {
         var principal = await principals.FindPrincipalAsync(principalId, ct).ConfigureAwait(false);
         if (principal is not { PrincipalType: PrincipalType.User or PrincipalType.ServiceAccount })
             return;

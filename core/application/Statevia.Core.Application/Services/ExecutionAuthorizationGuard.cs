@@ -83,15 +83,39 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
     public async Task EnsureResourceGrantAsync(Guid tenantId, Guid definitionId, CancellationToken ct)
     {
+        var projectId = await RequireProjectIdAsync(tenantId, definitionId, ct).ConfigureAwait(false);
+        await resourceGrantAuth.EnsureAsync(projectId, definitionId, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>指定 Principal の Start に、project 許可と definition 許可の AND を要求する。</summary>
+    /// <remarks>スケジュールの作成・更新で、呼び出し元ではなく run-as ServiceAccount を評価する。</remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="principalId">評価する Principal。</param>
+    /// <param name="definitionId">論理定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    public async Task EnsureResourceGrantForPrincipalAsync(
+        Guid tenantId,
+        Guid principalId,
+        Guid definitionId,
+        CancellationToken ct)
+    {
+        var projectId = await RequireProjectIdAsync(tenantId, definitionId, ct).ConfigureAwait(false);
+        await resourceGrantAuth
+            .EnsureForPrincipalAsync(principalId, projectId, definitionId, ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>定義の所属 project を解決する。無ければ 404。</summary>
+    private async Task<Guid> RequireProjectIdAsync(Guid tenantId, Guid definitionId, CancellationToken ct)
+    {
         var projectId = await executor.ExecuteReadOnlyAsync(
                 (uow, innerCt) => definitions.ResolveProjectIdAsync(uow, tenantId, definitionId, innerCt),
                 ct)
             .ConfigureAwait(false);
         if (projectId is null)
             throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
-
-        await resourceGrantAuth
-            .EnsureAsync(projectId.Value, definitionId, ct)
-            .ConfigureAwait(false);
+        return projectId.Value;
     }
 }
