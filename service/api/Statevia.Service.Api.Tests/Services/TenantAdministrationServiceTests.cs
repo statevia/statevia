@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Contracts.Admin;
 using Statevia.Service.Api.Services;
 using Statevia.Service.Api.Tests.Infrastructure;
@@ -23,7 +24,12 @@ public sealed class TenantAdministrationServiceTests
             new TenantAdminAuthorization(new PlatformDataAccess(database.Factory, new DefaultIdGenerator())),
             new PasswordCredentialService(),
             new DefaultIdGenerator(),
-            NullLogger<TenantAdministrationService>.Instance);
+            NullLogger<TenantAdministrationService>.Instance,
+            new PrincipalResourceGrantAdminService(
+                database.Factory,
+                new PrincipalResourceGrantStore(database.Factory, tenantContext),
+                new AllowAllProjectAuthorizationService(),
+                new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(database.Factory))));
     }
 
     /// <summary>非管理者はユーザー一覧を拒否される。</summary>

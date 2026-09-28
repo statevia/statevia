@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace Statevia.Service.Api.Services;
 
-/// <summary>テナント管理者向け users / groups / ServiceAccount 管理。</summary>
+/// <summary>テナント管理者向け users / groups / ServiceAccount / リソース許可の管理。</summary>
 public interface ITenantAdministrationService
 {
     /// <summary>権限カタログを返す。</summary>
@@ -110,6 +110,32 @@ public interface ITenantAdministrationService
         Guid serviceAccountId,
         UpdateAdminServiceAccountRequest request,
         CancellationToken cancellationToken);
+
+    /// <summary>ユーザーの実行リソース許可を返す。</summary>
+    Task<PrincipalResourceGrantsDto> GetUserResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    /// <summary>ユーザーの実行リソース許可を両種別まとめて置き換える。</summary>
+    Task<PrincipalResourceGrantsDto> ReplaceUserResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid userId,
+        ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken cancellationToken);
+
+    /// <summary>ServiceAccount の実行リソース許可を返す。</summary>
+    Task<PrincipalResourceGrantsDto> GetServiceAccountResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken);
+
+    /// <summary>ServiceAccount の実行リソース許可を両種別まとめて置き換える。</summary>
+    Task<PrincipalResourceGrantsDto> ReplaceServiceAccountResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken cancellationToken);
 }
 
 /// <inheritdoc />
@@ -126,6 +152,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
     private readonly PasswordCredentialService _passwordCredentialService;
     private readonly IIdGenerator _idGenerator;
     private readonly ILogger<TenantAdministrationService> _logger;
+    private readonly PrincipalResourceGrantAdminService _resourceGrants;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
     public TenantAdministrationService(
@@ -134,7 +161,8 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
         ITenantAdminAuthorization tenantAdminAuthorization,
         PasswordCredentialService passwordCredentialService,
         IIdGenerator idGenerator,
-        ILogger<TenantAdministrationService> logger)
+        ILogger<TenantAdministrationService> logger,
+        PrincipalResourceGrantAdminService resourceGrants)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
@@ -142,6 +170,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
         _passwordCredentialService = passwordCredentialService;
         _idGenerator = idGenerator;
         _logger = logger;
+        _resourceGrants = resourceGrants;
     }
 
     /// <inheritdoc />
@@ -1057,6 +1086,151 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
         if (!_tenantContext.IsResolved || _tenantContext.TenantId is not { } tenantId)
             throw new UnauthorizedException("Authentication required.", UnauthorizedCode);
         return tenantId;
+    }
+
+    /// <inheritdoc />
+    public Task<PrincipalResourceGrantsDto> GetUserResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        ReadResourceGrantsAsync(
+            callerPrincipalId,
+            userId,
+            PrincipalType.User,
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<PrincipalResourceGrantsDto> ReplaceUserResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid userId,
+        ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken cancellationToken) =>
+        ReplaceResourceGrantsAsync(
+            callerPrincipalId,
+            userId,
+            PrincipalType.User,
+            request,
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<PrincipalResourceGrantsDto> GetServiceAccountResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken) =>
+        ReadResourceGrantsAsync(
+            callerPrincipalId,
+            serviceAccountId,
+            PrincipalType.ServiceAccount,
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<PrincipalResourceGrantsDto> ReplaceServiceAccountResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid serviceAccountId,
+        ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken cancellationToken) =>
+        ReplaceResourceGrantsAsync(
+            callerPrincipalId,
+            serviceAccountId,
+            PrincipalType.ServiceAccount,
+            request,
+            cancellationToken);
+
+    /// <summary>対象が当該テナントの指定種別であることを確認して許可を返す。</summary>
+    private async Task<PrincipalResourceGrantsDto> ReadResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid subjectId,
+        PrincipalType principalType,
+        CancellationToken cancellationToken)
+    {
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+        var principalId = await ResolveGrantPrincipalIdAsync(RequireTenantId(), subjectId, principalType, cancellationToken)
+            .ConfigureAwait(false);
+        return await _resourceGrants.GetAsync(principalId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>対象が当該テナントの指定種別であることを確認して許可を置き換える。</summary>
+    private async Task<PrincipalResourceGrantsDto> ReplaceResourceGrantsAsync(
+        Guid callerPrincipalId,
+        Guid subjectId,
+        PrincipalType principalType,
+        ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await EnsureTenantAdminAsync(callerPrincipalId, cancellationToken).ConfigureAwait(false);
+        var tenantId = RequireTenantId();
+        var principalId = await ResolveGrantPrincipalIdAsync(tenantId, subjectId, principalType, cancellationToken)
+            .ConfigureAwait(false);
+        return await _resourceGrants.ReplaceAsync(tenantId, principalId, request, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>ユーザー ID または ServiceAccount ID を、当該テナントの Principal へ解決する。違えば 404。</summary>
+    private async Task<Guid> ResolveGrantPrincipalIdAsync(
+        Guid tenantId,
+        Guid subjectId,
+        PrincipalType principalType,
+        CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var principalId = principalType switch
+        {
+            PrincipalType.User => await ResolveUserPrincipalIdAsync(db, tenantId, subjectId, cancellationToken)
+                .ConfigureAwait(false),
+            PrincipalType.ServiceAccount => await ResolveServiceAccountPrincipalIdAsync(db, tenantId, subjectId, cancellationToken)
+                .ConfigureAwait(false),
+            _ => throw new NotFoundException(PrincipalNotFoundMessage)
+        };
+
+        var principal = await db.Principals
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                row => row.PrincipalId == principalId && row.TenantId == tenantId && row.PrincipalType == principalType,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (principal is null)
+            throw new NotFoundException(PrincipalNotFoundMessage);
+        return principal.PrincipalId;
+    }
+
+    /// <summary>当該テナントのユーザーに紐づく Principal を返す。</summary>
+    private static async Task<Guid> ResolveUserPrincipalIdAsync(
+        CoreDbContext db,
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var userExists = await db.Users
+            .AsNoTracking()
+            .AnyAsync(row => row.UserId == userId && row.TenantId == tenantId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!userExists)
+            throw new NotFoundException("User not found.");
+
+        var link = await db.UserPrincipals
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.UserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (link is null)
+            throw new NotFoundException("User principal link not found.");
+        return link.PrincipalId;
+    }
+
+    /// <summary>当該テナントの ServiceAccount に紐づく Principal を返す。</summary>
+    private static async Task<Guid> ResolveServiceAccountPrincipalIdAsync(
+        CoreDbContext db,
+        Guid tenantId,
+        Guid serviceAccountId,
+        CancellationToken cancellationToken)
+    {
+        var account = await db.ServiceAccounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                row => row.ServiceAccountId == serviceAccountId && row.TenantId == tenantId,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return account?.PrincipalId ?? throw new NotFoundException("Service account not found.");
     }
 
     private async Task EnsureTenantAdminAsync(Guid principalId, CancellationToken cancellationToken)
