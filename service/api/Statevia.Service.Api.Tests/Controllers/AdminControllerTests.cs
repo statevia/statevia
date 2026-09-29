@@ -145,5 +145,31 @@ public sealed class AdminControllerTests
             UpdateAdminServiceAccountRequest request,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<PrincipalResourceGrantsDto> GetUserResourceGrantsAsync(
+            Guid callerPrincipalId,
+            Guid userId,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<PrincipalResourceGrantsDto> ReplaceUserResourceGrantsAsync(
+            Guid callerPrincipalId,
+            Guid userId,
+            ReplacePrincipalResourceGrantsRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<PrincipalResourceGrantsDto> GetServiceAccountResourceGrantsAsync(
+            Guid callerPrincipalId,
+            Guid serviceAccountId,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<PrincipalResourceGrantsDto> ReplaceServiceAccountResourceGrantsAsync(
+            Guid callerPrincipalId,
+            Guid serviceAccountId,
+            ReplacePrincipalResourceGrantsRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 }

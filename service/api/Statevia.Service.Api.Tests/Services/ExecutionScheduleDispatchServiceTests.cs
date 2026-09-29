@@ -89,6 +89,77 @@ public sealed class ExecutionScheduleDispatchServiceTests
         Assert.Null(run.ExecutionId);
     }
 
+    /// <summary>許可を狭めたあとの発火は Start せず、スケジュールは無効化しない。</summary>
+    [Fact]
+    public async Task DispatchDueAsync_WhenResourceGrantDenied_DoesNotStart()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var runAs = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        await SeedDueScheduleAsync(db, runAs, definitionId: definitionId);
+        var authorization = CreateDenyingAuthorization(db, runAs);
+        var executions = new FakeExecutionService(db.TenantAccessor)
+        {
+            OnStart = cancellationToken => authorization.EnsureAsync(Guid.NewGuid(), definitionId, cancellationToken)
+        };
+        var sut = CreateSut(db, runAs, executions);
+
+        // Act
+        var processed = await sut.DispatchDueAsync(DueNowUtc, limit: 64, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(0, executions.StartCount);
+        await using var verify = db.Factory.CreateDbContext();
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(ExecutionScheduleRunOutcomes.Failed, run.Outcome);
+        Assert.Equal("RESOURCE_GRANT_DENIED", run.ErrorCode);
+        Assert.Null(run.ExecutionId);
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
+        Assert.True(schedule.Enabled);
+    }
+
+    /// <summary>許可外の手動実行は failed run を残して HTTP と同じ拒否を返す。</summary>
+    [Fact]
+    public async Task RunManuallyAsync_WhenResourceGrantDenied_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var runAs = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var scheduleId = await SeedDueScheduleAsync(db, runAs, definitionId: definitionId);
+        var authorization = CreateDenyingAuthorization(db, runAs);
+        var executions = new FakeExecutionService(db.TenantAccessor)
+        {
+            OnStart = cancellationToken => authorization.EnsureAsync(Guid.NewGuid(), definitionId, cancellationToken)
+        };
+        var sut = CreateSut(db, runAs, executions);
+
+        // Act
+        var act = () => sut.RunManuallyAsync(scheduleId, "once", CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+        Assert.Equal(0, executions.StartCount);
+        await using var verify = db.Factory.CreateDbContext();
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(ExecutionScheduleRunOutcomes.Failed, run.Outcome);
+        Assert.Equal("RESOURCE_GRANT_DENIED", run.ErrorCode);
+        Assert.True(run.Manual);
+    }
+
+    private static PrincipalResourceGrantAuthorization CreateDenyingAuthorization(SqliteTestDatabase db, Guid runAs)
+    {
+        var principals = new StubPrincipalDataAccess();
+        principals.Add(runAs, TestTenantIds.DefaultTenantId, PrincipalType.ServiceAccount, isActive: true);
+        return new PrincipalResourceGrantAuthorization(
+            new SingleDefinitionGrantStore(runAs, Guid.NewGuid()),
+            db.TenantAccessor,
+            principals);
+    }
+
     /// <summary>欠発は Start せず next だけ未来枠へ進める。</summary>
     [Fact]
     public async Task DispatchDueAsync_WhenSlotMissed_AdvancesWithoutStart()
@@ -253,7 +324,8 @@ public sealed class ExecutionScheduleDispatchServiceTests
         SqliteTestDatabase db,
         Guid runAs,
         string overlap = ExecutionScheduleOverlapPolicies.Skip,
-        bool enabled = true)
+        bool enabled = true,
+        Guid? definitionId = null)
     {
         var scheduleId = Guid.NewGuid();
         var now = DateTime.UtcNow;
@@ -263,7 +335,7 @@ public sealed class ExecutionScheduleDispatchServiceTests
             {
                 ScheduleId = scheduleId,
                 TenantId = TestTenantIds.DefaultTenantId,
-                DefinitionId = Guid.NewGuid(),
+                DefinitionId = definitionId ?? Guid.NewGuid(),
                 RunAsPrincipalId = runAs,
                 CreatedByPrincipalId = Guid.NewGuid(),
                 Name = "dispatch-job",
@@ -337,6 +409,38 @@ public sealed class ExecutionScheduleDispatchServiceTests
             NullLogger<ExecutionScheduleDispatchService>.Instance);
     }
 
+    private sealed class SingleDefinitionGrantStore(Guid principalId, Guid definitionId) : IPrincipalResourceGrantStore
+    {
+        /// <inheritdoc />
+        public Task<IReadOnlyList<PrincipalResourceGrantRow>> ListAsync(
+            Guid id,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            IReadOnlyList<PrincipalResourceGrantRow> rows = id == principalId
+                ?
+                [
+                    new PrincipalResourceGrantRow
+                    {
+                        PrincipalId = principalId,
+                        ResourceKind = PrincipalResourceGrantKinds.Definition,
+                        ResourceId = definitionId,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                ]
+                : [];
+            return Task.FromResult(rows);
+        }
+
+        /// <inheritdoc />
+        public Task ReplaceAsync(
+            Guid id,
+            IReadOnlyCollection<Guid> projectIds,
+            IReadOnlyCollection<Guid> definitionIds,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class StubPrincipalDataAccess : IPrincipalDataAccess
     {
         private readonly Dictionary<Guid, PrincipalInfo> _principals = [];
@@ -374,24 +478,27 @@ public sealed class ExecutionScheduleDispatchServiceTests
         public string? LastIdempotencyKey { get; private set; }
         public CommandRequestContext? LastContext { get; private set; }
 
-        public Task<ExecutionResponse> StartAsync(
+        public Func<CancellationToken, Task>? OnStart { get; set; }
+
+        public async Task<ExecutionResponse> StartAsync(
             StartExecutionRequest request,
             string? idempotencyKey,
             CommandRequestContext requestContext,
             CancellationToken ct)
         {
             _ = request;
-            _ = ct;
+            if (OnStart is not null)
+                await OnStart(ct).ConfigureAwait(false);
             StartCount++;
             LastPrincipalId = accessor.PrincipalId;
             LastIdempotencyKey = idempotencyKey;
             LastContext = requestContext;
-            return Task.FromResult(new ExecutionResponse
+            return new ExecutionResponse
             {
                 ResourceId = StartedExecutionId,
                 DisplayId = StartedExecutionId.ToString("D"),
                 Status = ExecutionProjectionStatuses.Running
-            });
+            };
         }
 
         public Task<ExecutionResponse> ExecuteQueuedStartAsync(

@@ -4,7 +4,7 @@ using Statevia.Service.Api.Services;
 
 namespace Statevia.Service.Api.Controllers;
 
-/// <summary>テナント管理者向け users / groups / ServiceAccount API。</summary>
+/// <summary>テナント管理者向け users / groups / ServiceAccount / リソース許可 API。</summary>
 [ApiController]
 [Route("v1/admin")]
 public sealed class AdminController : ControllerBase
@@ -166,6 +166,47 @@ public sealed class AdminController : ControllerBase
         [FromBody] UpdateAdminServiceAccountRequest request,
         CancellationToken ct) =>
         Ok(await _administration.UpdateServiceAccountAsync(RequirePrincipalId(), serviceAccountId, request, ct)
+            .ConfigureAwait(false));
+
+    /// <summary>GET /v1/admin/users/{userId}/resource-grants — ユーザーの実行リソース許可。</summary>
+    [HttpGet("users/{userId:guid}/resource-grants")]
+    [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PrincipalResourceGrantsDto>> GetUserResourceGrants(
+        Guid userId,
+        CancellationToken ct) =>
+        Ok(await _administration.GetUserResourceGrantsAsync(RequirePrincipalId(), userId, ct).ConfigureAwait(false));
+
+    /// <summary>PUT /v1/admin/users/{userId}/resource-grants — ユーザーの実行リソース許可を一括置換する。</summary>
+    [HttpPut("users/{userId:guid}/resource-grants")]
+    [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PrincipalResourceGrantsDto>> ReplaceUserResourceGrants(
+        Guid userId,
+        [FromBody] ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken ct) =>
+        Ok(await _administration.ReplaceUserResourceGrantsAsync(RequirePrincipalId(), userId, request, ct)
+            .ConfigureAwait(false));
+
+    /// <summary>GET /v1/admin/service-accounts/{serviceAccountId}/resource-grants — ServiceAccount の実行リソース許可。</summary>
+    [HttpGet("service-accounts/{serviceAccountId:guid}/resource-grants")]
+    [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PrincipalResourceGrantsDto>> GetServiceAccountResourceGrants(
+        Guid serviceAccountId,
+        CancellationToken ct) =>
+        Ok(await _administration.GetServiceAccountResourceGrantsAsync(RequirePrincipalId(), serviceAccountId, ct)
+            .ConfigureAwait(false));
+
+    /// <summary>PUT /v1/admin/service-accounts/{serviceAccountId}/resource-grants — ServiceAccount の実行リソース許可を一括置換する。</summary>
+    [HttpPut("service-accounts/{serviceAccountId:guid}/resource-grants")]
+    [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PrincipalResourceGrantsDto>> ReplaceServiceAccountResourceGrants(
+        Guid serviceAccountId,
+        [FromBody] ReplacePrincipalResourceGrantsRequest request,
+        CancellationToken ct) =>
+        Ok(await _administration.ReplaceServiceAccountResourceGrantsAsync(
+                RequirePrincipalId(),
+                serviceAccountId,
+                request,
+                ct)
             .ConfigureAwait(false));
 
     private Guid RequirePrincipalId()

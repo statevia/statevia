@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.1 |
-| 更新日 | 2026-09-01 |
+| Version | 1.2 |
+| 更新日 | 2026-09-29 |
 | 関連 | [api-http.md](../specifications/api-http.md), [data-integration.md](../specifications/data-integration.md) |
 
 ---
 
 Service API が返す `error.code` の**調べ物**一覧。Normative 契約は [api-http.md](../specifications/api-http.md) §4.3、[data-integration.md](../specifications/data-integration.md) §7 を正とする。
+
+**Version 1.2（2026-09-29）**: Start の実行リソース許可不足 `RESOURCE_GRANT_DENIED` を載せる。
 
 **Version 1.1（2026-09-01）**: 実装に無い `COMMAND_REJECTED` を外し、`STATE_CONFLICT` を載せる。
 
@@ -45,6 +47,7 @@ Service API が返す `error.code` の**調べ物**一覧。Normative 契約は 
 | --- | --- | --- |
 | `PERMISSION_DENIED` | semantic permission key 不足 | [permission-keys.md](permission-keys.md) |
 | `PROJECT_ACCESS_DENIED` | プロジェクト `project_accesses` のロール不足（例: Reader のみで Start） | 存在秘匿のため未登録は **404** |
+| `RESOURCE_GRANT_DENIED` | User / ServiceAccount の実行リソース許可に無い project または定義で Start、または定期実行へ割り当てた | 行が無い種別は追加制限なし。未登録の定義は **404** |
 | `FORBIDDEN` | テナント管理者必須、テナント非 Active（汎用）、その他拒否 | Admin API 等 |
 | `TENANT_SUSPENDED` | テナント `Suspended` | fail-closed |
 | `TENANT_ARCHIVED` | テナント `Archived` | 復帰不可 |

@@ -83,6 +83,56 @@ public sealed class ExecutionScheduleServiceTests
         Assert.Contains("runAsPrincipalId", ex.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>run-as の許可に無い定義ではスケジュールを保存しない。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenRunAsLacksGrant_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var grants = new MutableGrantStore();
+        grants.Rows.Add(Grant(runAs, PrincipalResourceGrantKinds.Definition, Guid.NewGuid()));
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, resourceGrants: grants);
+
+        // Act
+        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+        await using var verify = db.Factory.CreateDbContext();
+        Assert.Empty(verify.ExecutionSchedules.IgnoreQueryFilters());
+    }
+
+    /// <summary>割り当て後に許可を狭めると、定義を変えない更新も拒否する。</summary>
+    [Fact]
+    public async Task UpdateAsync_WhenGrantNarrowed_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var grants = new MutableGrantStore();
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, resourceGrants: grants);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        grants.Rows.Add(Grant(runAs, PrincipalResourceGrantKinds.Definition, Guid.NewGuid()));
+
+        // Act
+        var act = () => sut.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { Name = "renamed-job" },
+            CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+        var stored = await sut.GetAsync(created.ScheduleId, CancellationToken.None);
+        Assert.Equal("nightly-job", stored.Name);
+    }
+
     /// <summary>不正 cron は 422 で field=cronExpression。</summary>
     [Fact]
     public async Task CreateAsync_WhenCronInvalid_ThrowsValidation()
@@ -348,7 +398,8 @@ public sealed class ExecutionScheduleServiceTests
         StubPrincipalDataAccess? principals = null,
         TenantContextState? tenant = null,
         Guid? runAsTenantId = null,
-        IExecutionScheduleDispatchService? dispatch = null)
+        IExecutionScheduleDispatchService? dispatch = null,
+        IPrincipalResourceGrantStore? resourceGrants = null)
     {
         var tenantState = tenant ?? TestTenantIds.DefaultContext with { PrincipalId = callerPrincipalId };
         var accessor = new SettableTenantContextAccessor();
@@ -369,7 +420,11 @@ public sealed class ExecutionScheduleServiceTests
             new AllowAllExecutionMutationAuthorization(),
             new AllowAllProjectAuthorizationService(),
             TestRepositoryFactory.CreateDefinitionRepository(),
-            new TestCoreTransactionExecutor(uowFactory));
+            new TestCoreTransactionExecutor(uowFactory),
+            new PrincipalResourceGrantAuthorization(
+                resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
+                accessor,
+                principalAccess));
 
         var transactionExecutor = new TestCoreTransactionExecutor(uowFactory);
         return new ExecutionScheduleService(
@@ -428,6 +483,40 @@ public sealed class ExecutionScheduleServiceTests
             Guid principalId,
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<GroupSnapshot>>([]);
+    }
+
+    private static PrincipalResourceGrantRow Grant(Guid principalId, string kind, Guid resourceId) =>
+        new()
+        {
+            PrincipalId = principalId,
+            ResourceKind = kind,
+            ResourceId = resourceId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+    private sealed class MutableGrantStore : IPrincipalResourceGrantStore
+    {
+        public List<PrincipalResourceGrantRow> Rows { get; } = [];
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<PrincipalResourceGrantRow>> ListAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            IReadOnlyList<PrincipalResourceGrantRow> matched = Rows
+                .Where(row => row.PrincipalId == principalId)
+                .ToList();
+            return Task.FromResult(matched);
+        }
+
+        /// <inheritdoc />
+        public Task ReplaceAsync(
+            Guid principalId,
+            IReadOnlyCollection<Guid> projectIds,
+            IReadOnlyCollection<Guid> definitionIds,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class RecordingDispatchService : IExecutionScheduleDispatchService

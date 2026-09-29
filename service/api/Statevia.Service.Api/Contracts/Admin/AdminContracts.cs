@@ -379,3 +379,25 @@ public sealed class UpdateAdminServiceAccountRequest : IValidatableObject
             yield return new ValidationResult("groupIds must contain at least one group.", [nameof(GroupIds)]);
     }
 }
+
+/// <summary>Principal の実行リソース許可。</summary>
+public sealed class PrincipalResourceGrantsDto
+{
+    /// <summary>付与済み project ID。無ければ空。</summary>
+    public IReadOnlyList<Guid> ProjectIds { get; init; } = [];
+
+    /// <summary>付与済み定義 ID。無ければ空。</summary>
+    public IReadOnlyList<Guid> DefinitionIds { get; init; } = [];
+}
+
+/// <summary>Principal の実行リソース許可を両種別まとめて置き換える要求。</summary>
+public sealed class ReplacePrincipalResourceGrantsRequest
+{
+    /// <summary>残す project ID。空配列はその種別の許可を消す。省略は不可。</summary>
+    [Required]
+    public IReadOnlyList<Guid>? ProjectIds { get; set; }
+
+    /// <summary>残す定義 ID。空配列はその種別の許可を消す。省略は不可。</summary>
+    [Required]
+    public IReadOnlyList<Guid>? DefinitionIds { get; set; }
+}

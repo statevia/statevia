@@ -131,6 +131,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string ScheduledFireAt = "scheduled_fire_at";
         public const string Manual = "manual";
         public const string Outcome = "outcome";
+        public const string ResourceKind = "resource_kind";
     }
 
     private static class ColumnTypes
@@ -191,6 +192,9 @@ internal class CoreDbContext : DbContext, ICoreDatabase
 
     /// <summary>定期実行の枠結果。</summary>
     public DbSet<ExecutionScheduleRunRow> ExecutionScheduleRuns => Set<ExecutionScheduleRunRow>();
+
+    /// <summary>Principal の project / definition 許可。</summary>
+    public DbSet<PrincipalResourceGrantRow> PrincipalResourceGrants => Set<PrincipalResourceGrantRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -528,6 +532,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         });
 
         ConfigureScheduleEntities(modelBuilder);
+        ConfigurePrincipalResourceGrants(modelBuilder);
 
         ConfigureTenantScopedFilters(modelBuilder);
         ConfigureSecurityEntities(modelBuilder);
@@ -586,6 +591,39 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             e.HasOne<ExecutionScheduleRow>()
                 .WithMany()
                 .HasForeignKey(x => x.ScheduleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<TenantRow>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    /// <summary>
+    /// Principal の実行リソース許可。主キー順は Principal と種別の参照を兼ねる。
+    /// </summary>
+    private static void ConfigurePrincipalResourceGrants(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PrincipalResourceGrantRow>(e =>
+        {
+            e.ToTable("principal_resource_grants", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_principal_resource_grants_resource_kind",
+                    "resource_kind IN ('project', 'definition')");
+            });
+            e.HasKey(x => new { x.PrincipalId, x.ResourceKind, x.ResourceId });
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.PrincipalId).HasColumnName(Columns.PrincipalId);
+            e.Property(x => x.ResourceKind)
+                .HasMaxLength(PrincipalResourceGrantKinds.MaxLength)
+                .HasColumnName(Columns.ResourceKind);
+            e.Property(x => x.ResourceId).HasColumnName(Columns.ResourceId);
+            e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
+            e.HasIndex(x => x.TenantId);
+            e.HasOne<PrincipalRow>()
+                .WithMany()
+                .HasForeignKey(x => x.PrincipalId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne<TenantRow>()
                 .WithMany()
@@ -669,6 +707,10 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
 
         modelBuilder.Entity<ProjectAccessRow>().HasQueryFilter(e =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+
+        modelBuilder.Entity<PrincipalResourceGrantRow>().HasQueryFilter(e =>
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
     }

@@ -219,6 +219,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILoginFailureLockStore>(sp => sp.GetRequiredService<LoginFailureLockStore>());
         services.AddHostedService<LoginFailureLockPurgeHostedService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<PrincipalResourceGrantAdminService>();
         services.AddScoped<ITenantAdministrationService, TenantAdministrationService>();
         services.AddOptions<DevAdminBootstrapOptions>()
             .Bind(configuration.GetSection(DevAdminBootstrapOptions.SectionName));
