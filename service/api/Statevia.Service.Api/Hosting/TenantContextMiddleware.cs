@@ -142,6 +142,7 @@ internal sealed class TenantContextMiddleware
         || path.StartsWithSegments("/v1/executions", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/schedules", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/events", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/v1/event-subscriptions", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/graphs", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/actions", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/v1/admin", StringComparison.OrdinalIgnoreCase)

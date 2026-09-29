@@ -66,4 +66,19 @@ public interface IExecutionWaitRepository
         string topic,
         string correlationKey,
         CancellationToken ct);
+
+    /// <summary>
+    /// 現在テナントのアクティブ購読から、一意な topic / key を昇順で返す。
+    /// </summary>
+    /// <param name="uow">同一トランザクションの Unit of Work。</param>
+    /// <param name="tenantId">列挙するテナント（Query Filter に頼らない明示条件）。</param>
+    /// <param name="limit">返す上限。1 以上。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>候補。同一 (topic, key) は 1 行。Hosted 子実行の購読も含む。</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> が 1 未満。</exception>
+    Task<IReadOnlyList<EventSubscriptionCandidate>> ListDistinctSubscriptionCandidatesAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        int limit,
+        CancellationToken ct);
 }

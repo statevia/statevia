@@ -11,7 +11,7 @@ internal static class RuntimePermissionRequirements
     /// <summary>POST /v1/definitions、PUT /v1/definitions/{id}、POST /v1/definitions/validate。</summary>
     public const string DefinitionsWrite = WellKnownPermissionKeys.DefinitionsWrite;
 
-    /// <summary>GET /v1/executions*（一覧・詳細・graph・state・events・stream）。</summary>
+    /// <summary>GET /v1/executions*（一覧・詳細・graph・state・events・stream）と GET /v1/event-subscriptions。</summary>
     public const string ExecutionsRead = WellKnownPermissionKeys.ExecutionsRead;
 
     /// <summary>POST /v1/executions、cancel、publish/resume。</summary>

@@ -729,6 +729,14 @@ public sealed class ExecutionServiceTests
             string correlationKey,
             CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<MatchingWaitSubscription>>(Array.Empty<MatchingWaitSubscription>());
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<EventSubscriptionCandidate>> ListDistinctSubscriptionCandidatesAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            int limit,
+            CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<EventSubscriptionCandidate>>([]);
     }
 
     private sealed class FakeEventStoreRepository : IEventStoreRepository
