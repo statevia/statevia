@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Statevia.Core.Application.Contracts.Security;
 using Statevia.Runtime.Observability;
 using Statevia.Service.Api.Application.Actions.Versioning;
 using Statevia.Service.Api.Hosting;

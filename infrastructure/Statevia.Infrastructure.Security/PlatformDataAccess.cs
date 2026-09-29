@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Statevia.Core.Application.Contracts.Scheduling;
 using Statevia.Core.Application.Contracts.Services;
 
 namespace Statevia.Infrastructure.Security;
@@ -335,6 +336,7 @@ internal sealed class PlatformDataAccess : IPlatformDataAccess
             CreatedAt = now,
             UpdatedAt = now
         });
+        db.ExecutionSchedules.Add(SystemScheduleRows.Create(_idGenerator.NewSequentialGuid(), DefaultTenantId, now));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

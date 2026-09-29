@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Statevia.Core.Application.Contracts.Services;
 using Statevia.Service.Api.Controllers;
 
 namespace Statevia.Service.Api.Tests.Controllers;

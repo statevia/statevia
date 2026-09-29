@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Sentry;
-
 namespace Statevia.Service.Api.Hosting;
 
 /// <summary>ホスト停止時に Sentry へ未送信イベントを flush する。</summary>

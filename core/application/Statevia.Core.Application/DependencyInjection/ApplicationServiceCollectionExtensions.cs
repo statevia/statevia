@@ -42,7 +42,9 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IForkExpansionHostHandler, ForkExpansionHostHandler>();
         services.AddScoped<ExecutionScheduleDefinitionResolver>();
         services.AddScoped<IExecutionScheduleService, ExecutionScheduleService>();
+        services.AddSingleton<ExecutionScheduleFireSupport>();
         services.AddScoped<IExecutionScheduleDispatchService, ExecutionScheduleDispatchService>();
+        services.AddScoped<ISystemScheduleProvisioner, SystemScheduleProvisioner>();
 
         return services;
     }

@@ -7,11 +7,17 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// </remarks>
 public interface IExecutionScheduleRepository
 {
-    /// <summary>テナント内の未削除スケジュールを 1 件取得する。</summary>
+    /// <summary>テナントから見える未削除スケジュールを 1 件取得する。システム行は不在と同じ。</summary>
     Task<ExecutionScheduleRow?> GetByIdAsync(Guid scheduleId, CancellationToken cancellationToken);
 
-    /// <summary>テナント内の未削除スケジュールを一覧する。</summary>
+    /// <summary>テナントから見える未削除スケジュールを一覧する。</summary>
     Task<IReadOnlyList<ExecutionScheduleRow>> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>未削除のシステム行があるか。テナントフィルタは使わない。</summary>
+    /// <param name="tenantId">対象テナント。</param>
+    /// <param name="jobKey">ジョブ識別子。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    Task<bool> SystemJobExistsAsync(Guid tenantId, string jobKey, CancellationToken cancellationToken);
 
     /// <summary>テナント内の未削除スケジュールを名前で取得する。</summary>
     Task<ExecutionScheduleRow?> GetByNameAsync(Guid tenantId, string name, CancellationToken cancellationToken);
@@ -54,5 +60,40 @@ public interface IExecutionScheduleRepository
         ICoreUnitOfWork uow,
         DateTime utcNow,
         int limit,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// 待機が無く、投影が <paramref name="updatedAtOrBefore"/> 以前の Running 件数。
+    /// </summary>
+    /// <param name="uow">読み取りに使う UoW。</param>
+    /// <param name="tenantId">点検中スケジュールのテナント。他テナントは数えない。</param>
+    /// <param name="updatedAtOrBefore">この時刻以前の <c>updated_at</c> を停滞とする。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    Task<int> CountStuckExecutionsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        DateTime updatedAtOrBefore,
+        CancellationToken cancellationToken);
+
+    /// <summary>テナントスケジュールの failed run で、<paramref name="createdAfter"/> より後の件数。</summary>
+    /// <param name="uow">読み取りに使う UoW。</param>
+    /// <param name="tenantId">点検中スケジュールのテナント。</param>
+    /// <param name="createdAfter">この時刻より後の <c>created_at</c>。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    Task<int> CountFailedTenantScheduleRunsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        DateTime createdAfter,
+        CancellationToken cancellationToken);
+
+    /// <summary>当該システム行の直近 <c>completed</c> の <c>scheduled_fire_at</c>。無ければ null。</summary>
+    /// <param name="uow">読み取りに使う UoW。</param>
+    /// <param name="scheduleId">点検中のシステムスケジュール。</param>
+    /// <param name="tenantId">点検中スケジュールのテナント。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    Task<DateTime?> FindLatestCompletedFireAtAsync(
+        ICoreUnitOfWork uow,
+        Guid scheduleId,
+        Guid tenantId,
         CancellationToken cancellationToken);
 }

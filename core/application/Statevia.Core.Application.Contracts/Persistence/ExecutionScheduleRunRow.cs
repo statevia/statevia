@@ -27,6 +27,9 @@ public sealed class ExecutionScheduleRunRow
     /// <summary>公開 error.code があれば。</summary>
     public string? ErrorCode { get; set; }
 
+    /// <summary>システム点検の件数 JSON。テナントスケジュールは null。</summary>
+    public string? SummaryJson { get; set; }
+
     /// <summary>作成日時（UTC）。</summary>
     public DateTime CreatedAt { get; set; }
 }

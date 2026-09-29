@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Statevia.Core.Application.Scheduling;
+using System.Text.Json;
 
 namespace Statevia.Core.Application.Services;
 
@@ -130,14 +130,14 @@ internal sealed class ExecutionScheduleService(
         {
             row.DefinitionVersionId = await definitions.ResolvePinnedVersionIdAsync(
                     tenantId,
-                    row.DefinitionId,
+                    row.RequireDefinitionId(),
                     request.DefinitionVersionId,
                     request.DefinitionVersion,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.DefinitionId, cancellationToken)
+        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
             .ConfigureAwait(false);
 
         if (request.RunAsPrincipalId is { } runAs)
@@ -148,8 +148,8 @@ internal sealed class ExecutionScheduleService(
 
         await authorization.EnsureResourceGrantForPrincipalAsync(
                 tenantId,
-                row.RunAsPrincipalId,
-                row.DefinitionId,
+                row.RequireRunAsPrincipalId(),
+                row.RequireDefinitionId(),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -189,7 +189,7 @@ internal sealed class ExecutionScheduleService(
         await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.DefinitionId, cancellationToken)
+        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
             .ConfigureAwait(false);
         var now = DateTime.UtcNow;
         row.DeletedAt = now;
@@ -206,7 +206,7 @@ internal sealed class ExecutionScheduleService(
         await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.DefinitionId, cancellationToken)
+        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
             .ConfigureAwait(false);
         if (!row.Enabled)
             throw new ApiValidationException("schedule is disabled.", new { field = "enabled" });
@@ -325,9 +325,9 @@ internal sealed class ExecutionScheduleService(
         {
             ScheduleId = row.ScheduleId,
             Name = row.Name,
-            DefinitionId = row.DefinitionId,
+            DefinitionId = row.RequireDefinitionId(),
             DefinitionVersionId = row.DefinitionVersionId,
-            RunAsPrincipalId = row.RunAsPrincipalId,
+            RunAsPrincipalId = row.RequireRunAsPrincipalId(),
             CronExpression = row.CronExpression,
             TimeZone = row.TimeZone,
             OverlapPolicy = row.OverlapPolicy,
@@ -342,9 +342,9 @@ internal sealed class ExecutionScheduleService(
         {
             ScheduleId = row.ScheduleId,
             Name = row.Name,
-            DefinitionId = row.DefinitionId,
+            DefinitionId = row.RequireDefinitionId(),
             DefinitionVersionId = row.DefinitionVersionId,
-            RunAsPrincipalId = row.RunAsPrincipalId,
+            RunAsPrincipalId = row.RequireRunAsPrincipalId(),
             CreatedByPrincipalId = row.CreatedByPrincipalId,
             CronExpression = row.CronExpression,
             TimeZone = row.TimeZone,

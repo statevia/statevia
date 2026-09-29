@@ -9,14 +9,17 @@ public sealed class ExecutionScheduleRow
     /// <summary>テナント ID。</summary>
     public Guid TenantId { get; set; }
 
-    /// <summary>対象定義。</summary>
-    public Guid DefinitionId { get; set; }
+    /// <summary>システムジョブ識別子。テナントスケジュールは null。</summary>
+    public string? JobKey { get; set; }
+
+    /// <summary>対象定義。システム行は null。</summary>
+    public Guid? DefinitionId { get; set; }
 
     /// <summary>ピンした定義版。null なら発火時 latest。</summary>
     public Guid? DefinitionVersionId { get; set; }
 
-    /// <summary>run-as ServiceAccount の Principal ID。</summary>
-    public Guid RunAsPrincipalId { get; set; }
+    /// <summary>run-as ServiceAccount の Principal ID。システム行は null。</summary>
+    public Guid? RunAsPrincipalId { get; set; }
 
     /// <summary>作成した Principal。</summary>
     public Guid CreatedByPrincipalId { get; set; }
@@ -50,4 +53,16 @@ public sealed class ExecutionScheduleRow
 
     /// <summary>更新日時（UTC）。</summary>
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>テナントスケジュールの定義 ID。</summary>
+    /// <returns>定義 ID。</returns>
+    /// <exception cref="InvalidOperationException">システム行など、定義が無い。</exception>
+    public Guid RequireDefinitionId() =>
+        DefinitionId ?? throw new InvalidOperationException("Tenant schedule requires definition_id.");
+
+    /// <summary>テナントスケジュールの run-as Principal ID。</summary>
+    /// <returns>Principal ID。</returns>
+    /// <exception cref="InvalidOperationException">システム行など、run-as が無い。</exception>
+    public Guid RequireRunAsPrincipalId() =>
+        RunAsPrincipalId ?? throw new InvalidOperationException("Tenant schedule requires run_as_principal_id.");
 }

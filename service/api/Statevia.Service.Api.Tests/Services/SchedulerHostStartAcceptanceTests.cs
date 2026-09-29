@@ -12,6 +12,30 @@ namespace Statevia.Service.Api.Tests.Services;
 /// <summary>Scheduler プロセスの Start 受理（製品 Engine なし）。</summary>
 public sealed class SchedulerHostStartAcceptanceTests
 {
+    /// <summary>Development の Host と同じく、構築時に DI グラフを検証できる。</summary>
+    [Fact]
+    public void AddStateviaSchedulerProcess_ValidateOnBuild_Succeeds()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = "Host=127.0.0.1;Database=statevia;Username=x;Password=y"
+        }).Build();
+        services.AddStateviaSchedulerProcess(configuration);
+
+        // Act
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        // Assert
+        Assert.NotNull(provider.GetService<INodesSchemaProvider>());
+    }
+
     /// <summary>製品 Engine を登録しない scheduler プロセスで Start が Start work item を載せる。</summary>
     [Fact]
     public async Task StartAsync_WithoutProductEngine_EnqueuesStartWorkItem()

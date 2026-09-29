@@ -1,4 +1,3 @@
-using Sentry;
 using Statevia.Runtime.Observability;
 
 namespace Statevia.Service.Api.Hosting;

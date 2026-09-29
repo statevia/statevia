@@ -49,6 +49,17 @@ internal static partial class ExecutionScheduleDispatchLogMessages
         Guid tenantId,
         Guid executionId);
 
+    /// <summary>システム点検が件数を残した。ログはテナント ID と件数だけ。</summary>
+    [LoggerMessage(
+        EventId = 3036,
+        Level = LogLevel.Information,
+        Message = "Stuck execution report completed. TenantId={tenantId} StuckExecutionCount={stuckExecutionCount} FailedScheduleRunCount={failedScheduleRunCount}")]
+    public static partial void StuckExecutionReportCompleted(
+        this ILogger logger,
+        Guid tenantId,
+        int stuckExecutionCount,
+        int failedScheduleRunCount);
+
     [LoggerMessage(
         EventId = 3034,
         Level = LogLevel.Warning,

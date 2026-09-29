@@ -73,7 +73,9 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
 
         // Act
         await sut.StartAsync(cts.Token);
-        await WaitUntilAsync(() => queue.CompleteCallCount > 0, TimeSpan.FromSeconds(1.5));
+        await WaitUntilAsync(
+            () => queue.CompleteCallCount > 0 && executions.EndOwnedSessionCalls > 0,
+            TimeSpan.FromSeconds(1.5));
         await sut.StopAsync(CancellationToken.None);
 
         // Assert

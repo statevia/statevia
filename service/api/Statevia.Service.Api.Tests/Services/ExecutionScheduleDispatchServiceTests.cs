@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Statevia.Core.Application.Contracts.Scheduling;
+using Statevia.Core.Application.Scheduling;
 using Statevia.Core.Application.Services;
-using Statevia.Infrastructure.Common;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
 
@@ -320,6 +321,58 @@ public sealed class ExecutionScheduleDispatchServiceTests
         Assert.Equal(0, executions.StartCount);
     }
 
+    /// <summary>システム行は Start せず、待機なしの古い Running とテナント失敗枠だけを数える。</summary>
+    [Fact]
+    public async Task DispatchDueAsync_SystemReport_DoesNotStartAndWritesTwoCounts()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var executions = new FakeExecutionService(db.TenantAccessor);
+        var sut = CreateSut(db, Guid.NewGuid(), executions);
+        await SeedSystemReportFixtureAsync(db);
+
+        // Act
+        var processed = await sut.DispatchDueAsync(DueNowUtc, limit: 64, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(0, executions.StartCount);
+        await using var verify = db.Factory.CreateDbContext();
+        Assert.Equal(3, await verify.Executions.IgnoreQueryFilters().CountAsync());
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters()
+            .SingleAsync(row => row.Outcome == ExecutionScheduleRunOutcomes.Completed);
+        Assert.Equal("""{"stuckExecutionCount":1,"failedScheduleRunCount":1}""", run.SummaryJson);
+        Assert.Null(run.ExecutionId);
+        Assert.False(run.Manual);
+    }
+
+    /// <summary>実効 Action タイムアウトが範囲外なら補正せず REPORT_FAILED。</summary>
+    [Fact]
+    public async Task DispatchDueAsync_SystemReport_WhenTimeoutOutOfRange_FailsWithoutStart()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var executions = new FakeExecutionService(db.TenantAccessor);
+        var sut = CreateSut(
+            db,
+            Guid.NewGuid(),
+            executions,
+            actionTimeout: new EffectiveActionTimeoutSettings(null, 5));
+        await SeedSystemScheduleAsync(db);
+
+        // Act
+        var processed = await sut.DispatchDueAsync(DueNowUtc, limit: 64, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(0, executions.StartCount);
+        await using var verify = db.Factory.CreateDbContext();
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(SystemScheduleRows.ReportFailedErrorCode, run.ErrorCode);
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
+        Assert.True(schedule.Enabled);
+    }
+
     private static async Task<Guid> SeedDueScheduleAsync(
         SqliteTestDatabase db,
         Guid runAs,
@@ -388,12 +441,124 @@ public sealed class ExecutionScheduleDispatchServiceTests
         await ctx.SaveChangesAsync();
     }
 
+    private static async Task SeedSystemScheduleAsync(SqliteTestDatabase db)
+    {
+        await using var ctx = db.Factory.CreateDbContext();
+        ctx.ExecutionSchedules.Add(new ExecutionScheduleRow
+        {
+            ScheduleId = Guid.NewGuid(),
+            TenantId = TestTenantIds.DefaultTenantId,
+            JobKey = SystemScheduleRows.StuckExecutionReportJobKey,
+            Name = SystemScheduleRows.StuckExecutionReportJobKey,
+            CronExpression = "0 * * * *",
+            TimeZone = "UTC",
+            OverlapPolicy = "skip",
+            Enabled = true,
+            NextFireAt = SlotUtc,
+            CreatedAt = SlotUtc,
+            UpdatedAt = SlotUtc
+        });
+        await ctx.SaveChangesAsync();
+    }
+
+    private static async Task SeedSystemReportFixtureAsync(SqliteTestDatabase db)
+    {
+        await using var ctx = db.Factory.CreateDbContext();
+        var project = ProjectTestData.AddDefaultProject(ctx, TestTenantIds.DefaultTenantId, "default");
+        var seeded = DefinitionTestData.AddDefinitionWithVersion(
+            ctx,
+            TestTenantIds.DefaultTenantId,
+            Guid.NewGuid(),
+            "report-fixture",
+            project.ProjectId);
+        var systemScheduleId = Guid.NewGuid();
+        var tenantScheduleId = Guid.NewGuid();
+        ctx.ExecutionSchedules.Add(new ExecutionScheduleRow
+        {
+            ScheduleId = systemScheduleId,
+            TenantId = TestTenantIds.DefaultTenantId,
+            JobKey = SystemScheduleRows.StuckExecutionReportJobKey,
+            Name = SystemScheduleRows.StuckExecutionReportJobKey,
+            CronExpression = "0 * * * *",
+            TimeZone = "UTC",
+            OverlapPolicy = "skip",
+            Enabled = true,
+            NextFireAt = SlotUtc,
+            CreatedAt = SlotUtc,
+            UpdatedAt = SlotUtc
+        });
+        ctx.ExecutionSchedules.Add(new ExecutionScheduleRow
+        {
+            ScheduleId = tenantScheduleId,
+            TenantId = TestTenantIds.DefaultTenantId,
+            DefinitionId = seeded.Definition.DefinitionId,
+            RunAsPrincipalId = Guid.NewGuid(),
+            CreatedByPrincipalId = Guid.NewGuid(),
+            Name = "tenant-job",
+            CronExpression = "0 3 * * *",
+            TimeZone = "UTC",
+            OverlapPolicy = "skip",
+            Enabled = true,
+            NextFireAt = SlotUtc.AddDays(1),
+            CreatedAt = SlotUtc,
+            UpdatedAt = SlotUtc
+        });
+        var stuckId = Guid.NewGuid();
+        var waitingId = Guid.NewGuid();
+        var freshId = Guid.NewGuid();
+        ctx.Executions.AddRange(
+            CreateRunning(stuckId, seeded.Version.DefinitionVersionId, DueNowUtc.AddMinutes(-2)),
+            CreateRunning(waitingId, seeded.Version.DefinitionVersionId, DueNowUtc.AddMinutes(-2)),
+            CreateRunning(freshId, seeded.Version.DefinitionVersionId, DueNowUtc));
+        ctx.ExecutionWaits.Add(new ExecutionWaitRow
+        {
+            ExecutionId = waitingId,
+            NodeId = "wait",
+            WaitKind = ExecutionWaitKind.EventWait,
+            AllowedEvents = ["go"],
+            CreatedAt = DueNowUtc
+        });
+        ctx.ExecutionScheduleRuns.Add(new ExecutionScheduleRunRow
+        {
+            ScheduleRunId = Guid.NewGuid(),
+            ScheduleId = tenantScheduleId,
+            TenantId = TestTenantIds.DefaultTenantId,
+            ScheduledFireAt = SlotUtc.AddHours(-2),
+            Outcome = ExecutionScheduleRunOutcomes.Failed,
+            CreatedAt = DueNowUtc.AddMinutes(-30)
+        });
+        ctx.ExecutionScheduleRuns.Add(new ExecutionScheduleRunRow
+        {
+            ScheduleRunId = Guid.NewGuid(),
+            ScheduleId = systemScheduleId,
+            TenantId = TestTenantIds.DefaultTenantId,
+            ScheduledFireAt = SlotUtc.AddHours(-2),
+            Outcome = ExecutionScheduleRunOutcomes.Failed,
+            ErrorCode = SystemScheduleRows.ReportFailedErrorCode,
+            CreatedAt = DueNowUtc.AddMinutes(-20)
+        });
+        await ctx.SaveChangesAsync();
+    }
+
+    private static ExecutionRow CreateRunning(Guid executionId, Guid definitionVersionId, DateTime updatedAt) =>
+        new()
+        {
+            ExecutionId = executionId,
+            TenantId = TestTenantIds.DefaultTenantId,
+            DefinitionId = Guid.NewGuid(),
+            DefinitionVersionId = definitionVersionId,
+            Status = ExecutionProjectionStatuses.Running,
+            StartedAt = updatedAt,
+            UpdatedAt = updatedAt
+        };
+
     private static ExecutionScheduleDispatchService CreateSut(
         SqliteTestDatabase db,
         Guid runAs,
         FakeExecutionService executions,
         bool principalActive = true,
-        TenantLifecycle tenantLifecycle = TenantLifecycle.Active)
+        TenantLifecycle tenantLifecycle = TenantLifecycle.Active,
+        EffectiveActionTimeoutSettings? actionTimeout = null)
     {
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var principals = new StubPrincipalDataAccess();
@@ -406,7 +571,9 @@ public sealed class ExecutionScheduleDispatchServiceTests
             db.TenantAccessor,
             new TestCoreTransactionExecutor(uowFactory),
             new DefaultIdGenerator(),
-            NullLogger<ExecutionScheduleDispatchService>.Instance);
+            new ExecutionScheduleFireSupport(
+                NullLogger<ExecutionScheduleFireSupport>.Instance,
+                actionTimeout ?? EffectiveActionTimeoutSettings.PlatformDefault));
     }
 
     private sealed class SingleDefinitionGrantStore(Guid principalId, Guid definitionId) : IPrincipalResourceGrantStore

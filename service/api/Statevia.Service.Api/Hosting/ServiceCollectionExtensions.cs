@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Statevia.Core.Actions.Abstractions.Catalog;
 using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Core.Actions.Abstractions.Visibility;
@@ -13,7 +14,6 @@ using Statevia.Infrastructure.Modules.DependencyInjection;
 using Statevia.Infrastructure.Notification.DependencyInjection;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Infrastructure.Security.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.DependencyInjection;
 using Statevia.Runtime.Observability;
@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         services.AddStateviaExecutionRuntime(configuration);
+        services.AddHostedService<SystemScheduleEnsureHostedService>();
         services.AddStateviaApiHost(configuration);
         return services;
     }
@@ -97,6 +98,8 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddStateviaSchedulerHost(configuration);
+        services.AddHostedService<SystemScheduleEnsureHostedService>();
+        services.AddSingleton<INodesSchemaProvider, NodesSchemaProvider>();
         services.AddSingleton<IExecutionEngine, SchedulerHostRejectedExecutionEngine>();
         services.AddSingleton<IActionExecutor, SchedulerHostRejectedActionExecutor>();
         services.AddStateviaCoreApplication();

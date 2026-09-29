@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Statevia.Core.Application.Contracts.Scheduling;
 using Statevia.Core.Application.Contracts.Services;
 using Statevia.Core.Application.Contracts.Validation;
 
@@ -105,6 +106,7 @@ internal sealed class TenantBootstrap
             CreatedAt = now,
             UpdatedAt = now
         });
+        db.ExecutionSchedules.Add(SystemScheduleRows.Create(_idGenerator.NewSequentialGuid(), tenantId, now));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await _platformDataAccess.EnsurePermissionCatalogAsync(cancellationToken).ConfigureAwait(false);
