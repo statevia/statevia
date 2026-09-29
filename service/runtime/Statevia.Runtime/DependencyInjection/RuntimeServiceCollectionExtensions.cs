@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Statevia.Core.Application.Contracts.Security;
+using Statevia.Core.Application.Scheduling;
 using Statevia.Infrastructure.Common;
 using Statevia.Infrastructure.Common.DependencyInjection;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Infrastructure.Security.DependencyInjection;
-using Statevia.Core.Application.Scheduling;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.Services;
 

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace Statevia.Service.Api.Hosting;
 
 /// <summary>システムスケジュール補完の構造化ログ。</summary>

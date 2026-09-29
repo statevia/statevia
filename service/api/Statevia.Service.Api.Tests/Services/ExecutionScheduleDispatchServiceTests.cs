@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Statevia.Core.Application.Contracts.Scheduling;
 using Statevia.Core.Application.Scheduling;
 using Statevia.Core.Application.Services;
-using Statevia.Infrastructure.Common;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
 

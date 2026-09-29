@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Statevia.Core.Application.Scheduling;
+using System.Text.Json;
 
 namespace Statevia.Core.Application.Services;
 

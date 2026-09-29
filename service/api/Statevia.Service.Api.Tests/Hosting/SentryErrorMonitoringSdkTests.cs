@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sentry;
 using Statevia.Runtime.Observability;
 using Statevia.Service.Api.Hosting;
 

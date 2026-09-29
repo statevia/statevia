@@ -1,6 +1,6 @@
+using Statevia.Core.Application.Contracts.Persistence;
 using System.Security.Cryptography;
 using System.Text;
-using Statevia.Core.Application.Contracts.Persistence;
 
 namespace Statevia.Core.Application.Contracts.Scheduling;
 

@@ -1,8 +1,8 @@
-using System.Runtime.ExceptionServices;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Statevia.Core.Application.Contracts.Scheduling;
 using Statevia.Core.Application.Scheduling;
+using System.Runtime.ExceptionServices;
+using System.Text.Json;
 
 namespace Statevia.Core.Application.Services;
 

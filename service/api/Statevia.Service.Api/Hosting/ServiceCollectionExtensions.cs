@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Statevia.Core.Actions.Abstractions.Catalog;
 using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Core.Actions.Abstractions.Visibility;
@@ -13,7 +14,6 @@ using Statevia.Infrastructure.Modules.DependencyInjection;
 using Statevia.Infrastructure.Notification.DependencyInjection;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Infrastructure.Security.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.DependencyInjection;
 using Statevia.Runtime.Observability;
