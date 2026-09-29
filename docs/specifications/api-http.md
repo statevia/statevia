@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.25 |
+| Version | 1.26 |
 | 更新日 | 2026-09-29 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
@@ -25,6 +25,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.26（2026-09-29）**: 定期実行 API はシステム点検行を返さない。指定 ID は不在と同じ 404。
 
 **Version 1.25（2026-09-29）**: User / ServiceAccount の実行リソース許可（管理 GET/PUT）と、Start・定期実行での `RESOURCE_GRANT_DENIED` を追加。
 
@@ -470,6 +472,8 @@ Request:
 
 権限は専用キーを増やさない。一覧・取得は `executions.read`。作成・更新・削除・手動実行は `executions.write` と、対象定義の project executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みは 404。
 
+システムがテナントごとに持つ点検行（`schedules.job_key` あり）は、一覧・取得・更新・削除・手動実行の対象にしない。ID を指定しても不在と同じ 404（`Schedule not found`）。作成リクエストに `job_key` は無く、成功レスポンスの形は変わらない。run を返す API を足す場合も、テナントから見える親（`job_key` が NULL）の run だけを返す。
+
 **POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版は 404。run-as の実行リソース許可にその定義が無ければ **403**（`RESOURCE_GRANT_DENIED`）で保存しない。呼び出し側の許可では決めない。
 
 **GET /v1/schedules** — 200。テナント内のみ。`input` は含めない。
@@ -491,6 +495,7 @@ Request:
 - 保存枠の次枠もすでに now 以下なら、その枠は Start しない（途中枠は埋めない）。`nextFireAt` は now の次枠。
 - ServiceAccount 無効、テナントが Active でない、または実行リソース許可が外れているときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。許可不足の `errorCode` は `RESOURCE_GRANT_DENIED`。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
 - 手動実行は `manual=true`、`scheduledFireAt` は null。
+- `job_key` がある行は Start しない。実行も work item も増やさない。成功時の `schedule_runs.outcome` は `completed` で、`summary_json` は件数だけを持つ。この run はテナント API に出さない。
 
 資格のない ServiceAccount の作成は §4.1.3。ジョブ作成では発行しない。
 

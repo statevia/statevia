@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.23
+Version: 1.24
 Project: 実行型ステートマシン
+
+**Version 1.24（2026-09-29）**: `schedules.job_key` と `schedule_runs.summary_json` を追加。点検行は定義と run-as を持たない。`schedule_runs.outcome` に `completed` を追加。
 
 **Version 1.23（2026-09-29）**: `principal_resource_grants` を追加（User / ServiceAccount の Start 用オプトイン）。
 
@@ -83,8 +85,8 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | execution_branches | ExecutionSpace | Fork 物理子の親子リンク正本（親 Join 集約用） |
 | execution_runtime_checkpoints | ExecutionSpace | 再開可能なランタイム状態の文書ストア（現行 Postgres 物理テーブル。契約は `IExecutionCheckpointStore`）。Worker 所有・fencing 列を含む |
 | execution_work_items | ExecutionSpace | Start / Resume / Cancel を配送する lease 付き耐久キュー |
-| schedules | ExecutionSpace | 定義の定期 Start（cron・run-as ServiceAccount・次回発火）。論理削除あり |
-| schedule_runs | ExecutionSpace | 枠または手動実行の結果（started / skipped_overlap / failed） |
+| schedules | ExecutionSpace | 定義の定期 Start と、テナント API に出さない点検行。論理削除あり |
+| schedule_runs | ExecutionSpace | 枠または手動実行の結果（started / skipped_overlap / failed / completed） |
 | command_dedup | 信頼性 | コマンド冪等（Start 等の `X-Idempotency-Key`） |
 | event_delivery_dedup | 信頼性 | イベント配送冪等（Publish / Cancel の client event id） |
 | tenants | Platform | テナントの truth（内部 UUID・外部 `tenant_key`・ライフサイクル） |
@@ -372,17 +374,18 @@ Hosted Runtime が Fork を物理子 execution に展開したときの親子リ
 
 ### 2.10.4 schedules
 
-定義に埋め込まない定期 Start。発火は既存の Start work item（`kind=Start`）を積む。
+定義に埋め込まない定期 Start。発火は既存の Start work item（`kind=Start`）を積む。`job_key` がある行は点検専用で、Start しない。テナント向け API は `job_key IS NULL` の行だけを返す。
 
 | カラム | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
 | schedule_id | uuid | PK, NOT NULL | スケジュール ID |
 | tenant_id | uuid | FK → tenants, NOT NULL | テナント |
-| definition_id | uuid | NOT NULL | 対象定義 |
-| definition_version_id | uuid | NULL | 固定する版。NULL は発火時点の latest |
-| run_as_principal_id | uuid | NOT NULL | 実行 Owner にする ServiceAccount の Principal |
-| created_by_principal_id | uuid | NOT NULL | 作成者。実行 Owner ではない |
-| name | varchar(128) | NOT NULL | テナント内の表示名 |
+| job_key | varchar(64) | NULL | 点検キー。テナントの定期 Start は NULL。非 NULL は `stuck-execution-report` のみ |
+| definition_id | uuid | NULL | 対象定義。点検行は NULL |
+| definition_version_id | uuid | NULL | 固定する版。NULL は発火時点の latest。点検行は NULL |
+| run_as_principal_id | uuid | NULL | 実行 Owner にする ServiceAccount の Principal。点検行は NULL |
+| created_by_principal_id | uuid | NOT NULL | 作成者。実行 Owner ではない。点検行はゼロ UUID |
+| name | varchar(128) | NOT NULL | テナント内の表示名。点検行は名前一意の対象外 |
 | cron_expression | varchar(128) | NOT NULL | 5 フィールド cron |
 | time_zone | varchar(64) | NOT NULL | IANA タイムゾーン |
 | overlap_policy | varchar(16) | NOT NULL | `skip` または `allow` |
@@ -393,9 +396,11 @@ Hosted Runtime が Fork を物理子 execution に展開したときの親子リ
 | created_at | timestamptz | NOT NULL | 作成日時 |
 | updated_at | timestamptz | NOT NULL | 更新日時 |
 
-**インデックス:** `(enabled, deleted_at, next_fire_at)`（due claim）。`UNIQUE (tenant_id, name) WHERE deleted_at IS NULL`。`tenant_id`。
+**インデックス:** `(enabled, deleted_at, next_fire_at)`（due claim）。`UNIQUE (tenant_id, name) WHERE job_key IS NULL AND deleted_at IS NULL`。`UNIQUE (tenant_id, job_key) WHERE job_key IS NOT NULL AND deleted_at IS NULL`。`tenant_id`。
 
-欠発（保存枠の次枠も now 以下）は行を増やさず `next_fire_at` だけ進める。
+**チェック:** テナント行は `job_key` が NULL かつ `definition_id` と `run_as_principal_id` が NOT NULL。点検行は `job_key` が非 NULL かつ `definition_id`、`run_as_principal_id`、`input_json` が NULL。`job_key` は NULL または `stuck-execution-report`。
+
+欠発（保存枠の次枠も now 以下）は行を増やさず `next_fire_at` だけ進める。点検行も同じ。
 
 ### 2.10.5 schedule_runs
 
@@ -406,9 +411,10 @@ Hosted Runtime が Fork を物理子 execution に展開したときの親子リ
 | tenant_id | uuid | FK → tenants, NOT NULL | テナント |
 | scheduled_fire_at | timestamptz | NULL | cron 枠。手動実行は NULL |
 | manual | boolean | NOT NULL | 手動実行なら true |
-| outcome | varchar(32) | NOT NULL | `started` / `skipped_overlap` / `failed` |
-| execution_id | uuid | NULL | Start できた実行。失敗・skip は NULL |
+| outcome | varchar(32) | NOT NULL | `started` / `skipped_overlap` / `failed` / `completed` |
+| execution_id | uuid | NULL | Start できた実行。失敗・skip・点検の `completed` は NULL |
 | error_code | varchar(64) | NULL | 失敗時のコード |
+| summary_json | text | NULL | 点検成功時の件数。テナントの Start 結果では NULL |
 | created_at | timestamptz | NOT NULL | 記録日時 |
 
 **インデックス:** `UNIQUE (schedule_id, scheduled_fire_at) WHERE scheduled_fire_at IS NOT NULL`（同一 cron 枠は 1 行）。`tenant_id`。
@@ -1024,6 +1030,7 @@ erDiagram
   schedules {
     uuid schedule_id PK
     uuid tenant_id FK
+    string job_key
     uuid definition_id
     uuid run_as_principal_id
     timestamptz next_fire_at
@@ -1037,11 +1044,13 @@ erDiagram
     boolean manual
     string outcome
     uuid execution_id
+    string summary_json
   }
 ```
 
-- **schedules.run_as_principal_id** は実行の Owner。作成者列とは別。
-- **schedule_runs.execution_id** は Start できたときだけ。失敗・overlap skip・手動以外の欠発では実行行が無い（欠発は run 行も無い）。
+- **schedules.run_as_principal_id** はテナントスケジュールの実行 Owner。作成者列とは別。点検行は NULL。
+- **schedule_runs.execution_id** は Start できたときだけ。失敗・overlap skip・点検の `completed`・手動以外の欠発では実行行が無い（欠発は run 行も無い）。
+- **schedule_runs.summary_json** は点検が `completed` のときだけ。キーは `stuckExecutionCount` と `failedScheduleRunCount`。
 
 ---
 
@@ -1062,7 +1071,8 @@ erDiagram
 | execution_wait_subscriptions | (topic, correlation_key) | INDEX |
 | execution_runtime_checkpoints | lease_until | INDEX |
 | execution_work_items | (available_at, lease_until) | INDEX |
-| schedules | (tenant_id, name) WHERE deleted_at IS NULL | UNIQUE |
+| schedules | (tenant_id, name) WHERE job_key IS NULL AND deleted_at IS NULL | UNIQUE |
+| schedules | (tenant_id, job_key) WHERE job_key IS NOT NULL AND deleted_at IS NULL | UNIQUE |
 | schedules | (enabled, deleted_at, next_fire_at) | INDEX |
 | schedule_runs | (schedule_id, scheduled_fire_at) WHERE scheduled_fire_at IS NOT NULL | UNIQUE |
 | event_delivery_dedup | (tenant_id, execution_id, batch_id) | INDEX |
@@ -1095,6 +1105,7 @@ erDiagram
 | `20260817140816_AddUserUsername` | `users.username` 追加（varchar(64)）と既存 `email` からのバックフィル。`email` を NULL 可の varchar(256) にし、非 NULL のみテナント内一意 |
 | `20260918172216_AddExecutionSchedules` | `schedules` / `schedule_runs` を追加 |
 | `20260927160709_AddPrincipalResourceGrants` | `principal_resource_grants` を追加 |
+| `20260929071454_AddSystemScheduleJobKey` | `schedules.job_key`、定義と run-as の NULL 許可、点検用チェックと部分一意、`schedule_runs.summary_json` |
 
 適用: `cd service/api && dotnet ef database update --project Statevia.Service.Api`
 

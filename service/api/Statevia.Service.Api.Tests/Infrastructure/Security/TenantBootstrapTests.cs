@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Statevia.Core.Application.Contracts.Scheduling;
 
 namespace Statevia.Service.Api.Tests.Infrastructure.Security;
 
@@ -29,6 +30,11 @@ public sealed class TenantBootstrapTests
         var row = await db.Tenants.IgnoreQueryFilters()
             .SingleAsync(t => t.TenantKey == "acme-corp");
         Assert.Equal(result.TenantId, row.TenantId);
+        var schedule = await db.ExecutionSchedules.IgnoreQueryFilters()
+            .SingleAsync(item => item.TenantId == result.TenantId);
+        Assert.Equal(SystemScheduleRows.StuckExecutionReportJobKey, schedule.JobKey);
+        Assert.Null(schedule.DefinitionId);
+        Assert.Null(schedule.RunAsPrincipalId);
     }
 
     /// <summary>既存キーは skipIfExists で重複しない。</summary>

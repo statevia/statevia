@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         services.AddStateviaExecutionRuntime(configuration);
+        services.AddHostedService<SystemScheduleEnsureHostedService>();
         services.AddStateviaApiHost(configuration);
         return services;
     }
@@ -97,6 +98,8 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddStateviaSchedulerHost(configuration);
+        services.AddHostedService<SystemScheduleEnsureHostedService>();
+        services.AddSingleton<INodesSchemaProvider, NodesSchemaProvider>();
         services.AddSingleton<IExecutionEngine, SchedulerHostRejectedExecutionEngine>();
         services.AddSingleton<IActionExecutor, SchedulerHostRejectedActionExecutor>();
         services.AddStateviaCoreApplication();

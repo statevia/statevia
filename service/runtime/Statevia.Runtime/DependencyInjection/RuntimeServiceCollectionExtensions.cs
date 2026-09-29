@@ -5,6 +5,7 @@ using Statevia.Infrastructure.Common;
 using Statevia.Infrastructure.Common.DependencyInjection;
 using Statevia.Infrastructure.Persistence.DependencyInjection;
 using Statevia.Infrastructure.Security.DependencyInjection;
+using Statevia.Core.Application.Scheduling;
 using Statevia.Runtime.Configuration;
 using Statevia.Runtime.Services;
 
@@ -91,6 +92,21 @@ public static class RuntimeServiceCollectionExtensions
                     and <= WorkerRuntimeOptions.MaxMaxAttempts,
                 "Statevia:Runtime:Worker:MaxAttempts must be between 1 and 1000.")
             .ValidateOnStart();
+        services.AddSingleton(ReadActionTimeout(configuration));
         return services;
+    }
+
+    /// <summary>Container 実行と同じ実効 Action タイムアウトを読む。起動では落とさない。</summary>
+    private static EffectiveActionTimeoutSettings ReadActionTimeout(IConfiguration configuration)
+    {
+        var sandbox = configuration.GetSection("Statevia:ExecutionPolicy:Sandbox:TimeoutSeconds");
+        int? sandboxSeconds = sandbox.Value is { Length: > 0 } text && int.TryParse(text, out var parsed)
+            ? parsed
+            : null;
+        var docker = configuration.GetSection("Statevia:ExecutionPolicy:Sandbox:Docker:DefaultTimeoutSeconds");
+        var dockerSeconds = docker.Value is { Length: > 0 } dockerText && int.TryParse(dockerText, out var dockerParsed)
+            ? dockerParsed
+            : EffectiveActionTimeoutSettings.DefaultDockerSeconds;
+        return new EffectiveActionTimeoutSettings(sandboxSeconds, dockerSeconds);
     }
 }

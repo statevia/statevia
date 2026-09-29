@@ -1,7 +1,7 @@
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Statevia.Core.Application.Contracts.Scheduling;
 using Statevia.Core.Application.Scheduling;
 
 namespace Statevia.Core.Application.Services;
@@ -9,6 +9,7 @@ namespace Statevia.Core.Application.Services;
 /// <summary>due スケジュールを claim し、run-as SA 文脈で既存 <c>StartAsync</c> を呼ぶ。</summary>
 /// <remarks>
 /// <para>欠発は Start せず <c>next_fire_at</c> だけ進める。overlap skip は非終端実行があるとき Start しない。</para>
+/// <para>システム行は Start しない。停滞は実効 Action タイムアウトと投影の <c>updated_at</c> で数える。</para>
 /// <para>枠の一意制約と Start 冪等キーで二重 Dispatcher を 1 実行に畳む。</para>
 /// </remarks>
 /// <param name="schedules">claim / run / next 更新。</param>
@@ -17,7 +18,7 @@ namespace Statevia.Core.Application.Services;
 /// <param name="tenantContext">発火時に SA を載せる。</param>
 /// <param name="executor">claim と skip/fail/start 結果を同一トランザクションにする。</param>
 /// <param name="ids">schedule_runs ID。</param>
-/// <param name="logger">構造化ログ。</param>
+/// <param name="fire">構造化ログと停滞判定の実効 Action タイムアウト。</param>
 internal sealed class ExecutionScheduleDispatchService(
     IExecutionScheduleRepository schedules,
     IExecutionService executions,
@@ -25,7 +26,7 @@ internal sealed class ExecutionScheduleDispatchService(
     ITenantContextAccessor tenantContext,
     ICoreTransactionExecutor executor,
     IIdGenerator ids,
-    ILogger<ExecutionScheduleDispatchService> logger) : IExecutionScheduleDispatchService
+    ExecutionScheduleFireSupport fire) : IExecutionScheduleDispatchService
 {
     private const string SchedulerMethod = "SCHEDULER";
     private const string StartFailedCode = "START_FAILED";
@@ -58,7 +59,7 @@ internal sealed class ExecutionScheduleDispatchService(
             throw new ApiValidationException(ScheduleDisabled, new { field = "enabled" });
 
         var tenant = await principals.FindTenantAsync(row.TenantId, cancellationToken).ConfigureAwait(false);
-        var principal = await principals.FindPrincipalAsync(row.RunAsPrincipalId, cancellationToken)
+        var principal = await principals.FindPrincipalAsync(row.RequireRunAsPrincipalId(), cancellationToken)
             .ConfigureAwait(false);
         if (tenant is null ||
             tenant.Lifecycle != TenantLifecycle.Active ||
@@ -76,7 +77,7 @@ internal sealed class ExecutionScheduleDispatchService(
                 await schedules.AddRunAsync(uow, run, innerCt).ConfigureAwait(false);
                 await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
                 var permissions = await principals
-                    .ExpandPrincipalPermissionKeysAsync(row.RunAsPrincipalId, innerCt)
+                    .ExpandPrincipalPermissionKeysAsync(row.RequireRunAsPrincipalId(), innerCt)
                     .ConfigureAwait(false);
                 using (tenantContext.SetContext(new TenantContextState(
                            tenant.TenantId,
@@ -98,7 +99,7 @@ internal sealed class ExecutionScheduleDispatchService(
                             .ConfigureAwait(false);
                         run.ExecutionId = response.ResourceId;
                         await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
-                        logger.ScheduleManualRunStarted(row.ScheduleId, row.TenantId, response.ResourceId);
+                        fire.Logger.ScheduleManualRunStarted(row.ScheduleId, row.TenantId, response.ResourceId);
                     }
 #pragma warning disable CA1031
                     catch (Exception exception) when (exception is not OperationCanceledException)
@@ -106,8 +107,8 @@ internal sealed class ExecutionScheduleDispatchService(
                         run.Outcome = ExecutionScheduleRunOutcomes.Failed;
                         run.ErrorCode = MapErrorCode(exception);
                         await uow.SaveChangesAsync(innerCt).ConfigureAwait(false);
-                        logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
-                        logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, run.ErrorCode);
+                        fire.Logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
+                        fire.Logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, run.ErrorCode);
                         failure = exception;
                     }
 #pragma warning restore CA1031
@@ -157,7 +158,7 @@ internal sealed class ExecutionScheduleDispatchService(
         {
             await FailSlotAsync(uow, row, row.NextFireAt.AddMinutes(1), ValidationCode, cancellationToken)
                 .ConfigureAwait(false);
-            logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, ValidationCode);
+            fire.Logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, ValidationCode);
             return true;
         }
 
@@ -166,19 +167,22 @@ internal sealed class ExecutionScheduleDispatchService(
             var skipTo = CronNextFireCalculator.NextStrictlyAfter(row.CronExpression, row.TimeZone, utcNow);
             await schedules.AdvanceNextFireAtAsync(uow, row.ScheduleId, skipTo, utcNow, cancellationToken)
                 .ConfigureAwait(false);
-            logger.ScheduleFireMissedSlot(row.ScheduleId, row.TenantId);
+            fire.Logger.ScheduleFireMissedSlot(row.ScheduleId, row.TenantId);
             return true;
         }
 
+        if (row.JobKey is not null)
+            return await ProcessSystemRowAsync(uow, row, utcNow, nextAfterSlot, cancellationToken).ConfigureAwait(false);
+
         var tenant = await principals.FindTenantAsync(row.TenantId, cancellationToken).ConfigureAwait(false);
-        var principal = await principals.FindPrincipalAsync(row.RunAsPrincipalId, cancellationToken)
+        var principal = await principals.FindPrincipalAsync(row.RequireRunAsPrincipalId(), cancellationToken)
             .ConfigureAwait(false);
         if (tenant is null ||
             tenant.Lifecycle != TenantLifecycle.Active ||
             !IsUsableServiceAccount(principal, row.TenantId))
         {
             await FailSlotAsync(uow, row, nextAfterSlot, StartFailedCode, cancellationToken).ConfigureAwait(false);
-            logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, StartFailedCode);
+            fire.Logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, StartFailedCode);
             return true;
         }
 
@@ -198,7 +202,7 @@ internal sealed class ExecutionScheduleDispatchService(
             if (!occupied)
                 return false;
 
-            logger.ScheduleFireSkippedOverlap(row.ScheduleId, row.TenantId);
+            fire.Logger.ScheduleFireSkippedOverlap(row.ScheduleId, row.TenantId);
             return true;
         }
 
@@ -214,7 +218,7 @@ internal sealed class ExecutionScheduleDispatchService(
             return false;
 
         var permissions = await principals
-            .ExpandPrincipalPermissionKeysAsync(row.RunAsPrincipalId, cancellationToken)
+            .ExpandPrincipalPermissionKeysAsync(row.RequireRunAsPrincipalId(), cancellationToken)
             .ConfigureAwait(false);
         using (tenantContext.SetContext(new TenantContextState(
                    tenant.TenantId,
@@ -236,7 +240,7 @@ internal sealed class ExecutionScheduleDispatchService(
                     .ConfigureAwait(false);
                 run.ExecutionId = started.ResourceId;
                 await uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                logger.ScheduleFireStarted(row.ScheduleId, row.TenantId, started.ResourceId);
+                fire.Logger.ScheduleFireStarted(row.ScheduleId, row.TenantId, started.ResourceId);
             }
 #pragma warning disable CA1031
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -244,12 +248,74 @@ internal sealed class ExecutionScheduleDispatchService(
                 run.Outcome = ExecutionScheduleRunOutcomes.Failed;
                 run.ErrorCode = MapErrorCode(exception);
                 await uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
-                logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, run.ErrorCode);
+                fire.Logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
+                fire.Logger.ScheduleFireFailed(row.ScheduleId, row.TenantId, run.ErrorCode);
             }
 #pragma warning restore CA1031
         }
 
+        return true;
+    }
+
+    private async Task<bool> ProcessSystemRowAsync(
+        ICoreUnitOfWork uow,
+        ExecutionScheduleRow row,
+        DateTime utcNow,
+        DateTime nextAfterSlot,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(row.JobKey, SystemScheduleRows.StuckExecutionReportJobKey, StringComparison.Ordinal) ||
+            !fire.ActionTimeout.TryResolve(out var timeout))
+        {
+            await FailSlotAsync(uow, row, nextAfterSlot, SystemScheduleRows.ReportFailedErrorCode, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+
+        var tenant = await principals.FindTenantAsync(row.TenantId, cancellationToken).ConfigureAwait(false);
+        if (tenant is null || tenant.Lifecycle != TenantLifecycle.Active)
+        {
+            await FailSlotAsync(uow, row, nextAfterSlot, SystemScheduleRows.TenantNotActiveErrorCode, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+
+        int stuck;
+        int failedRuns;
+        try
+        {
+            var threshold = utcNow - timeout;
+            stuck = await schedules
+                .CountStuckExecutionsAsync(uow, row.TenantId, threshold, cancellationToken)
+                .ConfigureAwait(false);
+            var lastCompleted = await schedules
+                .FindLatestCompletedFireAtAsync(uow, row.ScheduleId, row.TenantId, cancellationToken)
+                .ConfigureAwait(false);
+            var createdAfter = lastCompleted ?? utcNow.AddHours(-1);
+            failedRuns = await schedules
+                .CountFailedTenantScheduleRunsAsync(uow, row.TenantId, createdAfter, cancellationToken)
+                .ConfigureAwait(false);
+        }
+#pragma warning disable CA1031
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            fire.Logger.ScheduleFireStartException(exception, row.ScheduleId, row.TenantId);
+            await FailSlotAsync(uow, row, nextAfterSlot, SystemScheduleRows.ReportFailedErrorCode, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+#pragma warning restore CA1031
+
+        var run = NewRun(row, ExecutionScheduleRunOutcomes.Completed, executionId: null, errorCode: null);
+        run.SummaryJson = JsonSerializer.Serialize(
+            new StuckExecutionReportSummary(stuck, failedRuns),
+            SummaryJsonOptions);
+        var occupied = await TryOccupySlotAsync(uow, row, nextAfterSlot, run, cancellationToken)
+            .ConfigureAwait(false);
+        if (!occupied)
+            return false;
+
+        fire.Logger.StuckExecutionReportCompleted(row.TenantId, stuck, failedRuns);
         return true;
     }
 
@@ -337,7 +403,7 @@ internal sealed class ExecutionScheduleDispatchService(
     private static StartExecutionRequest CreateStartRequest(ExecutionScheduleRow row) =>
         new()
         {
-            DefinitionId = row.DefinitionId.ToString("D"),
+            DefinitionId = row.RequireDefinitionId().ToString("D"),
             DefinitionVersionId = row.DefinitionVersionId,
             Input = DeserializeInput(row.InputJson)
         };
@@ -378,6 +444,13 @@ internal sealed class ExecutionScheduleDispatchService(
             ApiValidationException => ValidationCode,
             _ => StartFailedCode
         };
+
+    private static readonly JsonSerializerOptions SummaryJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private sealed record StuckExecutionReportSummary(int StuckExecutionCount, int FailedScheduleRunCount);
 
     private static JsonElement? DeserializeInput(string? json)
     {

@@ -67,4 +67,58 @@ public sealed class ExecutionScheduleRepositoryTests
         // Assert
         await Assert.ThrowsAsync<DbUpdateException>(act);
     }
+
+    /// <summary>一覧と ID 取得はシステム行を不在と同じにする。</summary>
+    [Fact]
+    public async Task ListAsync_OmitsSystemSchedule()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var repository = new ExecutionScheduleRepository(database.Factory);
+        var tenantId = TestTenantIds.DefaultTenantId;
+        var now = DateTime.UtcNow;
+        var systemId = Guid.NewGuid();
+        await repository.AddAsync(
+            new ExecutionScheduleRow
+            {
+                ScheduleId = systemId,
+                TenantId = tenantId,
+                JobKey = "stuck-execution-report",
+                Name = "stuck-execution-report",
+                CronExpression = "15 * * * *",
+                TimeZone = "UTC",
+                OverlapPolicy = "skip",
+                Enabled = true,
+                NextFireAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            CancellationToken.None);
+        await repository.AddAsync(
+            new ExecutionScheduleRow
+            {
+                ScheduleId = Guid.NewGuid(),
+                TenantId = tenantId,
+                DefinitionId = Guid.NewGuid(),
+                RunAsPrincipalId = Guid.NewGuid(),
+                CreatedByPrincipalId = Guid.NewGuid(),
+                Name = "visible",
+                CronExpression = "0 3 * * *",
+                TimeZone = "UTC",
+                OverlapPolicy = "skip",
+                Enabled = true,
+                NextFireAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            CancellationToken.None);
+
+        // Act
+        var listed = await repository.ListAsync(CancellationToken.None);
+        var hidden = await repository.GetByIdAsync(systemId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["visible"], listed.Select(row => row.Name).ToArray());
+        Assert.Null(hidden);
+    }
 }

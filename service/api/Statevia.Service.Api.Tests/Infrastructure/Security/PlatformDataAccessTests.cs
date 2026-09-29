@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Statevia.Core.Application.Contracts.Scheduling;
 
 namespace Statevia.Service.Api.Tests.Infrastructure.Security;
 
@@ -133,6 +134,10 @@ public sealed class PlatformDataAccessTests
         // Assert
         Assert.NotNull(tenant);
         Assert.Equal(TenantLifecycle.Active, tenant.Lifecycle);
+        await using var verify = database.Factory.CreateDbContext();
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters()
+            .SingleAsync(row => row.TenantId == tenant.TenantId);
+        Assert.Equal(SystemScheduleRows.StuckExecutionReportJobKey, schedule.JobKey);
     }
 
     /// <summary>API キー prefix + hash で資格情報を解決できる。</summary>

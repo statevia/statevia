@@ -71,6 +71,9 @@ public static class ExecutionScheduleRunOutcomes
 
     /// <summary>SA / テナント / Start 失敗。</summary>
     public const string Failed = "failed";
+
+    /// <summary>システム点検が件数を残せた。</summary>
+    public const string Completed = "completed";
 }
 
 /// <summary>POST /v1/schedules の本文。</summary>

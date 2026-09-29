@@ -16,7 +16,9 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         return await db.ExecutionSchedules
             .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.ScheduleId == scheduleId && row.DeletedAt == null, cancellationToken)
+            .FirstOrDefaultAsync(
+                row => row.ScheduleId == scheduleId && row.DeletedAt == null && row.JobKey == null,
+                cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -26,7 +28,7 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         return await db.ExecutionSchedules
             .AsNoTracking()
-            .Where(row => row.DeletedAt == null)
+            .Where(row => row.DeletedAt == null && row.JobKey == null)
             .OrderBy(row => row.Name)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -43,7 +45,24 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
         return await db.ExecutionSchedules
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                row => row.TenantId == tenantId && row.Name == name && row.DeletedAt == null,
+                row => row.TenantId == tenantId && row.Name == name && row.DeletedAt == null && row.JobKey == null,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> SystemJobExistsAsync(
+        Guid tenantId,
+        string jobKey,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobKey);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await db.ExecutionSchedules
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(
+                row => row.TenantId == tenantId && row.JobKey == jobKey && row.DeletedAt == null,
                 cancellationToken)
             .ConfigureAwait(false);
     }
@@ -165,7 +184,7 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
         await using var command = db.Database.GetDbConnection().CreateCommand();
         command.Transaction = db.Database.CurrentTransaction?.GetDbTransaction();
         command.CommandText = """
-            SELECT schedule_id, tenant_id, definition_id, definition_version_id,
+            SELECT schedule_id, tenant_id, job_key, definition_id, definition_version_id,
                    run_as_principal_id, created_by_principal_id, name, cron_expression,
                    time_zone, overlap_policy, input_json, enabled, deleted_at,
                    next_fire_at, created_at, updated_at
@@ -189,16 +208,20 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
 
     private static ExecutionScheduleRow ReadSchedule(DbDataReader reader)
     {
+        var jobKeyOrdinal = reader.GetOrdinal("job_key");
+        var definitionOrdinal = reader.GetOrdinal("definition_id");
         var versionOrdinal = reader.GetOrdinal("definition_version_id");
+        var runAsOrdinal = reader.GetOrdinal("run_as_principal_id");
         var inputOrdinal = reader.GetOrdinal("input_json");
         var deletedOrdinal = reader.GetOrdinal("deleted_at");
         return new ExecutionScheduleRow
         {
             ScheduleId = reader.GetGuid(reader.GetOrdinal("schedule_id")),
             TenantId = reader.GetGuid(reader.GetOrdinal("tenant_id")),
-            DefinitionId = reader.GetGuid(reader.GetOrdinal("definition_id")),
+            JobKey = reader.IsDBNull(jobKeyOrdinal) ? null : reader.GetString(jobKeyOrdinal),
+            DefinitionId = reader.IsDBNull(definitionOrdinal) ? null : reader.GetGuid(definitionOrdinal),
             DefinitionVersionId = reader.IsDBNull(versionOrdinal) ? null : reader.GetGuid(versionOrdinal),
-            RunAsPrincipalId = reader.GetGuid(reader.GetOrdinal("run_as_principal_id")),
+            RunAsPrincipalId = reader.IsDBNull(runAsOrdinal) ? null : reader.GetGuid(runAsOrdinal),
             CreatedByPrincipalId = reader.GetGuid(reader.GetOrdinal("created_by_principal_id")),
             Name = reader.GetString(reader.GetOrdinal("name")),
             CronExpression = reader.GetString(reader.GetOrdinal("cron_expression")),
@@ -211,6 +234,71 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
             CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
             UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountStuckExecutionsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        DateTime updatedAtOrBefore,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        var db = uow.GetDb();
+        return await db.Executions
+            .IgnoreQueryFilters()
+            .Where(execution =>
+                execution.TenantId == tenantId &&
+                execution.Status == ExecutionProjectionStatuses.Running &&
+                execution.UpdatedAt <= updatedAtOrBefore &&
+                !db.ExecutionWaits.Any(wait => wait.ExecutionId == execution.ExecutionId))
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountFailedTenantScheduleRunsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        DateTime createdAfter,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        var db = uow.GetDb();
+        return await db.ExecutionScheduleRuns
+            .IgnoreQueryFilters()
+            .Where(run =>
+                run.TenantId == tenantId &&
+                run.Outcome == ExecutionScheduleRunOutcomes.Failed &&
+                run.CreatedAt > createdAfter &&
+                db.ExecutionSchedules.IgnoreQueryFilters().Any(schedule =>
+                    schedule.ScheduleId == run.ScheduleId &&
+                    schedule.TenantId == tenantId &&
+                    schedule.JobKey == null))
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<DateTime?> FindLatestCompletedFireAtAsync(
+        ICoreUnitOfWork uow,
+        Guid scheduleId,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        var db = uow.GetDb();
+        return await db.ExecutionScheduleRuns
+            .IgnoreQueryFilters()
+            .Where(run =>
+                run.ScheduleId == scheduleId &&
+                run.TenantId == tenantId &&
+                run.Outcome == ExecutionScheduleRunOutcomes.Completed &&
+                run.ScheduledFireAt != null)
+            .OrderByDescending(run => run.ScheduledFireAt)
+            .Select(run => run.ScheduledFireAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static bool IsNpgsql(CoreDbContext db) =>

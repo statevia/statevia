@@ -1,7 +1,7 @@
 # テナント・初回管理者ブートストラップ
 
-- Version: 1.3.0
-- 更新日: 2026-08-19
+- Version: 1.4.0
+- 更新日: 2026-09-29
 - 関連: [security-runtime.md](../specifications/platform/security-runtime.md), [operations-docker.md](operations-docker.md)
 
 ---
@@ -67,6 +67,10 @@ dotnet run --project Statevia.Service.Api.Bootstrap -- \
 | `--skip-if-exists` | 同一 `tenant_key` があれば何もしない |
 
 作成後は権限カタログ（`permission_definitions`）を自動投入する。続けて [§3](#3-初回テナント管理者principal-整合) で管理者を作成する。
+
+create-tenant はテナント行と同じ保存で、点検用スケジュール `stuck-execution-report` を 1 行足す。テナント向けのスケジュール API には出ない。毎時の分はテナント ID から決まり、あとから上書きしない。既定テナントの初回作成も同じ行を足す。
+
+Service API と scheduler の起動時に、Active テナントへ足りない点検行を足す。すでに行があるときは cron と次回発火を変えない。補完に失敗してもホストの起動は続ける。
 
 ### 参考: 手動 SQL
 

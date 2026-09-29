@@ -46,6 +46,8 @@ Service API / Worker / Application / Engine の構造化ログで、同じ概念
 | 操作対象ユーザー | `TargetUserId` | 管理者パスワード更新 | `users.user_id` |
 | テナントキー | `TenantKey` | ログイン失敗ロック | JWT 前の外部キー。パスワードは出さない |
 | ユーザー名 | `Username` | ログイン失敗ロック | ロック主体。パスワード・ハッシュは出さない |
+| 停滞実行件数 | `StuckExecutionCount` | スケジュール点検 | Running かつ待機なしで、実効 Action タイムアウト以上更新が無い件数 |
+| 失敗スケジュール件数 | `FailedScheduleRunCount` | スケジュール点検 | 直前の点検以降に失敗したテナントスケジュール枠の件数 |
 
 ## Engine
 

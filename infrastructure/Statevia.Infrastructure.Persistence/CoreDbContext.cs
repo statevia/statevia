@@ -119,6 +119,8 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string LockedUntil = "locked_until";
         public const string FailedAt = "failed_at";
         public const string ScheduleId = "schedule_id";
+        public const string JobKey = "job_key";
+        public const string SummaryJson = "summary_json";
         public const string ScheduleRunId = "schedule_run_id";
         public const string RunAsPrincipalId = "run_as_principal_id";
         public const string CreatedByPrincipalId = "created_by_principal_id";
@@ -543,10 +545,22 @@ internal class CoreDbContext : DbContext, ICoreDatabase
     {
         modelBuilder.Entity<ExecutionScheduleRow>(e =>
         {
-            e.ToTable("schedules");
+            e.ToTable("schedules", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_schedules_job_shape",
+                    """
+                    (job_key IS NULL AND definition_id IS NOT NULL AND run_as_principal_id IS NOT NULL)
+                    OR (job_key IS NOT NULL AND definition_id IS NULL AND run_as_principal_id IS NULL AND input_json IS NULL)
+                    """);
+                table.HasCheckConstraint(
+                    "ck_schedules_job_key",
+                    "job_key IS NULL OR job_key = 'stuck-execution-report'");
+            });
             e.HasKey(x => x.ScheduleId);
             e.Property(x => x.ScheduleId).HasColumnName(Columns.ScheduleId);
             e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.JobKey).HasMaxLength(64).HasColumnName(Columns.JobKey);
             e.Property(x => x.DefinitionId).HasColumnName(Columns.DefinitionId);
             e.Property(x => x.DefinitionVersionId).HasColumnName(Columns.DefinitionVersionId);
             e.Property(x => x.RunAsPrincipalId).HasColumnName(Columns.RunAsPrincipalId);
@@ -563,7 +577,10 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             e.Property(x => x.UpdatedAt).HasColumnName(Columns.UpdatedAt);
             e.HasIndex(x => new { x.TenantId, x.Name })
                 .IsUnique()
-                .HasFilter("\"deleted_at\" IS NULL");
+                .HasFilter("\"job_key\" IS NULL AND \"deleted_at\" IS NULL");
+            e.HasIndex(x => new { x.TenantId, x.JobKey })
+                .IsUnique()
+                .HasFilter("\"job_key\" IS NOT NULL AND \"deleted_at\" IS NULL");
             e.HasIndex(x => new { x.Enabled, x.DeletedAt, x.NextFireAt });
             e.HasIndex(x => x.TenantId);
             e.HasOne<TenantRow>()
@@ -584,6 +601,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             e.Property(x => x.Outcome).HasMaxLength(32).HasColumnName(Columns.Outcome);
             e.Property(x => x.ExecutionId).HasColumnName(Columns.ExecutionId);
             e.Property(x => x.ErrorCode).HasMaxLength(64).HasColumnName(Columns.ErrorCode);
+            e.Property(x => x.SummaryJson).HasColumnName(Columns.SummaryJson);
             e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
             e.HasIndex(x => new { x.ScheduleId, x.ScheduledFireAt })
                 .IsUnique()

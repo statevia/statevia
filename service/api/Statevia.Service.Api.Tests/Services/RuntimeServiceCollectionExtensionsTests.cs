@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Statevia.Core.Application.Contracts.Services;
+using Statevia.Core.Application.Scheduling;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Runtime.DependencyInjection;
 using Statevia.Runtime.Services;
@@ -63,6 +63,48 @@ public sealed class RuntimeServiceCollectionExtensionsTests
         var tenantAccessor = Assert.Single(services, static descriptor => descriptor.ServiceType == typeof(ITenantContextAccessor));
         Assert.NotEqual(typeof(NullTenantContextAccessor), tenantAccessor.ImplementationType);
         Assert.IsNotType<NullTenantContextAccessor>(tenantAccessor.ImplementationInstance);
+    }
+
+    /// <summary>Sandbox の秒数が実効 Action タイムアウトになる。</summary>
+    [Fact]
+    public void AddStateviaRuntimeOptions_WhenSandboxTimeoutSet_UsesThatValue()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Statevia:ExecutionPolicy:Sandbox:TimeoutSeconds"] = "30"
+        }).Build();
+
+        // Act
+        services.AddStateviaRuntimeOptions(configuration);
+        using var provider = services.BuildServiceProvider();
+        var settings = provider.GetRequiredService<EffectiveActionTimeoutSettings>();
+
+        // Assert
+        Assert.True(settings.TryResolve(out var timeout));
+        Assert.Equal(TimeSpan.FromSeconds(30), timeout);
+    }
+
+    /// <summary>Sandbox が無いときは Docker 既定秒数を使う。</summary>
+    [Fact]
+    public void AddStateviaRuntimeOptions_WhenSandboxTimeoutMissing_UsesDockerDefault()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Statevia:ExecutionPolicy:Sandbox:Docker:DefaultTimeoutSeconds"] = "90"
+        }).Build();
+
+        // Act
+        services.AddStateviaRuntimeOptions(configuration);
+        using var provider = services.BuildServiceProvider();
+        var settings = provider.GetRequiredService<EffectiveActionTimeoutSettings>();
+
+        // Assert
+        Assert.True(settings.TryResolve(out var timeout));
+        Assert.Equal(TimeSpan.FromSeconds(90), timeout);
     }
 
     /// <summary>null 引数は ArgumentNullException になる。</summary>
