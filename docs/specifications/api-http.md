@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.24 |
-| 更新日 | 2026-09-27 |
+| Version | 1.25 |
+| 更新日 | 2026-09-29 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -25,6 +25,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.25（2026-09-29）**: User / ServiceAccount の実行リソース許可（管理 GET/PUT）と、Start・定期実行での `RESOURCE_GRANT_DENIED` を追加。
 
 **Version 1.24（2026-09-27）**: 定期実行 `/v1/schedules` と、資格のない ServiceAccount の `/v1/admin/service-accounts`。スケジュールは `executions.read` / `executions.write`。未認証は他の Runtime API と同じく Middleware で 401。Studio UI は無い。
 
@@ -96,7 +98,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
 **`definitions.project_id` は NOT NULL。** 認可 truth は `project_accesses`（`reader` / `executor` / `publisher` / `admin`）。`projects.visibility` は discoverability ヒントであり、認可には使わない。`UNIQUE(project_id, slug)`。
 
-定義取得・publish・Start は `ITenantContext.TenantInternalId` と `project_accesses` で評価する。Reader 未満は 404（存在秘匿）、Reader のみが Start した場合は 403（`PROJECT_ACCESS_DENIED`）。
+定義取得・publish・Start は `ITenantContext.TenantInternalId` と `project_accesses` で評価する。Reader 未満は 404（存在秘匿）、Reader のみが Start した場合は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount の Start は、そのあとに Principal の実行リソース許可を見る（[security-runtime.md](platform/security-runtime.md)）。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。
 
 **publish トランザクション:** `ICoreTransactionExecutor.ExecuteReadCommittedAsync` の 1 コールバック内で `definition_versions` INSERT → `definitions.latest_version` 更新。
 
@@ -464,21 +466,21 @@ Request:
 
 ### 3.12 定期実行スケジュール
 
-定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。ServiceAccount に定義・project の許可リストは無い。
+定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。run-as の ServiceAccount に実行リソース許可があれば、発火と手動実行の Start はその許可で絞る。
 
 権限は専用キーを増やさない。一覧・取得は `executions.read`。作成・更新・削除・手動実行は `executions.write` と、対象定義の project executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みは 404。
 
-**POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版は 404。
+**POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版は 404。run-as の実行リソース許可にその定義が無ければ **403**（`RESOURCE_GRANT_DENIED`）で保存しない。呼び出し側の許可では決めない。
 
 **GET /v1/schedules** — 200。テナント内のみ。`input` は含めない。
 
 **GET /v1/schedules/{scheduleId}** — 200。`input` を含む。
 
-**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。
+**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。更新後の定義と run-as の組が実行リソース許可から外れていれば **403**（`RESOURCE_GRANT_DENIED`）で保存しない。
 
 **DELETE /v1/schedules/{scheduleId}** — 204。論理削除。以降は発火しない。
 
-**POST /v1/schedules/{scheduleId}/run** — 201 で `ExecutionResponse`。`X-Idempotency-Key` は任意（印字可能 ASCII）。cron 枠とは別の冪等キー。`nextFireAt` は進めない。`enabled=false` は 422（`field=enabled`）。前の実行が残っていても overlap skip は適用しない。
+**POST /v1/schedules/{scheduleId}/run** — 201 で `ExecutionResponse`。`X-Idempotency-Key` は任意（印字可能 ASCII）。cron 枠とは別の冪等キー。`nextFireAt` は進めない。`enabled=false` は 422（`field=enabled`）。前の実行が残っていても overlap skip は適用しない。実行リソース許可が外れていれば実行は作らず **403**（`RESOURCE_GRANT_DENIED`）。`schedule_runs` に `manual=true`、`outcome=failed`、`errorCode=RESOURCE_GRANT_DENIED` を残す。
 
 発火（Dispatcher）:
 
@@ -487,7 +489,7 @@ Request:
 - 同一 cron 枠の再 poll は 1 実行に畳む。`schedule_runs.outcome` は `started` / `skipped_overlap` / `failed`。
 - overlap `skip` で同一スケジュール由来の非終端実行がある枠は Start せず `skipped_overlap` を残し、次枠へ進む。`allow` は前が Running でも Start する。
 - 保存枠の次枠もすでに now 以下なら、その枠は Start しない（途中枠は埋めない）。`nextFireAt` は now の次枠。
-- ServiceAccount 無効、またはテナントが Active でないときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
+- ServiceAccount 無効、テナントが Active でない、または実行リソース許可が外れているときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。許可不足の `errorCode` は `RESOURCE_GRANT_DENIED`。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
 - 手動実行は `manual=true`、`scheduledFireAt` は null。
 
 資格のない ServiceAccount の作成は §4.1.3。ジョブ作成では発行しない。
@@ -563,8 +565,14 @@ Request:
 | POST | `/service-accounts` | 資格のない ServiceAccount 作成（`name` は ASCII ラベル最大 128、`groupIds` は 1 件以上）。API キーは発行しない。201 |
 | GET | `/service-accounts/{serviceAccountId}` | ServiceAccount 詳細 |
 | PATCH | `/service-accounts/{serviceAccountId}` | `isActive?` / `displayName?` / `groupIds?`（指定時は 1 件以上の置換）。無効化すると Principal が inactive。紐づくスケジュールは自動では止めない |
+| GET | `/users/{userId}/resource-grants` | User の実行リソース許可（`projectIds` / `definitionIds`） |
+| PUT | `/users/{userId}/resource-grants` | User の実行リソース許可を置換 |
+| GET | `/service-accounts/{serviceAccountId}/resource-grants` | ServiceAccount の実行リソース許可 |
+| PUT | `/service-accounts/{serviceAccountId}/resource-grants` | ServiceAccount の実行リソース許可を置換 |
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
+
+**実行リソース許可の置換:** 本文は `{ "projectIds": [], "definitionIds": [] }`。両方必須。省略は **422**（`VALIDATION_ERROR`）。空配列はその種別の行を消す。重複 ID は 1 件に畳む。空 GUID は **422**。他テナントの主体・project・定義、および未知 ID は **404**。テナントが実行できない project や定義は **422** で、既存の許可は残る。1 Principal あたり project 32 件、definition 128 件まで。Start が許可集合を毎回メモリで評価するため。超過は **422**。評価の意味は [security-runtime.md](platform/security-runtime.md)。
 
 JWT クレーム: `tenant_id`（内部 UUID）、`tenant_key`、`principal_id` / `sub`。詳細は `docs/specifications/platform/security-runtime.md`。
 

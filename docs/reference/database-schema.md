@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.22
+Version: 1.23
 Project: 実行型ステートマシン
+
+**Version 1.23（2026-09-29）**: `principal_resource_grants` を追加（User / ServiceAccount の Start 用オプトイン）。
 
 **Version 1.22（2026-09-27）**: `schedules` / `schedule_runs` を追加（定期実行。定義 YAML には埋め込まない）。
 
@@ -88,6 +90,7 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | tenants | Platform | テナントの truth（内部 UUID・外部 `tenant_key`・ライフサイクル） |
 | permission_definitions | Platform | グローバル権限定義（キー・表示ラベル） |
 | principals | Platform | 実行主体（User / ServiceAccount / System の共通行） |
+| principal_resource_grants | Platform | User / ServiceAccount の Start 用オプトイン（project / definition） |
 | users | Platform | 人間ユーザー（ユーザー名・任意メール・パスワードハッシュ・管理者フラグ） |
 | user_principals | Platform | User ↔ Principal の 1:1 対応 |
 | groups | Platform | テナント内グループ（権限付与の単位） |
@@ -117,6 +120,7 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | --- | --- |
 | `tenants` | テナントの **truth**（`lifecycle` は `LifecycleTransitionPolicy` で遷移制御） |
 | `principals` | Actor 行の **truth**（論理削除は `deleted_at` / `is_active`） |
+| `principal_resource_grants` | Start のオプトイン許可。種別が空ならその種別の追加制限なし。resource への物理 FK は無い |
 | 実行系 `tenant_id` uuid | **`tenants.tenant_id` FK**（HasQueryFilter は内部 UUID で fail-closed） |
 | セキュリティ系 `tenant_id` uuid | **`tenants.tenant_id` 参照**（HasQueryFilter は内部 UUID で一致） |
 | `IgnoreQueryFilters()` | **`IPlatformDataAccess`（Platform 専用層）のみ**許容 |
@@ -617,6 +621,22 @@ API キー。**平文キーは保存しない**。lookup 用に `key_prefix` と
 
 **インデックス:** `(tenant_key, username, failed_at)`
 
+### 2.25 principal_resource_grants
+
+User と ServiceAccount の Start を絞るオプトイン。行が無い種別は、その種別の追加制限が無い。project の行と definition の行が両方あるときは両方を満たす定義だけが通る。System には付けない。resource への物理 FK は置かない（削除済み定義の行が残っても Start は 404）。置換は種別をまたいで行を作り直す。`created_at` は置換時刻。
+
+| カラム | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| principal_id | uuid | PK, FK → principals, NOT NULL | 対象 Principal。親削除で CASCADE |
+| resource_kind | varchar(32) | PK, NOT NULL | `project` または `definition`（CHECK） |
+| resource_id | uuid | PK, NOT NULL | project または論理定義の ID。物理 FK は無い |
+| tenant_id | uuid | FK → tenants, NOT NULL | 所属テナント。RESTRICT。HasQueryFilter |
+| created_at | timestamptz | NOT NULL | 置換時刻 |
+
+**インデックス:** `PRIMARY KEY (principal_id, resource_kind, resource_id)`、`INDEX (tenant_id)`
+
+**CHECK:** `resource_kind IN ('project', 'definition')`
+
 ---
 
 ## 3. ER 図
@@ -840,6 +860,7 @@ erDiagram
 
 - **tenants.tenant_key** は外部向け不変キー。実行系 FK は `tenants.tenant_id`。ログイン失敗ロックは JWT 前のため `tenant_key` で点取得する（`tenants` への DB FK は置かない）。
 - **principals** は User / ServiceAccount / System の共通親行。**論理削除**は `deleted_at` / `is_active` で表現する。
+- **principal_resource_grants** は User / ServiceAccount の Start 用オプトイン。resource への物理 FK は無い。
 - **user_principals** は User 型 Principal との 1:1 対応。
 - **group_permissions.permission_key** → **permission_definitions.permission_key**（グローバル権限辞書）。
 - **api_keys** は平文を保存せず **key_prefix + key_hash** のみ保持する。
@@ -1032,6 +1053,8 @@ erDiagram
 | projects | (owner_tenant_id, slug) | UNIQUE |
 | project_accesses | (project_id, tenant_id) | PRIMARY KEY |
 | project_accesses | tenant_id | INDEX |
+| principal_resource_grants | (principal_id, resource_kind, resource_id) | PRIMARY KEY |
+| principal_resource_grants | tenant_id | INDEX |
 | definitions | (project_id, slug) WHERE deleted_at IS NULL | UNIQUE |
 | definition_versions | (definition_id, version) | UNIQUE |
 | event_store | event_id | UNIQUE |
@@ -1071,6 +1094,7 @@ erDiagram
 | `20260802173232_AddExecutionCheckpointOwnership` | `execution_runtime_checkpoints` に `owner_worker_id` / `lease_until` / `owner_generation` と `lease_until` インデックスを追加 |
 | `20260817140816_AddUserUsername` | `users.username` 追加（varchar(64)）と既存 `email` からのバックフィル。`email` を NULL 可の varchar(256) にし、非 NULL のみテナント内一意 |
 | `20260918172216_AddExecutionSchedules` | `schedules` / `schedule_runs` を追加 |
+| `20260927160709_AddPrincipalResourceGrants` | `principal_resource_grants` を追加 |
 
 適用: `cd service/api && dotnet ef database update --project Statevia.Service.Api`
 

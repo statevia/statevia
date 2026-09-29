@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.4 |
-| 更新日 | 2026-09-27 |
+| Version | 1.5 |
+| 更新日 | 2026-09-29 |
 
 ---
 
@@ -58,6 +58,22 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 | --- | --- | --- |
 | プロジェクト未登録・Reader 未満 | 404 | `NOT_FOUND`（存在秘匿） |
 | Reader のみで Start | 403 | `PROJECT_ACCESS_DENIED` |
+
+### 実行リソース許可（Start のみ）
+
+専用の permission key は増やさない。`executions.write` と project の executor のあと、User と ServiceAccount の Start だけが `principal_resource_grants` を見る。
+
+| 順 | 状況 | HTTP | `error.code` |
+| --- | --- | --- | --- |
+| 1 | `executions.write` 不足 | 403 | `PERMISSION_DENIED` |
+| 2 | project 未登録、または Reader 未満 | 404 | `NOT_FOUND` |
+| 3 | Reader のみ | 403 | `PROJECT_ACCESS_DENIED` |
+| 4 | その種別の許可行があり、対象が外れる | 403 | `RESOURCE_GRANT_DENIED` |
+| 4 | その種別の許可行が無い | 追加制限なし | — |
+
+project の行と definition の行は独立する。両方にあるときは両方を満たす定義だけが通る。System と、親から始まる継承子 Start は 4 を見ない。定義の取得、Resume、Cancel も見ない。
+
+詳細: [security-runtime.md](../specifications/platform/security-runtime.md)、[api-http.md](../specifications/api-http.md) §3.12 / §4.1.3。
 
 ### Execution Security Snapshot（Resume / Cancel）
 
