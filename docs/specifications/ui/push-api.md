@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3 |
-| 更新日 | 2026-09-01 |
+| Version | 1.4 |
+| 更新日 | 2026-09-30 |
 | 関連 | [data-integration.md](../data-integration.md), [api-http.md](../api-http.md), [../guides/ui-auth-tenant-config.md](../../guides/ui-auth-tenant-config.md) |
 
 ---
@@ -18,6 +18,8 @@
 - **SHOULD**: UI は同一オリジン `/api/core/*` プロキシ経由で Service API に接続する。
 
 ---
+
+**Version 1.4（2026-09-30）**: 集合配送は実行一覧のページ操作から `POST /v1/events`。候補は `GET /v1/event-subscriptions`。ノード Resume は詳細の副経路。
 
 **Version 1.3（2026-09-01）**: SSE は Principal 必須。テナントは現行必須。未送出 Push 種別を現行本文から外す。
 
@@ -108,8 +110,8 @@ GET /v1/executions/{id}/stream
 UI は状態を直接変更しない。操作は [api-http.md](../api-http.md) の Command API に従う。
 
 - キャンセル: `POST /v1/executions/{id}/cancel`
-- Wait 再開: `POST /v1/executions/{id}/nodes/{nodeId}/resume`
-- 集合配送: `POST /v1/events`
+- Wait 再開: 実行詳細の副操作。`POST /v1/executions/{id}/nodes/{nodeId}/resume`。Subscribe の再開キーは内部イベント名で、topic ではない。この実行だけを再開する。
+- 集合配送: 実行一覧のページ操作（行ボタンではない）から `POST /v1/events`。body は topic / key のみ（payload は送らない）。候補は `GET /v1/event-subscriptions`。候補外の手入力も送れる。一致 0 件の 204 も成功。
 
 ---
 

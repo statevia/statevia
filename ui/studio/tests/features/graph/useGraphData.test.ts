@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { getNodeWithFallback, useGraphData } from "../../../features/executions/hooks/useGraphData";
+import {
+  expandWaitingNodeLayout,
+  getNodeWithFallback,
+  useGraphData,
+  WAITING_RESUME_LAYOUT_HEIGHT
+} from "../../../features/executions/hooks/useGraphData";
 import type { ExecutionNodeDTO, ExecutionView } from "@/features/executions/types";
 import { getGraphDefinition } from "@/features/executions/graphs/registry";
 import type { GraphDefinition } from "@/features/executions/graphs/types";
@@ -108,5 +113,25 @@ describe("getNodeWithFallback", () => {
     // Assert
     expect(resolved?.nodeId).toBe("decide-new");
     expect(resolved?.status).toBe("WAITING");
+  });
+});
+
+describe("expandWaitingNodeLayout", () => {
+  it("WAITING の下にあるノードだけを、枠の不足分だけ下げる", () => {
+    // Arrange
+    const nodes = [
+      { name: "wait", status: "WAITING", y: 0, h: 150 },
+      { name: "next", status: "IDLE", y: 240, h: 120 },
+      { name: "beside", status: "IDLE", y: 0, h: 120 }
+    ];
+
+    // Act
+    const expanded = expandWaitingNodeLayout(nodes);
+
+    // Assert
+    const extra = WAITING_RESUME_LAYOUT_HEIGHT - 150;
+    expect(expanded.find((node) => node.name === "wait")).toMatchObject({ y: 0, h: WAITING_RESUME_LAYOUT_HEIGHT });
+    expect(expanded.find((node) => node.name === "next")).toMatchObject({ y: 240 + extra, h: 120 });
+    expect(expanded.find((node) => node.name === "beside")).toMatchObject({ y: 0, h: 120 });
   });
 });

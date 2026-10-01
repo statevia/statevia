@@ -240,5 +240,26 @@ describe("NodeDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: uiText.actions.resume }));
       expect(onResume).toHaveBeenCalledWith("reject");
     });
+
+    it("Subscribe の Resume は内部イベント名でこの実行だけを再開し、集合配送フォームは出さない", () => {
+      const onResume = vi.fn();
+      const node: ExecutionNodeDTO = {
+        ...baseNode,
+        status: "WAITING",
+        waitKey: null,
+        allowedEvents: ["statevia.event.subscribe.0"]
+      };
+      render(<NodeDetail {...defaultProps} node={node} onResume={onResume} />);
+
+      expect(
+        screen.getByText(
+          (_, element) =>
+            element?.tagName === "P" && element.textContent === uiText.nodeDetail.waiting.subscribeOnlyHint
+        )
+      ).toHaveClass("whitespace-pre-line");
+      expect(screen.queryByLabelText("topic")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: uiText.nodeDetail.waiting.subscribeResumeAction }));
+      expect(onResume).toHaveBeenCalledWith("statevia.event.subscribe.0");
+    });
   });
 });

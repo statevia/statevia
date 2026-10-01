@@ -87,6 +87,12 @@ export type ExecutionsFeatureUiText = {
       resumeEventName: (eventName: string) => string;
       /** 複数イベント時の選択ラベル。 */
       selectResumeEvent: string;
+      /** Subscribe の内部イベント名を選ぶラベル。 */
+      selectInternalResumeEvent: string;
+      /** この実行だけの副操作であることの説明。 */
+      subscribeOnlyHint: string;
+      /** Subscribe Resume のボタン。 */
+      subscribeResumeAction: string;
     };
     cancel: {
       detailTitle: (cancelLabel: string) => string;
@@ -173,6 +179,20 @@ export type ExecutionsFeatureUiText = {
     updatedAt: (formattedDateTime: string) => string;
     actions: {
       openDetail: string;
+    };
+    ingress: {
+      open: string;
+      title: string;
+      topicLabel: string;
+      keyLabel: string;
+      emptyKey: string;
+      fanOutHint: string;
+      submit: string;
+      cancel: string;
+      candidatesUnavailable: string;
+      accepted: string;
+      invalidTopic: string;
+      invalidKey: string;
     };
     empty: string;
     error: string;

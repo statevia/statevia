@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   applyNodeChanges,
   Background,
@@ -27,7 +27,7 @@ import type { NodeStatus } from "../types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { GraphLegend } from "./GraphLegend";
 import { GraphNodeShell } from "@/shared/ui/GraphNodeShell";
-import { resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
 
 /** NodeDiffHighlight の型定義。 */
 export type NodeDiffHighlight = Record<string, { isFailureOrCancel: boolean }>;
@@ -68,12 +68,20 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   const isGateway = appearance.shapeKind === "gatewayFork" || appearance.shapeKind === "gatewayJoin";
   const flowNodeId = useNodeId();
   const updateInternals = useUpdateNodeInternals();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (flowNodeId != null && flowNodeId !== "") {
+    if (flowNodeId == null || flowNodeId === "") return;
+    updateInternals(flowNodeId);
+    const element = rootRef.current;
+    const trackCardHeight = data.status === "WAITING" || appearance.label === "WAIT";
+    if (!trackCardHeight || element == null) return;
+    const observer = new ResizeObserver(() => {
       updateInternals(flowNodeId);
-    }
-  }, [flowNodeId, updateInternals, data.nodeType, data.status, data.label]);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [flowNodeId, updateInternals, data.nodeType, data.status, data.label, appearance.label]);
   let diffRing = "";
   if (data.diffHighlight != null) {
     diffRing =
@@ -103,8 +111,11 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
       <WaitingResumeControls data={data} isGateway={isGateway} />
     ) : null;
 
+  // Wait はレイアウト高さとカードの高さがずれる。枠に h-full で合わせると、待機中はカード途中から、完了後はカード下端から離れた位置から出辺が出る。
+  const sizedToContent = data.status === "WAITING" || appearance.label === "WAIT";
+
   return (
-    <div className={`relative h-full w-full ${isGateway ? "border-0 bg-transparent p-0" : ""}`}>
+    <div ref={rootRef} className={`relative w-full ${sizedToContent ? "" : "h-full"} ${isGateway ? "border-0 bg-transparent p-0" : ""}`}>
       <Handle
         id="in"
         type="target"
@@ -119,7 +130,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
         diffRing={diffRing}
         isRunning={isRunning}
       >
-        <div className="flex h-full min-h-0 flex-col">
+        <div className={`flex min-h-0 flex-col ${sizedToContent ? "" : "h-full"}`}>
           <button
             type="button"
             aria-label={uiText.nodeGraph.aria.selectNode(data.label)}
@@ -147,6 +158,7 @@ function WaitingResumeControls({
 }: Readonly<{ data: ExecutionNodeData; isGateway: boolean }>) {
   const uiText = useUiText();
   const resumeEvents = resolveWaitResumeEvents(data);
+  const subscribeResume = isSubscribeInternalResume(resumeEvents);
   const resumeEventsKey = resumeEvents.join("\0");
   const [selectedEvent, setSelectedEvent] = useState(resumeEvents[0] ?? "");
   const effectiveEvent =
@@ -160,6 +172,9 @@ function WaitingResumeControls({
 
   return (
     <div className={`shrink-0 ${isGateway ? "mt-2" : "mt-3"} space-y-1`}>
+      {subscribeResume && (
+        <p className="whitespace-pre-line text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
+      )}
       {resumeEvents.length > 1 && (
         <select
           className="nodrag w-full rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] px-1.5 py-1 text-[10px]"
@@ -167,7 +182,7 @@ function WaitingResumeControls({
           disabled={disabled}
           onClick={(event) => event.stopPropagation()}
           onChange={(event) => setSelectedEvent(event.target.value)}
-          aria-label={uiText.nodeDetail.waiting.selectResumeEvent}
+          aria-label={subscribeResume ? uiText.nodeDetail.waiting.selectInternalResumeEvent : uiText.nodeDetail.waiting.selectResumeEvent}
         >
           {resumeEvents.map((eventName) => (
             <option key={eventName} value={eventName}>
@@ -185,7 +200,7 @@ function WaitingResumeControls({
         }}
         disabled={disabled}
       >
-        {uiText.actions.resume}
+        {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
       </button>
       {data.resumeDisabledReason && (
         <p className="mt-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{data.resumeDisabledReason}</p>
@@ -273,32 +288,36 @@ export function NodeGraphView({
       selectable: false
     }));
 
-    const executionNodes: Array<Node<ExecutionNodeData>> = nodes.map((node) => ({
-      id: node.name,
-      type: "executionNode",
-      position: { x: node.x, y: node.y },
-      width: node.w,
-      height: node.h,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
-      draggable: true,
-      data: {
-        name: node.name,
-        nodeId: node.nodeId,
-        label: node.label,
-        nodeType: node.nodeType,
-        status: node.status,
-        attempt: node.attempt,
-        waitKey: node.waitKey,
-        allowedEvents: node.allowedEvents ?? null,
-        selected: false,
-        onSelect: (id: string) => onSelectNode(id),
-        onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
-        resumeDisabledReason: getResumeDisabledReason(node.name),
-        diffHighlight: nodeDiffHighlight?.[node.nodeId] ?? null
-      },
-      style: { width: node.w, height: node.h }
-    }));
+    const executionNodes: Array<Node<ExecutionNodeData>> = nodes.map((node) => {
+      // Wait はカードの高さに合わせ、出辺をカード下端へ付ける。完了後も枠よりカードが短いため、高さ固定だと起点がカードの下に浮く。
+      const sizedToContent = node.status === "WAITING" || getNodeAppearance(node.nodeType).label === "WAIT";
+      return {
+        id: node.name,
+        type: "executionNode",
+        position: { x: node.x, y: node.y },
+        width: node.w,
+        ...(sizedToContent ? {} : { height: node.h }),
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
+        draggable: true,
+        data: {
+          name: node.name,
+          nodeId: node.nodeId,
+          label: node.label,
+          nodeType: node.nodeType,
+          status: node.status,
+          attempt: node.attempt,
+          waitKey: node.waitKey,
+          allowedEvents: node.allowedEvents ?? null,
+          selected: false,
+          onSelect: (id: string) => onSelectNode(id),
+          onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
+          resumeDisabledReason: getResumeDisabledReason(node.name),
+          diffHighlight: nodeDiffHighlight?.[node.nodeId] ?? null
+        },
+        style: sizedToContent ? { width: node.w } : { width: node.w, height: node.h }
+      };
+    });
 
     return [...groupNodes, ...executionNodes];
   }, [groups, nodes, onResumeNode, onSelectNode, getResumeDisabledReason, nodeDiffHighlight]);

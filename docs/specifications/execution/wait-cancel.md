@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.8 |
-| 更新日 | 2026-09-18 |
+| Version | 1.5.9 |
+| 更新日 | 2026-09-30 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -20,6 +20,8 @@
 - **禁止**: 利用者向け文書に `exit` 語彙を出さない。
 
 ---
+
+**Version 1.5.9（2026-09-30）**: 購読候補の GET と、Studio 実行一覧からの集合配送を追記する。ノード Resume は詳細の副経路。
 
 ## Wait（待機）
 
@@ -58,6 +60,8 @@ Hosted では分岐が物理子 execution になるため、分岐上の Wait �
 `POST /v1/events` は `{ topic, key?, payload? }` を受け付けます（`topic` 必須。`event` は送らない）。Principal と **`executions.write`** が必須です。不足は **403**（`PERMISSION_DENIED`）で、Resume work item を積みません。照合は現在テナントの購読だけです（他テナントへは乗りません）。照合は `execution_wait_subscriptions` で、正規化後の **topic かつ key の厳密一致**です。`key` 省略・空白は `""` です。一致した各購読の `resume_event_name` で Resume ワークを投入し、対象が 0 件でも `204 No Content` を返します。`payload` は将来の Wait 入力拡張のため受理しますが、この段階では再開値に反映しません。builtin `event.publish` も同じ `IEventIngressService` を呼び、HTTP を踏まずに同一の照合へ届きます。
 
 Wait 定義側は `wait.subscribe`（topic 必須・key 任意・next 必須）。Signal モード（`wait.events` のみ）は本 API の対象外で、execution-scoped Resume を使います。
+
+候補の列挙は `GET /v1/event-subscriptions`（`executions.read`。一意な topic / key、最大 500。displayId / nodeId は返さない）。Studio の実行一覧はページ操作から `POST /v1/events` を呼ぶ（行ボタンや詳細フォームではない。payload は送らない）。ノード Resume は実行詳細の副操作で、この実行だけを内部イベント名で再開する。
 
 Subscribe は入れ子ワークフローの **公式な子→親 Resume ではない**。同じ topic / key を子や外部が発行すれば親 wait を進められる、という合成にすぎません。一致した購読が複数あれば **1:N** で再開します。1:1 に抑えたい場合は作者が key を十分一意にしてください。専用 Action `execution.resume` は提供しません。
 

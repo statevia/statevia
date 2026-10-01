@@ -20,6 +20,37 @@ export type GraphData = {
   groups: GroupBounds[];
 };
 
+/**
+ * WAITING ノードに再開操作を描くときのレイアウト高さ。
+ * Wait の既定 150px では説明・選択・ボタンが枠を超え、出辺がカード途中に残る。
+ * カード描画は中身の高さに任せ、ここは次ノードをその下へずらすための確保分。
+ */
+export const WAITING_RESUME_LAYOUT_HEIGHT = 320;
+
+/**
+ * WAITING ノードを {@link WAITING_RESUME_LAYOUT_HEIGHT} まで広げ、それより下のノードを同じだけ下げる。
+ * 同じ高さの並列ノードは互いを押さない。
+ *
+ * @param nodes レイアウト済みノード。
+ * @returns 間隔を空けたノード。WAITING が無ければ要素はそのまま。
+ */
+export function expandWaitingNodeLayout<T extends { status: string; y: number; h: number }>(nodes: readonly T[]): T[] {
+  const extras = nodes
+    .filter((node) => node.status === "WAITING" && node.h < WAITING_RESUME_LAYOUT_HEIGHT)
+    .map((node) => ({ top: node.y, extra: WAITING_RESUME_LAYOUT_HEIGHT - node.h }));
+  if (extras.length === 0) return [...nodes];
+
+  return nodes.map((node) => {
+    const extraAbove = extras.reduce((sum, item) => (item.top < node.y ? sum + item.extra : sum), 0);
+    const ownExtra =
+      node.status === "WAITING" && node.h < WAITING_RESUME_LAYOUT_HEIGHT
+        ? WAITING_RESUME_LAYOUT_HEIGHT - node.h
+        : 0;
+    if (extraAbove === 0 && ownExtra === 0) return node;
+    return { ...node, y: node.y + extraAbove, h: node.h + ownExtra };
+  });
+}
+
 /** 実行ビューと定義グラフを合成したグラフデータを組み立てる。 */
 export function useGraphData(
   execution: ExecutionView | null,
@@ -34,13 +65,14 @@ export function useGraphData(
       merged.meta
     );
     const layoutMap = merged.meta?.layout;
-    const nodes =
+    const placed =
       layoutMap && Object.keys(layoutMap).length > 0
         ? positioned.nodes.map((n) => {
             const p = layoutMap[n.name];
             return p ? { ...n, x: p.x, y: p.y } : n;
           })
         : positioned.nodes;
+    const nodes = expandWaitingNodeLayout(placed);
     const groups = resolveGroupBounds(nodes, positioned.edges, merged.groups, merged.meta);
     return {
       graphId: execution.graphId,
