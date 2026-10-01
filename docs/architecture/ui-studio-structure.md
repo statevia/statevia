@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.8 |
-| 更新日 | 2026-07-26 |
+| Version | 0.9 |
+| 更新日 | 2026-10-02 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.9（2026-10-02）**: 色トークンを Tailwind テーマ（`md-*` / `brand-*` / `editor-*`）へ写し、操作部品 `Button` / `TextField` を `shared/ui` に追加。適用済みは集合配送ダイアログのみ。
 
 **Version 0.8（2026-07-26）**: Phase 5 完了（task 15）。最終ツリー・画面追加手順・Tailwind `content`・Docker ビルド注意を実装結果に合わせて確定。本移行は **Service API の HTTP 契約および利用者向け画面の振る舞いを変更しない**。
 
@@ -42,7 +44,7 @@ ui/studio/
 │  └─ dashboard/             # ui, i18n
 ├─ shared/
 │  ├─ api/                   # transport + 共通 query 型
-│  ├─ ui/                    # PageShell, Toast, AppHeader, GraphNodeShell 等
+│  ├─ ui/                    # PageShell, Toast, AppHeader, GraphNodeShell, Button, TextField 等
 │  ├─ i18n/                  # Context・locale・横断辞書 + feature 切片の合成
 │  ├─ auth/                  # session / jwt ヘルパ
 │  └─ lib/                   # dateTime, errors, validation, theme, graphLayout
@@ -128,3 +130,17 @@ flowchart LR
 - データ取得の全面 Server Components 化（規則の文書化は可）
 - C# Clean Architecture フォルダ名のそのまま移植
 - React Query 等の新規状態管理ライブラリ導入
+
+## 8. 色トークンと操作部品
+
+色の正本は `app/globals.css` の CSS 変数である。Tailwind からは `tailwind.config.ts` の `theme.extend.colors` を使う。
+
+| 変数の接頭辞 | ユーティリティの例 |
+| --- | --- |
+| `--md-sys-color-*` | `text-md-on-surface`、`bg-md-surface`、`border-md-outline` |
+| `--brand-*` | `bg-brand-cta-bg`、`text-brand-cta-fg`、`border-brand-cta-border` |
+| `--editor-*` | `text-editor-caret` |
+
+`md` 接頭辞は、Tailwind 既定の `neutral` パレットを置き換えないためである。新規の色指定で `text-[var(--md-sys-color-on-surface)]` は使わない。
+
+横断の操作部品は `shared/ui/Button`（`primary` / `secondary`）と `shared/ui/TextField` である。集合配送ダイアログだけが使っている。画面固有の並びと、候補リストのようなその画面だけの要素は `features/*/ui` に残す。他画面の直書きクラスは、この部品へ機械的に寄せる作業が終わるまで残る。

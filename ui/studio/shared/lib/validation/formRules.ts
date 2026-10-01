@@ -20,6 +20,23 @@ export const EVENT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]*$/;
 export const EVENT_NAME_MAX_LENGTH = 64;
 
 /**
+ * topic / 非空 key の最大文字数。サーバー `IdentifierConstraints.TopicMaxLength` と同一。
+ */
+export const TOPIC_IDENTIFIER_MAX_LENGTH = 256;
+
+/**
+ * topic / 非空 key が ASCII 識別子として有効か。空文字は無効。
+ * @param value trim 済みの値
+ */
+export function isTopicIdentifier(value: string): boolean {
+  return (
+    value.length > 0 &&
+    value.length <= TOPIC_IDENTIFIER_MAX_LENGTH &&
+    EVENT_NAME_PATTERN.test(value)
+  );
+}
+
+/**
  * 実行開始時 `input` JSON の最大 UTF-8 バイト数（64KB）。
  */
 export const START_INPUT_MAX_BYTES = 65536;

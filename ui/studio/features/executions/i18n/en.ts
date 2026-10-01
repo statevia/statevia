@@ -94,6 +94,9 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       reasonWaitByWaitKeyAndResumeWait: "Reason: waiting for resume event by wait key",
       resumeEventName: (eventName: string) => `Resume event name: ${eventName}`,
       selectResumeEvent: "Event to resume with",
+      selectInternalResumeEvent: "Internal event name",
+      subscribeOnlyHint: "This resumes only this execution, using an internal event name.\nIt is not a topic / key fan-out.",
+      subscribeResumeAction: "Resume this execution only",
     },
     cancel: {
       detailTitle: (cancelLabel: string) => `${cancelLabel} detail`,
@@ -189,6 +192,20 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     },
     actions: {
       openDetail: "Details",
+    },
+    ingress: {
+      open: "Event submission",
+      title: "Event submission",
+      topicLabel: "topic",
+      keyLabel: "key",
+      emptyKey: "No key",
+      fanOutHint: "Every execution waiting on the same topic / key may resume.\nThis is not limited to one row in the list.",
+      submit: "Send",
+      cancel: "Close",
+      candidatesUnavailable: "Candidates could not be loaded. You can still type a topic / key.",
+      accepted: "Accepted. This succeeds even when no subscription matches.",
+      invalidTopic: "Topic must start with a letter and use only ASCII letters, digits, and . _ - within 256 characters.",
+      invalidKey: "A non-empty key must start with a letter and use only ASCII letters, digits, and . _ - within 256 characters.",
     },
 
   },

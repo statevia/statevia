@@ -3,16 +3,17 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.26 |
-| 更新日 | 2026-09-29 |
+| Version | 1.27 |
+| 更新日 | 2026-09-30 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
 
 ## Normative 要約
 
-- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/schedules` / `/v1/events` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
+- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/schedules` / `/v1/events` / `/v1/event-subscriptions` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
 - **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。成功は **204**（一致 0 件でも）。
+- **MUST**: `GET /v1/event-subscriptions` は `executions.read` 必須。成功は **200**。候補は現在テナントの一意な topic / key（最大 500）。
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{id}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
 - **MUST**: 入力検証失敗は **422**、`error.code = VALIDATION_ERROR`（[data-integration.md](data-integration.md) §7）。
@@ -25,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.27（2026-09-30）**: `GET /v1/event-subscriptions` を追加。`executions.read`。一意な topic / key を最大 500 件。displayId / nodeId は返さない。
 
 **Version 1.26（2026-09-29）**: 定期実行 API はシステム点検行を返さない。指定 ID は不在と同じ 404。
 
@@ -141,6 +144,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 | POST     | /v1/executions/{id}/events | イベント発行（Wait 再開の互換シム） |
 | POST     | /v1/executions/{id}/nodes/{nodeId}/resume | Wait 再開の正本（body: `resumeKey` = イベント名） |
 | POST     | /v1/events                | 集合配送（topic / key。`executions.write`） |
+| GET      | /v1/event-subscriptions   | 集合配送の候補（一意な topic / key。`executions.read`） |
 | GET      | /v1/schedules             | 定期実行一覧（`input` なし） |
 | POST     | /v1/schedules             | 定期実行の作成 |
 | GET      | /v1/schedules/{scheduleId} | 定期実行の取得（`input` あり） |
@@ -466,6 +470,13 @@ Request:
 - Response: **204 No Content**（一致 0 件でも 204。成功パスは維持）。
 - 詳細は [execution/wait-cancel.md](execution/wait-cancel.md)。
 
+**GET /v1/event-subscriptions**
+
+- **必須**: Principal と **`executions.read`**。不足は **403**（`PERMISSION_DENIED`）。未認証は **401**。
+- 現在テナントのアクティブ購読から、一意な `(topic, key)` を topic・key の昇順で最大 **500** 件返す。Hosted 子実行の購読も含む。他テナントは含まない。
+- Response: **200**。`subscriptions` は `{ topic, key }` の配列。`key` が無い購読は `""`。displayId、nodeId、内部イベント名、payload は返さない。
+- テナントが解決できないときは、権限確認のあと空配列（照合の意味論は変えない）。
+
 ### 3.12 定期実行スケジュール
 
 定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。run-as の ServiceAccount に実行リソース許可があれば、発火と手動実行の Start はその許可で絞る。
@@ -593,7 +604,7 @@ Response（`GET /v1/admin/modules` の 1 件）: `moduleId`, `name`, `version`, 
 
 ### 4.1.2 Runtime API の認証要件
 
-- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/schedules`、`/v1/events`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
+- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/schedules`、`/v1/events`、`/v1/event-subscriptions`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
 - **必須**: Principal が解決済みであること（JWT または `X-Api-Key`）。
 - **拒否**: `X-Tenant-Id` のみ（Bearer / API キーなし）は **401**（`UNAUTHORIZED`）。
 - **除外パス**: `/v1/auth/login`、`/v1/health`、`/swagger/*`、`/scalar/*`。
@@ -607,7 +618,7 @@ Principal 解決後、サービス層で **semantic permission key** を評価�
 | --- | --- |
 | GET `/v1/definitions*`、`/v1/graphs/*`、`/v1/definitions/schema/nodes`、`/v1/actions/schema*` | `definitions.read` |
 | POST/PUT `/v1/definitions`、`POST /v1/definitions/validate` | `definitions.write` |
-| GET `/v1/executions*`（一覧・詳細・graph・waits・state・events・stream）、GET `/v1/schedules*` | `executions.read` |
+| GET `/v1/executions*`（一覧・詳細・graph・waits・state・events・stream）、GET `/v1/schedules*`、GET `/v1/event-subscriptions` | `executions.read` |
 | POST start / cancel / publish / resume、**`POST /v1/events`**、スケジュールの作成・更新・削除・手動実行 | `executions.write` |
 
 - **JWT**: グループ権限を Live 展開（`ExpandPrincipalPermissionKeysAsync`）。`is_tenant_admin` は全 catalog key を持つ。

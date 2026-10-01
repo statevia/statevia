@@ -10,6 +10,7 @@ import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { apiGet } from "@/shared/api";
 import { buildExecutionsListPath, type SortOrder, type ExecutionsListQuery } from "@/features/executions/api";
+import { SubscribeIngressDialog } from "./SubscribeIngressDialog";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
@@ -62,11 +63,17 @@ function ExecutionsPageClientInner() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [ingressOpen, setIngressOpen] = useState(false);
 
   const [nameDraft, setNameDraft] = useState("");
   const [definitionDraft, setDefinitionDraft] = useState("");
 
-  const listQuery = useMemo(() => readListQuery(searchParams), [searchParams]);
+  // 参照が毎レンダー変わっても、クエリ文字列が同じなら一覧を再取得しない。
+  const searchParamsKey = searchParams.toString();
+  const listQuery = useMemo(
+    () => readListQuery(new URLSearchParams(searchParamsKey)),
+    [searchParamsKey]
+  );
 
   useEffect(() => {
     setNameDraft(listQuery.name ?? "");
@@ -83,7 +90,7 @@ function ExecutionsPageClientInner() {
   );
   const hasPrev = listQuery.pagination.offset > 0;
   const hasNext = totalCount !== null && listQuery.pagination.offset + (items?.length ?? 0) < totalCount;
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setToast(null);
     try {
@@ -97,10 +104,12 @@ function ExecutionsPageClientInner() {
       const page = await apiGet<PagedExecutions>(path);
       setItems(page.items);
       setTotalCount(page.totalCount);
+      return true;
     } catch (e) {
       setToast(toToastError(e));
       setItems(null);
       setTotalCount(null);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -171,7 +180,29 @@ function ExecutionsPageClientInner() {
   );
 
   return (
-    <PageShell title={uiText.lists.executions}>
+    <PageShell
+      title={uiText.lists.executions}
+      primaryActions={
+        <button
+          type="button"
+          className="rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-4 py-2 text-sm font-medium text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)]"
+          onClick={() => setIngressOpen(true)}
+        >
+          {uiText.executionsPage.ingress.open}
+        </button>
+      }
+    >
+      <SubscribeIngressDialog
+        open={ingressOpen}
+        onClose={() => setIngressOpen(false)}
+        onAccepted={() => {
+          void load().then((loaded) => {
+            if (loaded) {
+              setToast({ tone: "success", message: uiText.executionsPage.ingress.accepted });
+            }
+          });
+        }}
+      />
 
       {listQuery.definitionId && (
         <output className="block rounded border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary-container)] px-3 py-2 text-sm text-[var(--md-sys-color-on-primary-container)]" aria-live="polite">

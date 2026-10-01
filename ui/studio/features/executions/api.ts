@@ -75,6 +75,39 @@ export async function cancelExecution(displayId: string): Promise<CommandAccepte
   });
 }
 
+/** テナント内の一意な購読候補。 */
+export type EventSubscriptionCandidate = {
+  topic: string;
+  key: string;
+};
+
+/** `GET /v1/event-subscriptions` の応答。 */
+export type EventSubscriptionListResponse = {
+  subscriptions: EventSubscriptionCandidate[];
+};
+
+/**
+ * 現在テナントのアクティブ購読から、一意な topic / key を取る。
+ * @returns 候補一覧。displayId と nodeId は含まない。
+ */
+export async function listEventSubscriptions(): Promise<EventSubscriptionListResponse> {
+  return apiGet<EventSubscriptionListResponse>("/event-subscriptions");
+}
+
+/**
+ * テナント内の一致購読へ集合配送する。ノード Resume には読み替えない。
+ * @param input topic は必須。key の空白は省略する。payload は送らない。
+ */
+export async function publishTenantEvent(input: { topic: string; key?: string }): Promise<void> {
+  const topic = input.topic.trim();
+  const key = input.key?.trim() ?? "";
+  const body: { topic: string; key?: string } = { topic };
+  if (key.length > 0) {
+    body.key = key;
+  }
+  await apiPost<unknown>("/events", body);
+}
+
 /**
  * 実行へイベントを送信する。
  * @param displayId 実行 displayId

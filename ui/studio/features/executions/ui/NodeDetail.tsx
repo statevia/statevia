@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ExecutionNodeDTO, ExecutionView } from "../types";
 import { formatTracePayload } from "../lib/formatExecutionTrace";
-import { resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { NodeDetailStatusPanels, NodeDetailTraceSection } from "./nodeDetailSections";
@@ -97,11 +97,18 @@ function NodeDetailResumeActions({
   onResume
 }: Readonly<NodeDetailResumeActionsProps>) {
   const uiText = useUiText();
+  const subscribeResume = isSubscribeInternalResume(resumeEvents);
+  const selectLabel = subscribeResume
+    ? uiText.nodeDetail.waiting.selectInternalResumeEvent
+    : uiText.nodeDetail.waiting.selectResumeEvent;
   return (
     <div className="mt-3 space-y-2">
+      {isWaiting && subscribeResume && (
+        <p className="whitespace-pre-line text-xs text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
+      )}
       {isWaiting && resumeEvents.length > 1 && (
         <label className="block space-y-1 text-xs text-[var(--md-sys-color-on-surface)]">
-          <span>{uiText.nodeDetail.waiting.selectResumeEvent}</span>
+          <span>{selectLabel}</span>
           <select
             className="w-full rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] px-3 py-2 text-sm"
             value={effectiveResumeEvent}
@@ -122,7 +129,7 @@ function NodeDetailResumeActions({
         disabled={!canResume || loading || effectiveResumeEvent.length === 0}
         onClick={() => onResume(effectiveResumeEvent)}
       >
-        {uiText.actions.resume}
+        {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
       </button>
       {resumeDisabledReason && (
         <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{resumeDisabledReason}</p>

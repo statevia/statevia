@@ -63,6 +63,25 @@ describe("api/core route GET", () => {
     expect(await res.text()).toBe("");
   });
 
+  it("events と event-subscriptions を v1 に転送する", async () => {
+    const eventsReq = new NextRequest("http://localhost/api/core/events", {
+      method: "POST",
+      body: JSON.stringify({ topic: "orders.updated", key: "sku" })
+    });
+    await POST(eventsReq, { params: Promise.resolve({ path: ["events"] }) });
+    expect(fetch).toHaveBeenCalledWith(
+      "http://core.test/v1/events",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ topic: "orders.updated", key: "sku" })
+      })
+    );
+
+    const listReq = new NextRequest("http://localhost/api/core/event-subscriptions");
+    await GET(listReq, { params: Promise.resolve({ path: ["event-subscriptions"] }) });
+    expect(fetch).toHaveBeenCalledWith("http://core.test/v1/event-subscriptions", expect.any(Object));
+  });
+
   it("definitions パスを v1/definitions に転送する", async () => {
     const req = new NextRequest("http://localhost/api/core/definitions/def-1");
     await GET(req, { params: Promise.resolve({ path: ["definitions", "def-1"] }) });

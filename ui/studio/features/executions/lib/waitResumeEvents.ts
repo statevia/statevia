@@ -39,7 +39,21 @@ function dedupeEventNames(eventNames: string[]): string[] {
   return unique;
 }
 
+const SUBSCRIBE_INTERNAL_EVENT_PREFIX = "statevia.event.subscribe.";
+
 const TERMINAL_EXECUTION_STATUSES = new Set(["Completed", "Cancelled", "Failed"]);
+
+/**
+ * Resume 候補が Subscribe の内部イベント名だけか。
+ * topic / key ではなく、この実行だけの副操作としてラベルを分ける。
+ * @param eventNames `resolveWaitResumeEvents` の結果
+ */
+export function isSubscribeInternalResume(eventNames: readonly string[]): boolean {
+  return (
+    eventNames.length > 0 &&
+    eventNames.every((eventName) => eventName.startsWith(SUBSCRIBE_INTERNAL_EVENT_PREFIX))
+  );
+}
 
 /**
  * 上部「イベント送信」（PublishEvent シム）が使えるか。

@@ -309,6 +309,79 @@ public sealed class ExecutionWaitRepositoryTests
         Assert.Empty(keyedMatches);
     }
 
+    /// <summary>候補はテナント内の一意な topic / key だけを昇順で返す。子実行の購読を含み、他テナントは含まない。</summary>
+    [Fact]
+    public async Task ListDistinctSubscriptionCandidatesAsync_ReturnsUniqueTenantPairsIncludingChild()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+        var otherTenantExecutionId = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, parentId, "parent-wait", "orders.updated", "", "statevia.event.subscribe.0", now);
+        await SeedSubscriptionAsync(db, childId, "child-wait", "orders.updated", "", "statevia.event.subscribe.0", now.AddMinutes(1));
+        await SeedSubscriptionAsync(db, childId, "child-wait-b", "zeta.ready", "box", "statevia.event.subscribe.1", now.AddMinutes(2));
+        await SeedSubscriptionAsync(
+            db,
+            otherTenantExecutionId,
+            "other-wait",
+            "secret.topic",
+            "hidden",
+            "statevia.event.subscribe.0",
+            now,
+            TestTenantIds.OtherTenantId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var candidates = await repo.ListDistinctSubscriptionCandidatesAsync(
+            uow,
+            TestTenantIds.T1TenantId,
+            limit: 10,
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(
+            [
+                new EventSubscriptionCandidate("orders.updated", ""),
+                new EventSubscriptionCandidate("zeta.ready", "box"),
+            ],
+            candidates);
+    }
+
+    /// <summary>上限を超える候補は topic / key 昇順の先頭だけを返す。</summary>
+    [Fact]
+    public async Task ListDistinctSubscriptionCandidatesAsync_WhenOverLimit_ReturnsLeadingPairs()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var executionId = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, executionId, "wait-a", "alpha.ready", "sku", "statevia.event.subscribe.0", now);
+        await SeedSubscriptionAsync(db, executionId, "wait-b", "orders.updated", "", "statevia.event.subscribe.1", now);
+        await SeedSubscriptionAsync(db, executionId, "wait-c", "zeta.ready", "box", "statevia.event.subscribe.2", now);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var candidates = await repo.ListDistinctSubscriptionCandidatesAsync(
+            uow,
+            TestTenantIds.T1TenantId,
+            limit: 2,
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(
+            [
+                new EventSubscriptionCandidate("alpha.ready", "sku"),
+                new EventSubscriptionCandidate("orders.updated", ""),
+            ],
+            candidates);
+    }
+
     /// <summary>topic+非空 key は厳密一致のみ返す。</summary>
     [Fact]
     public async Task ListMatchingSubscriptionsAsync_MatchesNonEmptyKeyExactly()
@@ -446,11 +519,12 @@ public sealed class ExecutionWaitRepositoryTests
         string topic,
         string correlationKey,
         string resumeEventName,
-        DateTime createdAt)
+        DateTime createdAt,
+        Guid? tenantId = null)
     {
         await using var ctx = new CoreDbContext(db.Options);
         if (!await ctx.Executions.AnyAsync(x => x.ExecutionId == executionId))
-            ctx.Executions.Add(CreateExecution(executionId, createdAt));
+            ctx.Executions.Add(CreateExecution(executionId, createdAt, tenantId));
 
         if (!await ctx.ExecutionWaits.AnyAsync(x => x.ExecutionId == executionId && x.NodeId == nodeId))
         {

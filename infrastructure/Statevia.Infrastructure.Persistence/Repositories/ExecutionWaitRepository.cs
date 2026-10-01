@@ -177,4 +177,29 @@ internal sealed class ExecutionWaitRepository(
             .ToListAsync(ct)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EventSubscriptionCandidate>> ListDistinctSubscriptionCandidatesAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        int limit,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+
+        var db = uow.GetDb();
+        return await (
+            from subscription in db.ExecutionWaitSubscriptions.AsNoTracking()
+            join execution in db.Executions.AsNoTracking()
+                on subscription.ExecutionId equals execution.ExecutionId
+            where execution.TenantId == tenantId
+            group subscription by new { subscription.Topic, subscription.CorrelationKey }
+                into grouped
+            orderby grouped.Key.Topic, grouped.Key.CorrelationKey
+            select new EventSubscriptionCandidate(grouped.Key.Topic, grouped.Key.CorrelationKey))
+            .Take(limit)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+    }
 }

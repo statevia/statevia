@@ -60,7 +60,7 @@ export function useNodeCommands(
    * Wait ノードを指定イベント名で Resume する。
    *
    * @param nodeId 実行ノード短名 UUID（`nodeId`）。
-   * @param resumeKey 再開イベント名（`resumeKey` として API に送る）。
+   * @param resumeKey 再開イベント名。Subscribe では内部イベント名であり、topic は載せない。
    */
   async function resumeNode(nodeId: string, resumeKey: string) {
     if (!commandsEnabled) return;

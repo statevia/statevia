@@ -38,6 +38,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ExecutionRecoveryService>();
         services.AddScoped<IExecutionService, ExecutionService>();
         services.AddScoped<IEventIngressService, EventIngressService>();
+        services.AddScoped<IEventSubscriptionQueryService, EventSubscriptionQueryService>();
         services.AddScoped<IForkChildExecutionCoordinator, ForkChildExecutionCoordinator>();
         services.AddScoped<IForkExpansionHostHandler, ForkExpansionHostHandler>();
         services.AddScoped<ExecutionScheduleDefinitionResolver>();
