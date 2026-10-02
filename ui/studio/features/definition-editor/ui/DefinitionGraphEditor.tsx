@@ -106,7 +106,7 @@ type DefinitionGraphNodeData = {
 };
 
 const handleClassName =
-  "z-20 h-4 w-4 border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]";
+  "z-20 h-4 w-4 border-md-outline-variant bg-md-surface-container";
 
 function DefinitionGraphNodeComponent({ data }: NodeProps<DefinitionGraphNodeData>) {
   const appearance = getNodeAppearance(data.nodeType);
@@ -875,16 +875,16 @@ export function DefinitionGraphEditor({
 
   if (!document) {
     return (
-      <section className="rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4">
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">{labels.empty}</p>
+      <section className="rounded-lg border border-md-outline bg-md-surface p-4">
+        <p className="text-sm text-md-on-surface-variant">{labels.empty}</p>
       </section>
     );
   }
 
-  const wrapperClassName = isFullscreen ? "fixed inset-0 z-50 bg-[var(--md-sys-color-surface-container-high)] p-4" : "";
+  const wrapperClassName = isFullscreen ? "fixed inset-0 z-50 bg-md-surface-container-high p-4" : "";
   const panelClassName = isFullscreen
-    ? "mx-auto h-full w-full max-w-[1600px] space-y-3 rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4"
-    : "space-y-3 rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4";
+    ? "mx-auto h-full w-full max-w-[1600px] space-y-3 rounded-lg border border-md-outline bg-md-surface p-4"
+    : "space-y-3 rounded-lg border border-md-outline bg-md-surface p-4";
   const gridClassName = isFullscreen
     ? "grid h-[calc(100%-4rem)] gap-3 lg:grid-cols-[minmax(0,1fr)_340px]"
     : "grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]";
@@ -894,10 +894,10 @@ export function DefinitionGraphEditor({
     <div className={wrapperClassName}>
       <section className={panelClassName}>
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">{labels.title}</h3>
+        <h3 className="text-sm font-semibold text-md-on-surface">{labels.title}</h3>
         <button
           type="button"
-          className="ml-auto rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-1 text-xs"
+          className="ml-auto rounded border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs"
           onClick={() => setIsFullscreen((current) => !current)}
         >
           {isFullscreen ? labels.fullscreenExit : labels.fullscreenEnter}
@@ -906,7 +906,7 @@ export function DefinitionGraphEditor({
 
       <div className={gridClassName}>
         <div
-          className={`${graphHeightClassName} min-h-0 min-w-0 rounded border border-[var(--md-sys-color-outline-variant)]`}
+          className={`${graphHeightClassName} min-h-0 min-w-0 rounded border border-md-outline-variant`}
         >
           <ReactFlow
             nodes={nodes}
@@ -941,8 +941,8 @@ export function DefinitionGraphEditor({
             <Background />
           </ReactFlow>
         </div>
-        <div className="flex h-full min-h-0 flex-col gap-2 rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] p-2">
-          <section className="shrink-0 space-y-2 rounded border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-2">
+        <div className="flex h-full min-h-0 flex-col gap-2 rounded border border-md-outline-variant bg-md-surface-container p-2">
+          <section className="shrink-0 space-y-2 rounded border border-md-outline bg-md-surface p-2">
             <p className="text-sm font-medium">{labels.addNodeDialogTitle}</p>
             <div className="grid grid-cols-2 gap-2">
               {availableNodeTypes.map((entry) => (
@@ -950,7 +950,7 @@ export function DefinitionGraphEditor({
                   key={entry.type}
                   type="button"
                   disabled={entry.disabled}
-                  className="rounded border border-[var(--md-sys-color-outline)] px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded border border-md-outline px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => {
                     if (entry.disabled) {
                       return;
@@ -969,7 +969,7 @@ export function DefinitionGraphEditor({
               ))}
             </div>
             {availableNodeTypes.some((entry) => entry.disabled && entry.reason) && (
-              <ul className="list-disc pl-4 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <ul className="list-disc pl-4 text-xs text-md-on-surface-variant">
                 {availableNodeTypes
                   .filter((entry) => entry.disabled && entry.reason)
                   .map((entry) => (
@@ -1164,12 +1164,12 @@ function GraphNodeInspector({
   const formValue = inputToFormRecord(node.input);
 
   return (
-    <section className="space-y-2 rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] p-3">
+    <section className="space-y-2 rounded border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.nodeInspectorTitle}</p>
       <label className="block text-xs">
         <span className="block">name</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={node.name}
           onChange={(changeEvent) => {
             const nextName = changeEvent.target.value;
@@ -1197,7 +1197,7 @@ function GraphNodeInspector({
             />
           ) : (
             <input
-              className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+              className="mt-1 w-full rounded border border-md-outline px-2 py-1"
               value={actionOrEventDraft}
               onChange={(changeEvent) => {
                 setActionOrEventDraft(changeEvent.target.value);
@@ -1217,7 +1217,7 @@ function GraphNodeInspector({
       {node.type === "wait" && waitEditMode === "legacy" && (
         <button
           type="button"
-          className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+          className="rounded border border-md-outline-variant px-2 py-1 text-xs"
           onClick={() => {
             onDocumentChange(convertLegacyWaitToEvents(document, node.name));
           }}
@@ -1235,7 +1235,7 @@ function GraphNodeInspector({
           {node.events !== undefined && (
             <button
               type="button"
-              className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+              className="rounded border border-md-outline-variant px-2 py-1 text-xs"
               onClick={() => {
                 onDocumentChange(setWaitEvents(document, node.name, node.events ?? {}));
               }}
@@ -1246,7 +1246,7 @@ function GraphNodeInspector({
           {node.subscribe !== undefined && (
             <button
               type="button"
-              className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+              className="rounded border border-md-outline-variant px-2 py-1 text-xs"
               onClick={() => {
                 onDocumentChange(
                   setWaitSubscribe(
@@ -1281,7 +1281,7 @@ function GraphNodeInspector({
           />
           <button
             type="button"
-            className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+            className="rounded border border-md-outline-variant px-2 py-1 text-xs"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "subscribe"));
             }}
@@ -1308,7 +1308,7 @@ function GraphNodeInspector({
           />
           <button
             type="button"
-            className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs"
+            className="rounded border border-md-outline-variant px-2 py-1 text-xs"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "events"));
             }}
@@ -1321,7 +1321,7 @@ function GraphNodeInspector({
         <label className="block text-xs">
           <span className="block">{labels.actionErrorLabel}</span>
           <input
-            className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+            className="mt-1 w-full rounded border border-md-outline px-2 py-1"
             value={node.error ?? ""}
             onChange={(changeEvent) => {
               const nextValue = changeEvent.target.value.trim();
@@ -1384,7 +1384,7 @@ function GraphNodeInspector({
                   }
                 }}
               />
-              <span className="mt-0.5 block text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+              <span className="mt-0.5 block text-[10px] text-md-on-surface-variant">
                 {labels.actionInputHint}
               </span>
             </>
@@ -1396,7 +1396,7 @@ function GraphNodeInspector({
         <label className="block text-xs">
           <span className="block">branches (comma separated)</span>
           <input
-            className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+            className="mt-1 w-full rounded border border-md-outline px-2 py-1"
             value={(node.branches ?? []).join(", ")}
             onChange={(changeEvent) => {
               const branches = changeEvent.target.value
@@ -1744,12 +1744,12 @@ function GraphEdgeInspector({
   }
 
   return (
-    <section className="space-y-2 rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] p-3">
+    <section className="space-y-2 rounded border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.edgeInspectorTitle}</p>
       <label className="block text-xs">
         <span className="block">to</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={targetEdge.to}
           onChange={(changeEvent) => {
             onDocumentChange(
@@ -1788,7 +1788,7 @@ function GraphEdgeInspector({
             <label className="block text-xs">
               <span className="block">when.path</span>
               <input
-                className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
                 value={conditionalEdge?.when?.path ?? ""}
                 placeholder={labels.whenPathPlaceholder}
                 disabled={isWhenFieldsDisabled}
@@ -1814,14 +1814,14 @@ function GraphEdgeInspector({
                   ))}
                 </datalist>
               ) : null}
-              <span className="mt-0.5 block text-[10px] text-[var(--md-sys-color-on-surface-variant)]">
+              <span className="mt-0.5 block text-[10px] text-md-on-surface-variant">
                 {labels.whenPathHint}
               </span>
             </label>
             <label className="block text-xs">
               <span className="block">when.op</span>
               <select
-                className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
                 value={selectedWhenOp}
                 disabled={isWhenFieldsDisabled}
                 onChange={(changeEvent) => {
@@ -1858,7 +1858,7 @@ function GraphEdgeInspector({
             <label className="block text-xs">
               <span className="block">when.value</span>
               <input
-                className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
                 value={formatWhenValue(conditionalEdge?.when?.value)}
                 placeholder={labels.whenValuePlaceholder}
                 disabled={isWhenFieldsDisabled || isWhenValueDisabled}
@@ -1877,12 +1877,12 @@ function GraphEdgeInspector({
                 }}
               />
               {!isWhenFieldsDisabled && isWhenValueDisabled && (
-                <span className="mt-1 block text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                <span className="mt-1 block text-[11px] text-md-on-surface-variant">
                   {labels.whenValueDisabledForExists}
                 </span>
               )}
               {!isWhenFieldsDisabled && !isWhenValueDisabled && whenValueHint && (
-                <span className="mt-1 block text-[11px] text-[var(--md-sys-color-on-surface-variant)]">
+                <span className="mt-1 block text-[11px] text-md-on-surface-variant">
                   {whenValueHint}
                 </span>
               )}

@@ -185,7 +185,7 @@ function ExecutionsPageClientInner() {
       primaryActions={
         <button
           type="button"
-          className="rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-4 py-2 text-sm font-medium text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)]"
+          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
           onClick={() => setIngressOpen(true)}
         >
           {uiText.executionsPage.ingress.open}
@@ -205,8 +205,8 @@ function ExecutionsPageClientInner() {
       />
 
       {listQuery.definitionId && (
-        <output className="block rounded border border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary-container)] px-3 py-2 text-sm text-[var(--md-sys-color-on-primary-container)]" aria-live="polite">
-          <span className="text-[var(--md-sys-color-on-primary-container)]">{uiText.executionsPage.filter.contextActivePrefix} </span>
+        <output className="block rounded border border-md-primary bg-md-primary-container px-3 py-2 text-sm text-md-on-primary-container" aria-live="polite">
+          <span className="text-md-on-primary-container">{uiText.executionsPage.filter.contextActivePrefix} </span>
           <span className="font-mono break-all">{listQuery.definitionId}</span>
           <button
             type="button"
@@ -226,13 +226,13 @@ function ExecutionsPageClientInner() {
         </output>
       )}
 
-      <form onSubmit={handleFilterSubmit} className="space-y-3 rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm">
-        <h2 className="text-sm font-medium text-[var(--md-sys-color-on-surface)]">{uiText.executionsPage.filter.title}</h2>
+      <form onSubmit={handleFilterSubmit} className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
+        <h2 className="text-sm font-medium text-md-on-surface">{uiText.executionsPage.filter.title}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm text-[var(--md-sys-color-on-surface)]">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.labels.status}</span>
+          <label className="block text-sm text-md-on-surface">
+            <span className="text-md-on-surface-variant">{uiText.labels.status}</span>
             <select
-              className="mt-1 w-full rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-1.5 text-sm text-[var(--md-sys-color-on-surface)]"
+              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
               value={currentStatus}
               onChange={(e) => {
                 const v = e.target.value as StatusFilter;
@@ -252,10 +252,10 @@ function ExecutionsPageClientInner() {
               <option value="Failed">{uiText.executionsPage.filter.statusFailed}</option>
             </select>
           </label>
-          <label className="block text-sm text-[var(--md-sys-color-on-surface)]">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.filter.definitionLabelWithHint(uiText.labels.definitionId)}</span>
+          <label className="block text-sm text-md-on-surface">
+            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.definitionLabelWithHint(uiText.labels.definitionId)}</span>
             <input
-              className="mt-1 w-full rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-1.5 font-mono text-sm text-[var(--md-sys-color-on-surface)]"
+              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
               value={definitionDraft}
               onChange={(e) => setDefinitionDraft(e.target.value)}
               placeholder={uiText.executionsPage.filter.definitionPlaceholder}
@@ -264,10 +264,10 @@ function ExecutionsPageClientInner() {
           </label>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[260px] flex-1 text-sm text-[var(--md-sys-color-on-surface)]">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.filter.nameInputHint}</span>
+          <label className="min-w-[260px] flex-1 text-sm text-md-on-surface">
+            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.nameInputHint}</span>
             <input
-              className="mt-1 w-full rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-1.5 font-mono text-sm text-[var(--md-sys-color-on-surface)]"
+              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
               value={nameDraft}
               onChange={(e) => setNameDraft(e.target.value)}
               autoComplete="off"
@@ -275,15 +275,15 @@ function ExecutionsPageClientInner() {
           </label>
           <button
             type="submit"
-            className="rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-4 py-2 text-sm font-medium text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)]"
+            className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
             disabled={loading}
           >
             {uiText.executionsPage.filter.search}
           </button>
-          <label className="text-sm text-[var(--md-sys-color-on-surface)]">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.filter.sortByLabel}</span>
+          <label className="text-sm text-md-on-surface">
+            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.sortByLabel}</span>
             <select
-              className="mt-1 rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-2 text-sm text-[var(--md-sys-color-on-surface)]"
+              className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
               value={effectiveSortBy}
               onChange={(e) =>
                 goTo({
@@ -297,10 +297,10 @@ function ExecutionsPageClientInner() {
               <option value="displayId">{uiText.executionsPage.filter.sortByDisplayId}</option>
             </select>
           </label>
-          <label className="text-sm text-[var(--md-sys-color-on-surface)]">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.filter.sortOrderLabel}</span>
+          <label className="text-sm text-md-on-surface">
+            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.sortOrderLabel}</span>
             <select
-              className="mt-1 rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-2 text-sm text-[var(--md-sys-color-on-surface)]"
+              className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
               value={effectiveSortOrder}
               onChange={(e) =>
                 goTo({
@@ -316,7 +316,7 @@ function ExecutionsPageClientInner() {
           </label>
           <button
             type="button"
-            className="rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-4 py-2 text-sm text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)]"
+            className="rounded border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
             onClick={() => {
               setNameDraft("");
               setDefinitionDraft("");
@@ -330,7 +330,7 @@ function ExecutionsPageClientInner() {
             {uiText.executionsPage.filter.clear}
           </button>
         </div>
-        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+        <p className="text-xs text-md-on-surface-variant">
           {uiText.executionsPage.filter.pageInfo(
             listQuery.pagination.limit,
             listQuery.pagination.offset,
@@ -348,11 +348,11 @@ function ExecutionsPageClientInner() {
       {!loading && items !== null && items.length > 0 && (
         <section aria-label={uiText.lists.executions}>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.listSummary(totalCount ?? 0, currentPage1Based)}</p>
+            <p className="text-xs text-md-on-surface-variant">{uiText.executionsPage.listSummary(totalCount ?? 0, currentPage1Based)}</p>
             {pagination}
           </div>
           <ul
-            className="divide-y divide-[var(--md-sys-color-outline)] overflow-hidden rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] shadow-sm"
+            className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm"
             aria-label={uiText.lists.executions}
           >
             {items.map((execution) => {
@@ -362,11 +362,11 @@ function ExecutionsPageClientInner() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={execution.status} />
-                      <span className="truncate font-mono text-sm text-[var(--md-sys-color-on-surface)]" title={execution.displayId}>
+                      <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
                         {execution.displayId}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">{uiText.executionsPage.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
+                    <p className="mt-1 text-xs text-md-on-surface-variant">{uiText.executionsPage.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
                   </div>
                   <button
                     type="button"
@@ -409,7 +409,7 @@ export function ExecutionsPageClient() {
   return (
     <Suspense
       fallback={
-        <div className="p-6 text-sm text-[var(--md-sys-color-on-surface-variant)]" aria-live="polite">
+        <div className="p-6 text-sm text-md-on-surface-variant" aria-live="polite">
           {uiText.actions.loading}
         </div>
       }

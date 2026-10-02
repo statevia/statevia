@@ -26,7 +26,7 @@ export function AppHeader({ theme, locale }: AppHeaderProps) {
   const brandHref = isLoginPage ? "/login" : "/dashboard";
 
   return (
-    <header className="border-b border-[var(--md-sys-color-outline)] bg-[var(--brand-header-bg)] text-[var(--brand-header-fg)]">
+    <header className="border-b border-md-outline bg-brand-header-bg text-brand-header-fg">
       <div className="mx-auto flex max-w-[min(1400px,calc(100%-2rem))] flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link href={brandHref} className="inline-flex items-center gap-2">
           <Image
@@ -44,17 +44,17 @@ export function AppHeader({ theme, locale }: AppHeaderProps) {
         </Link>
         <div className="flex items-center gap-3">
           {isLoginPage ? null : (
-            <nav className="flex flex-wrap items-center gap-3 text-sm text-[var(--brand-header-fg-muted)]">
-              <Link href="/dashboard" className="hover:text-[var(--brand-header-fg)] hover:underline">
+            <nav className="flex flex-wrap items-center gap-3 text-sm text-brand-header-fg-muted">
+              <Link href="/dashboard" className="hover:text-brand-header-fg hover:underline">
                 {uiText.navigation.dashboard}
               </Link>
-              <Link href="/definitions" className="hover:text-[var(--brand-header-fg)] hover:underline">
+              <Link href="/definitions" className="hover:text-brand-header-fg hover:underline">
                 {uiText.navigation.definitions}
               </Link>
-              <Link href="/executions" className="hover:text-[var(--brand-header-fg)] hover:underline">
+              <Link href="/executions" className="hover:text-brand-header-fg hover:underline">
                 {uiText.navigation.executions}
               </Link>
-              <Link href="/account" className="hover:text-[var(--brand-header-fg)] hover:underline">
+              <Link href="/account" className="hover:text-brand-header-fg hover:underline">
                 {uiText.navigation.account}
               </Link>
               <AdminNavLinks />
@@ -63,7 +63,7 @@ export function AppHeader({ theme, locale }: AppHeaderProps) {
                 onClick={() => {
                   void clearSessionAndRedirectToLogin({ includeFrom: false });
                 }}
-                className="hover:text-[var(--brand-header-fg)] hover:underline"
+                className="hover:text-brand-header-fg hover:underline"
               >
                 {uiText.navigation.logout}
               </button>

@@ -106,7 +106,7 @@ export function WaitEventsEditor({
       ))}
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs disabled:opacity-50"
+        className="rounded border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
         disabled={disabled}
         onClick={addRow}
       >
@@ -144,11 +144,11 @@ function WaitEventRowEditor({
   onRemove
 }: Readonly<WaitEventRowEditorProps>) {
   return (
-    <div className="space-y-1 rounded border border-[var(--md-sys-color-outline-variant)] p-2">
+    <div className="space-y-1 rounded border border-md-outline-variant p-2">
       <label className="block text-xs">
         <span className="block">{labels.waitEventNameLabel}</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={row.eventName}
           disabled={disabled}
           onChange={(changeEvent) => {
@@ -165,7 +165,7 @@ function WaitEventRowEditor({
       <label className="block text-xs">
         <span className="block">{labels.waitEventTargetLabel}</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={row.target}
           disabled={disabled}
           onChange={(changeEvent) => {
@@ -181,7 +181,7 @@ function WaitEventRowEditor({
       </label>
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs disabled:opacity-50"
+        className="rounded border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
         disabled={disabled}
         onClick={onRemove}
       >

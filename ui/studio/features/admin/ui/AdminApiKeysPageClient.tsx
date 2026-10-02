@@ -164,14 +164,14 @@ export function AdminApiKeysPageClient() {
               id="issued-plain-key"
               readOnly
               value={issuedKey.plainKey}
-              className="min-w-0 flex-1 rounded-lg border border-[var(--md-sys-color-outline)] bg-white px-3 py-2 font-mono text-xs dark:bg-[var(--md-sys-color-surface)]"
+              className="min-w-0 flex-1 rounded-lg border border-md-outline bg-white px-3 py-2 font-mono text-xs dark:bg-md-surface"
             />
             <button
               type="button"
               onClick={() => {
                 void handleCopyPlainKey();
               }}
-              className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 hover:bg-[var(--md-sys-color-surface-container)]"
+              className="rounded-lg border border-md-outline px-3 py-2 hover:bg-md-surface-container"
             >
               {copied ? uiText.admin.apiKeys.copiedKey : uiText.admin.apiKeys.copyKey}
             </button>
@@ -193,7 +193,7 @@ export function AdminApiKeysPageClient() {
         onSubmit={(event) => {
           void handleCreate(event);
         }}
-        className="rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm"
+        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
       >
         <h2 className="mb-3 text-lg font-medium">{uiText.admin.apiKeys.createTitle}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -207,7 +207,7 @@ export function AdminApiKeysPageClient() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -219,9 +219,9 @@ export function AdminApiKeysPageClient() {
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
-            <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+            <p className="mt-1 text-xs text-md-on-surface-variant">
               {uiText.admin.apiKeys.expiresAtHint}
             </p>
           </div>
@@ -262,22 +262,22 @@ export function AdminApiKeysPageClient() {
     if (apiKeys === null) return <PageState state="error" />;
     if (apiKeys.length === 0) return <PageState state="empty" />;
     return (
-      <ul className="divide-y divide-[var(--md-sys-color-outline)] rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)]">
+      <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
         {apiKeys.map((apiKey) => (
           <li
             key={apiKey.apiKeyId}
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
           >
             <div className="min-w-0">
-              <p className="font-medium text-[var(--md-sys-color-on-surface)]">{apiKey.name}</p>
-              <p className="text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="font-medium text-md-on-surface">{apiKey.name}</p>
+              <p className="text-md-on-surface-variant">
                 {uiText.admin.apiKeys.prefixLabel(apiKey.keyPrefix)}
               </p>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="text-xs text-md-on-surface-variant">
                 {apiKey.isActive ? uiText.admin.apiKeys.active : uiText.admin.apiKeys.inactive}
                 {` · ${apiKey.allowedScopes.join(", ")}`}
               </p>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="text-xs text-md-on-surface-variant">
                 {uiText.admin.apiKeys.createdLabel(formatDateTime(apiKey.createdAt) ?? apiKey.createdAt)}
                 {` · ${
                   apiKey.expiresAt
@@ -298,7 +298,7 @@ export function AdminApiKeysPageClient() {
                 onClick={() => {
                   void handleRevoke(apiKey);
                 }}
-                className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-1.5 hover:bg-[var(--md-sys-color-surface-container)] disabled:opacity-60"
+                className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container disabled:opacity-60"
               >
                 {revokingId === apiKey.apiKeyId ? uiText.admin.apiKeys.revoking : uiText.admin.apiKeys.revoke}
               </button>

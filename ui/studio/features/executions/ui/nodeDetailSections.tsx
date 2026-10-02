@@ -13,11 +13,11 @@ type TracePayloadDisclosureProps = {
 function TracePayloadDisclosure({ heading, payloadText, emptyLabel }: Readonly<TracePayloadDisclosureProps>) {
   const display = payloadText === "" ? emptyLabel : payloadText;
   return (
-    <details className="mt-1 rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-high)]/60">
-      <summary className="cursor-pointer select-none list-none px-2 py-1.5 text-xs font-medium text-[var(--md-sys-color-on-surface)] outline-none marker:content-none [&::-webkit-details-marker]:hidden">
+    <details className="mt-1 rounded-lg border border-md-outline-variant bg-[var(--md-sys-color-surface-container-high)]/60">
+      <summary className="cursor-pointer select-none list-none px-2 py-1.5 text-xs font-medium text-md-on-surface outline-none marker:content-none [&::-webkit-details-marker]:hidden">
         {heading}
       </summary>
-      <pre className="mx-2 mb-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--md-sys-color-surface-container-high)] p-2 text-[10px] leading-snug text-[var(--md-sys-color-on-surface)]">
+      <pre className="mx-2 mb-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-md-surface-container-high p-2 text-[10px] leading-snug text-md-on-surface">
         {display}
       </pre>
     </details>
@@ -44,7 +44,7 @@ function NodeDetailTraceDuration({ node }: Readonly<Pick<NodeDetailTraceSectionP
     node.completedAt !== ""
   ) {
     return (
-      <div className="text-[var(--md-sys-color-on-surface-variant)]">
+      <div className="text-md-on-surface-variant">
         {uiText.nodeDetail.trace.durationUnavailable}
       </div>
     );
@@ -62,7 +62,7 @@ export function NodeDetailTraceSection({
   const uiText = useUiText();
   const locale = useLocale();
   return (
-    <div className="mt-2 space-y-1 border-t border-[var(--md-sys-color-outline-variant)] pt-2">
+    <div className="mt-2 space-y-1 border-t border-md-outline-variant pt-2">
       {node.startedAt != null && node.startedAt !== "" && (
         <div>{uiText.nodeDetail.trace.startedAt(formatExecutionInstant(node.startedAt, locale))}</div>
       )}

@@ -532,11 +532,11 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <PageState state="loading" message={uiText.definitionEditor.loadingMeta} />
       )}
 
-      <section className="space-y-3 rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm">
+      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
         <label className="block text-sm">
-          <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.definitionEditor.labels.name}</span>
+          <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.name}</span>
           <input
-            className="mt-1 w-full rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-2 py-1.5 text-sm text-[var(--md-sys-color-on-surface)]"
+            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
             value={definitionName}
             onChange={(event) => setDefinitionName(event.target.value)}
             autoComplete="off"
@@ -549,14 +549,14 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editorMode === "yaml" ? "border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] text-[var(--brand-cta-fg)]" : "border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)]"}`}
+            className={`rounded border px-3 py-1 text-xs ${editorMode === "yaml" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
             onClick={() => setEditorMode("yaml")}
           >
             {uiText.definitionEditor.actions.switchToYaml}
           </button>
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editorMode === "graph" ? "border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] text-[var(--brand-cta-fg)]" : "border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface)]"}`}
+            className={`rounded border px-3 py-1 text-xs ${editorMode === "graph" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
             onClick={() => {
               parseYamlImmediately(yaml);
               setEditorMode("graph");
@@ -568,7 +568,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
 
         {editorMode === "yaml" ? (
           <label className="block text-sm">
-            <span className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.definitionEditor.labels.yaml}</span>
+            <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.yaml}</span>
             <YamlCodeEditor
               value={yaml}
               onChange={handleYamlChange}
@@ -608,7 +608,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="w-full rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-3 py-1.5 text-sm text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)] disabled:opacity-50 sm:w-auto"
+            className="w-full rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50 sm:w-auto"
             onClick={() => void handleSave()}
             disabled={saving || hasYamlError}
           >
@@ -616,7 +616,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
           </button>
           <button
             type="button"
-            className="w-full rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-sm text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)] sm:ml-auto sm:w-auto"
+            className="w-full rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high sm:ml-auto sm:w-auto"
             onClick={() => {
               if (!initialSnapshot) {
                 return;

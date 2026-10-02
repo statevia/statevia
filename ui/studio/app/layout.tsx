@@ -30,7 +30,7 @@ export default async function RootLayout({
       <head>
         <Script src="/theme-init.js" strategy="beforeInteractive" />
       </head>
-      <body className="min-h-screen bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)]">
+      <body className="min-h-screen bg-md-surface-container-high text-md-on-surface">
         <UiTextProvider locale={locale}>
           <AppHeader theme={theme} locale={locale} />
           <div className="mx-auto max-w-[min(1400px,calc(100%-2rem))] px-4 py-6">{children}</div>

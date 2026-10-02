@@ -151,7 +151,7 @@ export function AdminGroupDetailPageClient({ groupId }: AdminGroupDetailPageClie
         </Link>
       }
     >
-      <section className="rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4">
+      <section className="rounded-xl border border-md-outline bg-md-surface p-4">
         <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.membersTitle}</h2>
         <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
           {users.map((user) => {
@@ -184,7 +184,7 @@ export function AdminGroupDetailPageClient({ groupId }: AdminGroupDetailPageClie
         </button>
       </section>
 
-      <section className="rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4">
+      <section className="rounded-xl border border-md-outline bg-md-surface p-4">
         <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.permissionsTitle}</h2>
         <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
           {assignablePermissions.map((permission) => {

@@ -260,7 +260,7 @@ export function ActionInputCodeEditor({
   }, [value, syntaxHighlight]);
 
   const wrapperClassName = [
-    "mt-1 overflow-hidden rounded border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] text-xs",
+    "mt-1 overflow-hidden rounded border border-md-outline bg-md-surface text-xs",
     className ?? ""
   ]
     .filter(Boolean)

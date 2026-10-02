@@ -41,10 +41,10 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 p-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-[var(--md-sys-color-on-surface)]">
+        <h1 className="text-xl font-semibold text-md-on-surface">
           {uiText.definitionDetail.title}
         </h1>
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+        <p className="text-sm text-md-on-surface-variant">
           {uiText.definitionDetail.urlPrefix} <span className="font-mono">{definitionId}</span>
         </p>
       </header>
@@ -52,32 +52,32 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {showLoading && (
-        <output className="block text-sm text-[var(--md-sys-color-on-surface-variant)]" aria-live="polite">
+        <output className="block text-sm text-md-on-surface-variant" aria-live="polite">
           {uiText.actions.loading}
         </output>
       )}
 
       {!loading && !row && toast && (
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+        <p className="text-sm text-md-on-surface-variant">
           {uiText.definitionDetail.errorFetchFailed}
         </p>
       )}
 
       {!loading && row && (
         <section
-          className="rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 text-sm text-[var(--md-sys-color-on-surface)] shadow-sm"
+          className="rounded-lg border border-md-outline bg-md-surface p-4 text-sm text-md-on-surface shadow-sm"
           aria-label={uiText.definitionDetail.ariaMeta}
         >
           <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-2">
-            <dt className="text-[var(--md-sys-color-on-surface-variant)]">
+            <dt className="text-md-on-surface-variant">
               {uiText.definitionDetail.meta.name}
             </dt>
             <dd className="font-medium">{row.name}</dd>
-            <dt className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.labels.displayId}</dt>
+            <dt className="text-md-on-surface-variant">{uiText.labels.displayId}</dt>
             <dd className="font-mono break-all">{row.displayId}</dd>
-            <dt className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.labels.resourceId}</dt>
+            <dt className="text-md-on-surface-variant">{uiText.labels.resourceId}</dt>
             <dd className="font-mono break-all">{row.resourceId}</dd>
-            <dt className="text-[var(--md-sys-color-on-surface-variant)]">
+            <dt className="text-md-on-surface-variant">
               {uiText.definitionDetail.meta.createdAt}
             </dt>
             <dd>{formatDateTimeLocalized(row.createdAt, dateTimeLocale)}</dd>
@@ -101,7 +101,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
         </p>
       </section>
 
-      <section className="space-y-2 text-sm text-[var(--md-sys-color-on-surface)]">
+      <section className="space-y-2 text-sm text-md-on-surface">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -113,7 +113,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
           </button>
           <button
             type="button"
-            className="rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-3 py-1.5 text-sm font-medium text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)] disabled:opacity-60"
+            className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
             onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/run`)}
             disabled={deleting}
           >
@@ -122,7 +122,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
           {row && !confirmDelete && (
             <button
               type="button"
-              className="rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-sm text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)] disabled:opacity-60"
+              className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
               onClick={onDeleteClick}
               disabled={deleting || loading}
             >
@@ -143,7 +143,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
               </button>
               <button
                 type="button"
-                className="rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-sm text-[var(--md-sys-color-on-surface)]"
+                className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
                 onClick={() => setConfirmDelete(false)}
                 disabled={deleting}
               >

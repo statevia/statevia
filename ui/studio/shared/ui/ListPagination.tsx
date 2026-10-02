@@ -42,16 +42,16 @@ export function ListPagination({
     <nav className={navClassName} aria-label={ariaLabel}>
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onPrev}
         disabled={!hasPrev}
       >
         {effectivePrevLabel}
       </button>
-      <span className="text-[var(--md-sys-color-on-surface-variant)]">{currentPageLabel}</span>
+      <span className="text-md-on-surface-variant">{currentPageLabel}</span>
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onNext}
         disabled={!hasNext}
       >

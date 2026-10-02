@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.9 |
+| Version | 0.10 |
 | 更新日 | 2026-10-02 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.10（2026-10-02）**: 画面の色クラスを `md-*` / `brand-*` へ寄せた。`Button` / `TextField` を使うのは集合配送ダイアログだけ。不透明度付きクラス、状態パレット、グラフとエディタの style 色は直書きのまま。
 
 **Version 0.9（2026-10-02）**: 色トークンを Tailwind テーマ（`md-*` / `brand-*` / `editor-*`）へ写し、操作部品 `Button` / `TextField` を `shared/ui` に追加。適用済みは集合配送ダイアログのみ。
 
@@ -143,4 +145,12 @@ flowchart LR
 
 `md` 接頭辞は、Tailwind 既定の `neutral` パレットを置き換えないためである。新規の色指定で `text-[var(--md-sys-color-on-surface)]` は使わない。
 
-横断の操作部品は `shared/ui/Button`（`primary` / `secondary`）と `shared/ui/TextField` である。集合配送ダイアログだけが使っている。画面固有の並びと、候補リストのようなその画面だけの要素は `features/*/ui` に残す。他画面の直書きクラスは、この部品へ機械的に寄せる作業が終わるまで残る。
+横断の操作部品は `shared/ui/Button`（`primary` / `secondary`）と `shared/ui/TextField` である。クラス列が一致するのは集合配送ダイアログだけなので、他画面のボタンと 1 行入力はトークンクラスの直書きである。hover、余白、ラベル色が部品と違う箇所は部品へ寄せない。
+
+次はトークンへ替えず、直書きのまま残す。
+
+- 不透明度付きの class（グラフノードの帯、凡例、比較バー、ノード詳細、フォーク領域）
+- `GraphNodeShell` の `--md-sys-color-secondary`（`globals.css` に変数が無い）
+- `PageState` の loading / error と `Toast` の error / success（パレット色）
+- 状態バッジのダーク背景（`color-mix`）
+- グラフのエッジとコードエディタの caret / プレースホルダ（style。class ではない）

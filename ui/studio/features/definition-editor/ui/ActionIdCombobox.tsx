@@ -58,7 +58,7 @@ export function ActionIdCombobox({
   return (
     <div className="relative">
       <input
-        className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+        className="mt-1 w-full rounded border border-md-outline px-2 py-1"
         list={loading ? undefined : listId}
         value={value}
         disabled={loading}
@@ -68,7 +68,7 @@ export function ActionIdCombobox({
         onBlur={handleBlur}
       />
       {loading ? (
-        <p className="mt-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{labels.loading}</p>
+        <p className="mt-1 text-[10px] text-md-on-surface-variant">{labels.loading}</p>
       ) : (
         <>
           <datalist id={listId}>
@@ -77,7 +77,7 @@ export function ActionIdCombobox({
             ))}
           </datalist>
           {showNoResults ? (
-            <p className="mt-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{labels.noResults}</p>
+            <p className="mt-1 text-[10px] text-md-on-surface-variant">{labels.noResults}</p>
           ) : null}
         </>
       )}

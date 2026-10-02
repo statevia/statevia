@@ -55,7 +55,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   - feature 間の内部 import は禁止。長期の互換 re-export は残さない。
   - Tailwind `content` は `app` / `features` / `shared` を含める（`tailwind.config.ts`）。
   - 色は `app/globals.css` の CSS 変数を正本とし、Tailwind では `md-*` / `brand-*` / `editor-*` を使う。`text-[var(--md-sys-color-on-surface)]` のような任意値は新規に書かない。
-  - フォームの送信・キャンセルは `shared/ui/Button`、ラベル付き 1 行入力は `shared/ui/TextField`。適用済みは集合配送ダイアログのみで、他画面はまだ直書きのままである。
+  - フォームの送信・キャンセルは `shared/ui/Button`、ラベル付き 1 行入力は `shared/ui/TextField`。クラス列が一致する集合配送ダイアログだけが部品を使う。他画面はトークンクラスの直書きとする。hover・余白・ラベル色が違う箇所、不透明度付き class、パレット色、style の色は部品やトークンへ寄せない。
 - 静的解析: `npm run lint`（ESLint 9 strict）。型チェック: `npm run typecheck`（`tsc --noEmit`）。テスト: `npm run test:run`（Vitest）。Sonar は **§5.2**。
 
 ---

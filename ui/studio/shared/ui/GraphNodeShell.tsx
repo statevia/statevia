@@ -37,8 +37,8 @@ export function GraphNodeShell({
   className: shellExtraClass,
   children
 }: Readonly<GraphNodeShellProps>) {
-  const outline = selected ? "outline outline-2 outline-[var(--md-sys-color-primary)] outline-offset-2" : "";
-  const running = isRunning ? "opacity-80 text-[var(--md-sys-color-on-surface-variant)]" : "";
+  const outline = selected ? "outline outline-2 outline-md-primary outline-offset-2" : "";
+  const running = isRunning ? "opacity-80 text-md-on-surface-variant" : "";
   const ring = diffRing ?? "";
 
   const roundedFrame = `relative overflow-hidden rounded-xl border-2 shadow-sm ${borderClass} ${bgClass} ${running} ${outline} ${ring}`;

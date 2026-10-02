@@ -105,7 +105,7 @@ export function WaitSubscribeEditor({
       ))}
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs disabled:opacity-50"
+        className="rounded border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
         disabled={disabled}
         onClick={addRow}
       >
@@ -143,11 +143,11 @@ function WaitSubscribeRowEditor({
   onRemove
 }: Readonly<WaitSubscribeRowEditorProps>) {
   return (
-    <div className="space-y-1 rounded border border-[var(--md-sys-color-outline-variant)] p-2">
+    <div className="space-y-1 rounded border border-md-outline-variant p-2">
       <label className="block text-xs">
         <span className="block">{labels.waitSubscribeTopicLabel}</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={row.topic}
           disabled={disabled}
           onChange={(changeEvent) => {
@@ -164,7 +164,7 @@ function WaitSubscribeRowEditor({
       <label className="block text-xs">
         <span className="block">{labels.waitSubscribeKeyLabel}</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={row.key}
           disabled={disabled}
           onChange={(changeEvent) => {
@@ -181,7 +181,7 @@ function WaitSubscribeRowEditor({
       <label className="block text-xs">
         <span className="block">{labels.waitSubscribeNextLabel}</span>
         <input
-          className="mt-1 w-full rounded border border-[var(--md-sys-color-outline)] px-2 py-1"
+          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
           value={row.next}
           disabled={disabled}
           onChange={(changeEvent) => {
@@ -197,7 +197,7 @@ function WaitSubscribeRowEditor({
       </label>
       <button
         type="button"
-        className="rounded border border-[var(--md-sys-color-outline-variant)] px-2 py-1 text-xs disabled:opacity-50"
+        className="rounded border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
         disabled={disabled}
         onClick={onRemove}
       >

@@ -54,7 +54,7 @@ export function AccountSettingsPageClient() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="max-w-md space-y-4 rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-6 shadow-sm"
+        className="max-w-md space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-sm"
       >
         <div>
           <label htmlFor="account-current-password" className="mb-1 block text-sm font-medium">
@@ -67,7 +67,7 @@ export function AccountSettingsPageClient() {
             required
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -88,9 +88,9 @@ export function AccountSettingsPageClient() {
               setNewPassword(e.target.value);
               setMismatch(false);
             }}
-            className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
           />
-          <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+          <p className="mt-1 text-xs text-md-on-surface-variant">
             {uiText.auth.account.passwordPolicyHint}
           </p>
         </div>
@@ -112,7 +112,7 @@ export function AccountSettingsPageClient() {
               setConfirmPassword(e.target.value);
               setMismatch(false);
             }}
-            className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
           />
         </div>
         {mismatch ? (

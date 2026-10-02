@@ -157,7 +157,7 @@ export function AdminUsersPageClient() {
         onSubmit={(event) => {
           void handleCreate(event);
         }}
-        className="rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm"
+        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
       >
         <h2 className="mb-3 text-lg font-medium">{uiText.admin.users.createTitle}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -174,7 +174,7 @@ export function AdminUsersPageClient() {
               pattern={USERNAME_PATTERN}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -187,7 +187,7 @@ export function AdminUsersPageClient() {
               maxLength={USER_EMAIL_MAX_LENGTH}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -204,9 +204,9 @@ export function AdminUsersPageClient() {
               title={uiText.admin.users.passwordPolicyHint}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
-            <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+            <p className="mt-1 text-xs text-md-on-surface-variant">
               {uiText.admin.users.passwordPolicyHint}
             </p>
           </div>
@@ -219,7 +219,7 @@ export function AdminUsersPageClient() {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
           </div>
           <label className="flex items-center gap-2 self-end text-sm">
@@ -252,12 +252,12 @@ export function AdminUsersPageClient() {
             onSubmit={(event) => {
               void handlePasswordUpdate(event);
             }}
-            className="w-full max-w-md space-y-4 rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-6 shadow-lg"
+            className="w-full max-w-md space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-lg"
           >
             <h2 id="admin-password-title" className="text-lg font-medium">
               {uiText.admin.users.updatePasswordTitle}
             </h2>
-            <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">{passwordTarget.username}</p>
+            <p className="text-sm text-md-on-surface-variant">{passwordTarget.username}</p>
             <div>
               <label htmlFor="admin-user-new-password" className="mb-1 block text-sm font-medium">
                 {uiText.admin.users.newPasswordLabel}
@@ -276,9 +276,9 @@ export function AdminUsersPageClient() {
                   setNewPassword(e.target.value);
                   setPasswordMismatch(false);
                 }}
-                className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
               />
-              <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="mt-1 text-xs text-md-on-surface-variant">
                 {uiText.admin.users.passwordPolicyHint}
               </p>
             </div>
@@ -300,7 +300,7 @@ export function AdminUsersPageClient() {
                   setConfirmPassword(e.target.value);
                   setPasswordMismatch(false);
                 }}
-                className="w-full rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
               />
             </div>
             {passwordMismatch ? (
@@ -312,7 +312,7 @@ export function AdminUsersPageClient() {
               <button
                 type="button"
                 onClick={closePasswordDialog}
-                className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-1.5 text-sm hover:bg-[var(--md-sys-color-surface-container)]"
+                className="rounded-lg border border-md-outline px-3 py-1.5 text-sm hover:bg-md-surface-container"
               >
                 {uiText.admin.users.cancel}
               </button>
@@ -339,18 +339,18 @@ export function AdminUsersPageClient() {
     if (users === null) return <PageState state="error" />;
     if (users.length === 0) return <PageState state="empty" />;
     return (
-      <ul className="divide-y divide-[var(--md-sys-color-outline)] rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)]">
+      <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
         {users.map((user) => (
           <li
             key={user.userId}
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
           >
             <div className="min-w-0">
-              <p className="font-medium text-[var(--md-sys-color-on-surface)]">{user.username}</p>
-              <p className="text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="font-medium text-md-on-surface">{user.username}</p>
+              <p className="text-md-on-surface-variant">
                 {user.email ? `${user.displayName} · ${user.email}` : user.displayName}
               </p>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="text-xs text-md-on-surface-variant">
                 {user.isActive ? uiText.admin.users.active : uiText.admin.users.inactive}
                 {user.isTenantAdmin ? ` · ${uiText.admin.users.adminBadge}` : ""}
                 {` · ${uiText.admin.users.groupCount(user.groupIds.length)}`}
@@ -362,7 +362,7 @@ export function AdminUsersPageClient() {
                 onClick={() => {
                   openPasswordDialog(user);
                 }}
-                className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-1.5 hover:bg-[var(--md-sys-color-surface-container)]"
+                className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
               >
                 {uiText.admin.users.updatePassword}
               </button>
@@ -371,7 +371,7 @@ export function AdminUsersPageClient() {
                 onClick={() => {
                   void toggleActive(user);
                 }}
-                className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-1.5 hover:bg-[var(--md-sys-color-surface-container)]"
+                className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
               >
                 {user.isActive ? uiText.admin.users.disable : uiText.admin.users.enable}
               </button>
