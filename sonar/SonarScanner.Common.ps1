@@ -101,7 +101,8 @@ function Get-StateviaSonarBeginArguments {
 
     $organization = Get-StateviaSonarOrganization
     if (-not [string]::IsNullOrWhiteSpace($organization)) {
-        $arguments.Add("/d:sonar.organization=$organization")
+        # Scanner for .NET 11 は sonar.organization プロパティを拒否し、/o: を要求する。
+        $arguments.Add("/o:$organization")
     }
 
     if ($ExcludeTestProjects) {
