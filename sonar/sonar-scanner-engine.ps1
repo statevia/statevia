@@ -11,9 +11,12 @@
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 if (-not $env:SONAR_TOKEN) {
     Write-Error '環境変数 SONAR_TOKEN が設定されていません。'
@@ -43,15 +46,14 @@ if (-not (Test-Path -LiteralPath $engineDir -PathType Container)) {
 
 Push-Location -LiteralPath $engineDir
 try {
-    dotnet sonarscanner begin /k:"StateviaCoreEngine" `
-        /d:sonar.host.url="http://localhost:9000" `
-        /d:sonar.token="$($env:SONAR_TOKEN)" `
-        /d:sonar.projectBaseDir="$repoRoot" `
-        /d:sonar.dotnet.excludeTestProjects=true `
-        /d:sonar.scanner.scanAll=false `
-        /d:sonar.cs.vscoveragexml.reportsPaths="$coverageXml" `
-        "/d:sonar.exclusions=$sonarAnalysisExclusions" `
-        "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
+    $beginArguments = Get-StateviaSonarBeginArguments `
+        -ProjectKey 'statevia_statevia_engine' `
+        -RepositoryRoot $repoRoot `
+        -CoverageReportPath $coverageXml `
+        -AnalysisExclusions $sonarAnalysisExclusions `
+        -CoverageExclusions $sonarCoverageExclusions `
+        -ExcludeTestProjects
+    dotnet sonarscanner @beginArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonarscanner begin failed'
         exit 1

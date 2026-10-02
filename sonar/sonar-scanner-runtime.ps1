@@ -4,7 +4,7 @@
   runtime（Statevia.Runtime / Scheduler / Worker）向け SonarScanner を実行する。
 
 .DESCRIPTION
-  HostedService 正本と分離ホストを StateviaServiceRuntime として解析する。
+  HostedService 正本と分離ホストを statevia_statevia_runtime として解析する。
   カバレッジは Api.Tests（DelayWait Scheduler 等）を service/api から収集する。
   解析対象は service/runtime に限定し、API / Engine 等と二重計上しない。
   sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
@@ -12,10 +12,13 @@
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
-  プロジェクトキー: StateviaServiceRuntime
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
+  プロジェクトキー: statevia_statevia_runtime
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 # 解析は service/runtime のみ。依存ソースは除外する。
 $sonarAnalysisExclusions = @(
@@ -54,16 +57,15 @@ if (-not (Test-Path -LiteralPath $apiDir -PathType Container)) {
 
 Push-Location -LiteralPath $apiDir
 try {
-    dotnet sonarscanner begin /k:"StateviaServiceRuntime" /n:"StateviaServiceRuntime" `
-        /d:sonar.host.url="http://localhost:9000" `
-        /d:sonar.token="$($env:SONAR_TOKEN)" `
-        /d:sonar.projectBaseDir="$repoRoot" `
-        /d:sonar.dotnet.excludeTestProjects=true `
-        /d:sonar.scanner.scanAll=false `
-        /d:sonar.cs.vscoveragexml.reportsPaths="$coverageXml" `
-        "/d:sonar.inclusions=**/service/runtime/**" `
-        "/d:sonar.exclusions=$sonarAnalysisExclusions" `
-        "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
+    $beginArguments = Get-StateviaSonarBeginArguments `
+        -ProjectKey 'statevia_statevia_runtime' `
+        -RepositoryRoot $repoRoot `
+        -CoverageReportPath $coverageXml `
+        -Inclusions '**/service/runtime/**' `
+        -AnalysisExclusions $sonarAnalysisExclusions `
+        -CoverageExclusions $sonarCoverageExclusions `
+        -ExcludeTestProjects
+    dotnet sonarscanner @beginArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonarscanner begin failed'
         exit 1

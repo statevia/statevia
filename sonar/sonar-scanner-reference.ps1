@@ -6,17 +6,20 @@
 .DESCRIPTION
   スクリプト配置（リポジトリの sonar/）から modules/reference とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
-  公式提供 Module を StateviaModulesReference として解析し、API / Engine / UI と二重計上しない。
+  公式提供 Module を statevia_statevia_reference として解析し、API / Engine / UI と二重計上しない。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=reference を渡し SonarQubeExclude する。
   sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio 等を CPD に混ぜる。scanAll はオフにする。
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
   sonar-project.properties は SonarScanner for .NET では使わない（begin の /d: で指定）。
-  プロジェクトキー: StateviaModulesReference
+  プロジェクトキー: statevia_statevia_reference
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 # 解析は modules/reference のプロダクションコードに限定する。
 $sonarAnalysisExclusions = @(
@@ -50,17 +53,16 @@ if (-not (Test-Path -LiteralPath $referenceDir -PathType Container)) {
 
 Push-Location -LiteralPath $referenceDir
 try {
-    dotnet sonarscanner begin /k:"StateviaModulesReference" /n:"StateviaModulesReference" `
-        /d:sonar.host.url="http://localhost:9000" `
-        /d:sonar.token="$($env:SONAR_TOKEN)" `
-        /d:sonar.projectBaseDir="$repoRoot" `
-        /d:sonar.dotnet.excludeTestProjects=true `
-        /d:sonar.scanner.scanAll=false `
-        /d:sonar.cs.vscoveragexml.reportsPaths="$coverageXml" `
-        "/d:sonar.inclusions=**/modules/reference/**" `
-        "/d:sonar.exclusions=$sonarAnalysisExclusions" `
-        "/d:sonar.coverage.exclusions=$sonarCoverageExclusions" `
-        "/d:sonar.cpd.exclusions=$sonarCpdExclusions"
+    $beginArguments = Get-StateviaSonarBeginArguments `
+        -ProjectKey 'statevia_statevia_reference' `
+        -RepositoryRoot $repoRoot `
+        -CoverageReportPath $coverageXml `
+        -Inclusions '**/modules/reference/**' `
+        -AnalysisExclusions $sonarAnalysisExclusions `
+        -CoverageExclusions $sonarCoverageExclusions `
+        -CpdExclusions $sonarCpdExclusions `
+        -ExcludeTestProjects
+    dotnet sonarscanner @beginArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonarscanner begin failed'
         exit 1
