@@ -50,7 +50,8 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+      matrix:
+        include: ${{ fromJson(needs.changes.outputs.matrix) }}
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: https://sonarcloud.io
