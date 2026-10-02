@@ -12,11 +12,14 @@
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
   sonar-project.properties は SonarScanner for .NET では使わない（begin の /d: で指定）。
-  プロジェクトキー: StateviaServiceCLI
+  プロジェクトキー: statevia_statevia_cli
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 $sonarAnalysisExclusions = @(
     '**/service/api/**',
@@ -50,14 +53,13 @@ if (-not (Test-Path -LiteralPath $cliDir -PathType Container)) {
 
 Push-Location -LiteralPath $cliDir
 try {
-    dotnet sonarscanner begin /k:"StateviaServiceCLI" /n:"StateviaServiceCLI" `
-        /d:sonar.host.url="http://localhost:9000" `
-        /d:sonar.token="$($env:SONAR_TOKEN)" `
-        /d:sonar.projectBaseDir="$repoRoot" `
-        /d:sonar.scanner.scanAll=false `
-        /d:sonar.cs.vscoveragexml.reportsPaths="$coverageXml" `
-        "/d:sonar.exclusions=$sonarAnalysisExclusions" `
-        "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
+    $beginArguments = Get-StateviaSonarBeginArguments `
+        -ProjectKey 'statevia_statevia_cli' `
+        -RepositoryRoot $repoRoot `
+        -CoverageReportPath $coverageXml `
+        -AnalysisExclusions $sonarAnalysisExclusions `
+        -CoverageExclusions $sonarCoverageExclusions
+    dotnet sonarscanner @beginArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonarscanner begin failed'
         exit 1

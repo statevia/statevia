@@ -25,7 +25,7 @@
   .\sonar\sonar-scanner-all.ps1 -Projects engine,api,ui
 
 .EXAMPLE
-  .\sonar\sonar-scanner-all.ps1 -Projects StateviaCoreEngine,StateviaServiceApi
+  .\sonar\sonar-scanner-all.ps1 -Projects statevia_statevia_engine,statevia_statevia_api
 
 .EXAMPLE
   .\sonar\sonar-scanner-all.ps1 -List
@@ -48,45 +48,45 @@ $ErrorActionPreference = 'Stop'
 $catalog = @(
     @{
         Name = 'engine'
-        ProjectKey = 'StateviaCoreEngine'
+        ProjectKey = 'statevia_statevia_engine'
         Script = 'sonar-scanner-engine.ps1'
-        Aliases = @('engine', 'StateviaCoreEngine')
+        Aliases = @('engine', 'statevia_statevia_engine', 'StateviaCoreEngine')
     }
     @{
         Name = 'api'
-        ProjectKey = 'StateviaServiceApi'
+        ProjectKey = 'statevia_statevia_api'
         Script = 'sonar-scanner-api.ps1'
-        Aliases = @('api', 'StateviaServiceApi')
+        Aliases = @('api', 'statevia_statevia_api', 'StateviaServiceApi')
     }
     @{
         Name = 'runtime'
-        ProjectKey = 'StateviaServiceRuntime'
+        ProjectKey = 'statevia_statevia_runtime'
         Script = 'sonar-scanner-runtime.ps1'
-        Aliases = @('runtime', 'StateviaServiceRuntime')
+        Aliases = @('runtime', 'statevia_statevia_runtime', 'StateviaServiceRuntime')
     }
     @{
         Name = 'cli'
-        ProjectKey = 'StateviaServiceCLI'
+        ProjectKey = 'statevia_statevia_cli'
         Script = 'sonar-scanner-cli.ps1'
-        Aliases = @('cli', 'StateviaServiceCLI')
+        Aliases = @('cli', 'statevia_statevia_cli', 'StateviaServiceCLI')
     }
     @{
         Name = 'action-host'
-        ProjectKey = 'StateviaServiceActionHost'
+        ProjectKey = 'statevia_statevia_action_host'
         Script = 'sonar-scanner-action-host.ps1'
-        Aliases = @('action-host', 'actionhost', 'StateviaServiceActionHost')
+        Aliases = @('action-host', 'actionhost', 'statevia_statevia_action_host', 'StateviaServiceActionHost')
     }
     @{
         Name = 'reference'
-        ProjectKey = 'StateviaModulesReference'
+        ProjectKey = 'statevia_statevia_reference'
         Script = 'sonar-scanner-reference.ps1'
-        Aliases = @('reference', 'StateviaModulesReference')
+        Aliases = @('reference', 'statevia_statevia_reference', 'StateviaModulesReference')
     }
     @{
         Name = 'ui'
-        ProjectKey = 'StateviaUIStudio'
+        ProjectKey = 'statevia_statevia_ui'
         Script = 'sonar-scanner-ui.ps1'
-        Aliases = @('ui', 'studio', 'StateviaUIStudio')
+        Aliases = @('ui', 'studio', 'statevia_statevia_ui', 'StateviaUIStudio')
     }
 )
 

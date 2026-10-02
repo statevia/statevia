@@ -120,8 +120,8 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   ```
 
 - **UI（TypeScript）**: **`npm run lint`**（error 厳格）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`）。
-- **SonarQube（Service API）**: プロジェクトキー **`StateviaServiceApi`**。新規コードの Quality Gate（`new_coverage ≥ 80%`、`new_violations = 0` 等）を満たすこと。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[sonar/README.md](../sonar/README.md)）。
-- **SonarQube（UI Studio）**: プロジェクトキー **`StateviaUIStudio`**。全体・新規コードの Quality Gate（`coverage` / `new_coverage ≥ 80%`、`new_violations = 0` 等）を満たすこと。手順は **§5.2**。C# と同様、`tests/` はスキャン対象外（`sonar.exclusions`）。カバレッジは lcov のプロダクションパスだけを見る。
+- **SonarQube（Service API）**: プロジェクトキー **`statevia_statevia_api`**。Quality Gate は SonarQube Cloud の組み込み **Sonar way**（新規コードのみ。信頼性・セキュリティ・保守性は A、Security Hotspot はすべてレビュー、カバレッジ 80% 以上、重複行 3% 以下）。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[sonar/README.md](../sonar/README.md)）。
+- **SonarQube（UI Studio）**: プロジェクトキー **`statevia_statevia_ui`**。Quality Gate は API と同じ **Sonar way**（新規コードのみ）。手順は **§5.2**。C# と同様、`tests/` はスキャン対象外（`sonar.exclusions`）。カバレッジは lcov のプロダクションパスだけを見る。
 
 ---
 
@@ -134,15 +134,16 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 | UI | `cd ui/studio && npm run lint && npm run typecheck && npm run test:run` |
 | UI（Sonar 前） | `cd ui/studio && npm run test:coverage` |
 | Sonar（一括） | `./sonar/sonar-scanner-all.ps1`（`-Projects engine,api` で複数指定可。[sonar/README.md](../sonar/README.md)） |
+| Sonar（CI） | `.github/workflows/sonar.yml`（`main` は全プロジェクト、`main` 向け PR は変更コンポーネント） |
 
-変更した領域に対応するテストを追加または更新し、ローカルで green を確認してから共有する。UI を Sonar に送る前はカバレッジ付きテストを実行する（**§5.2**）。C# の Scanner for .NET スクリプトはすべて `sonar.scanner.scanAll=false` とし、`ui/studio` は **`StateviaUIStudio`** だけが解析する。
+変更した領域に対応するテストを追加または更新し、ローカルで green を確認してから共有する。UI を Sonar に送る前はカバレッジ付きテストを実行する（**§5.2**）。C# の Scanner for .NET スクリプトはすべて `sonar.scanner.scanAll=false` とし、`ui/studio` は **`statevia_statevia_ui`** だけが解析する。
 
 ### 5.1 Service API — カバレッジと Sonar（手動）
 
 **前提**
 
-- ローカル SonarQube が起動していること（既定 URL: `http://localhost:9000`）
-- 環境変数 **`SONAR_TOKEN`** を設定していること
+- 環境変数 **`SONAR_TOKEN`** を設定していること（SonarQube Cloud の個人アクセストークン）
+- 既定の送信先は SonarQube Cloud（`https://sonarcloud.io`、組織 `statevia`）。ローカル Community Build へ送るときは **`SONAR_HOST_URL=http://localhost:9000`** を指定する
 - グローバルツール: `dotnet-sonarscanner`、`dotnet-coverage`（スクリプトが利用する）
 
 **カバレッジ runsettings（単体テストのみ確認するとき）**
@@ -168,7 +169,7 @@ dotnet build-server shutdown
 
 スクリプトは次を順に実行する。
 
-1. `dotnet sonarscanner begin`（キー `StateviaServiceApi`、除外は Engine / UI / Program / Migrations / `modules/reference` 等。`sonar.scanner.scanAll=false` で `ui/studio` を JS/TS 解析に混ぜない）
+1. `dotnet sonarscanner begin`（キー `statevia_statevia_api`、除外は Engine / UI / Program / Migrations / `modules/reference` 等。`sonar.scanner.scanAll=false` で `ui/studio` を JS/TS 解析に混ぜない）
 2. `dotnet build service/api/statevia-api.sln`
 3. `dotnet-coverage collect "dotnet test"` → `sonar/service-api-coverage.xml`
 4. `dotnet sonarscanner end`
@@ -176,15 +177,16 @@ dotnet build-server shutdown
 **注意**
 
 - `service/api/sonar-project.properties` は **Scanner for .NET では使わない**（設定は `begin` の `/d:` で渡す）。
-- `sonar.exclusions` だけでは `scanAll` が `ui/studio/tsconfig.json` を拾う。UI は **`StateviaUIStudio`**（§5.2）で解析する。
+- `sonar.exclusions` だけでは `scanAll` が `ui/studio/tsconfig.json` を拾う。UI は **`statevia_statevia_ui`**（§5.2）で解析する。
+- `STATEVIA_SKIP_SCENARIO_TESTS=true` のとき、API のカバレッジ収集は `Category!=Scenario` でシナリオテストを除外する。CI はこの環境変数を付ける。
 - スキャン直後は Sonar UI の数値が遅れて反映されることがある。Quality Gate 判定は Sonar のプロジェクト画面を正とする。
 
 ### 5.2 UI Studio — カバレッジと Sonar（手動）
 
 **前提**
 
-- ローカル SonarQube が起動していること（既定 URL: `http://localhost:9000`。`sonar/docker-compose.yaml` 参照）
-- 環境変数 **`SONAR_TOKEN`** を設定していること
+- 環境変数 **`SONAR_TOKEN`** を設定していること（SonarQube Cloud の個人アクセストークン）
+- 既定の送信先は SonarQube Cloud（`https://sonarcloud.io`、組織 `statevia`）。ローカル Community Build へ送るときは **`SONAR_HOST_URL=http://localhost:9000`** を指定する（`sonar/docker-compose.yaml`）
 - Node.js / npm が PATH にあり、`ui/studio` で `npm install` 済みであること
 - グローバルまたは `npx` で **`sonar-scanner`** が実行できること
 
@@ -209,14 +211,14 @@ npm run test:coverage
 スクリプトは次を順に実行する。
 
 1. `npm run test:coverage`（`ui/studio/coverage/lcov.info` を生成）
-2. `npx sonar-scanner`（キー **`StateviaUIStudio`**、`ui/studio/sonar-project.properties` を読み込み）
+2. `npx sonar-scanner`（キー **`statevia_statevia_ui`**、`ui/studio/sonar-project.properties` を読み込み。host と organization はスクリプトが渡す）
 
 **手動（`ui/studio` をカレントに）**
 
 ```powershell
 cd ui/studio
 npm run test:coverage
-npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)"
+npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)" "-Dsonar.projectKey=statevia_statevia_ui" "-Dsonar.organization=statevia" "-Dsonar.host.url=https://sonarcloud.io"
 ```
 
 **注意**
@@ -228,7 +230,7 @@ npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)"
 
 ### 5.3 リファレンス Module — Sonar（手動）
 
-first-party Module（`modules/reference/`）は **`StateviaModulesReference`** で解析する。API スキャンには含めない。
+first-party Module（`modules/reference/`）は **`statevia_statevia_reference`** で解析する。API スキャンには含めない。
 
 ```powershell
 dotnet build-server shutdown
@@ -274,6 +276,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-10-03 | §4.4 / §5 の Sonar 送信先を SonarQube Cloud（組織 `statevia`、Sonar way）へ更新 |
 | 2026-09-01 | §4.3 / §5.2 に UI `tests/` のスキャン除外（`sonar.exclusions`。C# テストプロジェクト除外と同趣旨）を追記 |
 | 2026-08-31 | §5 / §5.1 に C# スキャナの `scanAll=false`（`ui/studio` 混入防止）を追記 |
 | 2026-08-30 | §5 に全コンポーネント一括 Sonar スクリプト（`sonar-scanner-all.ps1`）を追記 |

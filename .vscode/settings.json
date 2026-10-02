@@ -1,8 +1,8 @@
 {
   "sonarlint.analysisExcludesStandalone": "**/*.Tests/**,**/tests/**,**/*.test.ts,**/*.test.tsx",
   "sonarlint.connectedMode.project": {
-    "connectionId": "Statevia",
-    "projectKey": "StateviaUIStudio"
+    "connectionId": "statevia",
+    "projectKey": "statevia_statevia_engine"
   },
   "dotnet.defaultSolution": "statevia.sln"
 }

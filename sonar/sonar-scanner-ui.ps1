@@ -10,10 +10,14 @@
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
   Node.js / npm が PATH にあり、ui/studio で依存関係がインストール済みであること。
+  プロジェクトキー: statevia_statevia_ui
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 if (-not $env:SONAR_TOKEN) {
     Write-Error '環境変数 SONAR_TOKEN が設定されていません。'
@@ -42,7 +46,8 @@ try {
         exit 1
     }
 
-    npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)"
+    $scannerArguments = Get-StateviaSonarUiScannerArguments -ProjectKey 'statevia_statevia_ui'
+    npx @scannerArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonar-scanner failed'
         exit 1

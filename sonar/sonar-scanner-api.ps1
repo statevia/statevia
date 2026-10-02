@@ -14,10 +14,15 @@
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
+  送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
   sonar-project.properties は SonarScanner for .NET では使わない（begin の /d: で指定）。
+  STATEVIA_SKIP_SCENARIO_TESTS=true のとき、Category=Scenario を dotnet test から除外する。
+  この環境変数を読むのは scripts/test-api.ps1 だけなので、スキャナ側でも同じフィルタを付ける。
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
 # service/api/coverage.runsettings の Exclude / ExcludeByFile と整合
 # sonar.projectBaseDir をリポジトリルートに固定し、移動後パス（core/engine 等）でも除外が効くようにする
@@ -56,15 +61,14 @@ if (-not (Test-Path -LiteralPath $apiDir -PathType Container)) {
 
 Push-Location -LiteralPath $apiDir
 try {
-    dotnet sonarscanner begin /k:"StateviaServiceApi" /n:"StateviaServiceApi" `
-        /d:sonar.host.url="http://localhost:9000" `
-        /d:sonar.token="$($env:SONAR_TOKEN)" `
-        /d:sonar.projectBaseDir="$repoRoot" `
-        /d:sonar.dotnet.excludeTestProjects=true `
-        /d:sonar.scanner.scanAll=false `
-        /d:sonar.cs.vscoveragexml.reportsPaths="$coverageXml" `
-        "/d:sonar.exclusions=$sonarAnalysisExclusions" `
-        "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
+    $beginArguments = Get-StateviaSonarBeginArguments `
+        -ProjectKey 'statevia_statevia_api' `
+        -RepositoryRoot $repoRoot `
+        -CoverageReportPath $coverageXml `
+        -AnalysisExclusions $sonarAnalysisExclusions `
+        -CoverageExclusions $sonarCoverageExclusions `
+        -ExcludeTestProjects
+    dotnet sonarscanner @beginArguments
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] sonarscanner begin failed'
         exit 1
@@ -76,7 +80,13 @@ try {
         exit 1
     }
 
-    dotnet-coverage collect 'dotnet test /p:StateviaSonarScope=api' -f xml -o "$coverageXml"
+    $apiTestCommand = 'dotnet test /p:StateviaSonarScope=api'
+    if ($env:STATEVIA_SKIP_SCENARIO_TESTS -eq 'true') {
+        $apiTestCommand += ' --filter Category!=Scenario'
+        Write-Host 'シナリオテストを除外してカバレッジを取得します（Category!=Scenario）'
+    }
+
+    dotnet-coverage collect $apiTestCommand -f xml -o "$coverageXml"
     if ($LASTEXITCODE -ne 0) {
         Write-Error '[ERROR] test / coverage failed'
         exit 1
