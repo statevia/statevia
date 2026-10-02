@@ -15,7 +15,7 @@ describe("PageShell", () => {
     render(<PageShell {...props} />);
 
     // Assert
-    expect(screen.getByRole("heading", { name: "実行一覧" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "実行一覧" })).toHaveClass("text-md-on-surface");
     expect(screen.getByText("一覧画面です。")).toBeInTheDocument();
     expect(screen.getByText("body")).toBeInTheDocument();
   });

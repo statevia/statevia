@@ -26,13 +26,13 @@ export function AdminNavLinks() {
 
   return (
     <>
-      <Link href="/admin/users" className="hover:text-[var(--brand-header-fg)] hover:underline">
+      <Link href="/admin/users" className="hover:text-brand-header-fg hover:underline">
         {uiText.navigation.adminUsers}
       </Link>
-      <Link href="/admin/groups" className="hover:text-[var(--brand-header-fg)] hover:underline">
+      <Link href="/admin/groups" className="hover:text-brand-header-fg hover:underline">
         {uiText.navigation.adminGroups}
       </Link>
-      <Link href="/admin/api-keys" className="hover:text-[var(--brand-header-fg)] hover:underline">
+      <Link href="/admin/api-keys" className="hover:text-brand-header-fg hover:underline">
         {uiText.navigation.adminApiKeys}
       </Link>
     </>

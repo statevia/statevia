@@ -99,9 +99,9 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
       </div>
       <div className={`space-y-1 text-xs ${isGateway ? "mt-1" : "mt-2"}`}>
         <div className="break-all font-mono">{data.label}</div>
-        <div className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeGraph.meta.type(data.nodeType)}</div>
-        <div className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeGraph.meta.attempt(data.attempt)}</div>
-        {data.waitKey && <div className="text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeGraph.meta.waitKey(data.waitKey)}</div>}
+        <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.type(data.nodeType)}</div>
+        <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.attempt(data.attempt)}</div>
+        {data.waitKey && <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.waitKey(data.waitKey)}</div>}
       </div>
     </>
   );
@@ -120,7 +120,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
         id="in"
         type="target"
         position={Position.Top}
-        className="h-2 w-2 border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]"
+        className="h-2 w-2 border-md-outline-variant bg-md-surface-container"
       />
       <GraphNodeShell
         shapeKind={appearance.shapeKind}
@@ -134,7 +134,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
           <button
             type="button"
             aria-label={uiText.nodeGraph.aria.selectNode(data.label)}
-            className={`min-h-0 flex-1 cursor-grab text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] active:cursor-grabbing ${isGateway ? "border-0 bg-transparent p-0" : ""}`}
+            className={`min-h-0 flex-1 cursor-grab text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-md-primary active:cursor-grabbing ${isGateway ? "border-0 bg-transparent p-0" : ""}`}
             onClick={() => data.onSelect(data.name)}
           >
             {nodeMainSection}
@@ -146,7 +146,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
         id="out"
         type="source"
         position={Position.Bottom}
-        className="h-2 w-2 border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]"
+        className="h-2 w-2 border-md-outline-variant bg-md-surface-container"
       />
     </div>
   );
@@ -173,11 +173,11 @@ function WaitingResumeControls({
   return (
     <div className={`shrink-0 ${isGateway ? "mt-2" : "mt-3"} space-y-1`}>
       {subscribeResume && (
-        <p className="whitespace-pre-line text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
+        <p className="whitespace-pre-line text-[10px] text-md-on-surface-variant">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
       )}
       {resumeEvents.length > 1 && (
         <select
-          className="nodrag w-full rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] px-1.5 py-1 text-[10px]"
+          className="nodrag w-full rounded-lg border border-md-outline-variant bg-md-surface px-1.5 py-1 text-[10px]"
           value={effectiveEvent}
           disabled={disabled}
           onClick={(event) => event.stopPropagation()}
@@ -203,7 +203,7 @@ function WaitingResumeControls({
         {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
       </button>
       {data.resumeDisabledReason && (
-        <p className="mt-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)]">{data.resumeDisabledReason}</p>
+        <p className="mt-1 text-[10px] text-md-on-surface-variant">{data.resumeDisabledReason}</p>
       )}
     </div>
   );
@@ -211,8 +211,8 @@ function WaitingResumeControls({
 
 function GroupNodeComponent({ data }: NodeProps<GroupNodeData>) {
   return (
-    <div className="h-full w-full rounded-2xl border border-dashed border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container)]/70 p-2">
-      <span className="rounded bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 text-[10px] font-semibold text-[var(--md-sys-color-on-surface)]">{data.label}</span>
+    <div className="h-full w-full rounded-2xl border border-dashed border-md-outline bg-[var(--md-sys-color-surface-container)]/70 p-2">
+      <span className="rounded bg-md-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-md-on-surface">{data.label}</span>
     </div>
   );
 }
@@ -358,7 +358,7 @@ export function NodeGraphView({
   const graphHeightClass = heightClassName ?? "h-[620px]";
 
   return (
-    <div className={`relative ${graphHeightClass} overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] shadow-sm`}>
+    <div className={`relative ${graphHeightClass} overflow-hidden rounded-2xl border border-md-outline bg-md-surface shadow-sm`}>
       <ReactFlow
         nodes={displayNodes}
         edges={graphEdges}

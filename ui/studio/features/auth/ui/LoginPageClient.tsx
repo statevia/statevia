@@ -117,10 +117,10 @@ export function LoginPageClient() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-2 text-2xl font-semibold text-[var(--md-sys-color-on-surface)]">
+      <h1 className="mb-2 text-2xl font-semibold text-md-on-surface">
         {uiText.auth.login.title}
       </h1>
-      <p className="mb-6 text-sm text-[var(--md-sys-color-on-surface-variant)]">
+      <p className="mb-6 text-sm text-md-on-surface-variant">
         {uiText.auth.login.description}
       </p>
 
@@ -128,7 +128,7 @@ export function LoginPageClient() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-4 rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-6 shadow-sm"
+        className="space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-sm"
         noValidate
       >
         <div>
@@ -143,7 +143,7 @@ export function LoginPageClient() {
             required
             value={tenantKey}
             onChange={(e) => setTenantKey(e.target.value)}
-            className="w-full rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-md-outline bg-md-surface-container px-3 py-2 text-sm"
           />
         </div>
 
@@ -161,7 +161,7 @@ export function LoginPageClient() {
             pattern={USERNAME_PATTERN}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container)] px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-md-outline bg-md-surface-container px-3 py-2 text-sm"
           />
         </div>
 
@@ -178,11 +178,11 @@ export function LoginPageClient() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface-container)] py-2 pl-3 pr-10 text-sm"
+              className="w-full rounded-lg border border-md-outline bg-md-surface-container py-2 pl-3 pr-10 text-sm"
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]"
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-md-on-surface-variant hover:text-md-on-surface"
               aria-label={passwordVisible ? uiText.auth.login.hidePassword : uiText.auth.login.showPassword}
               aria-pressed={passwordVisible}
               onClick={() => setPasswordVisible((visible) => !visible)}

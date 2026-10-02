@@ -20,7 +20,7 @@ type ActionLinkGroupProps = {
 
 const ACTION_LINK_CLASS_MAP: Record<ActionLinkPriority, string> = {
   primary:
-    "rounded-md border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-3 py-1.5 text-sm font-medium text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)]",
+    "rounded-md border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover",
   secondary: NAVIGATION_BUTTON_CLASS
 };
 

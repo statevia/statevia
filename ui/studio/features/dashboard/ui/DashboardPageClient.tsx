@@ -70,7 +70,7 @@ export function DashboardPageClient() {
       {!loading && items !== null && items.length > 0 && (
         <section aria-label={uiText.dashboard.aria.recentExecutionsList}>
           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-            <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{totalCountLabel}</p>
+            <p className="text-xs text-md-on-surface-variant">{totalCountLabel}</p>
             <button
               type="button"
               className={`self-start ${OPERATION_TEXT_BUTTON_CLASS}`}
@@ -79,7 +79,7 @@ export function DashboardPageClient() {
               {uiText.actions.reload}
             </button>
           </div>
-          <ul className="divide-y divide-[var(--md-sys-color-outline)] overflow-hidden rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] shadow-sm">
+          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm">
             {items.map((execution) => {
               const updated = execution.updatedAt ?? execution.startedAt;
               return (
@@ -87,11 +87,11 @@ export function DashboardPageClient() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={execution.status} />
-                      <span className="truncate font-mono text-sm text-[var(--md-sys-color-on-surface)]" title={execution.displayId}>
+                      <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
                         {execution.displayId}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">{uiText.dashboard.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
+                    <p className="mt-1 text-xs text-md-on-surface-variant">{uiText.dashboard.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
                   </div>
                   <button
                     type="button"

@@ -31,7 +31,7 @@ export function ThemeToggle({ theme }: ThemeToggleProps) {
     <div className="inline-flex items-center gap-1 rounded-md border border-white/20 p-1 text-xs">
       <button
         type="button"
-        className={`rounded px-2 py-1 ${currentTheme === "light" ? "bg-white/20 text-white" : "text-[var(--brand-header-fg-muted)] hover:text-[var(--brand-header-fg)]"}`}
+        className={`rounded px-2 py-1 ${currentTheme === "light" ? "bg-white/20 text-white" : "text-brand-header-fg-muted hover:text-brand-header-fg"}`}
         onClick={() => applyTheme("light")}
         aria-pressed={currentTheme === "light"}
       >
@@ -39,7 +39,7 @@ export function ThemeToggle({ theme }: ThemeToggleProps) {
       </button>
       <button
         type="button"
-        className={`rounded px-2 py-1 ${currentTheme === "dark" ? "bg-white/20 text-white" : "text-[var(--brand-header-fg-muted)] hover:text-[var(--brand-header-fg)]"}`}
+        className={`rounded px-2 py-1 ${currentTheme === "dark" ? "bg-white/20 text-white" : "text-brand-header-fg-muted hover:text-brand-header-fg"}`}
         onClick={() => applyTheme("dark")}
         aria-pressed={currentTheme === "dark"}
       >

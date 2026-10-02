@@ -104,13 +104,13 @@ function NodeDetailResumeActions({
   return (
     <div className="mt-3 space-y-2">
       {isWaiting && subscribeResume && (
-        <p className="whitespace-pre-line text-xs text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
+        <p className="whitespace-pre-line text-xs text-md-on-surface-variant">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
       )}
       {isWaiting && resumeEvents.length > 1 && (
-        <label className="block space-y-1 text-xs text-[var(--md-sys-color-on-surface)]">
+        <label className="block space-y-1 text-xs text-md-on-surface">
           <span>{selectLabel}</span>
           <select
-            className="w-full rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-md-outline bg-md-surface px-3 py-2 text-sm"
             value={effectiveResumeEvent}
             disabled={!canResume || loading}
             onChange={(event) => onSelectedResumeEventChange(event.target.value)}
@@ -132,7 +132,7 @@ function NodeDetailResumeActions({
         {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
       </button>
       {resumeDisabledReason && (
-        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">{resumeDisabledReason}</p>
+        <p className="text-xs text-md-on-surface-variant">{resumeDisabledReason}</p>
       )}
     </div>
   );
@@ -150,7 +150,7 @@ export function NodeDetail({
   className
 }: Readonly<NodeDetailProps>) {
   const uiText = useUiText();
-  const baseClassName = "rounded-2xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm";
+  const baseClassName = "rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm";
   const asideClassName = className ? `${baseClassName} ${className}` : baseClassName;
   const resumeEvents = node ? resolveWaitResumeEvents(node) : [];
   const [selectedResumeEvent, setSelectedResumeEvent] = useState(resumeEvents[0] ?? "");
@@ -164,7 +164,7 @@ export function NodeDetail({
   if (!execution) {
     return (
       <aside className={asideClassName}>
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.prompts.loadExecution(uiText.entities.execution)}</p>
+        <p className="text-sm text-md-on-surface-variant">{uiText.nodeDetail.prompts.loadExecution(uiText.entities.execution)}</p>
       </aside>
     );
   }
@@ -172,7 +172,7 @@ export function NodeDetail({
   if (!node) {
     return (
       <aside className={asideClassName}>
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">{uiText.nodeDetail.prompts.selectNode(uiText.entities.node)}</p>
+        <p className="text-sm text-md-on-surface-variant">{uiText.nodeDetail.prompts.selectNode(uiText.entities.node)}</p>
       </aside>
     );
   }
@@ -189,7 +189,7 @@ export function NodeDetail({
             {node.status}
           </span>
         </div>
-        <div className="mt-2 space-y-1 text-xs text-[var(--md-sys-color-on-surface)]">
+        <div className="mt-2 space-y-1 text-xs text-md-on-surface">
           {node.workerId != null && node.workerId !== "" && (
             <div className="font-mono">{uiText.nodeDetail.meta.workerId(node.workerId)}</div>
           )}

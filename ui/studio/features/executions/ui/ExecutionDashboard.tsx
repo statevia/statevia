@@ -496,7 +496,7 @@ function ExecutionDashboardView({
     />
   );
 
-  const graphWrapperClassName = graphFullscreen ? "fixed inset-0 z-50 bg-[var(--md-sys-color-surface-container-high)] p-4" : "";
+  const graphWrapperClassName = graphFullscreen ? "fixed inset-0 z-50 bg-md-surface-container-high p-4" : "";
   const graphMainClassName = graphFullscreen
     ? "mx-auto grid h-full max-w-[1600px] gap-4 lg:grid-cols-[minmax(0,1.8fr)_380px]"
     : "grid gap-4 lg:grid-cols-[1.6fr_1fr]";
@@ -507,8 +507,8 @@ function ExecutionDashboardView({
     <div className={graphFullscreen ? "" : "space-y-4"}>
       {!graphFullscreen && (
         <>
-          <header className="flex flex-col items-start gap-3 rounded-2xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-xl font-bold text-[var(--md-sys-color-on-surface)]">{headerTitle}</h1>
+          <header className="flex flex-col items-start gap-3 rounded-2xl border border-md-outline bg-md-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-xl font-bold text-md-on-surface">{headerTitle}</h1>
             {headerNav ?? defaultHeaderNav}
           </header>
 
@@ -534,13 +534,13 @@ function ExecutionDashboardView({
           <Toast toast={toast} onClose={onCloseToast} />
 
           {operationsEnabled && showExecutionPanels && isPublishEventAvailable(execution) && (
-            <section className="rounded-2xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">{uiText.executionDashboard.actions.sectionTitle}</h2>
+            <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-md-on-surface">{uiText.executionDashboard.actions.sectionTitle}</h2>
               <div className="mt-3 flex flex-wrap items-end gap-2">
-                <label className="block min-w-[14rem] flex-1 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                <label className="block min-w-[14rem] flex-1 text-xs text-md-on-surface-variant">
                   <span>{uiText.executionDashboard.actions.eventNameLabel}</span>
                   <input
-                    className="mt-1 w-full rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-2 text-sm text-[var(--md-sys-color-on-surface)] outline-none focus:border-[var(--md-sys-color-primary)]"
+                    className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-none focus:border-md-primary"
                     value={eventName}
                     onChange={(event) => setEventName(event.target.value)}
                     placeholder={uiText.executionDashboard.actions.eventNamePlaceholder}
@@ -549,7 +549,7 @@ function ExecutionDashboardView({
                 </label>
                 <button
                   type="button"
-                  className="rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-2 text-sm text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)] disabled:opacity-50"
+                  className="rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-50"
                   disabled={loading || !trimmedEventName || !execution || terminal || !!eventNameValidationMessage}
                   onClick={() => {
                     onPublishEvent(trimmedEventName);
@@ -562,7 +562,7 @@ function ExecutionDashboardView({
               {eventNameValidationMessage && (
                 <p className="mt-2 text-xs text-rose-600">{eventNameValidationMessage}</p>
               )}
-              <p className="mt-2 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="mt-2 text-xs text-md-on-surface-variant">
                 {uiText.executionDashboard.operationsAggregatedInRun(
                   uiText.actions.cancel,
                   uiText.actions.resume,
@@ -627,7 +627,7 @@ function ExecutionDashboardView({
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      className="rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)] px-3 py-1.5 text-xs font-semibold text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container-high)]"
+                      className="rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-xs font-semibold text-md-on-surface hover:bg-md-surface-container-high"
                       onClick={onToggleGraphFullscreen}
                     >
                       {graphFullscreen

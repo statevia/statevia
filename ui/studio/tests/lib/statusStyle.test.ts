@@ -10,7 +10,7 @@ describe("getStatusStyle", () => {
     const result = getStatusStyle(status);
 
     // Assert
-    expect(result.badgeClass).toContain("md-sys-color-info");
+    expect(result.badgeClass).toContain("bg-md-info");
     expect(result.emphasisRank).toBe(20);
   });
 
@@ -22,7 +22,7 @@ describe("getStatusStyle", () => {
     const result = getStatusStyle(status);
 
     // Assert
-    expect(result.badgeClass).toContain("md-sys-color-success");
+    expect(result.badgeClass).toContain("bg-md-success");
     expect(result.icon).toBe("✓");
   });
 
@@ -34,7 +34,7 @@ describe("getStatusStyle", () => {
     const result = getStatusStyle(status);
 
     // Assert
-    expect(result.badgeClass).toContain("md-sys-color-warning");
+    expect(result.badgeClass).toContain("bg-md-warning");
     expect(result.icon).toBe("⏸");
   });
 
@@ -46,7 +46,7 @@ describe("getStatusStyle", () => {
     const result = getStatusStyle(status);
 
     // Assert
-    expect(result.badgeClass).toContain("md-sys-color-error");
+    expect(result.badgeClass).toContain("bg-md-error");
     expect(result.emphasisRank).toBe(80);
   });
 

@@ -80,10 +80,10 @@ export function DefinitionRunStartPage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-[var(--md-sys-color-on-surface)]">
+        <h1 className="text-xl font-semibold text-md-on-surface">
           {uiText.definitionRunPage.title}
         </h1>
-        <p className="text-sm text-[var(--md-sys-color-on-surface-variant)]">
+        <p className="text-sm text-md-on-surface-variant">
           <span className="font-mono break-all">
             {uiText.definitionRunPage.definitionIdLine(
               uiText.labels.definitionId,
@@ -95,9 +95,9 @@ export function DefinitionRunStartPage() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      <section className="space-y-3 rounded-lg border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm">
+      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
         <label className="block text-sm">
-          <span className="text-[var(--md-sys-color-on-surface-variant)]">
+          <span className="text-md-on-surface-variant">
             {uiText.definitionRunPage.inputLabelWithHint(uiText.labels.input)}
           </span>
           <ActionInputCodeEditor
@@ -106,12 +106,12 @@ export function DefinitionRunStartPage() {
             placeholder={uiText.definitionRunPage.inputJsonPlaceholder}
             syntaxHighlight="jsonOnly"
             ariaLabel={uiText.labels.input}
-            className="min-h-[7rem] w-full border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container)]"
+            className="min-h-[7rem] w-full border-md-outline-variant bg-md-surface-container"
           />
         </label>
         <button
           type="button"
-          className="rounded border-2 border-[var(--brand-cta-border)] bg-[var(--brand-cta-bg)] px-3 py-1.5 text-sm text-[var(--brand-cta-fg)] hover:bg-[var(--brand-cta-bg-hover)] disabled:opacity-50"
+          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50"
           onClick={() => void handleStart()}
           disabled={starting || !definitionId.trim()}
         >
@@ -119,7 +119,7 @@ export function DefinitionRunStartPage() {
             ? uiText.definitionRunPage.actions.starting
             : uiText.definitionRunPage.actions.startExecution}
         </button>
-        <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+        <p className="text-xs text-md-on-surface-variant">
           {uiText.definitionRunPage.help.redirectAfterStart("/executions/[executionId]/run")}
         </p>
       </section>

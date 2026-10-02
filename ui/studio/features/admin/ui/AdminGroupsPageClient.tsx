@@ -70,28 +70,28 @@ export function AdminGroupsPageClient() {
     if (groupList === null) return <PageState state="error" />;
     if (groupList.length === 0) return <PageState state="empty" />;
     return (
-      <ul className="divide-y divide-[var(--md-sys-color-outline)] rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)]">
+      <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
         {groupList.map((item) => (
           <li
             key={item.groupId}
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
           >
             <div>
-              <p className="font-medium text-[var(--md-sys-color-on-surface)]">
+              <p className="font-medium text-md-on-surface">
                 {item.name}
                 {item.isSystem ? (
-                  <span className="ml-2 rounded bg-[var(--md-sys-color-surface-container-high)] px-2 py-0.5 text-xs">
+                  <span className="ml-2 rounded bg-md-surface-container-high px-2 py-0.5 text-xs">
                     {pageUi.systemBadge}
                   </span>
                 ) : null}
               </p>
-              <p className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              <p className="text-xs text-md-on-surface-variant">
                 {pageUi.memberCount(item.memberCount)} · {pageUi.permissionCount(item.permissionCount)}
               </p>
             </div>
             <Link
               href={`/admin/groups/${item.groupId}`}
-              className="rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-1.5 hover:bg-[var(--md-sys-color-surface-container)]"
+              className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
             >
               {pageUi.openDetail}
             </Link>
@@ -107,7 +107,7 @@ export function AdminGroupsPageClient() {
         onSubmit={(event) => {
           void handleCreate(event);
         }}
-        className="rounded-xl border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] p-4 shadow-sm"
+        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
       >
         <h2 className="mb-3 text-lg font-medium">{pageUi.createTitle}</h2>
         <label htmlFor="admin-group-name" className="mb-1 block text-sm font-medium">
@@ -119,7 +119,7 @@ export function AdminGroupsPageClient() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-[var(--md-sys-color-outline)] px-3 py-2 text-sm"
+          className="w-full max-w-md rounded-lg border border-md-outline px-3 py-2 text-sm"
         />
         <button
           type="submit"
