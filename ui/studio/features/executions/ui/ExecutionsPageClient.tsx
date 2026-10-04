@@ -1,183 +1,35 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
-import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { Suspense, useState } from "react";
 import { ListPagination } from "@/shared/ui/ListPagination";
-import { NAVIGATION_BUTTON_CLASS, OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
+import { OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { Toast } from "@/shared/ui/Toast";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
-import { apiGet } from "@/shared/api";
-import { buildExecutionsListPath, type SortOrder, type ExecutionsListQuery } from "@/features/executions/api";
-import { SubscribeIngressDialog } from "./SubscribeIngressDialog";
-import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
-import { getDateTimeLocale } from "@/shared/i18n/i18n";
-import type { PagedExecutions, ExecutionDTO } from "../types";
 import { useI18n, useUiText } from "@/shared/i18n/uiTextContext";
-import { matchesPattern } from "@/shared/lib/validation/primitives";
-import { DEFINITION_ID_PATTERN, SEARCH_NAME_PATTERN } from "@/shared/lib/validation/searchRules";
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 500;
-type StatusFilter = "" | "Running" | "Completed" | "Cancelled" | "Failed";
-type SortBy = "updatedAt" | "displayId";
-
-/**
- * クエリから一覧の取得条件を正規化する。無効な値は既定に寄せる。
- */
-function readListQuery(searchParams: { get: (name: string) => string | null }): ExecutionsListQuery {
-  const limitRaw = Number.parseInt(searchParams.get("limit") ?? "", 10);
-  const limit = Number.isFinite(limitRaw) ? Math.min(MAX_LIMIT, Math.max(1, limitRaw)) : DEFAULT_LIMIT;
-  const offsetRaw = Number.parseInt(searchParams.get("offset") ?? "0", 10);
-  const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0;
-  const statusRaw = searchParams.get("status")?.trim() ?? "";
-  const asStatus: ExecutionsListQuery["status"] =
-    statusRaw === "Running" || statusRaw === "Completed" || statusRaw === "Cancelled" || statusRaw === "Failed" ? statusRaw : undefined;
-  const name = searchParams.get("name")?.trim() ?? "";
-  const definitionId = searchParams.get("definitionId")?.trim() ?? "";
-  const sortByRaw = searchParams.get("sortBy")?.trim() ?? "";
-  const sortOrderRaw = searchParams.get("sortOrder")?.trim() ?? "";
-  const sortBy: SortBy = sortByRaw === "displayId" ? "displayId" : "updatedAt";
-  const sortOrder: SortOrder = sortOrderRaw === "asc" ? "asc" : "desc";
-  return {
-    pagination: { limit, offset },
-    sort: { sortBy, sortOrder },
-    status: asStatus,
-    name: name || undefined,
-    definitionId: definitionId || undefined
-  };
-}
+import { useExecutionsPage } from "../hooks/useExecutionsPage";
+import { ExecutionsFilterForm } from "./ExecutionsFilterForm";
+import { ExecutionsList } from "./ExecutionsList";
+import { SubscribeIngressDialog } from "./SubscribeIngressDialog";
 
 /**
  * ページング・フィルタ（URL 同期）付きの実行一覧。詳細は <code>/executions/[id]</code> へ遷移する。
  */
 function ExecutionsPageClientInner() {
-  const { uiText, locale } = useI18n();
-  const dateTimeLocale = getDateTimeLocale(locale);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  const [items, setItems] = useState<ExecutionDTO[] | null>(null);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const { uiText } = useI18n();
+  const page = useExecutionsPage();
   const [ingressOpen, setIngressOpen] = useState(false);
-
-  const [nameDraft, setNameDraft] = useState("");
-  const [definitionDraft, setDefinitionDraft] = useState("");
-
-  // 参照が毎レンダー変わっても、クエリ文字列が同じなら一覧を再取得しない。
-  const searchParamsKey = searchParams.toString();
-  const listQuery = useMemo(
-    () => readListQuery(new URLSearchParams(searchParamsKey)),
-    [searchParamsKey]
-  );
-
-  useEffect(() => {
-    setNameDraft(listQuery.name ?? "");
-    setDefinitionDraft(listQuery.definitionId ?? "");
-  }, [listQuery.name, listQuery.definitionId]);
-
-  const currentStatus = (listQuery.status ?? "") as StatusFilter;
-  const effectiveSortBy = (listQuery.sort.sortBy ?? "updatedAt") as SortBy;
-  const effectiveSortOrder: SortOrder = listQuery.sort.sortOrder ?? "desc";
-
-  const currentPage1Based = useMemo(
-    () => Math.floor(listQuery.pagination.offset / listQuery.pagination.limit) + 1,
-    [listQuery.pagination.offset, listQuery.pagination.limit]
-  );
-  const hasPrev = listQuery.pagination.offset > 0;
-  const hasNext = totalCount !== null && listQuery.pagination.offset + (items?.length ?? 0) < totalCount;
-  const load = useCallback(async (): Promise<boolean> => {
-    setLoading(true);
-    setToast(null);
-    try {
-      const path = buildExecutionsListPath({
-        pagination: listQuery.pagination,
-        sort: listQuery.sort,
-        status: listQuery.status,
-        name: listQuery.name,
-        definitionId: listQuery.definitionId
-      });
-      const page = await apiGet<PagedExecutions>(path);
-      setItems(page.items);
-      setTotalCount(page.totalCount);
-      return true;
-    } catch (e) {
-      setToast(toToastError(e));
-      setItems(null);
-      setTotalCount(null);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [listQuery]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const goTo = useCallback(
-    (query: ExecutionsListQuery) => {
-      router.replace(buildExecutionsListPath(query), { scroll: false });
-    },
-    [router]
-  );
-
-  const handleFilterSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!matchesPattern(nameDraft.trim(), SEARCH_NAME_PATTERN)) {
-      setToast({
-        tone: "error",
-        message: uiText.executionsPage.filter.invalidName
-      });
-      return;
-    }
-    if (!matchesPattern(definitionDraft.trim(), DEFINITION_ID_PATTERN)) {
-      setToast({
-        tone: "error",
-        message: uiText.executionsPage.filter.invalidDefinitionId
-      });
-      return;
-    }
-    goTo({
-      pagination: { ...listQuery.pagination, offset: 0 },
-      sort: listQuery.sort,
-      status: (currentStatus || undefined),
-      name: nameDraft || undefined,
-      definitionId: definitionDraft || undefined
-    });
+  const paginationLabels = uiText.executionsPage.pagination;
+  const paginationProps = {
+    ariaLabel: paginationLabels.ariaLabel,
+    currentPageLabel: paginationLabels.currentPage(page.currentPage),
+    hasPrev: page.hasPrev,
+    hasNext: page.hasNext,
+    prevLabel: paginationLabels.prev,
+    nextLabel: paginationLabels.next,
+    onPrev: page.goToPreviousPage,
+    onNext: page.goToNextPage
   };
-  const pagination = (
-    <ListPagination
-      ariaLabel={uiText.executionsPage.pagination.ariaLabel}
-      currentPageLabel={uiText.executionsPage.pagination.currentPage(currentPage1Based)}
-      hasPrev={hasPrev}
-      hasNext={hasNext}
-      prevLabel={uiText.executionsPage.pagination.prev}
-      nextLabel={uiText.executionsPage.pagination.next}
-      onPrev={() =>
-        goTo({
-          ...listQuery,
-          pagination: {
-            ...listQuery.pagination,
-            offset: Math.max(0, listQuery.pagination.offset - listQuery.pagination.limit)
-          }
-        })
-      }
-      onNext={() =>
-        goTo({
-          ...listQuery,
-          pagination: {
-            ...listQuery.pagination,
-            offset: listQuery.pagination.offset + listQuery.pagination.limit
-          }
-        })
-      }
-    />
-  );
 
   return (
     <PageShell
@@ -196,207 +48,79 @@ function ExecutionsPageClientInner() {
         open={ingressOpen}
         onClose={() => setIngressOpen(false)}
         onAccepted={() => {
-          void load().then((loaded) => {
+          void page.reload().then((loaded) => {
             if (loaded) {
-              setToast({ tone: "success", message: uiText.executionsPage.ingress.accepted });
+              page.notifyIngressAccepted();
             }
           });
         }}
       />
 
-      {listQuery.definitionId && (
+      {page.definitionId && (
         <output className="block rounded border border-md-primary bg-md-primary-container px-3 py-2 text-sm text-md-on-primary-container" aria-live="polite">
           <span className="text-md-on-primary-container">{uiText.executionsPage.filter.contextActivePrefix} </span>
-          <span className="font-mono break-all">{listQuery.definitionId}</span>
+          <span className="font-mono break-all">{page.definitionId}</span>
           <button
             type="button"
             className={`ml-2 ${OPERATION_TEXT_BUTTON_CLASS}`}
-            onClick={() => {
-              setDefinitionDraft("");
-              goTo({
-                pagination: { ...listQuery.pagination, offset: 0 },
-                sort: listQuery.sort,
-                status: (currentStatus || undefined),
-                name: nameDraft || undefined
-              });
-            }}
+            onClick={page.clearDefinitionContext}
           >
             {uiText.executionsPage.filter.clearDefinition}
           </button>
         </output>
       )}
 
-      <form onSubmit={handleFilterSubmit} className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
-        <h2 className="text-sm font-medium text-md-on-surface">{uiText.executionsPage.filter.title}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm text-md-on-surface">
-            <span className="text-md-on-surface-variant">{uiText.labels.status}</span>
-            <select
-              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
-              value={currentStatus}
-              onChange={(e) => {
-                const v = e.target.value as StatusFilter;
-                goTo({
-                  pagination: { ...listQuery.pagination, offset: 0 },
-                  sort: listQuery.sort,
-                  status: v || undefined,
-                  name: nameDraft || undefined,
-                  definitionId: definitionDraft || undefined
-                });
-              }}
-            >
-              <option value="">{uiText.executionsPage.filter.all}</option>
-              <option value="Running">{uiText.executionsPage.filter.statusRunning}</option>
-              <option value="Completed">{uiText.executionsPage.filter.statusCompleted}</option>
-              <option value="Cancelled">{uiText.executionsPage.filter.statusCancelled}</option>
-              <option value="Failed">{uiText.executionsPage.filter.statusFailed}</option>
-            </select>
-          </label>
-          <label className="block text-sm text-md-on-surface">
-            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.definitionLabelWithHint(uiText.labels.definitionId)}</span>
-            <input
-              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
-              value={definitionDraft}
-              onChange={(e) => setDefinitionDraft(e.target.value)}
-              placeholder={uiText.executionsPage.filter.definitionPlaceholder}
-              autoComplete="off"
-            />
-          </label>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[260px] flex-1 text-sm text-md-on-surface">
-            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.nameInputHint}</span>
-            <input
-              className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              autoComplete="off"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-            disabled={loading}
-          >
-            {uiText.executionsPage.filter.search}
-          </button>
-          <label className="text-sm text-md-on-surface">
-            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.sortByLabel}</span>
-            <select
-              className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
-              value={effectiveSortBy}
-              onChange={(e) =>
-                goTo({
-                  ...listQuery,
-                  pagination: { ...listQuery.pagination, offset: 0 },
-                  sort: { ...listQuery.sort, sortBy: e.target.value }
-                })
-              }
-            >
-              <option value="updatedAt">{uiText.executionsPage.filter.sortByUpdatedAt}</option>
-              <option value="displayId">{uiText.executionsPage.filter.sortByDisplayId}</option>
-            </select>
-          </label>
-          <label className="text-sm text-md-on-surface">
-            <span className="text-md-on-surface-variant">{uiText.executionsPage.filter.sortOrderLabel}</span>
-            <select
-              className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
-              value={effectiveSortOrder}
-              onChange={(e) =>
-                goTo({
-                  ...listQuery,
-                  pagination: { ...listQuery.pagination, offset: 0 },
-                  sort: { ...listQuery.sort, sortOrder: e.target.value as SortOrder }
-                })
-              }
-            >
-              <option value="desc">{uiText.executionsPage.filter.sortOrderDesc}</option>
-              <option value="asc">{uiText.executionsPage.filter.sortOrderAsc}</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className="rounded border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
-            onClick={() => {
-              setNameDraft("");
-              setDefinitionDraft("");
-              goTo({
-                pagination: { ...listQuery.pagination, offset: 0 },
-                sort: listQuery.sort
-              });
-            }}
-            disabled={loading && !currentStatus && !nameDraft && !definitionDraft}
-          >
-            {uiText.executionsPage.filter.clear}
-          </button>
-        </div>
-        <p className="text-xs text-md-on-surface-variant">
-          {uiText.executionsPage.filter.pageInfo(
-            listQuery.pagination.limit,
-            listQuery.pagination.offset,
-            currentPage1Based
-          )}
-        </p>
-      </form>
+      <ExecutionsFilterForm
+        status={page.status}
+        sortBy={page.sortBy}
+        sortOrder={page.sortOrder}
+        nameDraft={page.nameDraft}
+        definitionDraft={page.definitionDraft}
+        loading={page.loading}
+        limit={page.limit}
+        offset={page.offset}
+        currentPage={page.currentPage}
+        onSubmit={page.submitFilters}
+        onStatusChange={page.changeStatus}
+        onNameDraftChange={page.setNameDraft}
+        onDefinitionDraftChange={page.setDefinitionDraft}
+        onSortByChange={page.changeSortBy}
+        onSortOrderChange={page.changeSortOrder}
+        onClear={page.clearFilters}
+      />
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
+      <Toast toast={page.toast} onClose={page.dismissToast} />
 
-      {loading && (
+      {page.loading && (
         <PageState state="loading" message={uiText.executionsPage.loading} />
       )}
 
-      {!loading && items !== null && items.length > 0 && (
+      {!page.loading && page.items !== null && page.items.length > 0 && (
         <section aria-label={uiText.lists.executions}>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-md-on-surface-variant">{uiText.executionsPage.listSummary(totalCount ?? 0, currentPage1Based)}</p>
-            {pagination}
+            <p className="text-xs text-md-on-surface-variant">
+              {uiText.executionsPage.listSummary(page.totalCount ?? 0, page.currentPage)}
+            </p>
+            <ListPagination {...paginationProps} />
           </div>
-          <ul
-            className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm"
-            aria-label={uiText.lists.executions}
-          >
-            {items.map((execution) => {
-              const updated = execution.updatedAt ?? execution.startedAt;
-              return (
-                <li key={execution.displayId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge status={execution.status} />
-                      <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
-                        {execution.displayId}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-md-on-surface-variant">{uiText.executionsPage.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`shrink-0 ${NAVIGATION_BUTTON_CLASS}`}
-                    onClick={() => router.push(`/executions/${encodeURIComponent(execution.displayId)}`)}
-                  >
-                    {uiText.executionsPage.actions.openDetail}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <ExecutionsList items={page.items} onOpen={page.openExecution} />
           <div className="mt-2 flex justify-end">
-            {pagination}
+            <ListPagination {...paginationProps} />
           </div>
         </section>
       )}
 
-      {!loading && items !== null && items.length === 0 && (
+      {!page.loading && page.items !== null && page.items.length === 0 && (
         <PageState state="empty" message={uiText.executionsPage.empty} />
       )}
 
-      {!loading && !toast && items === null && (
+      {!page.loading && !page.toast && page.items === null && (
         <PageState
           state="error"
           message={uiText.executionsPage.error}
-          onRetry={() => void load()}
+          onRetry={() => void page.reload()}
         />
       )}
-
     </PageShell>
   );
 }

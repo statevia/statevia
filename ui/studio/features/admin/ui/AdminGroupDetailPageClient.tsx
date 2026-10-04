@@ -1,130 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
-import { apiGet, apiPut } from "@/shared/api";
-import type { AdminGroupDetail, AdminUserListItem, PermissionDefinitionDto } from "../types";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { useAdminGroupDetail } from "../hooks/useAdminGroupDetail";
+import { AdminGroupMembersSection } from "./AdminGroupMembersSection";
+import { AdminGroupPermissionsSection } from "./AdminGroupPermissionsSection";
 
-type AdminGroupDetailPageClientProps = Readonly<{
+type AdminGroupDetailPageClientProps = {
+  /** 編集対象のグループ ID。 */
   groupId: string;
-}>;
-
-/**
- * チェックボックス用の HTML id（semantic key の `.` 等を置換）。
- */
-function checkboxInputId(prefix: string, key: string): string {
-  return `${prefix}-${key.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}`;
-}
-
-/**
- * ユーザー行の表示ラベル（無効ユーザーは inactive 表記を付与）。
- */
-function memberCheckboxLabel(user: AdminUserListItem, inactiveLabel: string): string {
-  return user.isActive ? user.username : `${user.username} (${inactiveLabel})`;
-}
+};
 
 /**
  * グループのメンバー・権限を編集する。
+ * @param props グループ ID。
+ * @returns グループ詳細画面。
  */
-export function AdminGroupDetailPageClient({ groupId }: AdminGroupDetailPageClientProps) {
+export function AdminGroupDetailPageClient({ groupId }: Readonly<AdminGroupDetailPageClientProps>) {
   const uiText = useUiText();
-  const [group, setGroup] = useState<AdminGroupDetail | null>(null);
-  const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [permissions, setPermissions] = useState<PermissionDefinitionDto[]>([]);
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
-  const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [savingMembers, setSavingMembers] = useState(false);
-  const [savingPermissions, setSavingPermissions] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const page = useAdminGroupDetail({ groupId });
 
-  const assignablePermissions = useMemo(
-    () => permissions.filter((p) => p.permissionKey !== "tenant.admin" && !p.isDeprecated),
-    [permissions]
-  );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setToast(null);
-    try {
-      const [groupDetail, userList, permissionList] = await Promise.all([
-        apiGet<AdminGroupDetail>(`/admin/groups/${groupId}`),
-        apiGet<AdminUserListItem[]>("/admin/users"),
-        apiGet<PermissionDefinitionDto[]>("/admin/permissions")
-      ]);
-      setGroup(groupDetail);
-      setUsers(userList);
-      setPermissions(permissionList);
-      setSelectedUserIds(new Set(groupDetail.memberUserIds));
-      setSelectedPermissionKeys(new Set(groupDetail.permissionKeys));
-    } catch (error) {
-      setToast(toToastError(error));
-      setGroup(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [groupId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  function toggleUser(userId: string) {
-    setSelectedUserIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
-      return next;
-    });
-  }
-
-  function togglePermission(key: string) {
-    setSelectedPermissionKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  async function saveMembers() {
-    setSavingMembers(true);
-    setToast(null);
-    try {
-      const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/members`, {
-        userIds: [...selectedUserIds]
-      });
-      setGroup(updated);
-      setSelectedUserIds(new Set(updated.memberUserIds));
-    } catch (error) {
-      setToast(toToastError(error));
-    } finally {
-      setSavingMembers(false);
-    }
-  }
-
-  async function savePermissions() {
-    setSavingPermissions(true);
-    setToast(null);
-    try {
-      const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/permissions`, {
-        permissionKeys: [...selectedPermissionKeys]
-      });
-      setGroup(updated);
-      setSelectedPermissionKeys(new Set(updated.permissionKeys));
-    } catch (error) {
-      setToast(toToastError(error));
-    } finally {
-      setSavingPermissions(false);
-    }
-  }
-
-  if (loading) {
+  if (page.loading) {
     return (
       <PageShell title={uiText.admin.groupManagement.title}>
         <PageState state="loading" />
@@ -132,18 +31,18 @@ export function AdminGroupDetailPageClient({ groupId }: AdminGroupDetailPageClie
     );
   }
 
-  if (!group) {
+  if (!page.group) {
     return (
       <PageShell title={uiText.admin.groupManagement.title}>
         <PageState state="error" />
-        {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
+        {page.toast ? <Toast toast={page.toast} onClose={page.dismissToast} /> : null}
       </PageShell>
     );
   }
 
   return (
     <PageShell
-      title={group.name}
+      title={page.group.name}
       description={uiText.admin.groupManagement.description}
       secondaryActions={
         <Link href="/admin/groups" className="hover:underline">
@@ -151,73 +50,21 @@ export function AdminGroupDetailPageClient({ groupId }: AdminGroupDetailPageClie
         </Link>
       }
     >
-      <section className="rounded-xl border border-md-outline bg-md-surface p-4">
-        <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.membersTitle}</h2>
-        <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
-          {users.map((user) => {
-            const inputId = checkboxInputId("group-member", user.userId);
-            const labelText = memberCheckboxLabel(user, uiText.admin.users.inactive);
-            return (
-              <li key={user.userId} className="flex items-center gap-2 text-sm">
-                <input
-                  id={inputId}
-                  type="checkbox"
-                  checked={selectedUserIds.has(user.userId)}
-                  onChange={() => toggleUser(user.userId)}
-                />
-                <label htmlFor={inputId} className="cursor-pointer">
-                  {labelText}
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-        <button
-          type="button"
-          disabled={savingMembers}
-          onClick={() => {
-            void saveMembers();
-          }}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {savingMembers ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.saveMembers}
-        </button>
-      </section>
-
-      <section className="rounded-xl border border-md-outline bg-md-surface p-4">
-        <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.permissionsTitle}</h2>
-        <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
-          {assignablePermissions.map((permission) => {
-            const inputId = checkboxInputId("group-permission", permission.permissionKey);
-            const labelText = `${permission.displayLabel} (${permission.permissionKey})`;
-            return (
-              <li key={permission.permissionKey} className="flex items-start gap-2 text-sm">
-                <input
-                  id={inputId}
-                  type="checkbox"
-                  checked={selectedPermissionKeys.has(permission.permissionKey)}
-                  onChange={() => togglePermission(permission.permissionKey)}
-                />
-                <label htmlFor={inputId} className="cursor-pointer">
-                  {labelText}
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-        <button
-          type="button"
-          disabled={savingPermissions}
-          onClick={() => {
-            void savePermissions();
-          }}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {savingPermissions ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.savePermissions}
-        </button>
-      </section>
-
-      {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
+      <AdminGroupMembersSection
+        users={page.users}
+        selectedUserIds={page.selectedUserIds}
+        saving={page.savingMembers}
+        onToggleUser={page.toggleUser}
+        onSave={page.saveMembers}
+      />
+      <AdminGroupPermissionsSection
+        permissions={page.assignablePermissions}
+        selectedPermissionKeys={page.selectedPermissionKeys}
+        saving={page.savingPermissions}
+        onTogglePermission={page.togglePermission}
+        onSave={page.savePermissions}
+      />
+      {page.toast ? <Toast toast={page.toast} onClose={page.dismissToast} /> : null}
     </PageShell>
   );
 }

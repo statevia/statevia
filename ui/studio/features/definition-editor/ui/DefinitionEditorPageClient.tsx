@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DefinitionGraphEditor } from "./DefinitionGraphEditor";
 import { YamlCodeEditor } from "./YamlCodeEditor";
 import { ActionLinkGroup } from "@/shared/ui/ActionLinkGroup";
@@ -9,526 +7,37 @@ import { NAVIGATION_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
-import { apiGet, apiPost, apiPut } from "@/shared/api";
-import { parseDefinitionYaml, type ParseDefinitionYamlMessageOptions } from "../lib/parseDefinitionYaml";
-import { serializeDefinitionYaml } from "../lib/serializeDefinitionYaml";
-import type { DefinitionGraphDocument } from "../lib/types";
-import { validateGraphDocument, type ValidateGraphDocumentMessageOptions } from "../lib/validateGraphDocument";
-import { defaultDefinitionYaml } from "../lib/defaultDefinitionYaml";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
-import type { DefinitionDTO, DefinitionSchemaResponse } from "../types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
-import { getUtf8ByteLength, matchesPattern } from "@/shared/lib/validation/primitives";
-import { DEFINITION_NAME_PATTERN, DEFINITION_YAML_MAX_BYTES } from "@/shared/lib/validation/formRules";
-
-/** GET /definitions/schema/nodes の応答からルート・workflow・ノード項目の補完キーを収集する */
-function extractCompletionKeywordsFromNodesSchema(schema: unknown): string[] {
-  const root =
-    typeof schema === "object" && schema !== null ? (schema as Record<string, unknown>) : null;
-  const props = root?.properties as Record<string, unknown> | undefined;
-  const keys = new Set<string>();
-  if (!props) {
-    return [];
-  }
-  for (const k of Object.keys(props)) {
-    keys.add(k);
-  }
-  const wf = props.workflow as Record<string, unknown> | undefined;
-  const wfProps = wf?.properties as Record<string, unknown> | undefined;
-  if (wfProps) {
-    for (const k of Object.keys(wfProps)) {
-      keys.add(k);
-    }
-  }
-  const nodes = props.nodes as Record<string, unknown> | undefined;
-  const items = nodes?.items as Record<string, unknown> | undefined;
-  const nodeProps = items?.properties as Record<string, unknown> | undefined;
-  if (nodeProps) {
-    for (const k of Object.keys(nodeProps)) {
-      keys.add(k);
-    }
-  }
-  return [...keys];
-}
+import { useDefinitionEditorPage } from "../hooks/useDefinitionEditorPage";
 
 type DefinitionEditorPageClientProps = {
+  /** 編集対象。無いときは新規作成。 */
   definitionId?: string;
 };
 
-type EditorMode = "yaml" | "graph";
-
-type ApiErrorLike = {
-  status?: number;
-  error?: {
-    message?: string;
-    details?: unknown;
-  };
-};
-
-type ValidationDetailItem = {
-  field?: string;
-  message?: string;
-  state?: string;
-  actionId?: string;
-  jsonPath?: string;
-};
-
-function isApiErrorLike(value: unknown): value is ApiErrorLike {
-  return typeof value === "object" && value !== null && "error" in value;
-}
-
-function toValidationDetailItem(value: unknown): ValidationDetailItem | null {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  return {
-    field: typeof record.field === "string" ? record.field : undefined,
-    message: typeof record.message === "string" ? record.message : undefined,
-    state: typeof record.state === "string" ? record.state : undefined,
-    actionId: typeof record.actionId === "string" ? record.actionId : undefined,
-    jsonPath: typeof record.jsonPath === "string" ? record.jsonPath : undefined
-  };
-}
-
-function extractApiValidationDetails(error: unknown): ValidationDetailItem[] {
-  if (!isApiErrorLike(error) || error.status !== 422) {
-    return [];
-  }
-  const details = error.error?.details;
-  if (Array.isArray(details)) {
-    return details
-      .map((item) => {
-        if (typeof item === "string") {
-          return { message: item };
-        }
-        return toValidationDetailItem(item);
-      })
-      .filter((detail): detail is ValidationDetailItem => detail !== null && typeof detail.message === "string");
-  }
-  return [];
-}
-
-function extractApiDiagnosticMessages(error: unknown): string[] {
-  if (!isApiErrorLike(error) || error.status !== 422) {
-    return [];
-  }
-  const details = error.error?.details;
-  if (Array.isArray(details)) {
-    return details
-      .map((item) => {
-        if (typeof item === "string") {
-          return item;
-        }
-        const parsed = toValidationDetailItem(item);
-        if (parsed?.message) {
-          return parsed.field ? `[${parsed.field}] ${parsed.message}` : parsed.message;
-        }
-        return null;
-      })
-      .filter((message): message is string => typeof message === "string");
-  }
-  if (typeof details === "object" && details !== null) {
-    return Object.values(details)
-      .map((item) => (typeof item === "string" ? item : null))
-      .filter((message): message is string => typeof message === "string");
-  }
-  return error.error?.message ? [error.error.message] : [];
-}
-
-/** Definition 専用エディタ。`definitionId` があるとき PUT、ないとき POST で保存する。 */
+/**
+ * Definition 専用エディタ。`definitionId` があるとき PUT、ないとき POST で保存する。
+ * @param props 編集対象の定義 ID。
+ * @returns 定義エディタ。
+ */
 export function DefinitionEditorPageClient({ definitionId }: Readonly<DefinitionEditorPageClientProps>) {
   const uiText = useUiText();
-  const graphValidationMessageOptions = useMemo<ValidateGraphDocumentMessageOptions>(
-    () => ({
-      nodesRequired: uiText.definitionEditor.graph.nodesRequired,
-      nodeNameRequired: uiText.definitionEditor.graph.nodeNameRequired,
-      duplicateNodeName: uiText.definitionEditor.graph.duplicateNodeName,
-      startCountInvalid: uiText.definitionEditor.graph.startCountInvalid,
-      endCountInvalid: uiText.definitionEditor.graph.endCountInvalid,
-      startRequiresTransition: uiText.definitionEditor.graph.startRequiresTransition,
-      actionRequired: uiText.definitionEditor.graph.actionRequired,
-      actionRequiresTransition: uiText.definitionEditor.graph.actionRequiresTransition,
-      waitEventRequired: uiText.definitionEditor.graph.waitEventRequired,
-      waitRequiresTransition: uiText.definitionEditor.graph.waitRequiresTransition,
-      waitEventsAndEventTogether: uiText.definitionEditor.graph.waitEventsAndEventTogether,
-      waitEventsCannotHaveEdges: uiText.definitionEditor.graph.waitEventsCannotHaveEdges,
-      waitEventTargetRequired: uiText.definitionEditor.graph.waitEventTargetRequired,
-      waitEventsAndSubscribeTogether: uiText.definitionEditor.graph.waitEventsAndSubscribeTogether,
-      waitSubscribeAndEventTogether: uiText.definitionEditor.graph.waitSubscribeAndEventTogether,
-      waitSubscribeCannotHaveEdges: uiText.definitionEditor.graph.waitSubscribeCannotHaveEdges,
-      waitSubscribeRequired: uiText.definitionEditor.graph.waitSubscribeRequired,
-      waitSubscribeTopicRequired: uiText.definitionEditor.graph.waitSubscribeTopicRequired,
-      waitSubscribeNextRequired: uiText.definitionEditor.graph.waitSubscribeNextRequired,
-      forkBranchesRequired: uiText.definitionEditor.graph.forkBranchesRequired,
-      joinRequiresTransition: uiText.definitionEditor.graph.joinRequiresTransition,
-      joinModeInvalid: uiText.definitionEditor.graph.joinModeInvalid,
-      endCannotHaveTransition: uiText.definitionEditor.graph.endCannotHaveTransition,
-      edgeToRequired: uiText.definitionEditor.graph.edgeToRequired,
-      edgeWhenPathRequired: uiText.definitionEditor.graph.edgeWhenPathRequired,
-      edgeWhenOpRequired: uiText.definitionEditor.graph.edgeWhenOpRequired,
-      edgeWhenValueRequired: uiText.definitionEditor.graph.edgeWhenValueRequired,
-      edgeWhenValueInInvalid: uiText.definitionEditor.graph.edgeWhenValueInInvalid,
-      edgeWhenValueBetweenInvalid: uiText.definitionEditor.graph.edgeWhenValueBetweenInvalid,
-      edgeDefaultMultiple: uiText.definitionEditor.graph.edgeDefaultMultiple,
-      selfReferenceEdge: uiText.definitionEditor.graph.selfReferenceEdge,
-      missingTargetNode: uiText.definitionEditor.graph.missingTargetNode,
-      forkRegionIngressFromOutside: uiText.definitionEditor.graph.forkRegionIngressFromOutside,
-      forkRegionEgressWithoutJoin: uiText.definitionEditor.graph.forkRegionEgressWithoutJoin,
-      forkRegionWaitTargetOutside: uiText.definitionEditor.graph.forkRegionWaitTargetOutside
-    }),
-    [uiText.definitionEditor.graph]
-  );
-  const router = useRouter();
-  const parseYamlMessageOptions = useMemo<ParseDefinitionYamlMessageOptions>(
-    () => ({
-      rootObjectRequired: uiText.definitionEditor.graph.rootObjectRequired,
-      nodesArrayRequired: uiText.definitionEditor.graph.nodesArrayRequired
-    }),
-    [uiText.definitionEditor.graph.nodesArrayRequired, uiText.definitionEditor.graph.rootObjectRequired]
-  );
-  const isCreateMode = !definitionId;
-  // 編集対象のメタ情報（名前など）ロード中フラグ。新規作成では不要。
-  const [loadingMeta, setLoadingMeta] = useState(!isCreateMode);
-  // フォーム本体の状態（name/yaml）。
-  const [definitionName, setDefinitionName] = useState("");
-  const [yaml, setYaml] = useState(defaultDefinitionYaml);
-  const [editorMode, setEditorMode] = useState<EditorMode>("yaml");
-  const [graphDocument, setGraphDocument] = useState<DefinitionGraphDocument | null>(null);
-  const [graphValidationMessages, setGraphValidationMessages] = useState<string[]>([]);
-  const [yamlParseMessages, setYamlParseMessages] = useState<string[]>([]);
-  const [initialSnapshot, setInitialSnapshot] = useState<{ name: string; yaml: string } | null>(null);
-  // CodeMirror 側の lint 結果（true = エラーあり）。
-  const [yamlHasLintErrors, setYamlHasLintErrors] = useState(false);
-  // YAML パーサ由来の診断メッセージ。
-  const [yamlDiagnostics, setYamlDiagnostics] = useState<string[]>([]);
-  // API 422 由来の構造化診断。field ごとに表示位置を分離する。
-  const [apiValidationDetails, setApiValidationDetails] = useState<ValidationDetailItem[]>([]);
-  // API 422 由来の診断メッセージ（fallback 用）。
-  const [apiDiagnostics, setApiDiagnostics] = useState<string[]>([]);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [savedDefinition, setSavedDefinition] = useState<DefinitionDTO | null>(null);
-  // 補完候補（API スキーマ由来 + フォールバック）。
-  const [completionKeywords, setCompletionKeywords] = useState<string[]>([]);
-  const yamlRef = useRef(yaml);
-  const graphDocumentRef = useRef(graphDocument);
-  const graphValidationMessageOptionsRef = useRef(graphValidationMessageOptions);
-  const parseYamlMessageOptionsRef = useRef(parseYamlMessageOptions);
-  graphValidationMessageOptionsRef.current = graphValidationMessageOptions;
-  parseYamlMessageOptionsRef.current = parseYamlMessageOptions;
-  // 空文字 or lint エラーを保存禁止条件として統一する。
-  const hasYamlError = useMemo(
-    () => !yaml.trim() || yamlHasLintErrors || yamlParseMessages.length > 0 || graphValidationMessages.length > 0,
-    [graphValidationMessages.length, yaml, yamlHasLintErrors, yamlParseMessages.length]
-  );
-  // UI診断とAPI診断の二段構え。保存後の再修正では API 診断を先に見せる。
-  const apiNameMessages = useMemo(
-    () => apiValidationDetails.filter((detail) => detail.field === "name").map((detail) => detail.message!).filter(Boolean),
-    [apiValidationDetails]
-  );
-  const apiYamlMessages = useMemo(
-    () => apiValidationDetails.filter((detail) => detail.field === "yaml").map((detail) => detail.message!).filter(Boolean),
-    [apiValidationDetails]
-  );
-  const hintMessages = useMemo(() => {
-    if (apiYamlMessages.length > 0) {
-      return apiYamlMessages;
-    }
-    if (apiDiagnostics.length > 0) {
-      return apiDiagnostics;
-    }
-    if (yamlParseMessages.length > 0) {
-      return yamlParseMessages;
-    }
-    return yamlDiagnostics;
-  }, [apiDiagnostics, apiYamlMessages, yamlDiagnostics, yamlParseMessages]);
-  const graphHintMessages = useMemo(() => {
-    if (graphValidationMessages.length > 0) {
-      return graphValidationMessages;
-    }
-    return yamlParseMessages;
-  }, [graphValidationMessages, yamlParseMessages]);
-  const actionValidationDetails = useMemo(
-    () =>
-      apiValidationDetails.filter(
-        (detail) => detail.state || detail.jsonPath || detail.actionId
-      ),
-    [apiValidationDetails]
-  );
-  const canResetToInitial = useMemo(() => {
-    if (!initialSnapshot) {
-      return false;
-    }
-    return initialSnapshot.name !== definitionName || initialSnapshot.yaml !== yaml;
-  }, [definitionName, initialSnapshot, yaml]);
-  const actionLinks = useMemo(
-    () =>
-      isCreateMode
-        ? [{ label: uiText.lists.definitions, href: "/definitions", priority: "primary" as const }]
-        : [
-            { label: uiText.definitionEditor.backToDetail, href: `/definitions/${encodeURIComponent(definitionId)}`, priority: "primary" as const },
-            { label: uiText.lists.definitions, href: "/definitions" }
-          ],
-    [definitionId, isCreateMode, uiText.definitionEditor.backToDetail, uiText.lists.definitions]
-  );
-
-  /**
-   * 編集モード時のみ、既存定義のメタ情報を読んで初期 name を補う。
-   * 新規作成モードでは読み込みをスキップする。
-   */
-  const loadDefinition = useCallback(async () => {
-    if (!definitionId) {
-      setLoadingMeta(false);
-      return;
-    }
-    setLoadingMeta(true);
-    try {
-      const row = await apiGet<DefinitionDTO>(`/definitions/${encodeURIComponent(definitionId)}`);
-      setDefinitionName((current) => (current.trim() ? current : row.name));
-      const sourceYaml = typeof row.yaml === "string" && row.yaml.trim().length > 0 ? row.yaml : defaultDefinitionYaml;
-      const parsed = parseDefinitionYaml(sourceYaml, parseYamlMessageOptionsRef.current);
-      if (parsed.document) {
-        const normalizedYaml = serializeDefinitionYaml(parsed.document);
-        setYaml(normalizedYaml);
-        yamlRef.current = normalizedYaml;
-        const validated = validateGraphDocument(parsed.document, graphValidationMessageOptionsRef.current);
-        setYamlParseMessages(validated.isValid ? [] : validated.messages);
-        setGraphValidationMessages(validated.messages);
-        if (validated.isValid) {
-          setGraphDocument(parsed.document);
-        }
-      } else {
-        setYaml(sourceYaml);
-        yamlRef.current = sourceYaml;
-        setYamlParseMessages(parsed.diagnostics);
-      }
-    } catch (error) {
-      setToast(toToastError(error));
-    } finally {
-      setLoadingMeta(false);
-    }
-  }, [definitionId]);
-
-  /**
-   * 補完候補の源泉となる nodes スキーマを API から取得する。
-   * API が落ちていても編集を止めないため、失敗時は最小候補へフォールバックする。
-   */
-  const loadSchemaKeywords = useCallback(async () => {
-    const fallback = [
-      "version",
-      "workflow",
-      "nodes",
-      "name",
-      "id",
-      "description",
-      "type",
-      "action",
-      "error",
-      "input",
-      "next",
-      "event",
-      "events",
-      "branches",
-      "mode",
-      "edges",
-      "to",
-      "when",
-      "path",
-      "op",
-      "value",
-      "order",
-      "default"
-    ];
-    try {
-      const response = await apiGet<DefinitionSchemaResponse>("/definitions/schema/nodes");
-      const fromSchema = extractCompletionKeywordsFromNodesSchema(response.schema);
-      setCompletionKeywords(fromSchema.length > 0 ? fromSchema : fallback);
-    } catch {
-      setCompletionKeywords(fallback);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadDefinition();
-  }, [definitionId, loadDefinition]);
-
-  useEffect(() => {
-    void loadSchemaKeywords();
-  }, [loadSchemaKeywords]);
-
-  useEffect(() => {
-    yamlRef.current = yaml;
-  }, [yaml]);
-
-  useEffect(() => {
-    graphDocumentRef.current = graphDocument;
-  }, [graphDocument]);
-
-  const parseYamlImmediately = useCallback(
-    (yamlText: string) => {
-      const parsed = parseDefinitionYaml(yamlText, parseYamlMessageOptionsRef.current);
-      if (!parsed.document) {
-        setYamlParseMessages(parsed.diagnostics);
-        return false;
-      }
-      const validated = validateGraphDocument(parsed.document, graphValidationMessageOptionsRef.current);
-      setYamlParseMessages(validated.isValid ? [] : validated.messages);
-      setGraphValidationMessages(validated.messages);
-      if (validated.isValid) {
-        setGraphDocument(parsed.document);
-      }
-      return validated.isValid;
-    },
-    []
-  );
-
-  const handleGraphDocumentChange = useCallback((nextDocument: DefinitionGraphDocument) => {
-    graphDocumentRef.current = nextDocument;
-    const validated = validateGraphDocument(nextDocument, graphValidationMessageOptionsRef.current);
-    setGraphValidationMessages(validated.messages);
-    setYamlParseMessages(validated.isValid ? [] : validated.messages);
-    setGraphDocument(nextDocument);
-    if (!validated.isValid) {
-      return;
-    }
-    const serialized = serializeDefinitionYaml(nextDocument);
-    yamlRef.current = serialized;
-    setYaml(serialized);
-  }, []);
-
-  // グラフタブではドキュメントが親の yaml より先行することがある（ID 編集中の無効な中間状態など）。
-  // デバウンスした yaml 再パースで graphDocument を上書きすると編集中の状態が消えるため、YAML タブのときだけ同期する。
-  useEffect(() => {
-    if (editorMode === "graph") {
-      return;
-    }
-    const timer = setTimeout(() => {
-      parseYamlImmediately(yaml);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [editorMode, parseYamlImmediately, yaml]);
-
-  useEffect(() => {
-    if (initialSnapshot || loadingMeta) {
-      return;
-    }
-    setInitialSnapshot({
-      name: definitionName,
-      yaml
-    });
-  }, [definitionName, initialSnapshot, loadingMeta, yaml]);
-
-  const handleYamlChange = useCallback((nextYaml: string) => {
-    yamlRef.current = nextYaml;
-    setYaml(nextYaml);
-  }, []);
-
-  /**
-   * 保存処理（UI事前検証 -> API最終検証）。
-   * UI側で弾けるものは先に弾き、API 422 は診断として再表示する。
-   */
-  const handleSave = useCallback(async () => {
-    const name = definitionName.trim();
-    const latestYaml = yamlRef.current;
-    const latestGraphDocument = graphDocumentRef.current;
-    let yamlForSave = latestYaml;
-    if (editorMode === "graph" && latestGraphDocument) {
-      yamlForSave = serializeDefinitionYaml(latestGraphDocument);
-    } else {
-      // YAML モードでも保存直前に最新テキストを再パースし、送信内容を確定する。
-      const parsedForSave = parseDefinitionYaml(latestYaml, parseYamlMessageOptions);
-      if (parsedForSave.document) {
-        yamlForSave = serializeDefinitionYaml(parsedForSave.document);
-      }
-    }
-    const yamlText = yamlForSave.trim();
-    if (!name) {
-      setToast({
-        tone: "error",
-        message: uiText.definitionEditor.validation.nameRequired
-      });
-      return;
-    }
-    if (!yamlText) {
-      setToast({
-        tone: "error",
-        message: uiText.definitionEditor.validation.yamlRequired
-      });
-      return;
-    }
-    if (!matchesPattern(name, DEFINITION_NAME_PATTERN)) {
-      setToast({
-        tone: "error",
-        message: uiText.definitionEditor.validation.nameInvalidFormat
-      });
-      return;
-    }
-    const yamlBytes = getUtf8ByteLength(yamlText);
-    if (yamlBytes > DEFINITION_YAML_MAX_BYTES) {
-      setToast({
-        tone: "error",
-        message: uiText.definitionEditor.validation.yamlTooLarge
-      });
-      return;
-    }
-    if (hasYamlError) {
-      setToast({
-        tone: "error",
-        message: uiText.definitionEditor.validation.yamlLintInvalid
-      });
-      return;
-    }
-
-    setSaving(true);
-    setToast(null);
-    setSavedDefinition(null);
-    setApiValidationDetails([]);
-    // 直前の API 診断は保存試行ごとにクリアする。
-    setApiDiagnostics([]);
-    try {
-      // 保存 payload は直前の Graph 編集内容を優先して確定する。
-      yamlRef.current = yamlForSave;
-      setYaml(yamlForSave);
-      let saved: DefinitionDTO;
-      if (definitionId) {
-        saved = await apiPut<DefinitionDTO>(
-          `/definitions/${encodeURIComponent(definitionId)}`,
-          { name, yaml: yamlForSave }
-        );
-      } else {
-        saved = await apiPost<DefinitionDTO>("/definitions", { name, yaml: yamlForSave });
-      }
-      setSavedDefinition(saved);
-      setToast({
-        tone: "success",
-        message: uiText.definitionEditor.toasts.savedWithDisplayId(uiText.labels.displayId, saved.displayId)
-      });
-    } catch (error) {
-      // API が返す 422 詳細をヒント領域へ反映する。
-      setApiValidationDetails(extractApiValidationDetails(error));
-      setApiDiagnostics(extractApiDiagnosticMessages(error));
-      setToast(toToastError(error));
-    } finally {
-      setSaving(false);
-    }
-  }, [definitionId, definitionName, editorMode, hasYamlError, parseYamlMessageOptions, uiText.definitionEditor.validation.nameInvalidFormat, uiText.definitionEditor.validation.nameRequired, uiText.definitionEditor.validation.yamlLintInvalid, uiText.definitionEditor.validation.yamlRequired, uiText.definitionEditor.validation.yamlTooLarge, uiText.definitionEditor.toasts, uiText.labels.displayId]);
+  const editor = useDefinitionEditorPage({ definitionId });
 
   return (
     <PageShell
       title={uiText.labels.definitionEditor}
       description={
-        isCreateMode
+        editor.isCreateMode || !definitionId
           ? uiText.definitionEditor.descriptionCreating
           : uiText.definitionEditor.descriptionEditingTarget(definitionId)
       }
-      primaryActions={<ActionLinkGroup links={actionLinks} />}
+      primaryActions={<ActionLinkGroup links={editor.actionLinks} />}
       className="max-w-[1600px]"
     >
+      <Toast toast={editor.toast} onClose={editor.dismissToast} />
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
-
-      {loadingMeta && (
+      {editor.loadingMeta && (
         <PageState state="loading" message={uiText.definitionEditor.loadingMeta} />
       )}
 
@@ -537,68 +46,63 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
           <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.name}</span>
           <input
             className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
-            value={definitionName}
-            onChange={(event) => setDefinitionName(event.target.value)}
+            value={editor.definitionName}
+            onChange={(event) => editor.setDefinitionName(event.target.value)}
             autoComplete="off"
           />
         </label>
-        {apiNameMessages.length > 0 && (
-          <p className="text-xs text-rose-600">{apiNameMessages[0]}</p>
+        {editor.apiNameMessages.length > 0 && (
+          <p className="text-xs text-rose-600">{editor.apiNameMessages[0]}</p>
         )}
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editorMode === "yaml" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
-            onClick={() => setEditorMode("yaml")}
+            className={`rounded border px-3 py-1 text-xs ${editor.editorMode === "yaml" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
+            onClick={editor.showYaml}
           >
             {uiText.definitionEditor.actions.switchToYaml}
           </button>
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editorMode === "graph" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
-            onClick={() => {
-              parseYamlImmediately(yaml);
-              setEditorMode("graph");
-            }}
+            className={`rounded border px-3 py-1 text-xs ${editor.editorMode === "graph" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
+            onClick={editor.showGraph}
           >
             {uiText.definitionEditor.actions.switchToGraph}
           </button>
         </div>
 
-        {editorMode === "yaml" ? (
+        {editor.editorMode === "yaml" ? (
           <label className="block text-sm">
             <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.yaml}</span>
             <YamlCodeEditor
-              value={yaml}
-              onChange={handleYamlChange}
-              completionKeywords={completionKeywords}
-              onLintChange={setYamlHasLintErrors}
-              onDiagnosticsChange={setYamlDiagnostics}
+              value={editor.yaml}
+              onChange={editor.onYamlChange}
+              completionKeywords={editor.completionKeywords}
+              onLintChange={editor.onYamlLintChange}
+              onDiagnosticsChange={editor.onYamlDiagnosticsChange}
             />
           </label>
         ) : (
           <>
-            {yamlParseMessages.length > 0 && (
+            {editor.yamlParseMessages.length > 0 && (
               <p className="text-xs text-amber-700">{uiText.definitionEditor.graph.parseFailed}</p>
             )}
             <DefinitionGraphEditor
-              document={graphDocument}
-              onDocumentChange={handleGraphDocumentChange}
-              validationMessages={graphHintMessages}
-              actionValidationDetails={actionValidationDetails}
+              document={editor.graphDocument}
+              onDocumentChange={editor.onGraphDocumentChange}
+              validationMessages={editor.graphHintMessages}
+              actionValidationDetails={editor.actionValidationDetails}
               labels={uiText.definitionEditor.graph}
             />
           </>
         )}
-        {/* 保存ガード理由を画面上で明示する。 */}
-        {hasYamlError && <p className="text-xs text-rose-600">{uiText.definitionEditor.validation.yamlLintInvalid}</p>}
-        {/* 診断ヒント: API診断があれば優先、なければYAML診断を表示。 */}
-        {hintMessages.length > 0 && (
+        {editor.hasYamlError && <p className="text-xs text-rose-600">{uiText.definitionEditor.validation.yamlLintInvalid}</p>}
+        {editor.hintMessages.length > 0 && (
           <section className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <p className="font-medium">{uiText.definitionEditor.hints.title}</p>
             <ul className="mt-2 list-inside list-disc space-y-1">
-              {hintMessages.slice(0, 8).map((message) => (
+              {editor.hintMessages.slice(0, 8).map((message) => (
                 <li key={message}>{message}</li>
               ))}
             </ul>
@@ -609,44 +113,37 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
           <button
             type="button"
             className="w-full rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50 sm:w-auto"
-            onClick={() => void handleSave()}
-            disabled={saving || hasYamlError}
+            onClick={() => void editor.save()}
+            disabled={editor.saving || editor.hasYamlError}
           >
-            {saving ? uiText.definitionEditor.actions.saving : uiText.definitionEditor.actions.saveWithApiHint}
+            {editor.saving ? uiText.definitionEditor.actions.saving : uiText.definitionEditor.actions.saveWithApiHint}
           </button>
           <button
             type="button"
             className="w-full rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high sm:ml-auto sm:w-auto"
-            onClick={() => {
-              if (!initialSnapshot) {
-                return;
-              }
-              setDefinitionName(initialSnapshot.name);
-              setYaml(initialSnapshot.yaml);
-              parseYamlImmediately(initialSnapshot.yaml);
-            }}
-            disabled={saving || !canResetToInitial}
+            onClick={editor.resetToInitial}
+            disabled={editor.saving || !editor.canResetToInitial}
           >
             {uiText.definitionEditor.actions.resetTemplate}
           </button>
         </div>
       </section>
 
-      {savedDefinition && (
+      {editor.savedDefinition && (
         <section className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-medium">{uiText.definitionEditor.saved.complete(savedDefinition.displayId)}</p>
+          <p className="font-medium">{uiText.definitionEditor.saved.complete(editor.savedDefinition.displayId)}</p>
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               className={NAVIGATION_BUTTON_CLASS}
-              onClick={() => router.push(`/definitions/${encodeURIComponent(savedDefinition.displayId)}`)}
+              onClick={editor.openSavedDetail}
             >
               {uiText.definitionEditor.saved.openNewDetail}
             </button>
             <button
               type="button"
               className={NAVIGATION_BUTTON_CLASS}
-              onClick={() => router.push(`/definitions/${encodeURIComponent(savedDefinition.displayId)}/run`)}
+              onClick={editor.openSavedRun}
             >
               {uiText.definitionEditor.saved.runWithThisDefinition}
             </button>

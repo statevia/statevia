@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.10 |
-| 更新日 | 2026-10-02 |
+| Version | 0.11 |
+| 更新日 | 2026-10-04 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.11（2026-10-04）**: 画面の取得・検証・送信はフックがデータとコマンドで返す。`ReactNode` は返さない。loading / empty / error の出し分けは UI に残し、短い部品は行数だけで割らない。
 
 **Version 0.10（2026-10-02）**: 画面の色クラスを `md-*` / `brand-*` へ寄せた。`Button` / `TextField` を使うのは集合配送ダイアログだけ。不透明度付きクラス、状態パレット、グラフとエディタの style 色は直書きのまま。
 
@@ -95,6 +97,24 @@ flowchart LR
 | UI | `features/*/ui/` | 一覧行、確認ボタン群、PageClient |
 | i18n | `features/*/i18n/` | 画面文言切片（`shared/i18n` で合成） |
 | route | `app/**/page.tsx` | feature の Page を返すだけ（`"use client"` は feature 側） |
+
+### 画面のフックと UI
+
+長い画面では、取得・検証・送信を `features/<name>/hooks/` のフックへ置く。画面コンポーネントはフックを 1 回呼び、レイアウトを返す。
+
+| 置くもの | 置き場 |
+| --- | --- |
+| 状態、`useEffect`、API 呼び出し、ハンドラ | フックが返すデータとコマンド |
+| その画面だけの導出 | フックと同じファイルの関数 |
+| 複数画面で使う導出 | `features/<name>/lib/` |
+| レイアウトと、loading / empty / error / ダイアログ閉止 | `features/<name>/ui/` |
+| 文言 | 既存の i18n 辞書 |
+
+フックの戻り値はフラグ、文言、配列、コールバックである。`ReactNode` や描画済みのノードは返さない。
+
+部品だけの操作（候補リストの開閉、入力欄の下書き）は、その表示コンポーネントの state に残す。フィルタ、一覧、フォーム、ダイアログのように、骨格を名前で追える塊だけを表示コンポーネントにする。短いマークアップや、すでにフックへ出ている画面を、行数だけを理由に割らない。ページングのように既存の共有部品があるものは、ページの JSX からそれを使う。
+
+分割の前後で HTTP と画面の操作結果は変えない。
 
 ## 5. 画面追加の手順
 
