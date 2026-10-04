@@ -120,7 +120,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   npx markdownlint-cli2 "path/to/edited.md"
   ```
 
-- **UI（TypeScript）**: **`npm run lint`**（error 厳格）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`）。
+- **UI（TypeScript）**: **`npm run lint`**（エラーも警告も失敗。`--max-warnings 0`）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`）。
 - **SonarQube（Service API）**: プロジェクトキー **`statevia_statevia_api`**。Quality Gate は SonarQube Cloud の組み込み **Sonar way**（新規コードのみ。信頼性・セキュリティ・保守性は A、Security Hotspot はすべてレビュー、カバレッジ 80% 以上、重複行 3% 以下）。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[sonar/README.md](../sonar/README.md)）。
 - **SonarQube（UI Studio）**: プロジェクトキー **`statevia_statevia_ui`**。Quality Gate は API と同じ **Sonar way**（新規コードのみ）。手順は **§5.2**。C# と同様、`tests/` はスキャン対象外（`sonar.exclusions`）。カバレッジは lcov のプロダクションパスだけを見る。
 

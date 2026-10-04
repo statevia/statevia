@@ -12,6 +12,12 @@ import type { ActionInputValidationDetail } from "../actionSchema/types";
 import { defaultDefinitionYaml } from "../lib/defaultDefinitionYaml";
 import { parseDefinitionYaml, type ParseDefinitionYamlMessageOptions } from "../lib/parseDefinitionYaml";
 import { serializeDefinitionYaml } from "../lib/serializeDefinitionYaml";
+import {
+  buildDefinitionYamlDownloadFileName,
+  downloadDefinitionYamlText,
+  readDefinitionYamlFile
+} from "../lib/definitionYamlFile";
+import { definitionYamlFileToastMessage } from "../i18n/yamlFileToasts";
 import type { DefinitionGraphDocument } from "../lib/types";
 import { validateGraphDocument, type ValidateGraphDocumentMessageOptions } from "../lib/validateGraphDocument";
 import type { DefinitionDTO, DefinitionSchemaResponse } from "../types";
@@ -116,6 +122,19 @@ export type DefinitionEditorPageModel = {
   openSavedDetail: () => void;
   /** 保存した定義で実行を開始する。 */
   openSavedRun: () => void;
+  /** 未保存の上書き確認を出しているか。 */
+  yamlUploadConfirming: boolean;
+  /**
+   * ローカル YAML を読む。未保存のときは確認まで適用しない。
+   * @param file 選択ファイル。
+   */
+  requestYamlUpload: (file: File) => Promise<void>;
+  /** 確認中の YAML をエディタへ適用する。定義名は変えない。 */
+  confirmYamlOverwrite: () => void;
+  /** 確認を取り消し、エディタを変えない。 */
+  cancelYamlOverwrite: () => void;
+  /** 現在の YAML をファイルへ書き出す。保存 API は呼ばない。 */
+  downloadYaml: () => void;
 };
 
 /**
@@ -627,6 +646,54 @@ export function useDefinitionEditorPage({
     setToast(null);
   }, []);
 
+  const [pendingUploadText, setPendingUploadText] = useState<string | null>(null);
+
+  const applyUploadedYaml = useCallback((text: string) => {
+    yamlRef.current = text;
+    setYaml(text);
+    parseYamlImmediately(text);
+    setPendingUploadText(null);
+    setToast({
+      tone: "success",
+      message: definitionYamlFileToastMessage(uiText, "loaded")
+    });
+  }, [parseYamlImmediately, uiText]);
+
+  const requestYamlUpload = useCallback(async (file: File) => {
+    const result = await readDefinitionYamlFile(file);
+    if (!result.ok) {
+      setPendingUploadText(null);
+      setToast({
+        tone: "error",
+        message: definitionYamlFileToastMessage(uiText, result.reason)
+      });
+      return;
+    }
+    if (canResetToInitial) {
+      setPendingUploadText(result.text);
+      return;
+    }
+    applyUploadedYaml(result.text);
+  }, [applyUploadedYaml, canResetToInitial, uiText]);
+
+  const confirmYamlOverwrite = useCallback(() => {
+    if (pendingUploadText === null) {
+      return;
+    }
+    applyUploadedYaml(pendingUploadText);
+  }, [applyUploadedYaml, pendingUploadText]);
+
+  const cancelYamlOverwrite = useCallback(() => {
+    setPendingUploadText(null);
+  }, []);
+
+  const downloadYaml = useCallback(() => {
+    const yamlText = editorMode === "graph" && graphDocument
+      ? serializeDefinitionYaml(graphDocument)
+      : yamlRef.current;
+    downloadDefinitionYamlText(buildDefinitionYamlDownloadFileName(definitionName), yamlText);
+  }, [definitionName, editorMode, graphDocument]);
+
   const openSavedDetail = useCallback(() => {
     if (!savedDefinition) {
       return;
@@ -672,6 +739,11 @@ export function useDefinitionEditorPage({
     dismissToast,
     savedDefinition,
     openSavedDetail,
-    openSavedRun
+    openSavedRun,
+    yamlUploadConfirming: pendingUploadText !== null,
+    requestYamlUpload,
+    confirmYamlOverwrite,
+    cancelYamlOverwrite,
+    downloadYaml
   };
 }

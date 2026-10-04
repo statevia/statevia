@@ -166,7 +166,7 @@
 
 ## 品質チェック
 
-- `tsc --noEmit` と該当範囲の `npm run test:run` を通す。
+- 変更後は、変更した `ui/studio` の TypeScript に `npx eslint`（警告も失敗）、`tsc --noEmit`、該当範囲の `npm run test:run` を通す。全体は `npm run lint`。
 
 ## 補足（TypeScript）
 

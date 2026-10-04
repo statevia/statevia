@@ -17,9 +17,30 @@ vi.mock("@/shared/api", async (importOriginal) => {
 });
 
 import { apiGet, apiPost, apiPut } from "@/shared/api";
+import { DEFINITION_YAML_MAX_BYTES } from "@/shared/lib/validation/formRules";
+
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("read"));
+    reader.readAsText(blob);
+  });
+}
+
+function selectDefinitionYamlFile(fileName: string, content: string) {
+  const input = document.querySelector('input[type="file"]');
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error("YAML file input がありません");
+  }
+  const file = new File([content], fileName, { type: "text/yaml" });
+  fireEvent.change(input, { target: { files: [file] } });
+}
 
 describe("DefinitionEditorPageClient", () => {
   beforeEach(() => {
+    vi.mocked(apiPost).mockClear();
+    vi.mocked(apiPut).mockClear();
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === "/definitions/schema/nodes") {
         return {
@@ -210,5 +231,88 @@ describe("DefinitionEditorPageClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "編集前に戻す" }));
 
     expect(screen.getByLabelText(/定義名/i)).toHaveValue("Edited");
+  });
+
+  it("アップロードで YAML を差し替え、保存 API は呼ばない", async () => {
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+
+    selectDefinitionYamlFile("sample.yaml", "uploaded-marker: true\n");
+
+    expect(await screen.findByText("YAML を読み込みました。登録は保存を押すまで行われません。")).toBeInTheDocument();
+    expect(screen.getByText("uploaded-marker: true")).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(apiPut).not.toHaveBeenCalled();
+  });
+
+  it("未保存のときは確認するまで YAML を差し替えない", async () => {
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "DirtyName" } });
+
+    selectDefinitionYamlFile("sample.yaml", "uploaded-marker: true\n");
+
+    expect(await screen.findByRole("button", { name: "上書きする" })).toBeInTheDocument();
+    expect(screen.queryByText("uploaded-marker: true")).not.toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(apiPut).not.toHaveBeenCalled();
+  });
+
+  it("未保存の上書き確認をキャンセルすると YAML は変わらない", async () => {
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "DirtyName" } });
+
+    selectDefinitionYamlFile("sample.yaml", "uploaded-marker: true\n");
+    fireEvent.click(await screen.findByRole("button", { name: "キャンセル" }));
+
+    expect(screen.queryByText("uploaded-marker: true")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "上書きする" })).not.toBeInTheDocument();
+  });
+
+  it("未保存の上書きを確認すると YAML が差し替わる", async () => {
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "DirtyName" } });
+
+    selectDefinitionYamlFile("sample.yaml", "uploaded-marker: true\n");
+    fireEvent.click(await screen.findByRole("button", { name: "上書きする" }));
+
+    expect(await screen.findByText("uploaded-marker: true")).toBeInTheDocument();
+    expect(screen.getByLabelText(/定義名/i)).toHaveValue("DirtyName");
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(apiPut).not.toHaveBeenCalled();
+  });
+
+  it("不正な拡張子とサイズ超過では保存 API を呼ばない", async () => {
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+
+    selectDefinitionYamlFile("sample.txt", "uploaded-marker: true\n");
+    expect(await screen.findByText("拡張子は .yaml または .yml のみ読み込めます。")).toBeInTheDocument();
+    expect(screen.queryByText("uploaded-marker: true")).not.toBeInTheDocument();
+
+    selectDefinitionYamlFile("big.yaml", "a".repeat(DEFINITION_YAML_MAX_BYTES + 1));
+    expect(await screen.findByText("YAMLは256KB（262144バイト）以内で入力してください。")).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(apiPut).not.toHaveBeenCalled();
+  });
+
+  it("ダウンロードは現在の YAML をオブジェクト URL にする", async () => {
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:yaml");
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "ダウンロード" }));
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    expect(blob).toBeInstanceOf(Blob);
+    await expect(readBlobText(blob as Blob)).resolves.toContain("DefinitionMinimal");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:yaml");
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
   });
 });

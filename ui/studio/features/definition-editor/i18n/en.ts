@@ -29,6 +29,10 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       resetTemplate: "Reset to initial",
       switchToYaml: "YAML",
       switchToGraph: "Graph",
+      uploadYaml: "Upload",
+      downloadYaml: "Download",
+      confirmOverwrite: "Overwrite",
+      cancelOverwrite: "Cancel",
     },
     graph: {
       title: "Graph editor",
@@ -152,6 +156,9 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
     toasts: {
       savedWithDisplayId: (displayIdLabel: string, displayId: string) =>
         `Definition saved (${displayIdLabel}: ${displayId})`,
+      yamlLoaded: "YAML loaded. It is not registered until you save.",
+      yamlExtensionRejected: "Only .yaml or .yml files can be loaded.",
+      yamlReadFailed: "The file could not be read.",
     },
     hints: {
       title: "Fix hints",

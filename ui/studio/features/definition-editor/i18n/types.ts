@@ -25,6 +25,10 @@ export type DefinitionEditorFeatureUiText = {
       resetTemplate: string;
       switchToYaml: string;
       switchToGraph: string;
+      uploadYaml: string;
+      downloadYaml: string;
+      confirmOverwrite: string;
+      cancelOverwrite: string;
     };
     graph: {
       title: string;
@@ -124,6 +128,9 @@ export type DefinitionEditorFeatureUiText = {
     };
     toasts: {
       savedWithDisplayId: (displayIdLabel: string, displayId: string) => string;
+      yamlLoaded: string;
+      yamlExtensionRejected: string;
+      yamlReadFailed: string;
     };
     hints: {
       title: string;

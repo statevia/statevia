@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { DefinitionGraphEditor } from "./DefinitionGraphEditor";
 import { YamlCodeEditor } from "./YamlCodeEditor";
 import { ActionLinkGroup } from "@/shared/ui/ActionLinkGroup";
@@ -23,6 +24,9 @@ type DefinitionEditorPageClientProps = {
 export function DefinitionEditorPageClient({ definitionId }: Readonly<DefinitionEditorPageClientProps>) {
   const uiText = useUiText();
   const editor = useDefinitionEditorPage({ definitionId });
+  const yamlFileInputRef = useRef<HTMLInputElement>(null);
+  const modeButtonClass = (selected: boolean) =>
+    `rounded border px-3 py-1 text-xs ${selected ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`;
 
   return (
     <PageShell
@@ -58,18 +62,68 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editor.editorMode === "yaml" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
+            className={modeButtonClass(editor.editorMode === "yaml")}
             onClick={editor.showYaml}
           >
             {uiText.definitionEditor.actions.switchToYaml}
           </button>
           <button
             type="button"
-            className={`rounded border px-3 py-1 text-xs ${editor.editorMode === "graph" ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`}
+            className={modeButtonClass(editor.editorMode === "graph")}
             onClick={editor.showGraph}
           >
             {uiText.definitionEditor.actions.switchToGraph}
           </button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={modeButtonClass(false)}
+              onClick={() => yamlFileInputRef.current?.click()}
+            >
+              {uiText.definitionEditor.actions.uploadYaml}
+            </button>
+            <button
+              type="button"
+              className={modeButtonClass(false)}
+              onClick={editor.downloadYaml}
+            >
+              {uiText.definitionEditor.actions.downloadYaml}
+            </button>
+            <input
+              ref={yamlFileInputRef}
+              type="file"
+              accept=".yaml,.yml,text/yaml"
+              className="hidden"
+              aria-hidden
+              tabIndex={-1}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) {
+                  return;
+                }
+                void editor.requestYamlUpload(file);
+              }}
+            />
+            {editor.yamlUploadConfirming && (
+              <>
+                <button
+                  type="button"
+                  className="rounded border border-red-700 bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-800"
+                  onClick={editor.confirmYamlOverwrite}
+                >
+                  {uiText.definitionEditor.actions.confirmOverwrite}
+                </button>
+                <button
+                  type="button"
+                  className={modeButtonClass(false)}
+                  onClick={editor.cancelYamlOverwrite}
+                >
+                  {uiText.definitionEditor.actions.cancelOverwrite}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {editor.editorMode === "yaml" ? (
