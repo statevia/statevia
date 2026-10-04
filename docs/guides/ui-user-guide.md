@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.7 |
-| 更新日 | 2026-09-01 |
+| Version | 1.8 |
+| 更新日 | 2026-10-04 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.8（2026-10-04）**: 定義編集画面の「アップロード」「ダウンロード」でローカル YAML を読み書きできる。アップロードは未保存で、登録は保存ボタン。
 
 **Version 1.7（2026-09-01）**: 品質チェックと内部構成をコントリビュータ向けと明示。SSE は Principal 必須。
 
@@ -72,6 +74,16 @@ Studio の定義一覧・詳細から Service API の catalog ライフサイク
 | 復元 | 一覧の削除済み行のみ | 単体 GET は 404（operational invisibility）のため詳細からは復元しない |
 
 HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2.2。
+
+### 定義エディタの YAML ファイル入出力
+
+定義の新規作成と更新の画面で、「アップロード」と「ダウンロード」を使えます。YAML / Graph の切替は左、この2つは右です。アップロードは画面上の YAML を差し替えるだけで、Service API へは送りません。登録は従来の「保存」です。
+
+| 操作 | 結果 |
+| --- | --- |
+| アップロード | `.yaml` / `.yml`。UTF-8。先頭の BOM は除く。256KB（262144 バイト）を超えるファイルは読み込まない |
+| 未保存の上書き | 編集中の内容があるときは、確認のあとだけ差し替える。キャンセルすると内容は残る |
+| ダウンロード | YAML 表示中は画面のテキスト。Graph 表示中は保存時と同じ YAML。定義名が空なら `definition.yaml` |
 
 グラフのマージ規則・ノード表現の Normative 契約は [visual 仕様](../specifications/ui/visual.md)。リアルタイム更新は SSE（[push-api 仕様](../specifications/ui/push-api.md)）。SSE も Principal 必須（未認証は 401）。Studio はプロキシ経由でセッション Cookie を付ける。
 

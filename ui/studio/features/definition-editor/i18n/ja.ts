@@ -26,6 +26,10 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
       resetTemplate: "編集前に戻す",
       switchToYaml: "YAML",
       switchToGraph: "Graph",
+      uploadYaml: "アップロード",
+      downloadYaml: "ダウンロード",
+      confirmOverwrite: "上書きする",
+      cancelOverwrite: "キャンセル",
     },
     graph: {
       title: "グラフ編集",
@@ -150,6 +154,9 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
     toasts: {
       savedWithDisplayId: (displayIdLabel: string, displayId: string) =>
         `定義を保存しました（${displayIdLabel}: ${displayId}）`,
+      yamlLoaded: "YAML を読み込みました。登録は保存を押すまで行われません。",
+      yamlExtensionRejected: "拡張子は .yaml または .yml のみ読み込めます。",
+      yamlReadFailed: "ファイルを読み取れませんでした。",
     },
     hints: {
       title: "修正ヒント",
