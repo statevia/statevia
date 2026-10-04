@@ -1,11 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { DefinitionGraphEditor } from "@/features/definition-editor/ui/DefinitionGraphEditor";
 import { resetActionSchemaIndexSessionCacheForTests } from "@/features/definition-editor/actionSchema/actionSchemaIndexSessionCache";
 import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultDefinitionYaml";
 import { parseDefinitionYaml } from "@/features/definition-editor/lib/parseDefinitionYaml";
 import type { DefinitionGraphDocument } from "@/features/definition-editor/lib/types";
+import { useDefinitionGraphEditor } from "@/features/definition-editor/hooks/useDefinitionGraphEditor";
+import { useGraphActionSchemas } from "@/features/definition-editor/hooks/useGraphActionSchemas";
+import type { Connection, Node } from "reactflow";
+import type { DefinitionGraphNodeData } from "@/features/definition-editor/lib/definitionGraphCanvas";
 import { renderWithUiText } from "../../testUtils";
 import { definitionGraphEditorTestLabels } from "./definitionGraphEditorLabels";
 
@@ -533,5 +537,140 @@ nodes:
       });
     });
     expect(detailPathCalls(vi.mocked(apiGet).mock.calls)).toHaveLength(1);
+  });
+
+  it("error と wait と分岐の辺を描画する", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "start", type: "start", next: "act" },
+        {
+          name: "act",
+          type: "action",
+          action: "noop",
+          error: "end",
+          next: "wait1",
+          edges: [{ to: "end" }, { to: "" }]
+        },
+        {
+          name: "wait1",
+          type: "wait",
+          events: { go: "end", "": "end" },
+          subscribe: [
+            { topic: "", next: "end" },
+            { topic: "orders", next: "" }
+          ]
+        },
+        { name: "fork1", type: "fork", branches: ["end", ""] },
+        { name: "end", type: "end" }
+      ]
+    };
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={vi.fn()}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByRole("button", { name: "action" }));
+    fireEvent.click(screen.getByRole("button", { name: "fork" }));
+    fireEvent.click(screen.getByRole("button", { name: "join" }));
+    expect(screen.getByText(definitionGraphEditorTestLabels.title)).toBeInTheDocument();
+  });
+});
+
+describe("定義グラフの接続と schema 取得", () => {
+  const document: DefinitionGraphDocument = {
+    version: 1,
+    workflow: { name: "w" },
+    nodes: [
+      { name: "start", type: "start", next: "act" },
+      { name: "act", type: "action", action: "statevia.action.builtin.execution.noop", next: "end" },
+      { name: "plain", type: "action", action: "noop", next: "end" },
+      { name: "waitSub", type: "wait", subscribe: [{ topic: "orders", next: "end" }] },
+      { name: "waitEv", type: "wait", events: { go: "end" } },
+      { name: "waitBad", type: "wait", events: { go: "end" }, subscribe: [{ topic: "t", next: "end" }] },
+      { name: "fork1", type: "fork", branches: [] },
+      { name: "end", type: "end" }
+    ]
+  };
+
+  beforeEach(() => {
+    resetActionSchemaIndexSessionCacheForTests();
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === "/actions/schema/index") {
+        return {
+          items: [
+            { actionId: "statevia.action.builtin.execution.noop", displayName: "No-op", version: "1.0.0" }
+          ]
+        };
+      }
+      throw new Error(`schema failed: ${path}`);
+    });
+  });
+
+  it("接続の種類ごとに文書更新か拒否をする", () => {
+    const onDocumentChange = vi.fn();
+    const { result } = renderHook(() =>
+      useDefinitionGraphEditor({
+        document,
+        onDocumentChange,
+        labels: definitionGraphEditorTestLabels
+      })
+    );
+
+    const connect = (source: string, target: string, sourceHandle: string | null) => {
+      const connection: Connection = { source, target, sourceHandle, targetHandle: "in" };
+      act(() => {
+        result.current.onConnect(connection);
+      });
+    };
+
+    connect("start", "start", "out");
+    expect(result.current.graphMessage).toBe(definitionGraphEditorTestLabels.selfReferenceRejected);
+
+    connect("start", "missing", "out");
+    connect("act", "end", "out-error");
+    expect(onDocumentChange).toHaveBeenCalled();
+    connect("start", "end", "out-error");
+    connect("waitBad", "end", "out");
+    connect("waitSub", "end", "out");
+    connect("waitEv", "end", "out");
+    connect("fork1", "end", "out");
+    connect("plain", "act", "out");
+    connect("start", "act", "out");
+
+    act(() => {
+      const node: Node<DefinitionGraphNodeData> = {
+        id: "start",
+        position: { x: 12, y: 24 },
+        data: { nodeType: "START", label: "start", width: 10, height: 10 }
+      };
+      result.current.onNodeDragStop(new MouseEvent("mouseup"), node);
+    });
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
+  it("上流 action の schema 取得失敗を飲み込む", async () => {
+    const edgeSourceNode = document.nodes.find((node) => node.name === "end");
+    const { result } = renderHook(() =>
+      useGraphActionSchemas({ document, edgeSourceNode })
+    );
+
+    await waitFor(() => {
+      expect(result.current.actionCandidatesLoading).toBe(false);
+    });
+    await act(async () => {
+      await result.current.loadActionSchema("statevia.action.builtin.execution.noop");
+      await result.current.loadActionSchema("unknown.action");
+      await result.current.loadActionSchema(" ");
+    });
+    expect(result.current.getCachedActionSchema("statevia.action.builtin.execution.noop")).toBeUndefined();
   });
 });

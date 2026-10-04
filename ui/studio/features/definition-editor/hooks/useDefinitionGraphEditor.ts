@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   MarkerType,
   Position,
@@ -73,11 +73,11 @@ export type DefinitionGraphEditorModel = {
   /** ノード位置の変更を React Flow から受ける。 */
   onNodesChange: ReturnType<typeof useNodesState<DefinitionGraphNodeData>>[2];
   /**
-   * ドラッグ終了でレイアウトを文書へ書く。
-   * @param event マウスイベント。
+   * ドラッグ終了でレイアウトを文書へ書く。イベント本体は使わない。
+   * @param _event React Flow が渡すマウスイベント。
    * @param node 離したノード。
    */
-  onNodeDragStop: (event: MouseEvent, node: Node<DefinitionGraphNodeData>) => void;
+  onNodeDragStop: (_event: unknown, node: Node<DefinitionGraphNodeData>) => void;
   /** ハンドル接続。 */
   onConnect: OnConnect;
   /**
@@ -253,7 +253,7 @@ export function useDefinitionGraphEditor({
   );
 
   const onNodeDragStop = useCallback(
-    (_event: MouseEvent, node: Node<DefinitionGraphNodeData>) => {
+    (_event: unknown, node: Node<DefinitionGraphNodeData>) => {
       persistNodePosition(String(node.id), node.position);
     },
     [persistNodePosition]

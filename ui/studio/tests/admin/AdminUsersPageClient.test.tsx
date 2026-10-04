@@ -155,4 +155,19 @@ describe("AdminUsersPageClient", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(uiText.admin.users.passwordMismatch);
     expect(apiPut).not.toHaveBeenCalled();
   });
+
+  it("作成失敗でも一覧は残る", async () => {
+    vi.mocked(apiPost).mockRejectedValue(new Error("network"));
+    renderWithUiText(<AdminUsersPageClient />);
+    await screen.findByText("admin");
+
+    fireEvent.change(screen.getByLabelText("ユーザー名"), { target: { value: "new-user" } });
+    fireEvent.change(screen.getByLabelText("初期パスワード"), { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalled();
+    });
+    expect(screen.getByText("admin")).toBeInTheDocument();
+  });
 });

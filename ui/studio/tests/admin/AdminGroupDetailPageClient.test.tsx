@@ -147,4 +147,14 @@ describe("AdminGroupDetailPageClient", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(uiText.pageState.error);
   });
+
+  it("メンバー保存の失敗をトーストで示す", async () => {
+    vi.mocked(apiPut).mockRejectedValue(new Error("network"));
+    renderWithUiText(<AdminGroupDetailPageClient groupId="group-1" />);
+    await screen.findByRole("heading", { name: "Operators" });
+
+    fireEvent.click(screen.getByRole("button", { name: "メンバーを保存" }));
+
+    expect(await screen.findByText("UNKNOWN: Unknown error")).toBeInTheDocument();
+  });
 });
