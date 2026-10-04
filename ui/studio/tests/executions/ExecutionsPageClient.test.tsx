@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { ExecutionsPageClient } from "../../features/executions/ui/ExecutionsPageClient";
 import { renderWithUiText } from "../testUtils";
 
+const push = vi.fn();
 const replace = vi.fn();
 const searchParams = new URLSearchParams("limit=20&offset=0");
 
@@ -18,7 +19,7 @@ const runningExecution = {
 };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => searchParams
 }));
 
@@ -135,5 +136,34 @@ describe("ExecutionsPageClient", () => {
 
     fireEvent.mouseDown(suggestion);
     expect(screen.getByLabelText("topic")).toHaveValue("orders.updated");
+  });
+
+  it("一覧取得の失敗をトーストで示し、成功後はフィルタと詳細へ進める", async () => {
+    vi.mocked(apiGet).mockRejectedValue(new Error("network"));
+    const failed = renderWithUiText(<ExecutionsPageClient />);
+    expect(await screen.findByText("UNKNOWN: Unknown error")).toBeInTheDocument();
+    failed.unmount();
+
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/event-subscriptions")) {
+        return { subscriptions: [] };
+      }
+      return { items: [runningExecution], totalCount: 40 };
+    });
+    renderWithUiText(<ExecutionsPageClient />);
+    expect(await screen.findByRole("button", { name: "詳細" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "Failed" } });
+    fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "displayId" } });
+    fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "asc" } });
+    fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "次へ" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "クリア" }));
+    fireEvent.change(screen.getByLabelText(/name（execution/), { target: { value: "名前" } });
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    expect(await screen.findByText(/name は半角英数字/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "詳細" }));
+    expect(push).toHaveBeenCalledWith("/executions/ex-1");
   });
 });

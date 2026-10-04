@@ -134,4 +134,44 @@ describe("AdminApiKeysPageClient", () => {
       expect(api.apiDelete).toHaveBeenCalledWith("/admin/api-keys/key-1");
     });
   });
+
+  it("期限と最終使用を表示し、不正な名前は発行しない", async () => {
+    vi.mocked(api.apiGet).mockImplementation(async (path: string) => {
+      if (path === "/admin/api-keys") {
+        return [
+          {
+            apiKeyId: "key-1",
+            name: "CI Runner",
+            keyPrefix: "stv_abcd",
+            allowedScopes: ["executions.read"],
+            expiresAt: "not-a-date",
+            lastUsedAt: "2026-06-02T00:00:00Z",
+            createdAt: "",
+            isActive: false
+          }
+        ];
+      }
+      if (path === "/admin/permissions") {
+        return [
+          {
+            permissionKey: "executions.read",
+            displayLabel: "Read executions",
+            displayKey: "permissions.executionsRead",
+            isSystem: true,
+            isDeprecated: false
+          }
+        ];
+      }
+      throw new Error(`unexpected path: ${path}`);
+    });
+
+    render(<AdminApiKeysPageClient />);
+    expect(await screen.findByText("CI Runner")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "失効" })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("表示名"), { target: { value: "名前" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "発行" }));
+    expect(api.apiPost).not.toHaveBeenCalled();
+  });
 });

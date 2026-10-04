@@ -5,8 +5,10 @@ import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultD
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 import { renderWithUiText } from "../testUtils";
 
+const push = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() })
+  useRouter: () => ({ push, replace: vi.fn() })
 }));
 
 vi.mock("@/shared/api", async (importOriginal) => {
@@ -147,5 +149,66 @@ describe("DefinitionEditorPageClient", () => {
     await waitFor(() => {
       expect(apiPost).toHaveBeenCalledWith("/definitions", expect.objectContaining({ name: "DemoFlow" }));
     });
+  });
+
+  it("定義名の形式が違うときは保存しない", async () => {
+    vi.mocked(apiPost).mockClear();
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "1bad" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(await screen.findByText(/半角英字で開始/)).toBeInTheDocument();
+    expect(apiPost).not.toHaveBeenCalled();
+  });
+
+  it("422 の詳細をヒントに出す", async () => {
+    vi.mocked(apiPut).mockRejectedValue({
+      status: 422,
+      error: {
+        message: "invalid",
+        details: [
+          { field: "name", message: "bad name" },
+          { field: "yaml", message: "bad yaml", state: "start", jsonPath: "$.input", actionId: "noop" },
+          "plain detail"
+        ]
+      }
+    });
+
+    renderWithUiText(<DefinitionEditorPageClient definitionId="def-1" />);
+    await waitFor(() => expect(screen.getByDisplayValue("Edited")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(await screen.findByText("bad name")).toBeInTheDocument();
+    expect(screen.getByText("bad yaml")).toBeInTheDocument();
+  });
+
+  it("保存後に詳細へ進める", async () => {
+    vi.mocked(apiPost).mockResolvedValue({
+      displayId: "def-new",
+      resourceId: "res-new",
+      name: "DemoFlow",
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z"
+    });
+
+    renderWithUiText(<DefinitionEditorPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "DemoFlow" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    fireEvent.click(await screen.findByRole("button", { name: "新しい定義の詳細へ" }));
+
+    expect(push).toHaveBeenCalledWith("/definitions/def-new");
+  });
+
+  it("編集前に戻す", async () => {
+    renderWithUiText(<DefinitionEditorPageClient definitionId="def-1" />);
+    await waitFor(() => expect(screen.getByDisplayValue("Edited")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "Edited2" } });
+    fireEvent.click(screen.getByRole("button", { name: "編集前に戻す" }));
+
+    expect(screen.getByLabelText(/定義名/i)).toHaveValue("Edited");
   });
 });

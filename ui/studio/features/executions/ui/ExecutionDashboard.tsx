@@ -1,421 +1,47 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ActionLinkGroup } from "@/shared/ui/ActionLinkGroup";
+import { PageState } from "@/shared/ui/PageState";
+import { Toast } from "@/shared/ui/Toast";
+import { useUiText } from "@/shared/i18n/uiTextContext";
+import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
+import { EVENT_NAME_MAX_LENGTH, EVENT_NAME_PATTERN } from "@/shared/lib/validation/formRules";
+import {
+  useExecutionDashboard,
+  type ExecutionDashboardModel,
+  type UseExecutionDashboardOptions
+} from "../hooks/useExecutionDashboard";
+import { isPublishEventAvailable } from "../lib/waitResumeEvents";
 import { ExecutionComparisonBar } from "./ExecutionComparisonBar";
 import { ExecutionHeader } from "./ExecutionHeader";
 import { ExecutionStatusBanner } from "./ExecutionStatusBanner";
 import { ExecutionTimeline } from "./ExecutionTimeline";
-import { ReplayBanner } from "./ReplayBanner";
-import { ActionLinkGroup } from "@/shared/ui/ActionLinkGroup";
-import { PageState } from "@/shared/ui/PageState";
 import { NodeDetail } from "./NodeDetail";
-import { NodeGraphView, type GraphViewport } from "./NodeGraphView";
+import { NodeGraphView } from "./NodeGraphView";
 import { NodeListView } from "./NodeListView";
-import { Toast } from "@/shared/ui/Toast";
-import type { ViewMode } from "./ViewToggle";
-import { useExecution } from "../hooks/useExecution";
-import { useExecutionEvents } from "../hooks/useExecutionEvents";
-import { useExecutionStateAtSeq } from "../hooks/useExecutionStateAtSeq";
-import { useGraphDefinition } from "../hooks/useGraphDefinition";
-import { getNodeWithFallback, useGraphData } from "../hooks/useGraphData";
-import { getResumeDisabledReason, useNodeCommands } from "../hooks/useNodeCommands";
-import { computeExecutionDiff } from "../lib/executionDiff";
-import { isPublishEventAvailable } from "../lib/waitResumeEvents";
-import { apiGet } from "@/shared/api";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
-import { useI18n, useUiText } from "@/shared/i18n/uiTextContext";
-import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
-import { EVENT_NAME_MAX_LENGTH, EVENT_NAME_PATTERN } from "@/shared/lib/validation/formRules";
-import { buildExecutionView } from "../lib/executionView";
-import type { ExecutionDTO, ExecutionGraphDTO, ExecutionView } from "../types";
-
-/** executionId ごとの Graph ビューポート（ズーム・パン位置） */
-type GraphViewportByExecutionId = Record<string, GraphViewport>;
-
-const STREAM_PREF_STORAGE_KEY = "statevia.execution.streamEnabled";
+import { ReplayBanner } from "./ReplayBanner";
 
 /** 実行ダッシュボードの props。 */
-export type ExecutionDashboardProps = {
-  /** 初期の実行 ID（URL から渡す場合は key と併用） */
-  initialExecutionId: string;
-  /** true のときマウント直後に Load を実行する */
-  autoLoadOnMount?: boolean;
-  /** ヘッダ右側のナビ（未指定時は dashboard/executions/health） */
+export type ExecutionDashboardProps = UseExecutionDashboardOptions & {
+  /** ヘッダ右側のナビ。未指定時は dashboard / executions / health。 */
   headerNav?: ReactNode;
-  /** メイン見出し */
-  headerTitle?: string;
-  /** false のとき executionId を URL 固定として編集させない。 */
-  executionIdEditable?: boolean;
-  /** false のとき比較モード UI を出さない。 */
-  comparisonEnabled?: boolean;
-  /** false のとき Cancel / Resume / Event などの実行操作を無効化する。 */
-  operationsEnabled?: boolean;
-  /** 初期の表示モード。 */
-  initialViewMode?: ViewMode;
-  /** true のとき View モード切り替えを固定し、UI から変更不可にする。 */
-  lockViewMode?: boolean;
 };
 
-type ExecutionDashboardViewProps = {
-  graphFullscreen: boolean;
-  headerTitle: string;
+type ExecutionDashboardViewProps = ExecutionDashboardModel & {
+  /** ヘッダ右側のナビ。未指定時は既定リンク。 */
   headerNav?: ReactNode;
-  toast: ToastState | null;
-  onCloseToast: () => void;
-  executionId: string;
-  executionIdEditable: boolean;
-  onExecutionIdChange: (executionId: string) => void;
-  onLoadExecution: () => void;
-  onCancelExecution: () => void;
-  loading: boolean;
-  canCancel: boolean;
-  onPublishEvent: (eventName: string) => void;
-  execution: ExecutionView | null;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  showViewToggle: boolean;
-  compareMode: boolean;
-  onCompareModeChange: (compareMode: boolean) => void;
-  comparisonEnabled: boolean;
-  operationsEnabled: boolean;
-  streamEnabled: boolean;
-  onStreamEnabledChange: (enabled: boolean) => void;
-  showExecutionPanels: boolean;
-  executionB: ExecutionView | null;
-  executionIdB: string;
-  onExecutionIdBChange: (executionId: string) => void;
-  onLoadExecutionB: () => void;
-  loadingB: boolean;
-  executionDiff: ReturnType<typeof computeExecutionDiff>;
-  onSelectNode: (nodeId: string | null) => void;
-  terminal: boolean;
-  isReplaying: boolean;
-  onBackToCurrent: () => void;
-  timelineEvents: ReturnType<typeof useExecutionEvents>["events"];
-  timelineLoading: boolean;
-  timelineError: ReturnType<typeof useExecutionEvents>["error"];
-  replayAtSeq: number | null;
-  onSelectSeq: (seq: number | null) => void;
-  timelineHasMore: boolean;
-  timelineLoadingMore: boolean;
-  onTimelineLoadMore: () => void;
-  displayExecution: ExecutionView | null;
-  selectedNodeId: string | null;
-  graphData: ReturnType<typeof useGraphData>;
-  onToggleGraphFullscreen: () => void;
-  onResumeNode: (nodeId: string, eventName: string) => void;
-  getResumeDisabledReasonForNode: (nodeId: string) => string | null;
-  savedGraphViewport?: GraphViewport;
-  onGraphViewportChange: (viewport: GraphViewport) => void;
-  selectedNode: ReturnType<typeof getNodeWithFallback>;
-  selectedResumeDisabledReason: string | null;
-  resumeEventName: string | null;
 };
 
 /**
  * 実行一覧・グラフ・タイムライン・ノード操作の共通ダッシュボード。
  * `/dashboard` や `/executions/[executionId]` から利用する。
+ * @param props 初期実行 ID と、ヘッダ・比較・操作の有無。
+ * @returns ダッシュボード。
  */
-export function ExecutionDashboard({
-  initialExecutionId,
-  autoLoadOnMount = false,
-  headerNav,
-  headerTitle,
-  executionIdEditable = true,
-  comparisonEnabled = true,
-  operationsEnabled = true,
-  initialViewMode = "list",
-  lockViewMode = false
-}: Readonly<ExecutionDashboardProps>) {
-  const { uiText, locale } = useI18n();
-  const effectiveHeaderTitle = headerTitle ?? uiText.executionDashboard.header.titleDefault;
-  const [executionId, setExecutionId] = useState(initialExecutionId);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
-  const [graphFullscreen, setGraphFullscreen] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const [graphViewportByExecutionId, setGraphViewportByExecutionId] = useState<GraphViewportByExecutionId>({});
-  const [replayAtSeq, setReplayAtSeq] = useState<number | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [executionIdB, setExecutionIdB] = useState("");
-  const [executionB, setExecutionB] = useState<ExecutionView | null>(null);
-  const [loadingB, setLoadingB] = useState(false);
-  const [streamEnabled, setStreamEnabled] = useState(true);
-
-  useEffect(() => {
-    setExecutionId(initialExecutionId);
-  }, [initialExecutionId]);
-
-  useEffect(() => {
-    if (lockViewMode) setViewMode(initialViewMode);
-  }, [initialViewMode, lockViewMode]);
-
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STREAM_PREF_STORAGE_KEY);
-      if (raw === "0") setStreamEnabled(false);
-      else if (raw === "1") setStreamEnabled(true);
-    } catch {
-      // sessionStorage 不可時は既定のまま
-    }
-  }, []);
-
-  const handleStreamEnabledChange = useCallback((enabled: boolean) => {
-    setStreamEnabled(enabled);
-    try {
-      sessionStorage.setItem(STREAM_PREF_STORAGE_KEY, enabled ? "1" : "0");
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const executionHookOptions = useMemo(
-    () => ({
-      onError: (err: unknown) => setToast(toToastError(err)),
-      onCancelSuccess: () => setToast({ tone: "success", message: uiText.executionDashboard.toasts.cancelAccepted }),
-      onPublishSuccess: () => setToast({ tone: "success", message: uiText.executionDashboard.toasts.publishAccepted }),
-      streamEnabled
-    }),
-    [
-      streamEnabled,
-      uiText.executionDashboard.toasts.cancelAccepted,
-      uiText.executionDashboard.toasts.publishAccepted
-    ]
-  );
-
-  const {
-    execution,
-    loading: executionLoading,
-    canCancel,
-    terminal,
-    loadExecution,
-    cancelExecution,
-    publishEvent,
-    selectedNodeId,
-    setSelectedNodeId
-  } = useExecution(executionId, executionHookOptions);
-
-  const loadExecutionRef = useRef(loadExecution);
-  loadExecutionRef.current = loadExecution;
-  const didAutoLoadRef = useRef(false);
-
-  useEffect(() => {
-    if (!autoLoadOnMount) return;
-    didAutoLoadRef.current = false;
-  }, [initialExecutionId, autoLoadOnMount]);
-
-  useEffect(() => {
-    if (!autoLoadOnMount || !executionId.trim() || didAutoLoadRef.current) return;
-    didAutoLoadRef.current = true;
-    void loadExecutionRef.current();
-  }, [autoLoadOnMount, executionId]);
-
-  const {
-    events: timelineEvents,
-    hasMore: timelineHasMore,
-    loading: timelineLoading,
-    loadingMore: timelineLoadingMore,
-    error: timelineError,
-    loadMore: timelineLoadMore
-  } = useExecutionEvents(execution?.displayId ?? null);
-  const { state: stateAtSeq, loading: stateAtSeqLoading } = useExecutionStateAtSeq(
-    execution?.displayId ?? null,
-    replayAtSeq
-  );
-
-  const displayExecution: ExecutionView | null =
-    replayAtSeq != null && stateAtSeq != null ? stateAtSeq : execution;
-  const isReplaying = replayAtSeq != null && stateAtSeq != null;
-
-  const { definition: graphDefinition, loading: graphDefinitionLoading } = useGraphDefinition(
-    execution?.graphId ?? null
-  );
-  const graphData = useGraphData(displayExecution, graphDefinition);
-
-  const { resumeNode, loading: nodeLoading } = useNodeCommands(execution, {
-    commandsEnabled: operationsEnabled,
-    onSuccess: () => {
-      setToast({ tone: "success", message: uiText.executionDashboard.toasts.resumeAccepted });
-      void loadExecution();
-    },
-    onError: (err) => setToast(toToastError(err))
-  });
-
-  const loading =
-    executionLoading || nodeLoading || stateAtSeqLoading || graphDefinitionLoading;
-
-  const loadExecutionB = useCallback(async () => {
-    if (!executionIdB.trim()) return;
-    setLoadingB(true);
-    try {
-      const executionDto = await apiGet<ExecutionDTO>(`/executions/${executionIdB.trim()}`);
-      let graph: ExecutionGraphDTO | null = null;
-      try {
-        graph = await apiGet<ExecutionGraphDTO>(`/executions/${executionIdB.trim()}/graph`);
-      } catch {
-        // ignore
-      }
-      setExecutionB(buildExecutionView(executionDto, graph));
-    } catch {
-      setExecutionB(null);
-    } finally {
-      setLoadingB(false);
-    }
-  }, [executionIdB]);
-
-  const executionDiff = useMemo(
-    () => computeExecutionDiff(execution, executionB),
-    [execution, executionB]
-  );
-
-  const selectedNode = useMemo(
-    () => getNodeWithFallback(displayExecution, graphData, selectedNodeId),
-    [displayExecution, graphData, selectedNodeId]
-  );
-
-  const selectedResumeDisabledReason = isReplaying
-    ? uiText.executionDashboard.replayDisabledReason
-    : getResumeDisabledReason(execution, selectedNode, operationsEnabled, locale);
-
-  const resumeEventName = useMemo(() => {
-    if (!selectedNodeId || !graphData?.edges) return null;
-    const resumeEdge = graphData.edges.find(
-      (e) => e.from === selectedNodeId && e.edgeType === "Resume"
-    );
-    return resumeEdge?.eventName ?? null;
-  }, [selectedNodeId, graphData?.edges]);
-
-  const savedGraphViewport = execution ? graphViewportByExecutionId[execution.displayId] : undefined;
-  const handleGraphViewportChange = useCallback(
-    (viewport: GraphViewport) => {
-      if (displayExecution) {
-        setGraphViewportByExecutionId((prev) => ({
-          ...prev,
-          [displayExecution.displayId]: viewport
-        }));
-      }
-    },
-    [displayExecution]
-  );
-
-  useEffect(() => {
-    if (viewMode !== "graph" || !execution) setGraphFullscreen(false);
-  }, [viewMode, execution]);
-
-  useEffect(() => {
-    if (!graphFullscreen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setGraphFullscreen(false);
-    };
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    globalThis.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      globalThis.removeEventListener("keydown", onKeyDown);
-    };
-  }, [graphFullscreen]);
-
-  const showExecutionPanels = !!execution;
-  const getResumeDisabledReasonForNode = useCallback(
-    (nodeId: string) => {
-      const node = getNodeWithFallback(displayExecution, graphData, nodeId);
-      return isReplaying
-        ? uiText.executionDashboard.replayDisabledReason
-        : getResumeDisabledReason(execution, node, operationsEnabled, locale);
-    },
-    [
-      displayExecution,
-      graphData,
-      isReplaying,
-      execution,
-      operationsEnabled,
-      locale,
-      uiText.executionDashboard.replayDisabledReason
-    ]
-  );
-
-  const handleToggleGraphFullscreen = useCallback(() => {
-    setGraphFullscreen((value) => !value);
-  }, []);
-
-  const handleCloseToast = useCallback(() => {
-    setToast(null);
-  }, []);
-
-  const handleBackToCurrent = useCallback(() => {
-    setReplayAtSeq(null);
-  }, []);
-
-  return (
-    <ExecutionDashboardView
-      graphFullscreen={graphFullscreen}
-      headerTitle={effectiveHeaderTitle}
-      headerNav={headerNav}
-      toast={toast}
-      onCloseToast={handleCloseToast}
-      executionId={executionId}
-      executionIdEditable={executionIdEditable}
-      onExecutionIdChange={setExecutionId}
-      onLoadExecution={() => {
-        void loadExecution();
-      }}
-      onCancelExecution={() => {
-        void cancelExecution();
-      }}
-      loading={loading}
-      canCancel={canCancel}
-      onPublishEvent={(eventName) => {
-        void publishEvent(eventName);
-      }}
-      execution={execution}
-      viewMode={viewMode}
-      onViewModeChange={(mode) => {
-        if (lockViewMode) return;
-        setViewMode(mode);
-      }}
-      showViewToggle={!lockViewMode}
-      compareMode={compareMode}
-      onCompareModeChange={setCompareMode}
-      comparisonEnabled={comparisonEnabled}
-      operationsEnabled={operationsEnabled}
-      streamEnabled={streamEnabled}
-      onStreamEnabledChange={handleStreamEnabledChange}
-      showExecutionPanels={showExecutionPanels}
-      executionB={executionB}
-      executionIdB={executionIdB}
-      onExecutionIdBChange={setExecutionIdB}
-      onLoadExecutionB={() => {
-        void loadExecutionB();
-      }}
-      loadingB={loadingB}
-      executionDiff={executionDiff}
-      onSelectNode={setSelectedNodeId}
-      terminal={terminal}
-      isReplaying={isReplaying}
-      onBackToCurrent={handleBackToCurrent}
-      timelineEvents={timelineEvents}
-      timelineLoading={timelineLoading}
-      timelineError={timelineError}
-      replayAtSeq={replayAtSeq}
-      onSelectSeq={setReplayAtSeq}
-      timelineHasMore={timelineHasMore}
-      timelineLoadingMore={timelineLoadingMore}
-      onTimelineLoadMore={timelineLoadMore}
-      displayExecution={displayExecution}
-      selectedNodeId={selectedNodeId}
-      graphData={graphData}
-      onToggleGraphFullscreen={handleToggleGraphFullscreen}
-      onResumeNode={(nodeId, eventName) => {
-        void resumeNode(nodeId, eventName);
-      }}
-      getResumeDisabledReasonForNode={getResumeDisabledReasonForNode}
-      savedGraphViewport={savedGraphViewport}
-      onGraphViewportChange={handleGraphViewportChange}
-      selectedNode={selectedNode}
-      selectedResumeDisabledReason={selectedResumeDisabledReason}
-      resumeEventName={resumeEventName}
-    />
-  );
+export function ExecutionDashboard({ headerNav, ...options }: Readonly<ExecutionDashboardProps>) {
+  const dashboard = useExecutionDashboard(options);
+  return <ExecutionDashboardView headerNav={headerNav} {...dashboard} />;
 }
 
 function ExecutionDashboardView({
@@ -466,6 +92,7 @@ function ExecutionDashboardView({
   graphData,
   onToggleGraphFullscreen,
   onResumeNode,
+  onResumeSelectedNode,
   getResumeDisabledReasonForNode,
   savedGraphViewport,
   onGraphViewportChange,
@@ -663,10 +290,7 @@ function ExecutionDashboardView({
               execution={displayExecution ?? execution}
               node={selectedNode}
               loading={loading}
-              onResume={(eventName) => {
-                if (isReplaying || !selectedNode) return;
-                onResumeNode(selectedNode.nodeId, eventName);
-              }}
+              onResume={onResumeSelectedNode}
               resumeDisabledReason={selectedResumeDisabledReason}
               resumeEventName={resumeEventName}
               showResumeAction={operationsEnabled}

@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { ExecutionDashboard } from "../../../features/executions/ui/ExecutionDashboard";
 import { renderWithUiText } from "../../testUtils";
 import type { ExecutionView } from "@/features/executions/types";
+import { apiGet } from "@/shared/api";
 
 const executionViewFixture = (): ExecutionView => ({
   displayId: "ex-1",
@@ -147,6 +148,38 @@ describe("ExecutionDashboard", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Task node")).toBeInTheDocument();
+    });
+  });
+
+  it("全画面と比較対象の読み込みを操作できる", async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.endsWith("/graph")) {
+        throw new Error("no graph");
+      }
+      return {
+        displayId: "ex-2",
+        resourceId: "res-2",
+        graphId: "g-2",
+        status: "Completed",
+        startedAt: "2026-01-01T00:00:00Z",
+        cancelRequested: false,
+        restartLost: false,
+        nodes: []
+      };
+    });
+    renderWithUiText(<ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "グラフ" }));
+    fireEvent.click(await screen.findByRole("button", { name: "全画面表示" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "比較" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "リアルタイム更新" }));
+    fireEvent.change(screen.getByLabelText(/B$/), { target: { value: "ex-2" } });
+    const loadButtons = screen.getAllByRole("button", { name: "ロード" });
+    fireEvent.click(loadButtons[loadButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(apiGet).toHaveBeenCalledWith("/executions/ex-2");
     });
   });
 });

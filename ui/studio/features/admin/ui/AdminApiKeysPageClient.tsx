@@ -1,311 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
-import { apiDelete, apiGet, apiPost } from "@/shared/api";
-import type {
-  AdminApiKeyListItem,
-  CreatedAdminApiKey,
-  PermissionDefinitionDto
-} from "../types";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
-import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
-import { ASCII_LABEL_DEFAULT_MAX_LENGTH, ASCII_LABEL_PATTERN } from "@/shared/lib/validation/formRules";
 import { useUiText } from "@/shared/i18n/uiTextContext";
-
-type CreateApiKeyBody = {
-  name: string;
-  allowedScopes: string[];
-  expiresAt?: string;
-};
-
-/**
- * チェックボックス用の HTML id（semantic key の `.` 等を置換）。
- */
-function checkboxInputId(prefix: string, key: string): string {
-  return `${prefix}-${key.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}`;
-}
-
-/**
- * ISO 日時をローカル表示用に整形する。
- */
-function formatDateTime(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
+import { useAdminApiKeysPage } from "../hooks/useAdminApiKeysPage";
+import { AdminApiKeyCreateForm } from "./AdminApiKeyCreateForm";
+import { AdminApiKeyIssuedNotice } from "./AdminApiKeyIssuedNotice";
+import { AdminApiKeyList } from "./AdminApiKeyList";
 
 /**
  * API キー一覧・発行・失効。
+ * @returns API キー管理画面。
  */
 export function AdminApiKeysPageClient() {
   const uiText = useUiText();
-  const [apiKeys, setApiKeys] = useState<AdminApiKeyListItem[] | null>(null);
-  const [permissions, setPermissions] = useState<PermissionDefinitionDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const [name, setName] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
-  const [issuedKey, setIssuedKey] = useState<CreatedAdminApiKey | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const assignablePermissions = useMemo(
-    () => permissions.filter((p) => p.permissionKey !== "tenant.admin" && !p.isDeprecated),
-    [permissions]
-  );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setToast(null);
-    try {
-      const [keys, permissionList] = await Promise.all([
-        apiGet<AdminApiKeyListItem[]>("/admin/api-keys"),
-        apiGet<PermissionDefinitionDto[]>("/admin/permissions")
-      ]);
-      setApiKeys(keys);
-      setPermissions(permissionList);
-    } catch (error) {
-      setToast(toToastError(error));
-      setApiKeys(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  function toggleScope(permissionKey: string) {
-    setSelectedScopes((prev) => {
-      const next = new Set(prev);
-      if (next.has(permissionKey)) next.delete(permissionKey);
-      else next.add(permissionKey);
-      return next;
-    });
-  }
-
-  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setToast(null);
-    setCopied(false);
-    const trimmedName = name.trim();
-    if (
-      !isWithinMaxLength(trimmedName, ASCII_LABEL_DEFAULT_MAX_LENGTH) ||
-      !matchesPattern(trimmedName, ASCII_LABEL_PATTERN)
-    ) {
-      setToast({ tone: "error", message: uiText.admin.apiKeys.nameInvalidFormat });
-      setSubmitting(false);
-      return;
-    }
-    const body: CreateApiKeyBody = {
-      name: trimmedName,
-      allowedScopes: [...selectedScopes]
-    };
-    if (expiresAt.trim()) {
-      body.expiresAt = new Date(expiresAt).toISOString();
-    }
-
-    try {
-      const created = await apiPost<CreatedAdminApiKey>("/admin/api-keys", body);
-      setIssuedKey(created);
-      setName("");
-      setExpiresAt("");
-      setSelectedScopes(new Set());
-      await load();
-    } catch (error) {
-      setToast(toToastError(error));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleRevoke(apiKey: AdminApiKeyListItem) {
-    setRevokingId(apiKey.apiKeyId);
-    setToast(null);
-    try {
-      await apiDelete(`/admin/api-keys/${apiKey.apiKeyId}`);
-      await load();
-    } catch (error) {
-      setToast(toToastError(error));
-    } finally {
-      setRevokingId(null);
-    }
-  }
-
-  async function handleCopyPlainKey() {
-    if (!issuedKey) return;
-    try {
-      await navigator.clipboard.writeText(issuedKey.plainKey);
-      setCopied(true);
-    } catch {
-      setToast({ tone: "error", message: uiText.executionTimeline.errorUnknown });
-    }
-  }
+  const page = useAdminApiKeysPage();
+  const apiKeys = page.apiKeys;
 
   return (
     <PageShell title={uiText.admin.apiKeys.title} description={uiText.admin.apiKeys.description}>
-      {issuedKey ? (
-        <section className="mb-6 rounded-xl border border-amber-500/60 bg-amber-50 p-4 text-sm text-amber-950 shadow-sm dark:bg-amber-950/30 dark:text-amber-100">
-          <h2 className="mb-2 text-lg font-medium">{uiText.admin.apiKeys.issuedTitle}</h2>
-          <p className="mb-3">{uiText.admin.apiKeys.issuedWarning}</p>
-          <label htmlFor="issued-plain-key" className="mb-1 block font-medium">
-            {uiText.admin.apiKeys.plainKeyLabel}
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              id="issued-plain-key"
-              readOnly
-              value={issuedKey.plainKey}
-              className="min-w-0 flex-1 rounded-lg border border-md-outline bg-white px-3 py-2 font-mono text-xs dark:bg-md-surface"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                void handleCopyPlainKey();
-              }}
-              className="rounded-lg border border-md-outline px-3 py-2 hover:bg-md-surface-container"
-            >
-              {copied ? uiText.admin.apiKeys.copiedKey : uiText.admin.apiKeys.copyKey}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIssuedKey(null);
-                setCopied(false);
-              }}
-              className="rounded-lg bg-emerald-700 px-3 py-2 text-white hover:bg-emerald-800"
-            >
-              {uiText.admin.apiKeys.dismissIssued}
-            </button>
-          </div>
-        </section>
+      {page.issuedKey ? (
+        <AdminApiKeyIssuedNotice
+          issuedKey={page.issuedKey}
+          copied={page.copied}
+          onCopy={page.copyPlainKey}
+          onDismiss={page.dismissIssuedKey}
+        />
       ) : null}
 
-      <form
-        onSubmit={(event) => {
-          void handleCreate(event);
-        }}
-        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
-      >
-        <h2 className="mb-3 text-lg font-medium">{uiText.admin.apiKeys.createTitle}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="admin-api-key-name" className="mb-1 block text-sm font-medium">
-              {uiText.admin.apiKeys.nameLabel}
-            </label>
-            <input
-              id="admin-api-key-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label htmlFor="admin-api-key-expires" className="mb-1 block text-sm font-medium">
-              {uiText.admin.apiKeys.expiresAtLabel}
-            </label>
-            <input
-              id="admin-api-key-expires"
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-xs text-md-on-surface-variant">
-              {uiText.admin.apiKeys.expiresAtHint}
-            </p>
-          </div>
-        </div>
-        <fieldset className="mt-4">
-          <legend className="mb-2 text-sm font-medium">{uiText.admin.apiKeys.scopesTitle}</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {assignablePermissions.map((permission) => (
-              <label key={permission.permissionKey} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  id={checkboxInputId("api-key-scope", permission.permissionKey)}
-                  checked={selectedScopes.has(permission.permissionKey)}
-                  onChange={() => toggleScope(permission.permissionKey)}
-                />
-                {uiText.admin.permissions.label(permission.displayKey, permission.displayLabel)}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <button
-          type="submit"
-          disabled={submitting || selectedScopes.size === 0}
-          className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {submitting ? uiText.admin.apiKeys.creating : uiText.admin.apiKeys.createSubmit}
-        </button>
-      </form>
+      <AdminApiKeyCreateForm
+        name={page.name}
+        expiresAt={page.expiresAt}
+        selectedScopes={page.selectedScopes}
+        assignablePermissions={page.assignablePermissions}
+        submitting={page.submitting}
+        onNameChange={page.setName}
+        onExpiresAtChange={page.setExpiresAt}
+        onToggleScope={page.toggleScope}
+        onSubmit={page.createApiKey}
+      />
 
-      {renderListBody()}
+      {page.loading ? <PageState state="loading" /> : null}
+      {!page.loading && apiKeys === null ? <PageState state="error" /> : null}
+      {!page.loading && apiKeys !== null && apiKeys.length === 0 ? <PageState state="empty" /> : null}
+      {!page.loading && apiKeys !== null && apiKeys.length > 0 ? (
+        <AdminApiKeyList
+          apiKeys={apiKeys}
+          revokingId={page.revokingId}
+          onRevoke={page.revokeApiKey}
+        />
+      ) : null}
 
-      {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
+      {page.toast ? <Toast toast={page.toast} onClose={page.dismissToast} /> : null}
     </PageShell>
   );
-
-  function renderListBody() {
-    if (loading) return <PageState state="loading" />;
-    if (apiKeys === null) return <PageState state="error" />;
-    if (apiKeys.length === 0) return <PageState state="empty" />;
-    return (
-      <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
-        {apiKeys.map((apiKey) => (
-          <li
-            key={apiKey.apiKeyId}
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-          >
-            <div className="min-w-0">
-              <p className="font-medium text-md-on-surface">{apiKey.name}</p>
-              <p className="text-md-on-surface-variant">
-                {uiText.admin.apiKeys.prefixLabel(apiKey.keyPrefix)}
-              </p>
-              <p className="text-xs text-md-on-surface-variant">
-                {apiKey.isActive ? uiText.admin.apiKeys.active : uiText.admin.apiKeys.inactive}
-                {` · ${apiKey.allowedScopes.join(", ")}`}
-              </p>
-              <p className="text-xs text-md-on-surface-variant">
-                {uiText.admin.apiKeys.createdLabel(formatDateTime(apiKey.createdAt) ?? apiKey.createdAt)}
-                {` · ${
-                  apiKey.expiresAt
-                    ? uiText.admin.apiKeys.expiresLabel(formatDateTime(apiKey.expiresAt) ?? apiKey.expiresAt)
-                    : uiText.admin.apiKeys.noExpiry
-                }`}
-                {` · ${
-                  apiKey.lastUsedAt
-                    ? uiText.admin.apiKeys.lastUsedLabel(formatDateTime(apiKey.lastUsedAt) ?? apiKey.lastUsedAt)
-                    : uiText.admin.apiKeys.neverUsed
-                }`}
-              </p>
-            </div>
-            {apiKey.isActive ? (
-              <button
-                type="button"
-                disabled={revokingId === apiKey.apiKeyId}
-                onClick={() => {
-                  void handleRevoke(apiKey);
-                }}
-                className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container disabled:opacity-60"
-              >
-                {revokingId === apiKey.apiKeyId ? uiText.admin.apiKeys.revoking : uiText.admin.apiKeys.revoke}
-              </button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    );
-  }
 }

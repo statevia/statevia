@@ -87,6 +87,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 - **分岐**: `switch` / `Record` を優先する。
 - **データ変換**: `map` / `filter` / `reduce` 等の宣言的配列操作を主構文とする。
 - **i18n**: UI 文言は辞書経由とし、`*.tsx` へハードコードしない。
+- **画面の境界**: 取得・検証・送信は `features/*/hooks/` のフックがデータとコマンドで返す。`ReactNode` は返さない。loading / empty / error の出し分けは UI に残す。短い部品を行数だけで割らない。詳細は [ui-studio-structure.md](architecture/ui-studio-structure.md) §4。
 - **テスト**: Vitest で AAA。ケース名は日本語で検証シナリオが分かるようにする。
 - **品質チェック**: **§4.4** の UI 行に従う。
 
@@ -276,6 +277,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-10-04 | §4.2 に画面フックと UI の境界を追記 |
 | 2026-10-03 | §4.4 / §5 の Sonar 送信先を SonarQube Cloud（組織 `statevia`、Sonar way）へ更新 |
 | 2026-09-01 | §4.3 / §5.2 に UI `tests/` のスキャン除外（`sonar.exclusions`。C# テストプロジェクト除外と同趣旨）を追記 |
 | 2026-08-31 | §5 / §5.1 に C# スキャナの `scanAll=false`（`ui/studio` 混入防止）を追記 |

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -10,18 +9,14 @@ import ReactFlow, {
   MiniMap,
   Position,
   useNodeId,
-  useNodesState,
   useUpdateNodeInternals
 } from "reactflow";
-import type { Connection, Edge, Node, NodeProps, NodeTypes, OnConnect } from "reactflow";
+import type { NodeProps, NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
-import { layoutGraph } from "@/shared/lib/graphLayout";
-import type { LayoutEdgeInput, LayoutNodeInput } from "@/shared/lib/graphLayout";
 import { getNodeAppearance } from "@/shared/lib/nodeAppearance";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { renameNodeNameInDocument } from "../lib/renameNodeNameInDocument";
 import {
-  connectWaitEventTarget,
   convertLegacyWaitToEvents,
   removeWaitEvent,
   setLegacyWaitEvent,
@@ -29,33 +24,32 @@ import {
   setWaitEvents
 } from "../lib/setWaitEvents";
 import {
-  connectWaitSubscribeTarget,
   removeWaitSubscribeRow,
   setWaitSubscribe,
   setWaitSubscribeTarget,
   switchWaitMode
 } from "../lib/setWaitSubscribe";
-import type { DefinitionGraphDocument, DefinitionGraphNode, NodeType } from "../lib/types";
-import { buildDocumentAdjacency } from "../lib/definitionGraphAdjacency";
+import type { DefinitionGraphDocument, DefinitionGraphNode } from "../lib/types";
+import {
+  resolveWaitEditMode,
+  updateNode,
+  type DefinitionGraphNodeData,
+  type GraphSelection
+} from "../lib/definitionGraphCanvas";
+import { useDefinitionGraphEditor } from "../hooks/useDefinitionGraphEditor";
+import { useGraphActionSchemas } from "../hooks/useGraphActionSchemas";
 import { ActionInputCodeEditor } from "@/shared/ui/ActionInputCodeEditor";
 import { ActionIdCombobox } from "./ActionIdCombobox";
 import { SchemaDrivenActionInputForm } from "./SchemaDrivenActionInputForm";
 import { WaitEventsEditor } from "./WaitEventsEditor";
 import { WaitSubscribeEditor } from "./WaitSubscribeEditor";
 import { GraphNodeShell } from "@/shared/ui/GraphNodeShell";
-import { apiGet } from "@/shared/api";
-import { collectUpstreamOutputPathHints } from "../actionSchema/outputSchemaHints";
-import {
-  getCachedActionSchemaDetail,
-  setCachedActionSchemaDetail
-} from "../actionSchema/actionSchemaSessionCache";
-import { loadActionSchemaIndex } from "../actionSchema/actionSchemaIndexSessionCache";
-import { isIndexedActionId, buildIndexedActionIdSet } from "../actionSchema/isIndexedActionId";
+import { getCachedActionSchemaDetail } from "../actionSchema/actionSchemaSessionCache";
+import { isIndexedActionId } from "../actionSchema/isIndexedActionId";
 import type {
   ActionInputValidationDetail,
   ActionSchemaDetailResponse,
-  ActionSchemaIndexItem,
-  JsonSchemaObject
+  ActionSchemaIndexItem
 } from "../actionSchema/types";
 
 function formatActionInputForEditor(input: DefinitionGraphNode["input"]): string {
@@ -96,14 +90,6 @@ function inputToFormRecord(input: DefinitionGraphNode["input"]): Record<string, 
   }
   return {};
 }
-
-type DefinitionGraphNodeData = {
-  nodeType: string;
-  label: string;
-  /** React Flow の計測・ハンドル位置と一致させる（layoutGraph の w/h と同一） */
-  width: number;
-  height: number;
-};
 
 const handleClassName =
   "z-20 h-4 w-4 border-md-outline-variant bg-md-surface-container";
@@ -201,24 +187,6 @@ const DEFINITION_GRAPH_EDGE_DEFAULTS = {
   labelBgBorderRadius: 2
 };
 
-type GraphSelection =
-  | { kind: "node"; nodeName: string }
-  | {
-      kind: "edge";
-      nodeName: string;
-      edgeKind: "next" | "edge" | "error" | "waitEvent" | "waitSubscribe";
-      edgeIndex?: number;
-      eventName?: string;
-      subscribeIndex?: number;
-    }
-  | null;
-
-type AvailableNodeType = {
-  type: NodeType;
-  disabled: boolean;
-  reason?: string;
-};
-
 type DefinitionGraphEditorProps = {
   document: DefinitionGraphDocument | null;
   onDocumentChange: (nextDocument: DefinitionGraphDocument) => void;
@@ -277,18 +245,6 @@ type DefinitionGraphEditorProps = {
   };
 };
 
-type GraphEdgeMeta = {
-  id: string;
-  source: string;
-  target: string;
-  edgeKind: "next" | "edge" | "branch" | "error" | "waitEvent" | "waitSubscribe";
-  edgeIndex?: number;
-  eventName?: string;
-  subscribeIndex?: number;
-  parallelIndex?: number;
-  parallelCount?: number;
-};
-
 const WHEN_OP_OPTIONS = [
   { value: "EQ", label: "EQ (=)" },
   { value: "NE", label: "NE (!=)" },
@@ -300,274 +256,6 @@ const WHEN_OP_OPTIONS = [
   { value: "IN", label: "IN" },
   { value: "BETWEEN", label: "BETWEEN" }
 ] as const;
-
-function toLayoutNodes(document: DefinitionGraphDocument): LayoutNodeInput[] {
-  return document.nodes.map((node) => ({
-    name: node.name,
-    nodeType: node.type.toUpperCase()
-  }));
-}
-
-type ParallelEdgeCollector = {
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void;
-  finalize: () => GraphEdgeMeta[];
-};
-
-function createParallelEdgeCollector(): ParallelEdgeCollector {
-  const edges: GraphEdgeMeta[] = [];
-  const parallelKeyToIndices = new Map<string, number[]>();
-
-  const trackParallel = (edgeMeta: GraphEdgeMeta): void => {
-    const edgeIndex = edges.length;
-    edges.push(edgeMeta);
-    const key = `${edgeMeta.source}=>${edgeMeta.target}`;
-    const list = parallelKeyToIndices.get(key);
-    if (list) {
-      list.push(edgeIndex);
-    } else {
-      parallelKeyToIndices.set(key, [edgeIndex]);
-    }
-  };
-
-  const finalize = (): GraphEdgeMeta[] => {
-    for (const indices of parallelKeyToIndices.values()) {
-      if (indices.length < 2) {
-        continue;
-      }
-      for (let i = 0; i < indices.length; i += 1) {
-        const edge = edges[indices[i]];
-        edge.parallelIndex = i;
-        edge.parallelCount = indices.length;
-      }
-    }
-    return edges;
-  };
-
-  return { trackParallel, finalize };
-}
-
-function appendWaitEventGraphEdges(
-  node: DefinitionGraphNode,
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void
-): void {
-  if (node.type !== "wait" || !node.events) {
-    return;
-  }
-  for (const [eventName, target] of Object.entries(node.events)) {
-    const trimmedTarget = target?.trim();
-    const trimmedEvent = eventName.trim();
-    if (!trimmedTarget || !trimmedEvent) {
-      continue;
-    }
-    trackParallel({
-      id: `waitEvent:${node.name}:${trimmedEvent}`,
-      source: node.name,
-      target: trimmedTarget,
-      edgeKind: "waitEvent",
-      eventName: trimmedEvent
-    });
-  }
-}
-
-/**
- * Subscribe 行からキャンバス辺を出す。id は配列 index（topic は重複し得る）。
- *
- * @param node 起点ノード
- * @param trackParallel 並列辺コレクタ
- * @param untitledTopic 空 topic のラベル
- */
-function appendWaitSubscribeGraphEdges(
-  node: DefinitionGraphNode,
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void,
-  untitledTopic: string
-): void {
-  if (node.type !== "wait" || node.subscribe === undefined) {
-    return;
-  }
-  node.subscribe.forEach((entry, index) => {
-    const trimmedTarget = entry.next?.trim();
-    if (!trimmedTarget) {
-      return;
-    }
-    const topicLabel = entry.topic.trim().length > 0 ? entry.topic.trim() : untitledTopic;
-    trackParallel({
-      id: `waitSubscribe:${node.name}:${index}`,
-      source: node.name,
-      target: trimmedTarget,
-      edgeKind: "waitSubscribe",
-      subscribeIndex: index,
-      eventName: topicLabel
-    });
-  });
-}
-
-function appendNodeGraphEdges(
-  node: DefinitionGraphNode,
-  trackParallel: (edgeMeta: GraphEdgeMeta) => void,
-  untitledTopic: string
-): void {
-  if (node.type === "action" && node.error?.trim()) {
-    trackParallel({
-      id: `error:${node.name}`,
-      source: node.name,
-      target: node.error.trim(),
-      edgeKind: "error"
-    });
-  }
-  if (node.next?.trim()) {
-    trackParallel({
-      id: `next:${node.name}`,
-      source: node.name,
-      target: node.next.trim(),
-      edgeKind: "next"
-    });
-  }
-  for (const [index, edge] of (node.edges ?? []).entries()) {
-    if (!edge.to?.trim()) {
-      continue;
-    }
-    trackParallel({
-      id: `edge:${node.name}:${index}`,
-      source: node.name,
-      target: edge.to.trim(),
-      edgeKind: "edge",
-      edgeIndex: index
-    });
-  }
-  for (const [index, branch] of (node.branches ?? []).entries()) {
-    if (!branch?.trim()) {
-      continue;
-    }
-    trackParallel({
-      id: `branch:${node.name}:${index}`,
-      source: node.name,
-      target: branch.trim(),
-      edgeKind: "branch",
-      edgeIndex: index
-    });
-  }
-  appendWaitEventGraphEdges(node, trackParallel);
-  appendWaitSubscribeGraphEdges(node, trackParallel, untitledTopic);
-}
-
-function toGraphEdges(document: DefinitionGraphDocument, untitledTopic: string): GraphEdgeMeta[] {
-  const collector = createParallelEdgeCollector();
-  for (const node of document.nodes) {
-    appendNodeGraphEdges(node, collector.trackParallel, untitledTopic);
-  }
-  return collector.finalize();
-}
-
-function edgeOffsetForRendering(edge: GraphEdgeMeta): number {
-  let kindBaseOffset = 0;
-  if (edge.edgeKind === "error") {
-    kindBaseOffset = 36;
-  } else if (edge.edgeKind === "edge") {
-    kindBaseOffset = -24;
-  }
-  if (!edge.parallelCount || edge.parallelCount < 2 || edge.parallelIndex == null) {
-    return kindBaseOffset;
-  }
-  const center = (edge.parallelCount - 1) / 2;
-  const delta = edge.parallelIndex - center;
-  return Math.round(kindBaseOffset + delta * 24);
-}
-
-function buildAvailableNodeTypes(
-  document: DefinitionGraphDocument,
-  labels: Pick<DefinitionGraphEditorProps["labels"], "addNodeDisabledReasonStart" | "addNodeDisabledReasonEnd">
-): AvailableNodeType[] {
-  const startCount = document.nodes.filter((node) => node.type === "start").length;
-  const endCount = document.nodes.filter((node) => node.type === "end").length;
-  return [
-    {
-      type: "start",
-      disabled: startCount >= 1,
-      reason: startCount >= 1 ? labels.addNodeDisabledReasonStart : undefined
-    },
-    { type: "action", disabled: false },
-    { type: "wait", disabled: false },
-    { type: "fork", disabled: false },
-    { type: "join", disabled: false },
-    {
-      type: "end",
-      disabled: endCount >= 1,
-      reason: endCount >= 1 ? labels.addNodeDisabledReasonEnd : undefined
-    }
-  ];
-}
-
-function nextNodeName(document: DefinitionGraphDocument, type: NodeType): string {
-  const used = new Set(document.nodes.map((node) => node.name.toLowerCase()));
-  for (let index = 1; index < 9999; index += 1) {
-    const candidate = `${type}_${index}`;
-    if (!used.has(candidate.toLowerCase())) {
-      return candidate;
-    }
-  }
-  return `${type}_${crypto.randomUUID().slice(0, 8)}`;
-}
-
-function createNode(type: NodeType, name: string): DefinitionGraphNode {
-  switch (type) {
-    case "start":
-      return { name, type: "start" };
-    case "action":
-      return { name, type: "action", action: "noop" };
-    case "wait":
-      return { name, type: "wait", events: { resume: "" } };
-    case "fork":
-      return { name, type: "fork", branches: [] };
-    case "join":
-      return { name, type: "join" };
-    case "end":
-      return { name, type: "end" };
-  }
-}
-
-function updateNode(document: DefinitionGraphDocument, nodeName: string, updater: (node: DefinitionGraphNode) => DefinitionGraphNode): DefinitionGraphDocument {
-  return {
-    ...document,
-    nodes: document.nodes.map((node) => (node.name === nodeName ? updater(node) : node))
-  };
-}
-
-type WaitEditMode = "events" | "subscribe" | "legacy" | "conflict";
-
-/**
- * Wait ノードのインスペクタ編集モードを判定する。
- *
- * @param node 対象ノード
- * @returns events マップ編集 / 旧形式 / 併用衝突
- */
-function resolveWaitEditMode(node: DefinitionGraphNode): WaitEditMode {
-  if (node.type !== "wait") {
-    return "events";
-  }
-  const hasEventsProperty = node.events !== undefined;
-  const hasSubscribeProperty = node.subscribe !== undefined;
-  const hasLegacyEvent = Boolean(node.event?.trim());
-  const hasEdges = (node.edges?.length ?? 0) > 0;
-  if (hasEventsProperty && hasSubscribeProperty) {
-    return "conflict";
-  }
-  if (hasSubscribeProperty && (hasLegacyEvent || hasEdges)) {
-    return "conflict";
-  }
-  if (hasSubscribeProperty) {
-    return "subscribe";
-  }
-  if (hasEventsProperty && hasLegacyEvent) {
-    return "conflict";
-  }
-  if (hasEventsProperty) {
-    return "events";
-  }
-  if (hasLegacyEvent || node.next?.trim() || hasEdges) {
-    return "legacy";
-  }
-  return "events";
-}
 
 /** 十進・指数表記の ASCII 数値リテラル風（0x 等は含まない）。when の YAML 往復・パースで共通利用 */
 const DECIMAL_NUMERIC_STRING_PATTERN = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i;
@@ -638,240 +326,7 @@ export function DefinitionGraphEditor({
   actionValidationDetails = [],
   labels
 }: Readonly<DefinitionGraphEditorProps>) {
-  const [selection, setSelection] = useState<GraphSelection>(null);
-  const [graphMessage, setGraphMessage] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState<DefinitionGraphNodeData>([]);
-
-  const graphLayout = useMemo(() => {
-    if (!document) {
-      return {
-        edges: [] as Edge[],
-        edgeMap: new Map<string, GraphEdgeMeta>(),
-        layoutByName: new Map<string, { x: number; y: number; w: number; h: number }>()
-      };
-    }
-    const sourceEdges = toGraphEdges(document, labels.waitSubscribeUntitledTopic);
-    const layout = layoutGraph(
-      toLayoutNodes(document),
-      sourceEdges.map<LayoutEdgeInput>((edge) => ({
-        id: edge.id,
-        from: edge.source,
-        to: edge.target
-      })),
-      {
-        // h > 72 にすると compact レイアウト（ranksep 小）を回避でき、上下間隔を広げられる。
-        defaultNodeSize: { w: 240, h: 80 }
-      }
-    );
-    const layoutByName = new Map(layout.nodes.map((node) => [node.name, node]));
-    const edgeMap = new Map(sourceEdges.map((edge) => [edge.id, edge]));
-    const edges: Edge[] = sourceEdges.map((edge) => {
-      let label = "edge";
-      if (edge.edgeKind === "next") {
-        label = "next";
-      } else if (edge.edgeKind === "error") {
-        label = "error";
-      } else if (edge.edgeKind === "branch") {
-        label = "branch";
-      } else if (edge.edgeKind === "waitEvent") {
-        label = edge.eventName ?? "event";
-      } else if (edge.edgeKind === "waitSubscribe") {
-        label = edge.eventName ?? labels.waitSubscribeUntitledTopic;
-      }
-      return {
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.edgeKind === "error" ? "out-error" : "out",
-        targetHandle: "in",
-        label,
-        animated: edge.edgeKind === "edge" || edge.edgeKind === "error",
-        style:
-          edge.edgeKind === "error"
-            ? {
-                stroke: "var(--md-sys-color-edge-error-accent)",
-                strokeDasharray: "7 5"
-              }
-            : undefined,
-        markerEnd:
-          edge.edgeKind === "error"
-            ? {
-                type: MarkerType.ArrowClosed,
-                width: 15,
-                height: 15,
-                color: "var(--md-sys-color-edge-error-accent)"
-              }
-            : undefined,
-        labelStyle: {
-          fontSize: 10,
-          fontWeight: edge.edgeKind === "error" ? 700 : 600,
-          fill:
-            edge.edgeKind === "error"
-              ? "var(--md-sys-color-edge-error-accent)"
-              : "var(--md-sys-color-on-surface-variant)"
-        },
-        pathOptions: {
-          offset: edgeOffsetForRendering(edge),
-          borderRadius: 10
-        }
-      };
-    });
-    return { edges, edgeMap, layoutByName };
-  }, [document, labels.waitSubscribeUntitledTopic]);
-
-  useEffect(() => {
-    if (!document) {
-      setNodes([]);
-      return;
-    }
-    const { layoutByName } = graphLayout;
-    setNodes((prev) => {
-      const prevPos = new Map(prev.map((n) => [n.id, n.position]));
-      return document.nodes.map((node) => {
-        const positioned = layoutByName.get(node.name);
-        const pos =
-          document.meta?.layout?.[node.name] ?? prevPos.get(node.name) ?? { x: positioned?.x ?? 0, y: positioned?.y ?? 0 };
-        const w = positioned?.w ?? 220;
-        const h = positioned?.h ?? 120;
-        const rfNode: Node<DefinitionGraphNodeData> = {
-          id: node.name,
-          type: "definitionGraphNode",
-          position: pos,
-          style: { width: w, height: h },
-          width: w,
-          height: h,
-          sourcePosition: Position.Bottom,
-          targetPosition: Position.Top,
-          data: {
-            nodeType: node.type.toUpperCase(),
-            label: node.name,
-            width: w,
-            height: h
-          },
-          draggable: true,
-          connectable: true
-        };
-        return rfNode;
-      });
-    });
-  }, [document, graphLayout, setNodes]);
-
-  const persistNodePosition = useCallback(
-    (nodeName: string, position: { x: number; y: number }) => {
-      if (!document) {
-        return;
-      }
-      onDocumentChange({
-        ...document,
-        meta: {
-          ...document.meta,
-          layout: {
-            ...document.meta?.layout,
-            [nodeName]: { x: position.x, y: position.y }
-          }
-        }
-      });
-    },
-    [document, onDocumentChange]
-  );
-
-  const handleNodeDragStop = useCallback(
-    (_event: MouseEvent, node: Node<DefinitionGraphNodeData>) => {
-      persistNodePosition(String(node.id), node.position);
-    },
-    [persistNodePosition]
-  );
-
-  const availableNodeTypes = useMemo(
-    () => (document ? buildAvailableNodeTypes(document, labels) : []),
-    [document, labels]
-  );
-
-  const handleConnect: OnConnect = (connection: Connection) => {
-    if (!document || !connection.source || !connection.target) {
-      return;
-    }
-    const targetNodeName = connection.target;
-    if (connection.source === connection.target) {
-      setGraphMessage(labels.selfReferenceRejected);
-      return;
-    }
-    const sourceNode = document.nodes.find((node) => node.name === connection.source);
-    if (!sourceNode) {
-      return;
-    }
-    if (connection.sourceHandle === "out-error") {
-      if (sourceNode.type !== "action") {
-        return;
-      }
-      onDocumentChange(
-        updateNode(document, sourceNode.name, (node) =>
-          node.type === "action" ? { ...node, error: targetNodeName } : node
-        )
-      );
-      setGraphMessage(null);
-      return;
-    }
-    const waitMode = sourceNode.type === "wait" ? resolveWaitEditMode(sourceNode) : null;
-    if (waitMode === "conflict") {
-      setGraphMessage(labels.waitSubscribeConflictHint);
-      return;
-    }
-    const nextDocument = updateNode(document, sourceNode.name, (node) => {
-      if (node.type === "wait" && (node.events !== undefined || node.subscribe !== undefined)) {
-        return node;
-      }
-      if (node.type === "fork") {
-        const branches = new Set(node.branches ?? []);
-        branches.add(targetNodeName);
-        return { ...node, branches: Array.from(branches) };
-      }
-      if (!node.next && (!node.edges || node.edges.length === 0)) {
-        return { ...node, next: targetNodeName };
-      }
-      if (node.next && (!node.edges || node.edges.length === 0)) {
-        if (node.next === targetNodeName) {
-          return node;
-        }
-        return {
-          ...node,
-          next: undefined,
-          edges: [{ to: node.next }, { to: targetNodeName }]
-        };
-      }
-      const existing = node.edges ?? [];
-      if (existing.some((edge) => edge.to === targetNodeName)) {
-        return node;
-      }
-      return {
-        ...node,
-        edges: [...existing, { to: targetNodeName }]
-      };
-    });
-    if (waitMode === "subscribe") {
-      onDocumentChange(connectWaitSubscribeTarget(document, sourceNode.name, targetNodeName));
-    } else if (sourceNode.type === "wait" && sourceNode.events !== undefined) {
-      onDocumentChange(connectWaitEventTarget(document, sourceNode.name, targetNodeName));
-    } else {
-      onDocumentChange(nextDocument);
-    }
-    setGraphMessage(null);
-  };
-
-  useEffect(() => {
-    if (!isFullscreen) {
-      return;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsFullscreen(false);
-      }
-    };
-    globalThis.addEventListener("keydown", onKeyDown);
-    return () => globalThis.removeEventListener("keydown", onKeyDown);
-  }, [isFullscreen]);
+  const canvas = useDefinitionGraphEditor({ document, onDocumentChange, labels });
 
   if (!document) {
     return (
@@ -881,14 +336,14 @@ export function DefinitionGraphEditor({
     );
   }
 
-  const wrapperClassName = isFullscreen ? "fixed inset-0 z-50 bg-md-surface-container-high p-4" : "";
-  const panelClassName = isFullscreen
+  const wrapperClassName = canvas.isFullscreen ? "fixed inset-0 z-50 bg-md-surface-container-high p-4" : "";
+  const panelClassName = canvas.isFullscreen
     ? "mx-auto h-full w-full max-w-[1600px] space-y-3 rounded-lg border border-md-outline bg-md-surface p-4"
     : "space-y-3 rounded-lg border border-md-outline bg-md-surface p-4";
-  const gridClassName = isFullscreen
+  const gridClassName = canvas.isFullscreen
     ? "grid h-[calc(100%-4rem)] gap-3 lg:grid-cols-[minmax(0,1fr)_340px]"
     : "grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]";
-  const graphHeightClassName = isFullscreen ? "h-full min-h-[520px]" : "h-[420px] lg:h-[520px]";
+  const graphHeightClassName = canvas.isFullscreen ? "h-full min-h-[520px]" : "h-[420px] lg:h-[520px]";
 
   return (
     <div className={wrapperClassName}>
@@ -898,9 +353,9 @@ export function DefinitionGraphEditor({
         <button
           type="button"
           className="ml-auto rounded border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs"
-          onClick={() => setIsFullscreen((current) => !current)}
+          onClick={canvas.toggleFullscreen}
         >
-          {isFullscreen ? labels.fullscreenExit : labels.fullscreenEnter}
+          {canvas.isFullscreen ? labels.fullscreenExit : labels.fullscreenEnter}
         </button>
       </div>
 
@@ -909,31 +364,18 @@ export function DefinitionGraphEditor({
           className={`${graphHeightClassName} min-h-0 min-w-0 rounded border border-md-outline-variant`}
         >
           <ReactFlow
-            nodes={nodes}
-            edges={graphLayout.edges}
+            nodes={canvas.nodes}
+            edges={canvas.edges}
             nodeTypes={DEFINITION_GRAPH_NODE_TYPES}
-            onNodesChange={onNodesChange}
-            onNodeDragStop={handleNodeDragStop}
-            onConnect={handleConnect}
+            onNodesChange={canvas.onNodesChange}
+            onNodeDragStop={canvas.onNodeDragStop}
+            onConnect={canvas.onConnect}
             defaultEdgeOptions={DEFINITION_GRAPH_EDGE_DEFAULTS}
             elevateEdgesOnSelect
             edgesFocusable
-            onNodeClick={(_, node) => setSelection({ kind: "node", nodeName: String(node.id) })}
-            onEdgeClick={(_, edge) => {
-              const meta = graphLayout.edgeMap.get(String(edge.id));
-              if (!meta || meta.edgeKind === "branch") {
-                return;
-              }
-              setSelection({
-                kind: "edge",
-                nodeName: meta.source,
-                edgeKind: meta.edgeKind,
-                edgeIndex: meta.edgeIndex,
-                eventName: meta.eventName,
-                subscribeIndex: meta.subscribeIndex
-              });
-            }}
-            onPaneClick={() => setSelection(null)}
+            onNodeClick={(_, node) => canvas.selectNode(String(node.id))}
+            onEdgeClick={(_, edge) => canvas.selectEdge(String(edge.id))}
+            onPaneClick={canvas.clearSelection}
             fitView
           >
             <MiniMap zoomable pannable />
@@ -945,32 +387,22 @@ export function DefinitionGraphEditor({
           <section className="shrink-0 space-y-2 rounded border border-md-outline bg-md-surface p-2">
             <p className="text-sm font-medium">{labels.addNodeDialogTitle}</p>
             <div className="grid grid-cols-2 gap-2">
-              {availableNodeTypes.map((entry) => (
+              {canvas.availableNodeTypes.map((entry) => (
                 <button
                   key={entry.type}
                   type="button"
                   disabled={entry.disabled}
                   className="rounded border border-md-outline px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => {
-                    if (entry.disabled) {
-                      return;
-                    }
-                    const name = nextNodeName(document, entry.type);
-                    onDocumentChange({
-                      ...document,
-                      nodes: [...document.nodes, createNode(entry.type, name)]
-                    });
-                    setSelection({ kind: "node", nodeName: name });
-                  }}
+                  onClick={() => canvas.addNode(entry.type)}
                   title={entry.reason}
                 >
                   {entry.type}
                 </button>
               ))}
             </div>
-            {availableNodeTypes.some((entry) => entry.disabled && entry.reason) && (
+            {canvas.availableNodeTypes.some((entry) => entry.disabled && entry.reason) && (
               <ul className="list-disc pl-4 text-xs text-md-on-surface-variant">
-                {availableNodeTypes
+                {canvas.availableNodeTypes
                   .filter((entry) => entry.disabled && entry.reason)
                   .map((entry) => (
                     <li key={`${entry.type}-${entry.reason}`}>{entry.reason}</li>
@@ -981,18 +413,18 @@ export function DefinitionGraphEditor({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <GraphInspector
               document={document}
-              selection={selection}
+              selection={canvas.selection}
               labels={labels}
               actionValidationDetails={actionValidationDetails}
               onDocumentChange={onDocumentChange}
-              onClearSelection={() => setSelection(null)}
-              onInspectingNodeNameChange={(nextName) => setSelection({ kind: "node", nodeName: nextName })}
+              onClearSelection={canvas.clearSelection}
+              onInspectingNodeNameChange={canvas.selectNode}
             />
           </div>
         </div>
       </div>
 
-      {graphMessage && <p className="text-xs text-rose-600">{graphMessage}</p>}
+      {canvas.graphMessage && <p className="text-xs text-rose-600">{canvas.graphMessage}</p>}
       {validationMessages.length > 0 && (
         <ul className="list-disc space-y-1 pl-5 text-xs text-rose-600">
           {validationMessages.slice(0, 6).map((message) => (
@@ -1436,114 +868,11 @@ function GraphInspector({
   onClearSelection,
   onInspectingNodeNameChange
 }: Readonly<GraphInspectorProps>) {
-  const [outputSchemaByActionId, setOutputSchemaByActionId] = useState(
-    () => new Map<string, JsonSchemaObject | undefined>()
-  );
-  const [actionCandidates, setActionCandidates] = useState<ReadonlyArray<ActionSchemaIndexItem>>([]);
-  const [actionCandidatesLoading, setActionCandidatesLoading] = useState(true);
-  const indexedActionIds = useMemo(() => buildIndexedActionIdSet(actionCandidates), [actionCandidates]);
-  const inflightSchemaLoadsRef = useRef(new Map<string, Promise<ActionSchemaDetailResponse | undefined>>());
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadActionSchemaIndex(() => apiGet("/actions/schema/index")).then((items) => {
-      if (!cancelled) {
-        setActionCandidates(items);
-        setActionCandidatesLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-    
-  }, []);
-
-  const loadActionSchema = useCallback(async (actionId: string) => {
-    const trimmed = actionId.trim();
-    if (!trimmed || !indexedActionIds.has(trimmed)) {
-      return undefined;
-    }
-    const cached = getCachedActionSchemaDetail(trimmed);
-    if (cached) {
-      return cached;
-    }
-    const inflight = inflightSchemaLoadsRef.current.get(trimmed);
-    if (inflight !== undefined) {
-      return inflight;
-    }
-    const request = (async () => {
-      try {
-        const detail = await apiGet<ActionSchemaDetailResponse>(
-          `/actions/schema/${encodeURIComponent(trimmed)}`
-        );
-        if (!detail) {
-          return undefined;
-        }
-        setCachedActionSchemaDetail(trimmed, detail);
-        setOutputSchemaByActionId((previous) => {
-          const next = new Map(previous);
-          next.set(trimmed, detail.schema.outputSchema);
-          return next;
-        });
-        return detail;
-      } catch {
-        return undefined;
-      } finally {
-        inflightSchemaLoadsRef.current.delete(trimmed);
-      }
-    })();
-    inflightSchemaLoadsRef.current.set(trimmed, request);
-    return request;
-  }, [indexedActionIds]);
-
-  const getCachedActionSchema = useCallback((actionId: string) => getCachedActionSchemaDetail(actionId), []);
-
   const edgeSourceNode =
     selection?.kind === "edge"
       ? document.nodes.find((entry) => entry.name === selection.nodeName)
       : undefined;
-
-  const whenPathHints = useMemo(() => {
-    if (!edgeSourceNode) {
-      return [];
-    }
-    return collectUpstreamOutputPathHints(
-      document.nodes.map((entry) => ({ name: entry.name, type: entry.type, action: entry.action })),
-      buildDocumentAdjacency(document),
-      edgeSourceNode.name,
-      outputSchemaByActionId
-    );
-  }, [document, edgeSourceNode, outputSchemaByActionId]);
-
-  useEffect(() => {
-    if (!edgeSourceNode) {
-      return;
-    }
-    const adjacency = buildDocumentAdjacency(document);
-    const nodes = document.nodes.map((entry) => ({ name: entry.name, type: entry.type, action: entry.action }));
-    const upstreamActionIds = new Set<string>();
-    const visited = new Set<string>();
-    const queue = adjacency.filter((edge) => edge.targetId === edgeSourceNode.name).map((edge) => edge.sourceId);
-    while (queue.length > 0) {
-      const currentName = queue.shift();
-      if (!currentName || visited.has(currentName)) {
-        continue;
-      }
-      visited.add(currentName);
-      const node = nodes.find((entry) => entry.name === currentName);
-      if (node?.type === "action" && node.action?.trim()) {
-        upstreamActionIds.add(node.action.trim());
-      }
-      for (const edge of adjacency) {
-        if (edge.targetId === currentName) {
-          queue.push(edge.sourceId);
-        }
-      }
-    }
-    for (const actionId of upstreamActionIds) {
-      void loadActionSchema(actionId);
-    }
-  }, [document, edgeSourceNode, loadActionSchema]);
+  const schemas = useGraphActionSchemas({ document, edgeSourceNode });
 
   if (!selection) {
     return null;
@@ -1560,10 +889,10 @@ function GraphInspector({
         node={node}
         labels={labels}
         actionValidationDetails={actionValidationDetails}
-        loadActionSchema={loadActionSchema}
-        getCachedActionSchema={getCachedActionSchema}
-        actionCandidates={actionCandidates}
-        actionCandidatesLoading={actionCandidatesLoading}
+        loadActionSchema={schemas.loadActionSchema}
+        getCachedActionSchema={schemas.getCachedActionSchema}
+        actionCandidates={schemas.actionCandidates}
+        actionCandidatesLoading={schemas.actionCandidatesLoading}
         onDocumentChange={onDocumentChange}
         onClearSelection={onClearSelection}
         onInspectingNodeNameChange={onInspectingNodeNameChange}
@@ -1582,7 +911,7 @@ function GraphInspector({
       sourceNode={sourceNode}
       selection={selection}
       labels={labels}
-      whenPathHints={whenPathHints}
+      whenPathHints={schemas.whenPathHints}
       onDocumentChange={onDocumentChange}
       onClearSelection={onClearSelection}
     />
