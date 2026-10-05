@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2 |
-| 更新日 | 2026-08-09 |
+| Version | 1.3 |
+| 更新日 | 2026-10-05 |
 | 関連 | [api-http.md](../api-http.md), [concepts/execution-model.md](../../concepts/execution-model.md), [fork-join.md](fork-join.md) |
 
 ---
@@ -210,5 +210,6 @@ JSON プロパティ名は **camelCase** のため、C# の `From` / `To` は **
 - API は実行グラフの `conditionRouting` を透過的に返却する。
 - UI は `conditionRouting` を再評価しない（表示専用データとして扱う）。物理子や `execution_branches` を意識しない。
 - UI が定義グラフ（`GET /v1/graphs/{graphId}`）と合成するときは、**実行ノードの `nodeId` と定義ノードの `nodeName`（状態名）が一致しない**前提で、実行側の `nodeName` やエッジの `from`/`to` を用いて対応付ける（`ui/studio/features/executions/lib/mergeGraph.ts`）。
+- Studio の実行キャンバスは、同一 `nodeName` の訪問が複数あっても定義上の 1 ノードに合成する。色に使う代表は待機中を優先する。ノード詳細は、その状態の訪問を attempt の昇順で辿れる。ノード一覧は状態名で 1 行にまとめ、状態が 21 件以上のときは 20 件ずつページを切る。再開は詳細で選んでいる訪問の `nodeId` を送る。選んでいた訪問がグラフから消えたときは、同じ状態が残っていればいちばん新しい訪問へ移し、残っていなければ選択を外す。
 
 詳細は `docs/specifications/api-http.md` を参照。

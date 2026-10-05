@@ -33,8 +33,8 @@ describe("mergeGraph", () => {
     // Assert
     expect(result.graphId).toBe("hello");
     expect(result.isDefinitionBased).toBe(true);
-    expect(result.nodes.length).toBe(def.nodes.length);
-    expect(result.edges.length).toBe(def.edges.length);
+    expect(result.nodes).toHaveLength(def.nodes.length);
+    expect(result.edges).toHaveLength(def.edges.length);
     const startNode = result.nodes.find((n) => n.name === "start");
     expect(startNode?.status).toBe("RUNNING");
     expect(startNode?.attempt).toBe(1);
@@ -229,6 +229,7 @@ describe("mergeGraph", () => {
     const decide = result.nodes.find((n) => n.name === "cycle.decide");
 
     // Assert
+    expect(result.nodes).toHaveLength(1);
     expect(decide?.status).toBe("WAITING");
     expect(decide?.nodeId).toBe("decide-new");
     expect(decide?.attempt).toBe(2);
@@ -245,7 +246,7 @@ describe("mergeGraph (境界値)", () => {
     const result = mergeGraph(exec, def);
 
     // Assert
-    expect(result.nodes.length).toBe(def.nodes.length);
+    expect(result.nodes).toHaveLength(def.nodes.length);
     expect(result.nodes.every((n) => n.status === "IDLE")).toBe(true);
   });
 

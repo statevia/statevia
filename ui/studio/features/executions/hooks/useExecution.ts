@@ -85,7 +85,8 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
         return key;
       }
 
-      return soleWaiting?.nodeId ?? view.nodes[0]?.nodeId ?? null;
+      // 消えた ID はここでは別ノードへ移さない。同じ状態の最新への移動はダッシュボードが行う。
+      return current;
     });
   };
 

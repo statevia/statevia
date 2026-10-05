@@ -233,7 +233,7 @@ describe("useExecution", () => {
 
       // Assert
       await waitFor(() => {
-        expect(streamInstances.length).toBe(1);
+        expect(streamInstances).toHaveLength(1);
       });
       expect(streamInstances[0]?.url).toBe("/api/core/executions/ex-1/stream");
     });
@@ -250,7 +250,7 @@ describe("useExecution", () => {
 
       // Assert
       await waitFor(() => {
-        expect(streamInstances.length).toBe(1);
+        expect(streamInstances).toHaveLength(1);
       });
       expect(streamInstances[0]?.url).toBe(
         "/api/core/executions/ex-1/stream?tenantId=tenant-a"
@@ -264,7 +264,7 @@ describe("useExecution", () => {
         await result.current.loadExecution();
       });
 
-      expect(streamInstances.length).toBe(0);
+      expect(streamInstances).toHaveLength(0);
     });
 
     it("streamEnabled false のとき Running 中はポーリング間隔で再取得する", async () => {
@@ -295,7 +295,7 @@ describe("useExecution", () => {
         await result.current.loadExecution();
       });
 
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       vi.mocked(api.apiGet).mockClear();
       mockApiGetForExecutionAndGraph(defaultExecution, defaultGraph);
@@ -331,7 +331,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
       const firstInstance = streamInstances[0];
       if (!firstInstance?.onmessage) throw new Error("expected onmessage");
 
@@ -350,7 +350,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
       const firstInstance = streamInstances[0];
       if (!firstInstance) throw new Error("expected one stream instance");
       vi.useFakeTimers();
@@ -365,7 +365,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(1000);
       });
-      expect(streamInstances.length).toBe(2);
+      expect(streamInstances).toHaveLength(2);
       expect(streamInstances[1]?.url).toBe("/api/core/executions/ex-1/stream");
 
       vi.useRealTimers();
@@ -377,7 +377,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
       const firstInstance = streamInstances[0];
       if (!firstInstance) throw new Error("expected one stream instance");
       vi.mocked(api.apiGet).mockClear();
@@ -393,7 +393,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(1000);
       });
-      expect(streamInstances.length).toBe(2);
+      expect(streamInstances).toHaveLength(2);
       vi.useRealTimers();
 
       // Act: 再接続後の onopen
@@ -413,7 +413,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       if (!firstInstance) throw new Error("expected one stream instance");
@@ -427,7 +427,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(10000);
       });
-      expect(streamInstances.length).toBe(1);
+      expect(streamInstances).toHaveLength(1);
 
       vi.useRealTimers();
     });
@@ -438,7 +438,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       const onmessage = firstInstance?.onmessage;
@@ -462,7 +462,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       const onmessage = firstInstance?.onmessage;
@@ -485,7 +485,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       if (!firstInstance) throw new Error("expected one stream instance");
@@ -499,7 +499,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(1000);
       });
-      expect(streamInstances.length).toBe(2);
+      expect(streamInstances).toHaveLength(2);
       vi.useRealTimers();
 
       vi.mocked(api.apiGet).mockRejectedValueOnce(new Error("Refresh failed"));
@@ -517,7 +517,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       if (!firstInstance) throw new Error("expected one stream instance");
@@ -527,7 +527,7 @@ describe("useExecution", () => {
       act(() => {
         onerror?.();
       });
-      expect(streamInstances.length).toBe(1);
+      expect(streamInstances).toHaveLength(1);
     });
 
     it("2回目以降の onerror でも scheduleReconnect と clearReconnectTimer が正しく動く", async () => {
@@ -536,7 +536,7 @@ describe("useExecution", () => {
       await act(async () => {
         result.current.loadExecution();
       });
-      await waitFor(() => expect(streamInstances.length).toBe(1));
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       vi.useFakeTimers();
       const firstInstance = streamInstances[0];
@@ -547,7 +547,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(1000);
       });
-      expect(streamInstances.length).toBe(2);
+      expect(streamInstances).toHaveLength(2);
 
       const secondInstance = streamInstances[1];
       if (!secondInstance) throw new Error("expected second stream instance");
@@ -557,7 +557,7 @@ describe("useExecution", () => {
       act(() => {
         vi.advanceTimersByTime(2000);
       });
-      expect(streamInstances.length).toBe(3);
+      expect(streamInstances).toHaveLength(3);
 
       vi.useRealTimers();
     });
@@ -603,7 +603,7 @@ describe("useExecution", () => {
     expect(result.current.selectedNodeId).toBeNull();
   });
 
-  it("applyExecutionSnapshot: 現在の selectedNodeId が response に無いとき先頭ノードに切り替わる", async () => {
+  it("applyExecutionSnapshot: 消えた selectedNodeId は先頭ノードへ移さない", async () => {
     mockApiGetForExecutionAndGraph(executionDto(), graphDto([{ nodeId: "n-1", nodeName: "TASK" }]));
 
     const { result } = renderHook(() => useExecution("ex-1"));
@@ -624,7 +624,44 @@ describe("useExecution", () => {
     await act(async () => {
       result.current.loadExecution();
     });
-    expect(result.current.selectedNodeId).toBe("n-2");
+    expect(result.current.selectedNodeId).toBe("n-1");
+  });
+
+  it("applyExecutionSnapshot: 同じ状態の完了訪問は WAITING へ移さない", async () => {
+    const graph = {
+      nodes: [
+        {
+          nodeId: "old",
+          nodeName: "cycle.decide",
+          nodeType: "Wait",
+          attempt: 1,
+          completedAt: "2026-01-01T00:00:01Z"
+        },
+        {
+          nodeId: "latest",
+          nodeName: "cycle.decide",
+          nodeType: "Wait",
+          attempt: 2,
+          completedAt: null
+        }
+      ],
+      edges: []
+    };
+    mockApiGetForExecutionAndGraph(executionDto(), graph);
+
+    const { result } = renderHook(() => useExecution("ex-1"));
+
+    await act(async () => {
+      result.current.loadExecution();
+    });
+    act(() => {
+      result.current.setSelectedNodeId("old");
+    });
+
+    await act(async () => {
+      result.current.loadExecution();
+    });
+    expect(result.current.selectedNodeId).toBe("old");
   });
 
   it("publishEvent は有効なイベント名で POST 後にスナップショットを再取得する", async () => {
@@ -658,7 +695,7 @@ describe("useExecution", () => {
       await result.current.publishEvent("1invalid");
     });
 
-    expect(vi.mocked(api.apiPost).mock.calls.length).toBe(postCallsBefore);
+    expect(vi.mocked(api.apiPost).mock.calls).toHaveLength(postCallsBefore);
   });
 
   it("publishEvent が POST 後に refresh 失敗したとき execution をクリアする", async () => {

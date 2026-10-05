@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.8 |
-| 更新日 | 2026-10-04 |
+| Version | 1.9 |
+| 更新日 | 2026-10-05 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.9（2026-10-05）**: 実行詳細で、同じ状態の訪問を辿れる。グラフのマスは 1 つのまま。ノード一覧は状態ごとにまとめ、21 件以上は 20 件ずつページを切る。
 
 **Version 1.8（2026-10-04）**: 定義編集画面の「アップロード」「ダウンロード」でローカル YAML を読み書きできる。アップロードは未保存で、登録は保存ボタン。
 
@@ -85,7 +87,11 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 | 未保存の上書き | 編集中の内容があるときは、確認のあとだけ差し替える。キャンセルすると内容は残る |
 | ダウンロード | YAML 表示中は画面のテキスト。Graph 表示中は保存時と同じ YAML。定義名が空なら `definition.yaml` |
 
-グラフのマージ規則・ノード表現の Normative 契約は [visual 仕様](../specifications/ui/visual.md)。リアルタイム更新は SSE（[push-api 仕様](../specifications/ui/push-api.md)）。SSE も Principal 必須（未認証は 401）。Studio はプロキシ経由でセッション Cookie を付ける。
+### 実行詳細の循環と一覧
+
+同じ状態に実行が複数あるとき、グラフ上のマスは 1 つのままです。色は待機中の訪問を優先します。ノード詳細では、見出しの右にある移動で、1 つ新しい訪問、1 つ古い訪問、いちばん新しい訪問、いちばん古い訪問へ移れます。この移動は訪問が 2 件以上のときだけ出ます。ノード一覧は状態ごとに 1 行で、左の印を開くと `状態名 (試行回数)` の行になります。状態が 21 件以上のときは、見出し右のページ移動で 20 件ずつ見ます。再開はそのとき詳細に出ている訪問に対して行います。選択していた訪問が無くなったときは、同じ状態が残っていればいちばん新しい訪問へ移ります。
+
+グラフのマージ規則・ノード表現の Normative 契約は [visual 仕様](../specifications/ui/visual.md)。実行グラフ上の代表と詳細の訪問の対応は [execution-graph 仕様](../specifications/execution/execution-graph.md) を参照します。リアルタイム更新は SSE（[push-api 仕様](../specifications/ui/push-api.md)）。SSE も Principal 必須（未認証は 401）。Studio はプロキシ経由でセッション Cookie を付ける。
 
 ## コントリビュータ向け
 

@@ -262,4 +262,40 @@ describe("NodeDetail", () => {
       expect(onResume).toHaveBeenCalledWith("statevia.event.subscribe.0");
     });
   });
+
+  it("複数訪問のときだけ移動ボタンを出し、押した先を呼ぶ", () => {
+    // Arrange
+    const onJumpToLatest = vi.fn();
+    const onStepNewer = vi.fn();
+    const onStepOlder = vi.fn();
+    const onJumpToFirst = vi.fn();
+    const navigation = {
+      visible: true,
+      attempt: 2,
+      canJumpToLatest: false,
+      canStepNewer: false,
+      canStepOlder: true,
+      canJumpToFirst: true,
+      onJumpToLatest,
+      onStepNewer,
+      onStepOlder,
+      onJumpToFirst
+    };
+
+    // Act
+    const { rerender } = render(<NodeDetail {...defaultProps} nodeVisitNavigation={navigation} />);
+
+    // Assert
+    expect(screen.getByRole("button", { name: uiText.nodeDetail.visitNavigation.jumpToLatest })).toBeDisabled();
+    expect(screen.getByRole("button", { name: uiText.nodeDetail.visitNavigation.stepNewer })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: uiText.nodeDetail.visitNavigation.stepOlder }));
+    fireEvent.click(screen.getByRole("button", { name: uiText.nodeDetail.visitNavigation.jumpToFirst }));
+    expect(onStepOlder).toHaveBeenCalledTimes(1);
+    expect(onJumpToFirst).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByText(uiText.nodeDetail.meta.attempt(2))).toHaveLength(1);
+    expect(screen.getAllByText(uiText.nodeDetail.meta.attempt(1))).toHaveLength(1);
+
+    rerender(<NodeDetail {...defaultProps} />);
+    expect(screen.queryByRole("button", { name: uiText.nodeDetail.visitNavigation.jumpToLatest })).not.toBeInTheDocument();
+  });
 });
