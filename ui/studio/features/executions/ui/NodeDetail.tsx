@@ -20,6 +20,22 @@ type NodeDetailProps = {
   /** false のとき Resume ボタンを表示しない。 */
   showResumeAction?: boolean;
   className?: string;
+  /**
+   * 同一状態の訪問移動。未指定または visible が false のときは出さない。
+   * ボタン文言の出し分け以外の状態は持たない。
+   */
+  nodeVisitNavigation?: {
+    visible: boolean;
+    attempt: number;
+    canJumpToLatest: boolean;
+    canStepNewer: boolean;
+    canStepOlder: boolean;
+    canJumpToFirst: boolean;
+    onJumpToLatest: () => void;
+    onStepNewer: () => void;
+    onStepOlder: () => void;
+    onJumpToFirst: () => void;
+  };
 };
 
 /** ノード詳細パネル用の派生表示値。 */
@@ -147,7 +163,8 @@ export function NodeDetail({
   resumeDisabledReason,
   resumeEventName,
   showResumeAction = true,
-  className
+  className,
+  nodeVisitNavigation
 }: Readonly<NodeDetailProps>) {
   const uiText = useUiText();
   const baseClassName = "rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm";
@@ -181,7 +198,50 @@ export function NodeDetail({
 
   return (
     <aside className={asideClassName}>
-      <h2 className="text-sm font-semibold">{uiText.nodeDetail.title(uiText.entities.node)}</h2>
+      <div className="flex h-5 items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold leading-5">{uiText.nodeDetail.title(uiText.entities.node)}</h2>
+        {nodeVisitNavigation?.visible && (
+          <div className="flex h-5 items-center gap-1">
+            <button
+              type="button"
+              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={uiText.nodeDetail.visitNavigation.jumpToLatest}
+              disabled={!nodeVisitNavigation.canJumpToLatest}
+              onClick={nodeVisitNavigation.onJumpToLatest}
+            >
+              {"<<"}
+            </button>
+            <button
+              type="button"
+              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={uiText.nodeDetail.visitNavigation.stepNewer}
+              disabled={!nodeVisitNavigation.canStepNewer}
+              onClick={nodeVisitNavigation.onStepNewer}
+            >
+              {"<"}
+            </button>
+            <span className="px-1 text-xs leading-5 text-md-on-surface">{uiText.nodeDetail.meta.attempt(nodeVisitNavigation.attempt)}</span>
+            <button
+              type="button"
+              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={uiText.nodeDetail.visitNavigation.stepOlder}
+              disabled={!nodeVisitNavigation.canStepOlder}
+              onClick={nodeVisitNavigation.onStepOlder}
+            >
+              {">"}
+            </button>
+            <button
+              type="button"
+              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={uiText.nodeDetail.visitNavigation.jumpToFirst}
+              disabled={!nodeVisitNavigation.canJumpToFirst}
+              onClick={nodeVisitNavigation.onJumpToFirst}
+            >
+              {">>"}
+            </button>
+          </div>
+        )}
+      </div>
       <div className={`mt-3 rounded-xl border p-3 ${fields.style.borderClass} ${fields.style.bgClass}`}>
         <div className="flex items-center justify-between">
           <div className="font-mono text-xs">{uiText.nodeDetail.meta.nodeId(node.nodeId)}</div>

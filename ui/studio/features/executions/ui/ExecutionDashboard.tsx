@@ -76,6 +76,7 @@ function ExecutionDashboardView({
   loadingB,
   executionDiff,
   onSelectNode,
+  onSelectListedNode,
   terminal,
   isReplaying,
   onBackToCurrent,
@@ -98,7 +99,8 @@ function ExecutionDashboardView({
   onGraphViewportChange,
   selectedNode,
   selectedResumeDisabledReason,
-  resumeEventName
+  resumeEventName,
+  nodeVisitNavigation
 }: Readonly<ExecutionDashboardViewProps>) {
   const uiText = useUiText();
   const [eventName, setEventName] = useState("");
@@ -247,7 +249,7 @@ function ExecutionDashboardView({
                 <NodeListView
                   nodes={displayExecution?.nodes ?? []}
                   selectedNodeId={selectedNodeId}
-                  onSelectNode={onSelectNode}
+                  onSelectNode={onSelectListedNode}
                 />
               ) : (
                 <div className={graphContainerClassName}>
@@ -273,6 +275,7 @@ function ExecutionDashboardView({
                       edges={graphData.edges}
                       groups={graphData.groups}
                       selectedNodeId={selectedNodeId}
+                      selectedNodeName={selectedNode?.nodeName ?? null}
                       onSelectNode={onSelectNode}
                       onResumeNode={onResumeNode}
                       getResumeDisabledReason={getResumeDisabledReasonForNode}
@@ -293,6 +296,7 @@ function ExecutionDashboardView({
               onResume={onResumeSelectedNode}
               resumeDisabledReason={selectedResumeDisabledReason}
               resumeEventName={resumeEventName}
+              nodeVisitNavigation={nodeVisitNavigation}
               showResumeAction={operationsEnabled}
               className={graphFullscreen ? "h-full min-h-0 overflow-auto" : undefined}
             />
