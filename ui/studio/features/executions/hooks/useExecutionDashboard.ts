@@ -6,6 +6,13 @@ import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { buildExecutionView } from "../lib/executionView";
 import { computeExecutionDiff } from "../lib/executionDiff";
+import {
+  buildNodeVisitNavigation,
+  listNodeVisits,
+  resolveInitialSelectionNodeId,
+  resolveResumeTargetNodeId,
+  resolveVisitAfterRefresh
+} from "../lib/nodeVisits";
 import type { ExecutionDTO, ExecutionGraphDTO, ExecutionView } from "../types";
 import type { GraphViewport } from "../ui/NodeGraphView";
 import type { ViewMode } from "../ui/ViewToggle";
@@ -120,10 +127,15 @@ export type ExecutionDashboardModel = {
   /** 二つの実行の差分。 */
   executionDiff: ReturnType<typeof computeExecutionDiff>;
   /**
-   * ノードを選択する。
-   * @param nodeId ノード ID。解除は null。
+   * キャンバス上の状態を選ぶ。初期選択はその状態の最新訪問。
+   * @param nodeId 定義上の状態名、または実行ノード ID。解除は null。
    */
   onSelectNode: (nodeId: string | null) => void;
+  /**
+   * 一覧の 1 行を選ぶ。渡された実行ノード ID をそのまま選択する。
+   * @param nodeId 一覧行の実行ノード ID。
+   */
+  onSelectListedNode: (nodeId: string) => void;
   /** 実行が終端か。 */
   terminal: boolean;
   /** 過去時点を表示しているか。 */
@@ -186,6 +198,22 @@ export type ExecutionDashboardModel = {
   selectedResumeDisabledReason: string | null;
   /** 選択中ノードの Resume エッジが持つイベント名。無ければ null。 */
   resumeEventName: string | null;
+  /**
+   * 同一状態の訪問ナビ。訪問が 1 件以下のとき visible は false。
+   * ボタンの出し分けは画面側。ここは移動先と可否だけを返す。
+   */
+  nodeVisitNavigation: {
+    visible: boolean;
+    attempt: number;
+    canJumpToLatest: boolean;
+    canStepNewer: boolean;
+    canStepOlder: boolean;
+    canJumpToFirst: boolean;
+    onJumpToLatest: () => void;
+    onStepNewer: () => void;
+    onStepOlder: () => void;
+    onJumpToFirst: () => void;
+  };
 };
 
 /**
@@ -276,6 +304,7 @@ export function useExecutionDashboard({
   const loadExecutionRef = useRef(loadExecution);
   loadExecutionRef.current = loadExecution;
   const didAutoLoadRef = useRef(false);
+  const visitNodeNameRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!autoLoadOnMount) return;
@@ -351,17 +380,86 @@ export function useExecutionDashboard({
     [displayExecution, graphData, selectedNodeId]
   );
 
+  const selectVisit = useCallback(
+    (nodeId: string) => {
+      const exact = displayExecution?.nodes.find((node) => node.nodeId === nodeId);
+      if (exact?.nodeName && exact.nodeName.trim().length > 0) visitNodeNameRef.current = exact.nodeName;
+      setSelectedNodeId(nodeId);
+    },
+    [displayExecution, setSelectedNodeId]
+  );
+
+  const selectExecutionNode = useCallback(
+    (nodeId: string | null) => {
+      if (!nodeId || !displayExecution) {
+        visitNodeNameRef.current = null;
+        setSelectedNodeId(nodeId);
+        return;
+      }
+      const nextId = resolveInitialSelectionNodeId(displayExecution.nodes, nodeId);
+      const exact = displayExecution.nodes.find((node) => node.nodeId === nextId);
+      visitNodeNameRef.current =
+        exact?.nodeName && exact.nodeName.trim().length > 0 ? exact.nodeName : visitNodeNameRef.current;
+      setSelectedNodeId(nextId);
+    },
+    [displayExecution, setSelectedNodeId]
+  );
+
+  useEffect(() => {
+    if (!displayExecution || !selectedNodeId) {
+      if (!selectedNodeId) visitNodeNameRef.current = null;
+      return;
+    }
+    const next = resolveVisitAfterRefresh(displayExecution.nodes, selectedNodeId, visitNodeNameRef.current);
+    visitNodeNameRef.current = next.nodeName;
+    if (next.nodeId !== selectedNodeId) setSelectedNodeId(next.nodeId);
+  }, [displayExecution, selectedNodeId, setSelectedNodeId]);
+
+  const nodeVisitNavigation = useMemo(() => {
+    const nodeName = selectedNode?.nodeName ?? visitNodeNameRef.current;
+    const navigation = buildNodeVisitNavigation(
+      nodeName && displayExecution ? listNodeVisits(displayExecution.nodes, nodeName) : [],
+      selectedNode?.nodeId ?? null
+    );
+    return {
+      visible: navigation.visible,
+      attempt: navigation.attempt,
+      canJumpToLatest: navigation.canJumpToLatest,
+      canStepNewer: navigation.canStepNewer,
+      canStepOlder: navigation.canStepOlder,
+      canJumpToFirst: navigation.canJumpToFirst,
+      onJumpToLatest: () => {
+        if (navigation.latestNodeId) selectVisit(navigation.latestNodeId);
+      },
+      onStepNewer: () => {
+        if (navigation.newerNodeId) selectVisit(navigation.newerNodeId);
+      },
+      onStepOlder: () => {
+        if (navigation.olderNodeId) selectVisit(navigation.olderNodeId);
+      },
+      onJumpToFirst: () => {
+        if (navigation.firstNodeId) selectVisit(navigation.firstNodeId);
+      }
+    };
+  }, [displayExecution, selectVisit, selectedNode]);
+
   const selectedResumeDisabledReason = isReplaying
     ? uiText.executionDashboard.replayDisabledReason
     : getResumeDisabledReason(execution, selectedNode, operationsEnabled, locale);
 
   const resumeEventName = useMemo(() => {
     if (!selectedNodeId || !graphData?.edges) return null;
-    const resumeEdge = graphData.edges.find(
-      (edge) => edge.from === selectedNodeId && edge.edgeType === "Resume"
+    const selectedName = selectedNode?.nodeName?.trim().toLowerCase() ?? "";
+    const merged = graphData.mergedNodes.find(
+      (node) =>
+        node.nodeId === selectedNode?.nodeId ||
+        node.name === selectedNodeId ||
+        (selectedName.length > 0 && node.nodeName.trim().toLowerCase() === selectedName)
     );
+    const fromName = merged?.name ?? selectedNodeId;
+    const resumeEdge = graphData.edges.find((edge) => edge.from === fromName && edge.edgeType === "Resume");
     return resumeEdge?.eventName ?? null;
-  }, [selectedNodeId, graphData?.edges]);
+  }, [selectedNodeId, selectedNode, graphData]);
 
   const savedGraphViewport = execution ? graphViewportByExecutionId[execution.displayId] : undefined;
   const handleGraphViewportChange = useCallback(
@@ -397,7 +495,10 @@ export function useExecutionDashboard({
   const showExecutionPanels = !!execution;
   const getResumeDisabledReasonForNode = useCallback(
     (nodeId: string) => {
-      const node = getNodeWithFallback(displayExecution, graphData, nodeId);
+      const targetId = displayExecution
+        ? resolveResumeTargetNodeId(displayExecution.nodes, nodeId, selectedNode?.nodeId ?? null)
+        : nodeId;
+      const node = targetId ? getNodeWithFallback(displayExecution, graphData, targetId) : null;
       return isReplaying
         ? uiText.executionDashboard.replayDisabledReason
         : getResumeDisabledReason(execution, node, operationsEnabled, locale);
@@ -405,6 +506,7 @@ export function useExecutionDashboard({
     [
       displayExecution,
       graphData,
+      selectedNode,
       isReplaying,
       execution,
       operationsEnabled,
@@ -446,17 +548,30 @@ export function useExecutionDashboard({
 
   const requestResumeNode = useCallback(
     (nodeId: string, eventName: string) => {
-      void resumeNode(nodeId, eventName);
+      if (!displayExecution) return;
+      const targetId = resolveResumeTargetNodeId(
+        displayExecution.nodes,
+        nodeId,
+        selectedNode?.nodeId ?? null
+      );
+      if (!targetId) return;
+      void resumeNode(targetId, eventName);
     },
-    [resumeNode]
+    [displayExecution, resumeNode, selectedNode]
   );
 
   const resumeSelectedNode = useCallback(
     (eventName: string) => {
-      if (isReplaying || !selectedNode) return;
-      void resumeNode(selectedNode.nodeId, eventName);
+      if (isReplaying || !displayExecution || !selectedNode) return;
+      const targetId = resolveResumeTargetNodeId(
+        displayExecution.nodes,
+        selectedNode.nodeId,
+        selectedNode.nodeId
+      );
+      if (!targetId) return;
+      void resumeNode(targetId, eventName);
     },
-    [isReplaying, resumeNode, selectedNode]
+    [displayExecution, isReplaying, resumeNode, selectedNode]
   );
 
   const changeViewMode = useCallback(
@@ -497,7 +612,8 @@ export function useExecutionDashboard({
     onLoadExecutionB: requestLoadExecutionB,
     loadingB,
     executionDiff,
-    onSelectNode: setSelectedNodeId,
+    onSelectNode: selectExecutionNode,
+    onSelectListedNode: selectVisit,
     terminal,
     isReplaying,
     onBackToCurrent: handleBackToCurrent,
@@ -520,6 +636,7 @@ export function useExecutionDashboard({
     onGraphViewportChange: handleGraphViewportChange,
     selectedNode,
     selectedResumeDisabledReason,
-    resumeEventName
+    resumeEventName,
+    nodeVisitNavigation
   };
 }

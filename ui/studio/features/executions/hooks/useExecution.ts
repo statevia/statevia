@@ -75,18 +75,8 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
       }
 
       const key = current.trim();
-      const byRuntimeId = view.nodes.find((node) => node.nodeId === key);
-      if (byRuntimeId) {
-        // 循環で同名 Wait が再入場したとき、完了済みの旧 nodeId 選択を WAITING へ追従する。
-        if (
-          soleWaiting
-          && byRuntimeId.status !== "WAITING"
-          && typeof byRuntimeId.nodeName === "string"
-          && byRuntimeId.nodeName.trim().length > 0
-          && byRuntimeId.nodeName.trim().toLowerCase() === (soleWaiting.nodeName?.trim() ?? "").toLowerCase()
-        ) {
-          return soleWaiting.nodeId;
-        }
+      if (view.nodes.some((node) => node.nodeId === key)) {
+        // 同じ状態の別訪問が WAITING でも、残っている選択は動かさない。
         return key;
       }
 
@@ -94,7 +84,8 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
         return key;
       }
 
-      return soleWaiting?.nodeId ?? view.nodes[0]?.nodeId ?? null;
+      // 消えた ID はここでは別ノードへ移さない。同じ状態の最新への移動はダッシュボードが行う。
+      return current;
     });
   };
 

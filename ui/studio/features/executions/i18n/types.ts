@@ -114,6 +114,13 @@ export type ExecutionsFeatureUiText = {
       conditionRoutingHeading: string;
       conditionRoutingEmpty: string;
     };
+    /** 同一状態を何度も訪れたときの詳細ナビ。 */
+    visitNavigation: {
+      jumpToLatest: string;
+      stepNewer: string;
+      stepOlder: string;
+      jumpToFirst: string;
+    };
 
   },
   graphLegend: {
@@ -226,13 +233,26 @@ export type ExecutionsFeatureUiText = {
   },
   nodeList: {
     title: string;
-    nodeCount: (count: number) => string;
+    /** 状態数と、まとめ前の訪問数。同数なら件数だけを出す。 */
+    summary: (stateCount: number, visitCount: number) => string;
+    /** 同じ状態への訪問数。 */
+    visitCount: (count: number) => string;
+    /** 展開行の表示名。例: cycle.work.a (1) */
+    visitLabel: (nodeName: string, attempt: number) => string;
+    expandVisits: (nodeName: string) => string;
+    collapseVisits: (nodeName: string) => string;
     columns: {
       status: string;
       type: string;
       nodeName: string;
       nodeId: string;
       duration: string;
+      /** 訪問の開閉列。画面では読み上げ用にだけ出す。 */
+      expand: string;
+    };
+    pagination: {
+      ariaLabel: string;
+      currentPage: (page: number, pageCount: number) => string;
     };
 
   },

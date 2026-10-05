@@ -112,6 +112,12 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       conditionRoutingHeading: "条件ルーティング",
       conditionRoutingEmpty: "（なし）",
     },
+    visitNavigation: {
+      jumpToLatest: "最新の訪問へ",
+      stepNewer: "1つ新しい訪問へ",
+      stepOlder: "1つ古い訪問へ",
+      jumpToFirst: "1回目の訪問へ",
+    },
 
   },
   graphLegend: {
@@ -227,13 +233,23 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   },
   nodeList: {
     title: "ノード一覧",
-    nodeCount: (count: number) => `${count} 件`,
+    summary: (stateCount: number, visitCount: number) =>
+      stateCount === visitCount ? `${stateCount} 件` : `${stateCount} 状態 / ${visitCount} 訪問`,
+    visitCount: (count: number) => `${count} 訪問`,
+    visitLabel: (nodeName: string, attempt: number) => `${nodeName} (${attempt})`,
+    expandVisits: (nodeName: string) => `${nodeName} の訪問を展開`,
+    collapseVisits: (nodeName: string) => `${nodeName} の訪問を畳む`,
     columns: {
       status: "ステータス",
       type: "タイプ",
       nodeName: "ノード名",
       nodeId: "ノードID",
       duration: "実行時間",
+      expand: "開閉",
+    },
+    pagination: {
+      ariaLabel: "ノード一覧のページ",
+      currentPage: (page: number, pageCount: number) => `${page} / ${pageCount}`,
     },
 
   },

@@ -118,6 +118,12 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       conditionRoutingHeading: "Condition routing",
       conditionRoutingEmpty: "(None)",
     },
+    visitNavigation: {
+      jumpToLatest: "Go to the latest visit",
+      stepNewer: "Go one visit newer",
+      stepOlder: "Go one visit older",
+      jumpToFirst: "Go to the first visit",
+    },
 
   },
   graphLegend: {
@@ -242,13 +248,23 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   nodeList: {
     ...executionsUiTextJa.nodeList,
     title: "Node list",
-    nodeCount: (count: number) => `${count} items`,
+    summary: (stateCount: number, visitCount: number) =>
+      stateCount === visitCount ? `${stateCount} items` : `${stateCount} states / ${visitCount} visits`,
+    visitCount: (count: number) => `${count} visits`,
+    visitLabel: (nodeName: string, attempt: number) => `${nodeName} (${attempt})`,
+    expandVisits: (nodeName: string) => `Expand visits of ${nodeName}`,
+    collapseVisits: (nodeName: string) => `Collapse visits of ${nodeName}`,
     columns: {
       status: "Status",
       type: "Type",
       nodeName: "Node name",
       nodeId: "Node ID",
       duration: "Duration",
+      expand: "Expand",
+    },
+    pagination: {
+      ariaLabel: "Node list pages",
+      currentPage: (page: number, pageCount: number) => `${page} / ${pageCount}`,
     },
 
   },

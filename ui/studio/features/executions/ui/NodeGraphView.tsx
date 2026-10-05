@@ -18,6 +18,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { buildGraphEdges } from "../lib/buildGraphEdges";
+import { canvasNodeShowsSelection } from "../lib/nodeVisits";
 import type { GroupBounds } from "../lib/grouping";
 import type { LayoutEdgeInput, PositionedNode } from "@/shared/lib/graphLayout";
 import type { MergedGraphNode } from "../lib/mergeGraph";
@@ -35,7 +36,9 @@ export type NodeDiffHighlight = Record<string, { isFailureOrCancel: boolean }>;
 type ExecutionNodeData = {
   /** 定義グラフ上のノード名（選択・Resume エッジ照合）。 */
   name: string;
-  /** ExecutionGraph のノード ID（Resume API 本体）。 */
+  /** 実行ノードの状態名。同一状態の訪問ハイライトに使う。 */
+  nodeName: string;
+  /** ExecutionGraph のノード ID（Resume API 本体）。代表の ID であり、選択中訪問とは限らない。 */
   nodeId: string;
   label: string;
   nodeType: string;
@@ -251,6 +254,8 @@ type NodeGraphViewProps = {
   edges: LayoutEdgeInput[];
   groups: GroupBounds[];
   selectedNodeId: string | null;
+  /** 選択中訪問の状態名。キャンバスは 1 ノードのまま、この名前で選択表示する。 */
+  selectedNodeName?: string | null;
   onSelectNode: (nodeId: string | null) => void;
   onResumeNode: (nodeId: string, eventName: string) => void;
   getResumeDisabledReason: (nodeId: string) => string | null;
@@ -269,6 +274,7 @@ export function NodeGraphView({
   edges,
   groups,
   selectedNodeId,
+  selectedNodeName = null,
   onSelectNode,
   onResumeNode,
   getResumeDisabledReason,
@@ -302,6 +308,7 @@ export function NodeGraphView({
         draggable: true,
         data: {
           name: node.name,
+          nodeName: node.nodeName,
           nodeId: node.nodeId,
           label: node.label,
           nodeType: node.nodeType,
@@ -343,7 +350,11 @@ export function NodeGraphView({
         ...node,
         data: {
           ...d,
-          selected: selectedNodeId === d.name,
+          selected: canvasNodeShowsSelection(
+            { name: d.name, nodeName: d.nodeName, nodeId: d.nodeId },
+            selectedNodeId,
+            selectedNodeName
+          ),
           resumeDisabledReason: getResumeDisabledReason(d.name),
           onSelect: (id: string) => onSelectNode(id),
           onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
@@ -351,7 +362,7 @@ export function NodeGraphView({
         }
       };
     });
-  }, [syncedNodes, selectedNodeId, onSelectNode, onResumeNode, getResumeDisabledReason, nodeDiffHighlight]);
+  }, [syncedNodes, selectedNodeId, selectedNodeName, onSelectNode, onResumeNode, getResumeDisabledReason, nodeDiffHighlight]);
 
   const graphEdges = useMemo(() => buildGraphEdges(edges), [edges]);
 

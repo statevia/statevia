@@ -25,4 +25,44 @@ describe("NodeListView", () => {
     fireEvent.click(screen.getByText("n-1"));
     expect(onSelectNode).toHaveBeenCalledWith("n-1");
   });
+
+  it("同じ状態の訪問は最初は閉じ、左端の印で開閉でき、行名は状態名と回数になる", () => {
+    // Arrange
+    const onSelectNode = vi.fn();
+    const nodes: ExecutionNodeDTO[] = [
+      { ...node("old", "SUCCEEDED"), nodeName: "cycle.work.a", attempt: 1 },
+      { ...node("latest", "WAITING"), nodeName: "cycle.work.a", nodeType: "Wait", attempt: 2 }
+    ];
+    renderWithUiText(
+      <NodeListView nodes={nodes} selectedNodeId="latest" onSelectNode={onSelectNode} />
+    );
+
+    // Act
+    expect(screen.queryByText("cycle.work.a (1)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の訪問を展開" }));
+
+    // Assert
+    expect(screen.getByText("cycle.work.a (1)")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("cycle.work.a (1)"));
+    expect(onSelectNode).toHaveBeenCalledWith("old");
+    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の訪問を畳む" }));
+    expect(screen.queryByText("cycle.work.a (1)")).not.toBeInTheDocument();
+  });
+
+  it("状態がページサイズを超えるとき次と前でページを移す", () => {
+    // Arrange
+    const nodes = [node("a", "SUCCEEDED"), node("b", "SUCCEEDED"), node("c", "SUCCEEDED")];
+    renderWithUiText(
+      <NodeListView nodes={nodes} selectedNodeId={null} onSelectNode={vi.fn()} pageSize={2} />
+    );
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "次へ" }));
+
+    // Assert
+    expect(screen.getByText("state-c")).toBeInTheDocument();
+    expect(screen.queryByText("state-a")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "前へ" }));
+    expect(screen.getByText("state-a")).toBeInTheDocument();
+  });
 });
