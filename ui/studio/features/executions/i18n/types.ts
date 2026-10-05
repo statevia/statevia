@@ -247,6 +247,8 @@ export type ExecutionsFeatureUiText = {
       nodeName: string;
       nodeId: string;
       duration: string;
+      /** 訪問の開閉列。画面では読み上げ用にだけ出す。 */
+      expand: string;
     };
     pagination: {
       ariaLabel: string;

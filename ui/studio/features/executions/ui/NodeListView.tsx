@@ -93,7 +93,9 @@ export function NodeListView({
       <table className="w-full table-fixed text-left text-sm">
         <thead className="text-xs text-md-on-surface-variant">
           <tr>
-            <th className="w-8 py-2 pl-2 pr-0" aria-hidden />
+            <th className="w-8 py-2 pl-2 pr-0">
+              <span className="sr-only">{uiText.nodeList.columns.expand}</span>
+            </th>
             <th className="w-28 py-2 pl-2 pr-2">{uiText.nodeList.columns.status}</th>
             <th className="w-16 py-2 pl-2 pr-2">{uiText.nodeList.columns.type}</th>
             <th className="py-2 pl-2 pr-2">{uiText.nodeList.columns.nodeName}</th>

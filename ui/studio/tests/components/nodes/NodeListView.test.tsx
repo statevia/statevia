@@ -48,4 +48,21 @@ describe("NodeListView", () => {
     fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の訪問を畳む" }));
     expect(screen.queryByText("cycle.work.a (1)")).not.toBeInTheDocument();
   });
+
+  it("状態がページサイズを超えるとき次と前でページを移す", () => {
+    // Arrange
+    const nodes = [node("a", "SUCCEEDED"), node("b", "SUCCEEDED"), node("c", "SUCCEEDED")];
+    renderWithUiText(
+      <NodeListView nodes={nodes} selectedNodeId={null} onSelectNode={vi.fn()} pageSize={2} />
+    );
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "次へ" }));
+
+    // Assert
+    expect(screen.getByText("state-c")).toBeInTheDocument();
+    expect(screen.queryByText("state-a")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "前へ" }));
+    expect(screen.getByText("state-a")).toBeInTheDocument();
+  });
 });

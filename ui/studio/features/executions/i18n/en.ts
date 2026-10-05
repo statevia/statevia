@@ -260,6 +260,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       nodeName: "Node name",
       nodeId: "Node ID",
       duration: "Duration",
+      expand: "Expand",
     },
     pagination: {
       ariaLabel: "Node list pages",

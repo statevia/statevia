@@ -245,6 +245,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       nodeName: "ノード名",
       nodeId: "ノードID",
       duration: "実行時間",
+      expand: "開閉",
     },
     pagination: {
       ariaLabel: "ノード一覧のページ",

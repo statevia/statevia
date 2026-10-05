@@ -43,6 +43,19 @@ describe("buildNodeListGroups", () => {
     expect(decide?.visits.map((visit) => visit.nodeId)).toEqual(["decide-1", "decide-2"]);
     expect(groups.map((group) => group.nodeName)).toEqual(["cycle.decide", "cycle.start"]);
   });
+
+  it("名前の無いノードは状態名でまとめない", () => {
+    // Arrange
+    const nodes = [node({ nodeId: "bare", nodeName: "  ", status: "RUNNING" })];
+
+    // Act
+    const groups = buildNodeListGroups(nodes);
+
+    // Assert
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.key).toBe("id:bare");
+    expect(groups[0]?.nodeName).toBe("");
+  });
 });
 
 describe("pageNodeListGroups", () => {

@@ -75,8 +75,7 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
       }
 
       const key = current.trim();
-      const byRuntimeId = view.nodes.find((node) => node.nodeId === key);
-      if (byRuntimeId) {
+      if (view.nodes.some((node) => node.nodeId === key)) {
         // 同じ状態の別訪問が WAITING でも、残っている選択は動かさない。
         return key;
       }
