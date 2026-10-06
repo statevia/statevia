@@ -7474,6 +7474,30 @@ public sealed class ExecutionServiceTests
     }
 
     /// <summary>
+    /// 書き込み後にエンジンが既に無ければ、Unload しない。
+    /// </summary>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenCheckpointDisappearsBeforeUnload_SkipsUnload()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e5e5e5e5-e5e5-e5e5-e5e5-e5e5e5e5e5e5");
+        var emptyFork = CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: false);
+        var engine = new FakeExecutionEngine();
+        engine.CheckpointReads.Enqueue(emptyFork);
+        engine.CheckpointReads.Enqueue(null);
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(1, checkpointStore.UpsertCalls);
+    }
+
+    /// <summary>
     /// Unload 直前に当該 Fork 以降の Joined があれば、待ち行がまだ無くても破棄しない。
     /// </summary>
     [Fact]
