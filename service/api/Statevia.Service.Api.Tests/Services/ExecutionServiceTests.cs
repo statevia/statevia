@@ -226,13 +226,17 @@ public sealed class ExecutionServiceTests
         /// <summary>設定時、<see cref="ExportCheckpoint"/> がこの値を返す。</summary>
         public ExecutionRuntimeCheckpoint? CheckpointToExport { get; set; }
 
+        /// <summary>指定時は <see cref="ExportCheckpoint"/> がこの順で返す。尽きたら <see cref="CheckpointToExport"/>。</summary>
+        public Queue<ExecutionRuntimeCheckpoint?> CheckpointReads { get; } = new();
+
         /// <summary>設定時、<see cref="Unload"/> がこの例外を投げる。</summary>
         public Exception? UnloadExceptionToThrow { get; set; }
 
         /// <summary><see cref="ImportCheckpoint"/> が呼ばれた回数。</summary>
         public int ImportCheckpointCalls { get; private set; }
 
-        public ExecutionRuntimeCheckpoint? ExportCheckpoint(string executionId) => CheckpointToExport;
+        public ExecutionRuntimeCheckpoint? ExportCheckpoint(string executionId) =>
+            CheckpointReads.Count > 0 ? CheckpointReads.Dequeue() : CheckpointToExport;
 
         public void ImportCheckpoint(CompiledWorkflowDefinition definition, ExecutionRuntimeCheckpoint checkpoint)
         {
@@ -7425,6 +7429,151 @@ public sealed class ExecutionServiceTests
         Assert.Single(executionRepo.Updates);
     }
 
+    /// <summary>
+    /// 開始時は空の Fork 断面でも、Unload 直前に decide の待ちがあればエンジンを破棄しない。
+    /// </summary>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenWaitAppearsBeforeUnload_SkipsUnload()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1");
+        var emptyFork = CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: false);
+        var withDecide = CreateForkExpansionCheckpoint(
+            executionId.ToString(),
+            "fork-1",
+            joinCompleted: true,
+            pendingWaits:
+            [
+                new CheckpointPendingWait
+                {
+                    NodeId = "decide-1",
+                    NodeName = "cycle.decide",
+                    AllowedEvents = ["Again", "Finish"]
+                }
+            ],
+            "decide-1");
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = RunningDecideSnapshot(executionId.ToString()),
+            GraphJsonToReturn = """{"nodes":[],"edges":[]}"""
+        };
+        engine.CheckpointReads.Enqueue(emptyFork);
+        engine.CheckpointReads.Enqueue(withDecide);
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(1, checkpointStore.UpsertCalls);
+        Assert.NotNull(engine.GetSnapshot(executionId.ToString()));
+        Assert.Contains("cycle.decide", engine.GetSnapshot(executionId.ToString())!.ActiveStates);
+    }
+
+    /// <summary>
+    /// Unload 直前に当該 Fork 以降の Joined があれば、待ち行がまだ無くても破棄しない。
+    /// </summary>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenJoinCompletesBeforeUnload_SkipsUnload()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2");
+        var emptyFork = CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: false);
+        var joined = CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: true);
+        var engine = new FakeExecutionEngine();
+        engine.CheckpointReads.Enqueue(emptyFork);
+        engine.CheckpointReads.Enqueue(joined);
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(1, checkpointStore.UpsertCalls);
+        Assert.Empty(joined.PendingWaits);
+    }
+
+    /// <summary>
+    /// Again を 2 回分、遅れた Fork Unload が Join 後の decide を消さず Running のまま残す。
+    /// </summary>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenTwoAgainRoundsProgressBeforeUnload_KeepsDecideWaits()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e3e3e3e3-e3e3-e3e3-e3e3-e3e3e3e3e3e3");
+        var round1 = CreateForkExpansionCheckpoint(
+            executionId.ToString(),
+            "fork-1",
+            joinCompleted: true,
+            pendingWaits: [DecideWait("decide-1")],
+            "decide-1");
+        var round2 = CreateForkExpansionCheckpoint(
+            executionId.ToString(),
+            "fork-2",
+            joinCompleted: true,
+            pendingWaits: [DecideWait("decide-1"), DecideWait("decide-2")],
+            "decide-1",
+            "decide-2");
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = RunningDecideSnapshot(executionId.ToString()),
+            GraphJsonToReturn = """{"nodes":[],"edges":[]}"""
+        };
+        engine.CheckpointReads.Enqueue(CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: false));
+        engine.CheckpointReads.Enqueue(round1);
+        engine.CheckpointReads.Enqueue(CreateForkExpansionCheckpoint(executionId.ToString(), "fork-2", joinCompleted: false));
+        engine.CheckpointReads.Enqueue(round2);
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-1", CancellationToken.None);
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-2", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(2, checkpointStore.UpsertCalls);
+        var snapshot = engine.GetSnapshot(executionId.ToString());
+        Assert.NotNull(snapshot);
+        Assert.False(snapshot.IsCompleted);
+        Assert.False(snapshot.IsFailed);
+        Assert.Contains("cycle.decide", snapshot.ActiveStates);
+        Assert.Equal(["decide-1", "decide-2"], round2.PendingWaits.Select(wait => wait.NodeId).ToArray());
+        Assert.Contains(round2.Graph.Nodes, node => node.NodeId == "decide-1" && node.NodeName == "cycle.decide");
+        Assert.Contains(round2.Graph.Nodes, node => node.NodeId == "decide-2" && node.NodeName == "cycle.decide");
+    }
+
+    /// <summary>
+    /// Join 済みで次の待ちが無い断面は、再評価しても decide を足さず書き戻さない。
+    /// </summary>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenJoinFinishedWithoutNextWait_DoesNotRepair()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e4e4e4e4-e4e4-e4e4-e4e4-e4e4e4e4e4e4");
+        var stuck = CreateForkExpansionCheckpoint(executionId.ToString(), "fork-1", joinCompleted: true);
+        var engine = new FakeExecutionEngine { CheckpointToExport = stuck };
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "fork-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(0, checkpointStore.UpsertCalls);
+        Assert.Empty(stuck.PendingWaits);
+        Assert.DoesNotContain(stuck.Graph.Nodes, node => node.NodeName == "cycle.decide");
+    }
+
     /// <summary>不正な Engine ID の Unload 経路は早期 return する。</summary>
     [Fact]
     public async Task PersistCheckpointAndUnloadByEngineIdAsync_InvalidId_NoOps()
@@ -7490,6 +7639,122 @@ public sealed class ExecutionServiceTests
 
         // Assert
         Assert.Equal(0, engine.UnloadCalls);
+    }
+
+    private static ExecutionService BuildForkUnloadSut(
+        SqliteTestDatabase sqlite,
+        Guid executionId,
+        FakeExecutionEngine engine,
+        FakeExecutionCheckpointStore checkpointStore)
+    {
+        var now = DateTime.UtcNow;
+        return BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService(),
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = new FakeExecutionRepository
+                {
+                    ByIdResult = new ExecutionRow
+                    {
+                        ExecutionId = executionId,
+                        TenantId = TestTenantIds.T1TenantId,
+                        DefinitionId = Guid.NewGuid(),
+                        DefinitionVersionId = Guid.NewGuid(),
+                        Status = ExecutionProjectionStatuses.Running,
+                        StartedAt = now,
+                        UpdatedAt = now
+                    }
+                },
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(Guid.NewGuid(), TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                CheckpointStore = checkpointStore,
+            });
+    }
+
+    private static ExecutionSnapshot RunningDecideSnapshot(string executionId) =>
+        new()
+        {
+            ExecutionId = executionId,
+            WorkflowName = "CyclicForkSample",
+            ActiveStates = ["cycle.decide"],
+            IsCompleted = false,
+            IsCancelled = false,
+            IsFailed = false
+        };
+
+    private static CheckpointPendingWait DecideWait(string nodeId) =>
+        new()
+        {
+            NodeId = nodeId,
+            NodeName = "cycle.decide",
+            AllowedEvents = ["Again", "Finish"]
+        };
+
+    /// <summary>Fork 展開 Unload の開始断面と、Join 後断面を作る。</summary>
+    private static ExecutionRuntimeCheckpoint CreateForkExpansionCheckpoint(
+        string executionId,
+        string forkNodeId,
+        bool joinCompleted,
+        IReadOnlyList<CheckpointPendingWait>? pendingWaits = null,
+        params string[] decideNodeIds)
+    {
+        var started = new DateTime(2026, 10, 6, 0, 0, 0, DateTimeKind.Utc);
+        var nodes = new List<CheckpointGraphNode>
+        {
+            new()
+            {
+                NodeId = forkNodeId,
+                NodeName = "cycle.fork",
+                NodeType = "Fork",
+                StartedAt = started
+            }
+        };
+        if (joinCompleted)
+        {
+            nodes.Add(new CheckpointGraphNode
+            {
+                NodeId = "join-" + forkNodeId,
+                NodeName = "cycle.join",
+                NodeType = "Join",
+                StartedAt = started,
+                CompletedAt = started.AddSeconds(1),
+                Fact = "Joined"
+            });
+        }
+
+        foreach (var decideNodeId in decideNodeIds)
+        {
+            nodes.Add(new CheckpointGraphNode
+            {
+                NodeId = decideNodeId,
+                NodeName = "cycle.decide",
+                NodeType = "Wait",
+                StartedAt = started.AddSeconds(2)
+            });
+        }
+
+        var baseline = CreateMinimalCheckpoint(executionId);
+        return new ExecutionRuntimeCheckpoint
+        {
+            ExecutionId = baseline.ExecutionId,
+            DefinitionName = baseline.DefinitionName,
+            ActiveStates = baseline.ActiveStates,
+            StateAttempts = baseline.StateAttempts,
+            StateOutputs = baseline.StateOutputs,
+            AppliedPublishClientEventIds = baseline.AppliedPublishClientEventIds,
+            AppliedCancelClientEventIds = baseline.AppliedCancelClientEventIds,
+            Context = baseline.Context,
+            Graph = new CheckpointGraphData { Nodes = nodes, Edges = [] },
+            Join = baseline.Join,
+            PendingWaits = pendingWaits ?? []
+        };
     }
 
     private static ExecutionRuntimeCheckpoint CreateMinimalCheckpoint(string executionId) =>

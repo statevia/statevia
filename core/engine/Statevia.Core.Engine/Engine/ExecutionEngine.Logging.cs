@@ -79,6 +79,11 @@ public sealed partial class ExecutionEngine
             SafeLog(() =>
                 ExecutionLog.NoTransition(_logger, executionId, stateName, fact));
 
+        /// <summary>Fork 展開ハンドラの失敗。実行は Failed にせず、Engine ループは継続する。</summary>
+        public void LogForkExpansionHandlerFailed(Exception exception, string executionId) =>
+            SafeLog(() =>
+                ExecutionLog.ForkExpansionHandlerFailed(_logger, exception, executionId));
+
         /// <summary>ノード完了通知ハンドラの実行失敗（エンジン進行は継続）。</summary>
         public void LogWarningNodeCompletedHandlerFailed(Exception exception, string executionId) =>
             SafeLog(() =>
