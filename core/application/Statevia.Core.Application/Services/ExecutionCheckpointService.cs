@@ -340,6 +340,12 @@ internal sealed class ExecutionCheckpointService(
         if (skippedStalePersist)
             return;
 
+        // 開始時の断面が空でも、書き込み中に Join と次 Wait が進む。
+        // Unload 直前にもう一度見て、進んでいればエンジンを残す。
+        // 欠落した Wait は後から足さない。世代不一致のときは他 Worker が正本なので破棄する。
+        if (!fenceLost && ShouldSkipForkExpansionUnloadAfterWrite(engineExecutionId, executionId, nodeId))
+            return;
+
         // fencing 喪失時もローカル所有と Engine は必ず破棄する（docs/concepts/durability.md）。
         // DB の owner 列は触らない: TryUpsert 失敗は世代不一致＝他 Worker が正本のまま残すため。
         // メモリだけ Clear するのは「このプロセスが所有を主張しなくなる」ための意図的な非対称である。
@@ -472,6 +478,41 @@ internal sealed class ExecutionCheckpointService(
     }
 
     /// <summary>
+    /// DB 書き込み後の断面が Fork 展開より進んでいれば Unload しない。
+    /// </summary>
+    /// <remarks>
+    /// 開始時の Export では空でも、トランザクション中に Join と次 Wait が進む。
+    /// そのエンジンを破棄しない。既に Wait が無い Join 済み実行を decide まで進める修復はしない。
+    /// Export が null のときも Unload しない（既に破棄済み）。
+    /// </remarks>
+    /// <param name="engineExecutionId">Engine 辞書キー。</param>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="nodeId">Persist 要求元の Fork ノード ID。</param>
+    /// <returns>Unload をスキップするとき true。</returns>
+    private bool ShouldSkipForkExpansionUnloadAfterWrite(
+        string engineExecutionId,
+        Guid executionId,
+        string nodeId)
+    {
+        var latest = engine.ExportCheckpoint(engineExecutionId);
+        if (latest is null)
+        {
+            logger.ExportCheckpointNullSkipUnload(engineExecutionId, nodeId);
+            return true;
+        }
+
+        if (!IsForkExpansionUnloadObsolete(latest, nodeId))
+            return false;
+
+        logger.SkipForkExpansionUnloadAlreadyProgressed(
+            executionId,
+            nodeId,
+            latest.ActiveStates.Count,
+            latest.PendingWaits.Count);
+        return true;
+    }
+
+    /// <summary>
     /// 永続済み断面より incoming が遅れているか（古い Fork Unload の上書き防止）。
     /// </summary>
     /// <remarks>単体テストから到達するため internal。</remarks>
@@ -501,6 +542,10 @@ internal sealed class ExecutionCheckpointService(
     /// </para>
     /// <para>
     /// <paramref name="nodeId"/> が Fork ノードでない呼び出し（Wait Suspend）は常に false。
+    /// </para>
+    /// <para>
+    /// Persist 開始時と、DB 書き込み後の Unload 直前の両方で評価する。
+    /// 条件が true でも、欠落した次 Wait を断面へ足すことはしない。
     /// </para>
     /// <para>単体テストから到達するため internal。</para>
     /// </remarks>

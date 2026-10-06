@@ -142,7 +142,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 #pragma warning disable CA1031 // Fork 展開通知失敗は呼び出し元の再試行／親 Failed に委ね、Engine ループは止めない
         catch (Exception ex)
         {
-            _executionLog.LogExecutionRunFailed(ex, evt.ExecutionId, "fork-expansion-handler");
+            _executionLog.LogForkExpansionHandlerFailed(ex, evt.ExecutionId);
         }
 #pragma warning restore CA1031
     }
