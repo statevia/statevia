@@ -74,6 +74,20 @@ internal sealed class ExecutionRepository : IExecutionRepository
         uow.GetDb().ExecutionGraphSnapshots.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct);
 
+    /// <inheritdoc />
+    public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
+        uow.GetDb().ExecutionGraphSnapshots.AsNoTracking()
+            .Where(x => x.ExecutionId == executionId)
+            .Select(x => (DateTime?)x.UpdatedAt)
+            .FirstOrDefaultAsync(ct);
+
+    /// <inheritdoc />
+    public Task<string?> TryGetExecutionStatusByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
+        uow.GetDb().Executions.AsNoTracking()
+            .Where(x => x.ExecutionId == executionId)
+            .Select(x => (string?)x.Status)
+            .FirstOrDefaultAsync(ct);
+
     /// <summary>
     /// executions の status を更新し、graph JSON が変わったときだけ snapshot を書く。
     /// </summary>

@@ -1,7 +1,6 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { MutableRefObject } from "react";
 import { getApiConfig } from "@/shared/api";
-import { applyExecutionStreamEvent, parseExecutionStreamEvent } from "../lib/executionStream";
-import type { ExecutionView } from "../types";
+import { parseExecutionStreamEvent } from "../lib/executionStream";
 
 const STREAM_RECONNECT_BASE_MS = 1000;
 const STREAM_RECONNECT_MAX_MS = 30000;
@@ -16,7 +15,6 @@ export type ExecutionStreamLifecycleOptions = {
   displayId: string;
   streamRefreshDebounceMs: number;
   refreshSnapshot: (displayId: string) => Promise<void>;
-  setExecution: Dispatch<SetStateAction<ExecutionView | null>>;
   activeStreamRef: MutableRefObject<EventSource | null>;
 };
 
@@ -46,7 +44,7 @@ function bindStreamEventHandlers(
  * useExecution の useEffect から呼び出し、ネスト深度を抑える。
  */
 export function startExecutionStreamLifecycle(options: ExecutionStreamLifecycleOptions): () => void {
-  const { displayId, streamRefreshDebounceMs, refreshSnapshot, setExecution, activeStreamRef } = options;
+  const { displayId, streamRefreshDebounceMs, refreshSnapshot, activeStreamRef } = options;
 
   let disposed = false;
   let reconnectAttempt = 0;
@@ -88,8 +86,7 @@ export function startExecutionStreamLifecycle(options: ExecutionStreamLifecycleO
 
   const applyRawEvent = (raw: string) => {
     const parsed = parseExecutionStreamEvent(raw);
-    if (!parsed) return;
-    setExecution((current) => (current ? applyExecutionStreamEvent(current, parsed) : current));
+    if (parsed?.executionId !== displayId) return;
     scheduleDebouncedGet();
   };
 

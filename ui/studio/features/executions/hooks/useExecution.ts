@@ -113,7 +113,6 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
       displayId: execution.displayId,
       streamRefreshDebounceMs,
       refreshSnapshot: (displayId) => refreshSnapshotRef.current(displayId),
-      setExecution,
       activeStreamRef
     });
   }, [execution?.displayId, streamEnabled, streamRefreshDebounceMs, terminal]);

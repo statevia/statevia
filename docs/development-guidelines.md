@@ -105,7 +105,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 ### 4.4 リンター・ビルド警告・静的チェック
 
 - **C#**: `dotnet build` / `dotnet test` で出る **コンパイラエラー・Analyzer 警告**は、自分の変更に起因するものは **解消してから** PR に出す。触れていないファイルの既存警告をまとめて直すのは必須ではないが、**新規コードで警告を増やさない**こと。
-- **.NET ソリューションの警告 0**: 次の 6 sln は通常の `dotnet build` で **Warning 0** を維持する。新規のソリューション全体 `NoWarn` や `TreatWarningsAsErrors` は導入しない。意図的な抑制（テストの CA1707 / CA1515、API/ActionHost の CA2007、CLI の CA1303 等）は既存の `.editorconfig` を維持する。
+- **.NET ソリューションの警告 0**: 次の 6 sln は通常の `dotnet build` で **Warning 0** を維持する。新規のソリューション全体 `NoWarn` や `TreatWarningsAsErrors` は導入しない。意図的な抑制（テストの CA1707 / CA1515、API/ActionHost の CA2007、CLI の CA1303 等）は既存の `.editorconfig` を維持する。Sonar の指摘を IDE で Warning として出す `SonarAnalyzer.CSharp` は、ルート `Directory.Build.targets` がコマンドラインビルドから外す。Scanner 実行中は Scanner が Analyzer を差し替える。
   - `core/engine/statevia-engine.sln`
   - `infrastructure/statevia-infrastructure.sln`
   - `modules/reference/statevia-reference.sln`

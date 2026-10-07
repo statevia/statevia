@@ -9,12 +9,24 @@ public sealed class ExecutionStreamServiceTests
     {
         private readonly string _graphJson;
         private readonly string _status;
+        private readonly DateTime[] _updatedAts;
+        private readonly int _failUpdatedAtCount;
+        private int _updatedAtCalls;
         public int GetGraphJsonCalls { get; private set; }
+        public int GetUpdatedAtCalls { get; private set; }
 
-        public FakeExecutionService(string graphJson, string status = "Running")
+        public FakeExecutionService(
+            string graphJson,
+            string status = "Running",
+            DateTime[]? updatedAts = null,
+            int failUpdatedAtCount = 0)
         {
             _graphJson = graphJson;
             _status = status;
+            _updatedAts = updatedAts is { Length: > 0 }
+                ? updatedAts
+                : [new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)];
+            _failUpdatedAtCount = failUpdatedAtCount;
         }
 
         public Task<ExecutionResponse> StartAsync(StartExecutionRequest request, string? idempotencyKey, CommandRequestContext requestContext, CancellationToken ct) =>
@@ -36,6 +48,22 @@ public sealed class ExecutionStreamServiceTests
             GetGraphJsonCalls++;
             return Task.FromResult<string?>(_graphJson);
         }
+
+        public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct)
+        {
+            _updatedAtCalls++;
+            GetUpdatedAtCalls = _updatedAtCalls;
+            if (_updatedAtCalls <= _failUpdatedAtCount)
+                return Task.FromException<DateTime?>(new InvalidOperationException("transient updated at"));
+
+            var successIndex = _updatedAtCalls - _failUpdatedAtCount - 1;
+            var index = Math.Min(Math.Max(successIndex, 0), _updatedAts.Length - 1);
+            return Task.FromResult<DateTime?>(_updatedAts[index]);
+        }
+
+        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+            Task.FromResult<string?>(_status);
+
         public Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct) => throw new NotSupportedException();
         public Task<ExecutionViewDto> GetExecutionViewAtSeqAsync(string idOrUuid, long atSeq, CancellationToken ct) => throw new NotSupportedException();
         public Task<ExecutionEventsResponseDto> ListEventsAsync(string idOrUuid, long afterSeq, int limit, CancellationToken ct) => throw new NotSupportedException();
@@ -88,6 +116,13 @@ public sealed class ExecutionStreamServiceTests
 
             return Task.FromResult<string?>(_stableJson);
         }
+
+        public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+            Task.FromResult<DateTime?>(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+            Task.FromResult<string?>("Running");
+
         public Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct) => throw new NotSupportedException();
         public Task<ExecutionViewDto> GetExecutionViewAtSeqAsync(string idOrUuid, long atSeq, CancellationToken ct) => throw new NotSupportedException();
         public Task<ExecutionEventsResponseDto> ListEventsAsync(string idOrUuid, long afterSeq, int limit, CancellationToken ct) => throw new NotSupportedException();
@@ -150,6 +185,12 @@ public sealed class ExecutionStreamServiceTests
 
             return Task.FromResult<string?>(_stableJson);
         }
+
+        public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+            Task.FromResult<DateTime?>(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+            Task.FromResult<string?>("Running");
 
         public Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct) => throw new NotSupportedException();
 
@@ -223,6 +264,8 @@ public sealed class ExecutionStreamServiceTests
     private sealed class SnapshotMissingExecutionService : IExecutionService
     {
         public int TryGetSnapshotCalls { get; private set; }
+        public int TryGetUpdatedAtCalls { get; private set; }
+        public int GetGraphJsonCalls { get; private set; }
 
         public Task<ExecutionResponse> StartAsync(StartExecutionRequest request, string? idempotencyKey, CommandRequestContext requestContext, CancellationToken ct) =>
             throw new NotSupportedException();
@@ -234,8 +277,15 @@ public sealed class ExecutionStreamServiceTests
         public Task<ExecutionWaitsResponse> GetExecutionWaitsAsync(string idOrUuid, CancellationToken ct) =>
             Task.FromResult(new ExecutionWaitsResponse());
         public Task<string> GetGraphJsonAsync(string idOrUuid, CancellationToken ct) => Task.FromResult("{\"nodes\":[]}");
+        public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct)
+        {
+            TryGetUpdatedAtCalls++;
+            return Task.FromResult<DateTime?>(null);
+        }
+
         public Task<string?> TryGetSnapshotGraphJsonByExecutionIdAsync(Guid executionId, CancellationToken ct)
         {
+            GetGraphJsonCalls++;
             TryGetSnapshotCalls++;
             return Task.FromResult<string?>(null);
         }
@@ -389,7 +439,8 @@ public sealed class ExecutionStreamServiceTests
         var bodyText = System.Text.Encoding.UTF8.GetString(((MemoryStream)http.Response.Body).ToArray());
         var count = bodyText.Split("GraphUpdated", StringSplitOptions.None).Length - 1;
         Assert.Equal(1, count);
-        Assert.True(fakeExecutions.GetGraphJsonCalls >= 2);
+        Assert.Equal(1, fakeExecutions.GetGraphJsonCalls);
+        Assert.True(fakeExecutions.GetUpdatedAtCalls >= 2);
     }
 
     /// <summary>表示用識別子がないとき入力識別子を実行識別子として載せる。</summary>
@@ -507,13 +558,14 @@ public sealed class ExecutionStreamServiceTests
 
         // Assert
         Assert.Equal("text/event-stream", http.Response.ContentType);
-        Assert.Equal(1, executions.TryGetSnapshotCalls);
+        Assert.Equal(1, executions.TryGetUpdatedAtCalls);
+        Assert.Equal(0, executions.GetGraphJsonCalls);
         Assert.Equal(0, body.Length);
     }
 
-    /// <summary>スナップショットが終端を示したら、次ポーリングを待たずにストリームを終了する。</summary>
+    /// <summary>実行 status が終端なら、更新を 1 件書いたあと次の待ちに入らず閉じる。</summary>
     [Fact]
-    public async Task WriteStreamAsync_WhenExecutionIsTerminal_EndsStreamImmediatelyAfterFirstUpdate()
+    public async Task WriteStreamAsync_WhenExecutionStatusIsTerminal_EndsStreamImmediatelyAfterFirstUpdate()
     {
         // Arrange
         var graphJson = """
@@ -538,7 +590,7 @@ public sealed class ExecutionStreamServiceTests
                           ]
                         }
                         """;
-        var executions = new FakeExecutionService(graphJson);
+        var executions = new FakeExecutionService(graphJson, status: "Completed");
         var display = new FakeDisplayIdService
         {
             ResolveResult = Guid.NewGuid(),
@@ -557,6 +609,100 @@ public sealed class ExecutionStreamServiceTests
         var bodyText = System.Text.Encoding.UTF8.GetString(body.ToArray());
         Assert.Contains("GraphUpdated", bodyText);
         Assert.Equal(1, executions.GetGraphJsonCalls);
+    }
+
+    /// <summary>ノードが完了していても実行 status が Running なら接続を閉じない。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenNodesCompletedButExecutionRunning_KeepsStreamOpen()
+    {
+        // Arrange
+        var graphJson = """
+                        {
+                          "nodes": [
+                            { "nodeId": "fork", "fact": "Completed", "completedAt": "2020-01-01T00:00:00Z" },
+                            { "nodeId": "decide", "fact": null, "completedAt": null }
+                          ]
+                        }
+                        """;
+        var executions = new FakeExecutionService(graphJson, status: "Running");
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-RUNNING"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(ExecutionStreamService.GraphPollingIntervalMilliseconds + 400);
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", cts.Token);
+
+        // Assert
+        Assert.True(executions.GetUpdatedAtCalls >= 2);
+        Assert.Equal(1, executions.GetGraphJsonCalls);
+    }
+
+    /// <summary>UpdatedAt が進んだ周だけ全文を読み、GraphUpdated を追加で 1 件書く。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenUpdatedAtAdvances_WritesSecondGraphUpdated()
+    {
+        // Arrange
+        var t1 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var t2 = t1.AddSeconds(1);
+        var fakeExecutions = new FakeExecutionService(
+            "{\"nodes\":[]}",
+            updatedAts: [t1, t2]);
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-ADVANCE"
+        };
+        var sut = new ExecutionStreamService(fakeExecutions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(ExecutionStreamService.GraphPollingIntervalMilliseconds + 500);
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", cts.Token);
+
+        // Assert
+        var bodyText = System.Text.Encoding.UTF8.GetString(((MemoryStream)http.Response.Body).ToArray());
+        var count = bodyText.Split("GraphUpdated", StringSplitOptions.None).Length - 1;
+        Assert.Equal(2, count);
+        Assert.Equal(2, fakeExecutions.GetGraphJsonCalls);
+    }
+
+    /// <summary>UpdatedAt 読み取りが失敗した周は観測済みにせず、同じ時刻の次周は全文を読まない。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenUpdatedAtThrows_DoesNotRememberFailedStamp()
+    {
+        // Arrange
+        var fakeExecutions = new FakeExecutionService(
+            "{\"nodes\":[]}",
+            failUpdatedAtCount: 1);
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-RETRY"
+        };
+        var sut = new ExecutionStreamService(fakeExecutions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(ExecutionStreamService.GraphPollingIntervalMilliseconds * 2 + 500);
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", cts.Token);
+
+        // Assert
+        var bodyText = System.Text.Encoding.UTF8.GetString(((MemoryStream)http.Response.Body).ToArray());
+        var count = bodyText.Split("GraphUpdated", StringSplitOptions.None).Length - 1;
+        Assert.Equal(1, count);
+        Assert.Equal(1, fakeExecutions.GetGraphJsonCalls);
+        Assert.True(fakeExecutions.GetUpdatedAtCalls >= 3);
     }
 }
 

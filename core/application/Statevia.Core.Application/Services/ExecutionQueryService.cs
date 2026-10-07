@@ -168,6 +168,18 @@ internal sealed class ExecutionQueryService(
             },
             ct);
 
+    /// <inheritdoc />
+    public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => executions.TryGetSnapshotUpdatedAtByExecutionIdAsync(uow, executionId, innerCt),
+            ct);
+
+    /// <inheritdoc />
+    public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => executions.TryGetExecutionStatusByExecutionIdAsync(uow, executionId, innerCt),
+            ct);
+
     /// <summary>現在の実行ビューを返す。</summary>
     /// <param name="idOrUuid">表示 ID または UUID。</param>
     /// <param name="ct">キャンセル。</param>

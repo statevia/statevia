@@ -398,7 +398,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 **GET /v1/executions/{id}/stream**
 
-- Response: **`200`**、`Content-Type: text/event-stream`。本文は SSE の **`data:`** 行に JSON（`type: GraphUpdated` 等）。接続維持型（サーバは約 2 秒周期で投影グラフを比較し、変化時のみ `data:` を書き込む）。
+- Response: **`200`**、`Content-Type: text/event-stream`。本文は SSE の **`data:`** 行に JSON（`type: GraphUpdated`）。接続維持型。サーバは約 2 秒周期で snapshot の `UpdatedAt` を比較し、変わったときだけ `GraphJson` を読んで `data:` を 1 件書く。
 - **必須**: Principal（JWT または `X-Api-Key`）と `X-Tenant-Id`。未認証は **401**。SSE も `/v1/executions` 配下のため Middleware の Principal 必須と同一。
 - テナントは **`X-Tenant-Id`**（UI から `EventSource` でヘッダが付けられない場合は [ui-auth-tenant-config.md](../guides/ui-auth-tenant-config.md) のクエリ経由とプロキシ Cookie）。
 - 詳細ペイロードは [data-integration.md](data-integration.md) §5.1 を正とする。

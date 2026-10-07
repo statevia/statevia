@@ -227,6 +227,18 @@ public sealed class ForkExpansionHostHandlerTests
             CancellationToken ct) =>
             throw new NotImplementedException();
 
+        public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(
+            ICoreUnitOfWork uow,
+            Guid executionId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
+
+        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(
+            ICoreUnitOfWork uow,
+            Guid executionId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
+
         public Task UpdateExecutionAndSnapshotAsync(
             ICoreUnitOfWork uow,
             Guid executionId,

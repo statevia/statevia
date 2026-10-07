@@ -73,6 +73,14 @@ internal sealed class ExecutionService(
         queryService.TryGetSnapshotGraphJsonByExecutionIdAsync(executionId, ct);
 
     /// <inheritdoc />
+    public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        queryService.TryGetSnapshotUpdatedAtByExecutionIdAsync(executionId, ct);
+
+    /// <inheritdoc />
+    public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        queryService.TryGetExecutionStatusByExecutionIdAsync(executionId, ct);
+
+    /// <inheritdoc />
     public Task CancelAsync(
         string idOrUuid,
         string? idempotencyKey,
