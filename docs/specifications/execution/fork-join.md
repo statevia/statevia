@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3.1 |
-| 更新日 | 2026-08-14 |
+| Version | 1.3.2 |
+| 更新日 | 2026-10-07 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [wait-cancel.md](wait-cancel.md), [execution-graph.md](execution-graph.md), [../../concepts/durability.md](../../concepts/durability.md), [../../reference/database-schema.md](../../reference/database-schema.md) |
 
 ---
@@ -18,6 +18,7 @@
 - **MUST**: **Join 前**は同一 Fork の兄弟分岐同士が互いの `$.states…` / `$.vars…` / Context を参照してはならない。
 - **MUST**: **Join 後（成功）**は子の `states` / `vars` を親 Execution Context へマージし、親の後続から `$.states.<Name>.output` 等を解決できること。キー衝突は子完了信号の**適用順で後勝ち**（Failed にしない）。
 - **MUST**: 親の `GET …/graph` / `GET …/events` は、UI が物理分割を意識しないよう **GET 時に論理 1 実行へ合成**する（永続への二重書き込みはしない）。
+- **MUST**: `GET /v1/executions` の `items` と件数は、`execution_branches.execution_id` に無いルート execution のみとする。
 - **SHOULD**: Fork は定義上で並列開始する状態集合を明示する。
 
 ---
@@ -130,7 +131,13 @@ Join は複数の状態からの事実を待ってから次に進みます。
 
 ## 読みモデル（UI は分割非認知）
 
-クライアント／UI は物理子や `execution_branches` を意識しない。親の読み取り API が論理 1 実行に見せる。
+クライアント／UI は物理子や `execution_branches` を意識しない。親の読み取り API が論理 1 実行に見せる。実行一覧も同じで、画面側では物理子を間引かない。
+
+### 実行一覧（`GET /v1/executions`）
+
+- 対象は `execution_branches.execution_id` に無いルートのみ。`items` と `totalCount` は同じ集合。
+- ネスト Fork の中間親も子 ID として除外する。
+- 子 ID を指定した `GET /v1/executions/{id}` は物理子を返す。
 
 ### 実行グラフ（`GET …/graph`）
 

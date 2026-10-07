@@ -62,6 +62,7 @@ public class ExecutionsController : ControllerBase
     /// GET /v1/executions — ページング一覧。<c>limit</c> は必須。
     /// <c>?limit=&amp;offset=&amp;status=&amp;definitionId=&amp;name=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>。
     /// <c>definitionId</c> は定義の display / UUID。 <c>name</c> は execution の <c>displayId</c> 部分一致、または execution の UUID 完全一致で絞り込み。
+    /// 応答の <c>items</c> と <c>totalCount</c> は、<c>execution_branches.execution_id</c> に無いルートのみ。
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ExecutionResponse>), StatusCodes.Status200OK)]

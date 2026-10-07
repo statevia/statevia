@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.27 |
-| 更新日 | 2026-09-30 |
+| Version | 1.28 |
+| 更新日 | 2026-10-07 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.28（2026-10-07）**: `GET /v1/executions` の `items` と `totalCount` は、`execution_branches.execution_id` に無いルートのみ。子 ID の単体 GET は変えない。
 
 **Version 1.27（2026-09-30）**: `GET /v1/event-subscriptions` を追加。`executions.read`。一意な topic / key を最大 500 件。displayId / nodeId は返さない。
 
@@ -326,7 +328,9 @@ Request:
   - `sortBy`: `updatedAt` / `displayId`（未指定時は `updatedAt`）
   - `sortOrder`: `asc` / `desc`（未指定時は `desc`）
   - `limit`: 1〜500（必須）、`offset`: 0 以上（省略時 0）
+  - `items` / `totalCount` / `hasMore` は、`execution_branches.execution_id` に無いルート execution のみ。ネスト Fork の中間親も子 ID として除外する。追加のクエリパラメータは無い
 - `limit` 未指定・不正: **422**
+- 子の displayId または UUID を指定した **GET /v1/executions/{id}** は、一覧に含まれなくても 200 で返す
 
 ### 3.3 実行取得
 

@@ -257,6 +257,86 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal(wf1, items[0].Execution.ExecutionId);
     }
 
+    /// <summary>親・子・孫のうち、枝表の子 ID に無い最上位の親だけを件数とページに含める。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_ExcludesNestedPhysicalChildren_AndCountsRootsOnly()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var tenantId = TestTenantIds.T1TenantId;
+        var definitionId = Guid.NewGuid();
+        var rootExecutionId = Guid.NewGuid();
+        var childExecutionId = Guid.NewGuid();
+        var grandchildExecutionId = Guid.NewGuid();
+        var rootUpdatedAt = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var childUpdatedAt = rootUpdatedAt.AddDays(1);
+        var grandchildUpdatedAt = rootUpdatedAt.AddDays(2);
+
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            ctx.Executions.AddRange(
+                CreateExecution(rootExecutionId, tenantId, definitionId, rootUpdatedAt),
+                CreateExecution(childExecutionId, tenantId, definitionId, childUpdatedAt),
+                CreateExecution(grandchildExecutionId, tenantId, definitionId, grandchildUpdatedAt));
+            ctx.ExecutionBranches.AddRange(
+                CreateBranch(rootExecutionId, childExecutionId, "fork-root", rootUpdatedAt),
+                CreateBranch(childExecutionId, grandchildExecutionId, "fork-child", childUpdatedAt));
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var (totalCount, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow,
+            tenantId,
+            new ExecutionListPageQuery(
+                Page: new PageQuery(0, 1),
+                Sort: new SortQuery(null, null),
+                StatusFilter: null,
+                DefinitionIdFilter: null,
+                NameContains: null),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, totalCount);
+        var item = Assert.Single(items);
+        Assert.Equal(rootExecutionId, item.Execution.ExecutionId);
+    }
+
+    /// <summary>一覧テスト用の execution 行を作る。</summary>
+    private static ExecutionRow CreateExecution(Guid executionId, Guid tenantId, Guid definitionId, DateTime updatedAt) =>
+        new()
+        {
+            ExecutionId = executionId,
+            TenantId = tenantId,
+            DefinitionId = definitionId,
+            Status = "Running",
+            StartedAt = updatedAt,
+            UpdatedAt = updatedAt,
+            CancelRequested = false,
+            RestartLost = false
+        };
+
+    /// <summary>子 execution を <c>execution_branches.execution_id</c> に載せる。</summary>
+    private static ExecutionBranchRow CreateBranch(
+        Guid parentExecutionId,
+        Guid childExecutionId,
+        string forkNodeId,
+        DateTime updatedAt) =>
+        new()
+        {
+            ParentExecutionId = parentExecutionId,
+            ExecutionId = childExecutionId,
+            ForkNodeId = forkNodeId,
+            JoinState = "join",
+            BranchState = "branch",
+            Status = ExecutionBranchStatuses.Running,
+            CreatedAt = updatedAt,
+            UpdatedAt = updatedAt
+        };
+
     /// <summary>name に displayId の部分一致のワークフローのみ含める。</summary>
     [Fact]
     public async Task ListWithDisplayIdsPageAsync_FiltersByNameDisplayIdContains()
