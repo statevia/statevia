@@ -19,6 +19,7 @@ public sealed class StateviaApiWebApplicationFactory : WebApplicationFactory<Sta
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.UseEnvironment(Environments.Development);
+        builder.UseSetting("ConnectionStrings:DefaultConnection", TestConnectionStrings.HostStartupOnly);
         builder.ConfigureServices(services =>
         {
             var bootstrap = services.SingleOrDefault(d =>

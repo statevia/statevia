@@ -23,6 +23,7 @@ public sealed class SecurityIntegrationWebApplicationFactory : WebApplicationFac
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.UseEnvironment(Environments.Development);
+        builder.UseSetting("ConnectionStrings:DefaultConnection", TestConnectionStrings.HostStartupOnly);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IHostedService>();

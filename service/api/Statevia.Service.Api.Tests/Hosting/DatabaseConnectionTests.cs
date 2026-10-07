@@ -51,20 +51,44 @@ public sealed class DatabaseConnectionTests
         }
     }
 
-    /// <summary>設定も環境変数も無いとき既定のローカル接続文字列を返す。</summary>
+    /// <summary>設定も環境変数も無いとき例外にする。</summary>
     [Fact]
-    public void Resolve_FallsBackToLocalDefault()
+    public void Resolve_ThrowsWhenConnectionStringMissing()
     {
         // Arrange
         Environment.SetEnvironmentVariable("DATABASE_URL", null);
         var config = new ConfigurationBuilder().Build();
 
         // Act
+        var act = () => DatabaseConnection.Resolve(config);
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains("DefaultConnection", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>設定の postgres URL も Npgsql 形式へ正規化する。</summary>
+    [Fact]
+    public void Resolve_NormalizesPostgresUrlFromConfiguration()
+    {
+        // Arrange
+        Environment.SetEnvironmentVariable("DATABASE_URL", null);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = "postgres://user:secret@db.example:5433/statevia"
+            })
+            .Build();
+
+        // Act
         var connectionString = DatabaseConnection.Resolve(config);
 
         // Assert
-        Assert.Contains("Host=localhost", connectionString, StringComparison.Ordinal);
+        Assert.Contains("Host=db.example", connectionString, StringComparison.Ordinal);
+        Assert.Contains("Port=5433", connectionString, StringComparison.Ordinal);
         Assert.Contains("Database=statevia", connectionString, StringComparison.Ordinal);
+        Assert.Contains("Username=user", connectionString, StringComparison.Ordinal);
+        Assert.Contains("Password=secret", connectionString, StringComparison.Ordinal);
     }
 
     /// <summary>postgres:// 以外の URL はそのまま返す。</summary>

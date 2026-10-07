@@ -48,13 +48,22 @@ public sealed class BootstrapAppTests : IDisposable
         using var output = new StringWriter();
         Console.SetOut(output);
         Console.SetError(output);
+        var previousDatabaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        Environment.SetEnvironmentVariable("DATABASE_URL", null);
 
-        // Act
-        var exitCode = await BootstrapApp.RunAsync(["unknown-cmd"]);
+        try
+        {
+            // Act
+            var exitCode = await BootstrapApp.RunAsync(["unknown-cmd"]);
 
-        // Assert
-        Assert.Equal(1, exitCode);
-        Assert.Contains("Unknown command", output.ToString(), StringComparison.Ordinal);
+            // Assert
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Unknown command", output.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("DATABASE_URL", previousDatabaseUrl);
+        }
     }
 
     /// <summary>create-tenant でテナントキー未指定は 1。</summary>
