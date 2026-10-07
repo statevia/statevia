@@ -11,6 +11,7 @@ internal static class BootstrapApp
     internal static Func<ServiceProvider>? ServiceProviderFactory { get; set; }
 
     /// <summary>引数を解釈してサブコマンドを実行する。</summary>
+    /// <remarks>未知コマンドは接続文字列を解決せず、終了コード 1 を返す。</remarks>
     public static async Task<int> RunAsync(string[] args)
     {
         var (globalOptions, commandArgs) = BootstrapGlobalCliOptions.Parse(args);
@@ -35,6 +36,9 @@ internal static class BootstrapApp
             await BootstrapHelp.WriteRootAsync(Console.Out).ConfigureAwait(false);
             return 0;
         }
+
+        if (command is not ("create-tenant" or "create-admin"))
+            return await UnknownCommandAsync(command).ConfigureAwait(false);
 
         ServiceProvider provider;
         try
