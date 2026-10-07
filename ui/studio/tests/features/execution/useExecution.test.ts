@@ -432,28 +432,92 @@ describe("useExecution", () => {
       vi.useRealTimers();
     });
 
-    it("ストリーム onmessage で有効な GraphUpdated を受信すると execution が更新される", async () => {
-      const { result } = renderHook(() => useExecution("ex-1"));
+    it("ストリーム onmessage の直後はノード状態を変えず、デバウンス後の GET で変える", async () => {
+      const { result } = renderHook(() => useExecution("ex-1", { streamRefreshDebounceMs: 50 }));
 
       await act(async () => {
-        result.current.loadExecution();
+        await result.current.loadExecution();
       });
       await waitFor(() => expect(streamInstances).toHaveLength(1));
 
       const firstInstance = streamInstances[0];
       const onmessage = firstInstance?.onmessage;
       if (!onmessage) throw new Error("expected onmessage handler");
+      const beforeStatus = result.current.execution?.nodes[0]?.status;
+      vi.mocked(api.apiGet).mockClear();
       const graphUpdated = JSON.stringify({
         type: "GraphUpdated",
         executionId: "ex-1",
-        patch: { nodes: [{ nodeId: "n-1", status: "RUNNING" }] }
+        patch: { nodes: [{ nodeId: "n-1", status: "SUCCEEDED" }] }
       });
 
       await act(async () => {
         onmessage({ data: graphUpdated } as MessageEvent<string>);
       });
 
-      expect(result.current.execution?.nodes[0]?.status).toBe("RUNNING");
+      expect(result.current.execution?.nodes[0]?.status).toBe(beforeStatus);
+      expect(api.apiGet).not.toHaveBeenCalled();
+
+      mockApiGetForExecutionAndGraph(
+        defaultExecution,
+        graphDto([{ nodeId: "n-1", nodeName: "TASK", completedAt: "2026-01-02T00:00:00Z" }])
+      );
+
+      await waitFor(() => {
+        expect(result.current.execution?.nodes[0]?.status).toBe("SUCCEEDED");
+      });
+    });
+
+    it("デバウンス窓の連続イベントでは GET を 1 回にまとめる", async () => {
+      const { result } = renderHook(() => useExecution("ex-1", { streamRefreshDebounceMs: 50 }));
+
+      await act(async () => {
+        await result.current.loadExecution();
+      });
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
+      const onmessage = streamInstances[0]?.onmessage;
+      if (!onmessage) throw new Error("expected onmessage handler");
+      vi.mocked(api.apiGet).mockClear();
+
+      await act(async () => {
+        onmessage({
+          data: JSON.stringify({ type: "GraphUpdated", executionId: "ex-1", patch: { nodes: [] } })
+        } as MessageEvent<string>);
+        onmessage({
+          data: JSON.stringify({ type: "GraphUpdated", executionId: "ex-1", patch: { nodes: [] } })
+        } as MessageEvent<string>);
+      });
+
+      await waitFor(() => {
+        expect(api.apiGet).toHaveBeenCalledWith("/executions/ex-1");
+      });
+      const executionGets = vi.mocked(api.apiGet).mock.calls.filter((call) => call[0] === "/executions/ex-1");
+      expect(executionGets).toHaveLength(1);
+    });
+
+    it("別 display id のイベントでは再取得しない", async () => {
+      const { result } = renderHook(() => useExecution("ex-1", { streamRefreshDebounceMs: 50 }));
+
+      await act(async () => {
+        await result.current.loadExecution();
+      });
+      await waitFor(() => expect(streamInstances).toHaveLength(1));
+      const onmessage = streamInstances[0]?.onmessage;
+      if (!onmessage) throw new Error("expected onmessage handler");
+      vi.mocked(api.apiGet).mockClear();
+
+      await act(async () => {
+        onmessage({
+          data: JSON.stringify({ type: "GraphUpdated", executionId: "other", patch: { nodes: [] } })
+        } as MessageEvent<string>);
+      });
+
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 80);
+        });
+      });
+      expect(api.apiGet).not.toHaveBeenCalled();
     });
 
     it("ストリーム onmessage で無効な JSON のときは execution を更新しない", async () => {

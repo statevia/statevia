@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { resolveGroupBounds } from "../lib/grouping";
-import { layoutGraph } from "@/shared/lib/graphLayout";
+import { layoutGraph, placeNodesAtSavedLayout } from "@/shared/lib/graphLayout";
 import { mergeGraph, type MergedGraphEdge, type MergedGraphNode } from "../lib/mergeGraph";
 import { pickPreferredRuntimeNode } from "../lib/pickPreferredRuntimeNode";
 import type { ExecutionNodeDTO, ExecutionView } from "../types";
 import type { GroupBounds } from "../lib/grouping";
-import type { LayoutEdgeInput, PositionedNode } from "@/shared/lib/graphLayout";
+import type { LayoutEdgeInput, LayoutNodeInput, PositionedNode } from "@/shared/lib/graphLayout";
 import type { GraphDefinition } from "@/features/executions/graphs/types";
 
 /** GraphData の型定義。 */
@@ -26,6 +26,47 @@ export type GraphData = {
  * カード描画は中身の高さに任せ、ここは次ノードをその下へずらすための確保分。
  */
 export const WAITING_RESUME_LAYOUT_HEIGHT = 320;
+
+/**
+ * レイアウトをやり直すかを決める構造キー。
+ * ノード名、辺の from / to、WAITING のノード名、保存レイアウトの有無だけを含む。
+ *
+ * @param input マージ後の構造。
+ * @returns 比較用の文字列。status と attempt は含まない。
+ */
+export function buildGraphStructureKey(input: {
+  nodeNames: readonly string[];
+  edges: readonly { from: string; to: string }[];
+  waitingNodeNames: readonly string[];
+  hasSavedLayout: boolean;
+}): string {
+  const names = [...input.nodeNames].sort((left, right) => left.localeCompare(right)).join("\n");
+  const edges = input.edges
+    .map((edge) => `${edge.from}->${edge.to}`)
+    .sort((left, right) => left.localeCompare(right))
+    .join("\n");
+  const waiting = [...input.waitingNodeNames].sort((left, right) => left.localeCompare(right)).join("\n");
+  return `${input.hasSavedLayout ? "saved" : "computed"}\n${names}\n${edges}\n${waiting}`;
+}
+
+/**
+ * 前回座標を残し、ノードの状態だけを差し替える。
+ *
+ * @param previous 前回レイアウトしたノード。
+ * @param nextNodes 今回のノード。
+ * @returns 前回の座標と寸法を載せた今回のノード。
+ */
+export function reuseGraphPositions<T extends LayoutNodeInput>(
+  previous: ReadonlyArray<PositionedNode<T>>,
+  nextNodes: readonly T[]
+): Array<PositionedNode<T>> {
+  const byName = new Map(previous.map((node) => [node.name, node]));
+  return nextNodes.map((node) => {
+    const prior = byName.get(node.name);
+    if (!prior) return { ...node, x: 0, y: 0, w: 0, h: 0 };
+    return { ...node, x: prior.x, y: prior.y, w: prior.w, h: prior.h };
+  });
+}
 
 /**
  * WAITING ノードを {@link WAITING_RESUME_LAYOUT_HEIGHT} まで広げ、それより下のノードを同じだけ下げる。
@@ -56,30 +97,48 @@ export function useGraphData(
   execution: ExecutionView | null,
   graphDefinition: GraphDefinition | null
 ): GraphData | null {
+  const previousLayoutRef = useRef<{
+    key: string;
+    nodes: Array<PositionedNode<MergedGraphNode>>;
+    edges: LayoutEdgeInput[];
+  } | null>(null);
+
   return useMemo(() => {
     if (!execution) return null;
     const merged = mergeGraph(execution, graphDefinition);
-    const positioned = layoutGraph(
-      merged.nodes,
-      merged.edges.map((edge: MergedGraphEdge) => ({ ...edge })),
-      merged.meta
-    );
     const layoutMap = merged.meta?.layout;
-    const placed =
-      layoutMap && Object.keys(layoutMap).length > 0
-        ? positioned.nodes.map((n) => {
-            const p = layoutMap[n.name];
-            return p ? { ...n, x: p.x, y: p.y } : n;
-          })
-        : positioned.nodes;
+    const hasSavedLayout = layoutMap != null && Object.keys(layoutMap).length > 0;
+    const structureKey = buildGraphStructureKey({
+      nodeNames: merged.nodes.map((node) => node.name),
+      edges: merged.edges,
+      waitingNodeNames: merged.nodes.filter((node) => node.status === "WAITING").map((node) => node.name),
+      hasSavedLayout
+    });
+    const edgeInputs = merged.edges.map((edge: MergedGraphEdge) => ({ ...edge }));
+
+    let placed: Array<PositionedNode<MergedGraphNode>>;
+    let edges: LayoutEdgeInput[];
+    if (hasSavedLayout && layoutMap) {
+      placed = placeNodesAtSavedLayout(merged.nodes, layoutMap, merged.meta);
+      edges = edgeInputs;
+    } else if (previousLayoutRef.current?.key === structureKey) {
+      placed = reuseGraphPositions(previousLayoutRef.current.nodes, merged.nodes);
+      edges = previousLayoutRef.current.edges;
+    } else {
+      const positioned = layoutGraph(merged.nodes, edgeInputs, merged.meta);
+      placed = positioned.nodes;
+      edges = positioned.edges;
+    }
+
+    previousLayoutRef.current = { key: structureKey, nodes: placed, edges };
     const nodes = expandWaitingNodeLayout(placed);
-    const groups = resolveGroupBounds(nodes, positioned.edges, merged.groups, merged.meta);
+    const groups = resolveGroupBounds(nodes, edges, merged.groups, merged.meta);
     return {
       graphId: execution.graphId,
       definitionBased: merged.isDefinitionBased,
       mergedNodes: merged.nodes,
       nodes,
-      edges: positioned.edges,
+      edges,
       groups
     };
   }, [execution, graphDefinition]);

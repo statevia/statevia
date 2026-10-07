@@ -201,3 +201,30 @@ export function layoutGraph<T extends LayoutNodeInput>(nodes: T[], rawEdges: Lay
   return { nodes: applyBranchOffsets(positioned, hints, rankdir), edges: safeEdges };
 }
 
+/**
+ * 保存座標を使い、dagre を呼ばずに幅と高さを付ける。
+ *
+ * @param nodes レイアウト対象ノード。
+ * @param layout ノード名から保存座標への対応。
+ * @param hints ノード寸法の上書き。
+ * @returns 保存座標と既定サイズを載せたノード。座標が無いノードは原点。
+ */
+export function placeNodesAtSavedLayout<T extends LayoutNodeInput>(
+  nodes: readonly T[],
+  layout: Record<string, { x: number; y: number }>,
+  hints?: GraphLayoutHints
+): Array<PositionedNode<T>> {
+  return nodes.map((node) => {
+    const baseSize = getNodeSize(node.nodeType, hints);
+    const override = hints?.nodeSizeOverrides?.[node.name];
+    const saved = layout[node.name];
+    return {
+      ...node,
+      x: saved?.x ?? 0,
+      y: saved?.y ?? 0,
+      w: override?.w ?? baseSize.w,
+      h: override?.h ?? baseSize.h
+    };
+  });
+}
+

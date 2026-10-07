@@ -304,4 +304,114 @@ public sealed class ExecutionViewMapperTests
         Assert.NotNull(response.Waits[0].AllowedEvents);
         Assert.Empty(response.Waits[0].AllowedEvents);
     }
+
+    /// <summary>空白だけのグラフ JSON は空のパッチで、終端ではない。</summary>
+    [Fact]
+    public void ReadGraphUpdate_returns_empty_when_json_is_whitespace()
+    {
+        // Arrange / Act
+        var update = ExecutionViewMapper.ReadGraphUpdate("   ");
+
+        // Assert
+        Assert.Empty(update.Nodes);
+        Assert.False(update.IsTerminal);
+    }
+
+    /// <summary>解釈できないグラフ JSON は空のパッチで、終端ではない。</summary>
+    [Fact]
+    public void ReadGraphUpdate_returns_empty_when_json_is_invalid()
+    {
+        // Arrange / Act
+        var update = ExecutionViewMapper.ReadGraphUpdate("not-json");
+
+        // Assert
+        Assert.Empty(update.Nodes);
+        Assert.False(update.IsTerminal);
+    }
+
+    /// <summary>完了した fact が Failed のノードは FAILED になり、実行グラフは終端とみなす。</summary>
+    [Fact]
+    public void ReadGraphUpdate_maps_failed_fact_to_failed_status()
+    {
+        // Arrange
+        const string json =
+            """
+            {
+              "nodes": [
+                {
+                  "nodeId": "n1",
+                  "fact": "Failed",
+                  "completedAt": "2020-01-01T00:00:00Z"
+                }
+              ]
+            }
+            """;
+
+        // Act
+        var update = ExecutionViewMapper.ReadGraphUpdate(json);
+
+        // Assert
+        Assert.Equal("FAILED", Assert.Single(update.Nodes).Status);
+        Assert.True(update.IsTerminal);
+    }
+
+    /// <summary>Joined のノードは SUCCEEDED になる。</summary>
+    [Fact]
+    public void ReadGraphUpdate_maps_joined_fact_to_succeeded_status()
+    {
+        // Arrange
+        const string json =
+            """
+            {
+              "nodes": [
+                {
+                  "nodeId": "join",
+                  "fact": "Joined",
+                  "completedAt": "2020-01-01T00:00:00Z"
+                }
+              ]
+            }
+            """;
+
+        // Act
+        var update = ExecutionViewMapper.ReadGraphUpdate(json);
+
+        // Assert
+        Assert.Equal("SUCCEEDED", Assert.Single(update.Nodes).Status);
+        Assert.True(update.IsTerminal);
+    }
+
+    /// <summary>未知の fact でも完了していれば SUCCEEDED になる。</summary>
+    [Fact]
+    public void ReadGraphUpdate_maps_unknown_fact_to_succeeded_status()
+    {
+        // Arrange
+        const string json =
+            """
+            {
+              "nodes": [
+                {
+                  "nodeId": "n1",
+                  "fact": "Paused",
+                  "completedAt": "2020-01-01T00:00:00Z"
+                },
+                {
+                  "nodeId": "n2",
+                  "fact": null,
+                  "completedAt": null
+                }
+              ],
+              "edges": [
+                { "from": "n1", "to": "n2" }
+              ]
+            }
+            """;
+
+        // Act
+        var update = ExecutionViewMapper.ReadGraphUpdate(json);
+
+        // Assert
+        Assert.Equal("SUCCEEDED", update.Nodes[0].Status);
+        Assert.False(update.IsTerminal);
+    }
 }

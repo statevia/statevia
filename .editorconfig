@@ -1,6 +1,31 @@
 root = true
 
 # =============================================================================
+# SonarAnalyzer（Cursor が読める重大度）
+# =============================================================================
+
+[*.{cs,vb}]
+
+# Cursor は Error と Warning だけを読む。Sonar のコードスメルを Info のままにすると、
+# IDE の波線には出てもエージェントの診断には届かない。
+# カテゴリ名は Sonar 専用で、CA 系とは重ならない。
+# コマンドラインの dotnet build では Directory.Build.targets がこの Analyzer を外し、Warning 0 を維持する。
+# Scanner 実行中は Scanner が差し替える Analyzer に任せる。
+dotnet_analyzer_diagnostic.category-Blocker Bug.severity = warning
+dotnet_analyzer_diagnostic.category-Blocker Code Smell.severity = warning
+dotnet_analyzer_diagnostic.category-Blocker Vulnerability.severity = warning
+dotnet_analyzer_diagnostic.category-Critical Bug.severity = warning
+dotnet_analyzer_diagnostic.category-Critical Code Smell.severity = warning
+dotnet_analyzer_diagnostic.category-Critical Vulnerability.severity = warning
+dotnet_analyzer_diagnostic.category-Info Code Smell.severity = warning
+dotnet_analyzer_diagnostic.category-Major Bug.severity = warning
+dotnet_analyzer_diagnostic.category-Major Code Smell.severity = warning
+dotnet_analyzer_diagnostic.category-Major Vulnerability.severity = warning
+dotnet_analyzer_diagnostic.category-Minor Bug.severity = warning
+dotnet_analyzer_diagnostic.category-Minor Code Smell.severity = warning
+dotnet_analyzer_diagnostic.category-Minor Vulnerability.severity = warning
+
+# =============================================================================
 # core/engine/Statevia.Core.Engine.Tests
 # =============================================================================
 

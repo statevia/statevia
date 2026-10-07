@@ -77,7 +77,7 @@ GET /v1/executions/{id}/stream
 
 - **Server-Sent Events (SSE)** のみ（`Content-Type: text/event-stream`）。**WebSocket は未実装**。
 - Principal 必須。未認証は **401**。
-- サーバは投影グラフを約 2 秒周期で比較し、変化時に `data:` 行を 1 件書き込む（長接続）。
+- サーバは約 2 秒周期で snapshot の `UpdatedAt` を比較し、変わったときだけ `GraphJson` を読んで `data:` 行を 1 件書く（長接続）。Studio はその受信を再取得のきっかけにし、パッチを描画へマージしない。
 - **テナント**: `X-Tenant-Id`（`EventSource` では [ui-auth-tenant-config.md](../../guides/ui-auth-tenant-config.md) の `?tenantId=` 経由）。
 - ペイロード形式は §5 および [data-integration.md](../data-integration.md) §5.1.1 を参照。
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
@@ -548,6 +549,85 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal("Completed", execution.Status);
         Assert.Equal(completedGraph, snapshot.GraphJson);
         Assert.Equal(snapshotAt, snapshot.UpdatedAt);
+    }
+
+    /// <summary>行が無いとき UpdatedAt は null。</summary>
+    [Fact]
+    public async Task TryGetSnapshotUpdatedAtByExecutionIdAsync_ReturnsNull_WhenMissing()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var updatedAt = await repo.TryGetSnapshotUpdatedAtByExecutionIdAsync(uow, Guid.NewGuid(), default);
+
+        // Assert
+        Assert.Null(updatedAt);
+    }
+
+    /// <summary>行があるとき UpdatedAt だけを返し、graph_json 列は読まない。</summary>
+    [Fact]
+    public async Task TryGetSnapshotUpdatedAtByExecutionIdAsync_ReturnsUpdatedAt_WithoutReadingGraphJson()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var executionId = Guid.NewGuid();
+        var expected = new DateTime(2026, 5, 16, 11, 0, 0, DateTimeKind.Utc);
+        await SeedExecutionForSnapshotUpdateAsync(db, executionId, "{\"nodes\":[1]}", expected);
+        var commands = new List<string>();
+        var options = new DbContextOptionsBuilder<CoreDbContext>()
+            .UseSqlite(db.Connection)
+            .LogTo(commands.Add, [RelationalEventId.CommandExecuted])
+            .Options;
+        var factory = new SqliteTestDbContextFactory(options, db.TenantAccessor);
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await new TestCoreUnitOfWorkFactory(factory).CreateAsync();
+        var updatedAt = await repo.TryGetSnapshotUpdatedAtByExecutionIdAsync(uow, executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(expected, updatedAt);
+        var snapshotSql = Assert.Single(commands, sql => sql.Contains("execution_graph_snapshots", StringComparison.Ordinal));
+        Assert.DoesNotContain("graph_json", snapshotSql, StringComparison.Ordinal);
+        Assert.Contains("updated_at", snapshotSql, StringComparison.Ordinal);
+    }
+
+    /// <summary>実行行があるとき status だけを返す。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsStatus_WhenRowExists()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var executionId = Guid.NewGuid();
+        await SeedExecutionForSnapshotUpdateAsync(db, executionId, "{\"nodes\":[1]}");
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await new TestCoreUnitOfWorkFactory(db.Factory).CreateAsync();
+        var status = await repo.TryGetExecutionStatusByExecutionIdAsync(uow, executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Running", status);
+    }
+
+    /// <summary>実行行が無いとき status は null。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsNull_WhenMissing()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await new TestCoreUnitOfWorkFactory(db.Factory).CreateAsync();
+        var status = await repo.TryGetExecutionStatusByExecutionIdAsync(uow, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Null(status);
     }
 
     /// <summary>

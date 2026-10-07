@@ -68,6 +68,26 @@ public interface IExecutionService
     /// <summary>スナップショット行からグラフ JSON を取得する。無ければ <see langword="null"/>。</summary>
     Task<string?> TryGetSnapshotGraphJsonByExecutionIdAsync(Guid executionId, CancellationToken ct);
 
+    /// <summary>
+    /// スナップショット行の <c>UpdatedAt</c> だけを返す。行が無ければ null。
+    /// </summary>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>行があるときの更新時刻。無ければ null。</returns>
+    /// <remarks>全文の <c>GraphJson</c> は読まない。欠落を <see cref="DateTime"/> の既定値で表さない。</remarks>
+    Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    /// <summary>
+    /// 実行行の status だけを返す。行が無ければ null。
+    /// </summary>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>投影 status。行が無ければ null。</returns>
+    /// <remarks>SSE はこれが Completed / Cancelled / Failed のときだけ接続を閉じる。ノードの完了では閉じない。</remarks>
+    Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
+        throw new NotSupportedException();
+
     /// <summary>現在の実行ビュー（UI 向け DTO）を返す。</summary>
     Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct);
 

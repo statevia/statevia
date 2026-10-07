@@ -10,6 +10,34 @@
   </PropertyGroup>
 
   <!--
+    プロダクションコードだけ SonarAnalyzer を参照する。テストは Scanner と同じく対象外。
+    重大度は .editorconfig の Sonar カテゴリで Warning にし、Cursor が診断を読めるようにする。
+    バージョンは IDE に入っている SonarQube for IDE の Analyzer（10.35）に合わせる。
+  -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true'">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!--
+    コマンドラインの dotnet build から SonarAnalyzer を外し、6 sln の Warning 0 を維持する。
+    IDE のデザインタイム評価は CoreCompile を走らせないため、開いているファイルでは Analyzer が残る。
+    Scanner 実行中（SonarQubeTempPath あり）はここでは外さない。Scanner が Analyzer 一式を差し替える。
+  -->
+  <Target Name="ExcludeSonarAnalyzerFromCommandLineBuild"
+          BeforeTargets="CoreCompile"
+          Condition="'$(DesignTimeBuild)' != 'true' AND '$(SonarQubeTempPath)' == ''">
+    <ItemGroup>
+      <_CommandLineSonarAnalyzer
+        Include="@(Analyzer)"
+        Condition="$([MSBuild]::ValueOrDefault('%(Analyzer.Identity)', '').Contains('SonarAnalyzer'))" />
+      <Analyzer Remove="@(_CommandLineSonarAnalyzer)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
     SonarQube for IDE / SonarLint が Temp 配下の .sonarqube に置く Analyzer が
     壊れたパスを参照すると CS0006 になるため、存在しない Temp 配下エントリのみ除去する。
     既存ファイルや Temp 以外の Analyzer は除去しない。

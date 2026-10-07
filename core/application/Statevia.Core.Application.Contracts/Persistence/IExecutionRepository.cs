@@ -21,6 +21,26 @@ public interface IExecutionRepository
 
     Task<ExecutionGraphSnapshotRow?> GetSnapshotByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
 
+    /// <summary>
+    /// スナップショット行の <c>UpdatedAt</c> だけを返す。行が無ければ null。
+    /// </summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>行があるときの更新時刻。無ければ null。</returns>
+    /// <remarks><c>GraphJson</c> は読まない。欠落を <see cref="DateTime"/> の既定値で表さない。</remarks>
+    Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
+
+    /// <summary>
+    /// 実行行の status だけを返す。行が無ければ null。
+    /// </summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>投影 status。行が無ければ null。</returns>
+    /// <remarks>テナントフィルタは外さない。グラフ JSON は読まない。</remarks>
+    Task<string?> TryGetExecutionStatusByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
+
     /// <summary>executions の status を更新し、graph JSON が変わったときだけ snapshot を書く。</summary>
     /// <param name="uow">参加中のユニットオブワーク。</param>
     /// <param name="executionId">実行 ID。</param>

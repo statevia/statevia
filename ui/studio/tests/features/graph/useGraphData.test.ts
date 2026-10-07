@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import {
   expandWaitingNodeLayout,
@@ -6,9 +6,18 @@ import {
   useGraphData,
   WAITING_RESUME_LAYOUT_HEIGHT
 } from "../../../features/executions/hooks/useGraphData";
+import { layoutGraph } from "@/shared/lib/graphLayout";
 import type { ExecutionNodeDTO, ExecutionView } from "@/features/executions/types";
 import { getGraphDefinition } from "@/features/executions/graphs/registry";
 import type { GraphDefinition } from "@/features/executions/graphs/types";
+
+vi.mock("@/shared/lib/graphLayout", async () => {
+  const actual = await vi.importActual<typeof import("@/shared/lib/graphLayout")>("@/shared/lib/graphLayout");
+  return {
+    ...actual,
+    layoutGraph: vi.fn(actual.layoutGraph)
+  };
+});
 
 function execution(nodes: ExecutionNodeDTO[], graphId = "hello"): ExecutionView {
   return {
@@ -67,6 +76,70 @@ describe("useGraphData", () => {
     expect(result.current?.definitionBased).toBe(false);
     expect(result.current?.mergedNodes).toHaveLength(1);
     expect(result.current?.edges).toHaveLength(0);
+  });
+
+  it("状態だけが変わった再計算では dagre を呼ばない", () => {
+    // Arrange
+    vi.mocked(layoutGraph).mockClear();
+    const idle = execution([
+      { nodeId: "n-1", nodeName: "n-1", nodeType: "Task", status: "RUNNING", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false }
+    ]);
+    const { result, rerender } = renderHook(({ current }) => useGraphData(current, null), { initialProps: { current: idle } });
+    const firstX = result.current?.nodes[0]?.x;
+    vi.mocked(layoutGraph).mockClear();
+
+    // Act
+    rerender({
+      current: execution([
+        { nodeId: "n-1", nodeName: "n-1", nodeType: "Task", status: "SUCCEEDED", attempt: 2, workerId: null, waitKey: null, canceledByExecution: false }
+      ])
+    });
+
+    // Assert
+    expect(layoutGraph).not.toHaveBeenCalled();
+    expect(result.current?.nodes[0]?.status).toBe("SUCCEEDED");
+    expect(result.current?.nodes[0]?.x).toBe(firstX);
+  });
+
+  it("WAITING の集合が変わると dagre を呼び直す", () => {
+    // Arrange
+    const running = execution([
+      { nodeId: "n-1", nodeName: "n-1", nodeType: "Wait", status: "RUNNING", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false }
+    ]);
+    const { rerender } = renderHook(({ current }) => useGraphData(current, null), { initialProps: { current: running } });
+    vi.mocked(layoutGraph).mockClear();
+
+    // Act
+    rerender({
+      current: execution([
+        { nodeId: "n-1", nodeName: "n-1", nodeType: "Wait", status: "WAITING", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false }
+      ])
+    });
+
+    // Assert
+    expect(layoutGraph).toHaveBeenCalledTimes(1);
+  });
+
+  it("保存座標があるとき dagre を呼ばない", () => {
+    // Arrange
+    vi.mocked(layoutGraph).mockClear();
+    const exec = execution([
+      { nodeId: "rt-1", nodeName: "a", nodeType: "Task", status: "RUNNING", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false }
+    ], "saved");
+    const def: GraphDefinition = {
+      graphId: "saved",
+      nodes: [{ nodeName: "a", nodeType: "Task" }],
+      edges: [],
+      meta: { layout: { a: { x: 12, y: 34 } } }
+    };
+
+    // Act
+    const { result } = renderHook(() => useGraphData(exec, def));
+
+    // Assert
+    expect(layoutGraph).not.toHaveBeenCalled();
+    expect(result.current?.nodes[0]?.x).toBe(12);
+    expect(result.current?.nodes[0]?.y).toBe(34);
   });
 });
 

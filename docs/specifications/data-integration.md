@@ -49,7 +49,7 @@
 
 - HTTP API 契約（[api-http.md](api-http.md)）
 - 永続化（EF Core）・Read API（`/v1/executions`、`/v1/definitions`）
-- **UI Push（SSE）**: `GET /v1/executions/{id}/stream` を実装済み（`Content-Type: text/event-stream`）。グラフ JSON の変化を検知したときに `GraphUpdated` 相当の JSON を `data:` 行で送出する（詳細は §5）。**WebSocket は未実装**。
+- **UI Push（SSE）**: `GET /v1/executions/{id}/stream` を実装済み（`Content-Type: text/event-stream`）。snapshot の `UpdatedAt` が変わったときだけ `GraphJson` を読み、`GraphUpdated` を `data:` 行で 1 件送出する（詳細は §5）。**WebSocket は未実装**。
 
 ### UI（Presentation）
 
@@ -191,7 +191,7 @@ UIが依存してよいレスポンス形を固定する。
 - **`execution_cursors` / `execution_waits`**: 実装済み。cursor は operational projection（GET read-model の正本ではない）。durable wait は初版 EventWait のみ。durable Wait が無い Running では cursor を INSERT しない。`Start` / `Cancel` / `Publish` / 投影キューと **同一 tx** で `executions` + `execution_graph_snapshots` と同期する。cursor 行は投影キューと checkpoint 永続化が重なっても PK 単位の原子 upsert で 1 行に収束する。
 - 投影キューは HTTP 外のバックグラウンド処理のため、投影更新前に `executions.tenant_id` でテナント境界を設定してから repository を呼ぶ。execution 行が無い場合は投影をスキップする。
 
-SSE（`GET /v1/executions/{id}/stream`）のサーバ挙動（約 2 秒間隔の投影 JSON 比較）は §5.1。
+SSE（`GET /v1/executions/{id}/stream`）のサーバ挙動（約 2 秒間隔の snapshot `UpdatedAt` 比較）は §5.1。
 
 ### event_store 対応表（現行）
 
@@ -251,7 +251,7 @@ SSE でサーバから UI へ「再取得のきっかけ」を送ると、ポー
 
 - **`GET /v1/executions/{id}/stream`**（`{id}` は **display_id または resource_id（UUID）**。`X-Tenant-Id` は他 Read API と同様。UI からは `EventSource` 等でプロキシ URL に接続し、テナントは [ui-auth-tenant-config.md](../guides/ui-auth-tenant-config.md) に従う）
 - 応答ヘッダ: `Content-Type: text/event-stream`、`Cache-Control: no-cache, no-transform` 等
-- **サーバ側挙動**: 約 **2 秒**間隔で投影済みグラフ JSON を読み、内容が前回から変わったときだけ **1 行の `data:`** を書き込む。接続はクライアントが閉じるまで継続。
+- **サーバ側挙動**: 約 **2 秒**間隔で snapshot の `UpdatedAt` を読む。前回送った時刻と同じなら `GraphJson` は読まず、`data:` も書かない。変わったときだけ `GraphJson` を 1 回読み、**1 行の `data:`**（`GraphUpdated`）を書く。接続を閉じるのは実行 status が `Completed` / `Cancelled` / `Failed` のときだけである。ノードが完了しているだけでは閉じない。
 
 #### 5.1.1 `data:` 行の JSON 形（`GraphUpdated`）
 
@@ -287,7 +287,7 @@ Service API は Execution Read Model 全体ではなく、グラフスナップ�
 ### 6.2 SSE 併用（現行で利用可能）
 
 - Command 送信（`201` / `204`）
-- **`GET /v1/executions/{id}/stream`** を `EventSource` 等で購読し、`GraphUpdated` を受信したタイミングで `GET /v1/executions/{id}` を再取得
+- **`GET /v1/executions/{id}/stream`** を `EventSource` 等で購読し、`GraphUpdated` を受信したタイミングで実行とグラフの GET を再取得する。受信したパッチは描画へマージしない
 - 即時に UI が追従しやすい（§5.1 の約 2 秒間隔に合わせ、過剰な GET を抑えられる）
 
 ---

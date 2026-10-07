@@ -1,22 +1,13 @@
 using Statevia.Core.Application.Infrastructure;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace Statevia.Service.Api.Services;
 
 /// <summary>
-/// GET …/stream 用の SSE。グラフ JSON の変化を <c>GraphUpdated</c> イベント相当の JSON で送出する。
+/// GET …/stream 用の SSE。snapshot の <c>UpdatedAt</c> が変わったときだけグラフ JSON を読み、<c>GraphUpdated</c> を 1 件書く。接続を閉じるのは実行 status が終端のときだけ。
 /// </summary>
 public sealed class ExecutionStreamService
 {
-    private static readonly HashSet<string> TerminalStatuses = new(StringComparer.Ordinal)
-    {
-        "Completed",
-        "Cancelled",
-        "Failed"
-    };
-
     /// <summary>
     /// 投影グラフ取得のポーリング間隔（ミリ秒）。
     /// </summary>
@@ -67,28 +58,90 @@ public sealed class ExecutionStreamService
         response.Headers["X-Accel-Buffering"] = "no";
 
         var jsonOpts = JsonSerializerProfiles.CamelCase;
-        string? lastHash = null;
+        DateTime? lastSentUpdatedAt = null;
 
         while (!ct.IsCancellationRequested)
         {
-            var snapshotResult = await TryGetSnapshotGraphJsonAsync(response, uuid.Value, ct).ConfigureAwait(false);
-            if (!snapshotResult.ShouldContinue)
+            var step = await PollStreamOnceAsync(response, uuid.Value, displayId, jsonOpts, lastSentUpdatedAt, ct).ConfigureAwait(false);
+            if (step.Stop)
                 return;
-            if (snapshotResult.GraphJson is null)
-                continue;
-            var graphJson = snapshotResult.GraphJson;
 
-            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(graphJson)));
-            if (!string.Equals(hash, lastHash, StringComparison.Ordinal))
-            {
-                lastHash = hash;
-                if (!await ProcessGraphUpdateAsync(response, graphJson, displayId, jsonOpts, ct).ConfigureAwait(false))
-                    return;
-            }
-
-            if (!await DelayNextPollAsync(response, ct).ConfigureAwait(false))
+            lastSentUpdatedAt = step.LastSentUpdatedAt;
+            if (step.Delay && !await DelayNextPollAsync(response, ct).ConfigureAwait(false))
                 return;
         }
+    }
+
+
+    /// <summary>
+    /// 1 周のポーリング結果。読み取り失敗で既に待った周は <see cref="Delay"/> を使わない。
+    /// </summary>
+    /// <param name="Stop">接続を終える。</param>
+    /// <param name="Delay">次の周までポーリング間隔を待つ。</param>
+    /// <param name="LastSentUpdatedAt">送信に成功したスナップショットの更新時刻。失敗周は前回のまま。</param>
+    private readonly record struct StreamPollStep(bool Stop, bool Delay, DateTime? LastSentUpdatedAt)
+    {
+        /// <summary>接続を終える。</summary>
+        public static StreamPollStep End(DateTime? lastSentUpdatedAt) => new(true, false, lastSentUpdatedAt);
+
+        /// <summary>待たずに次の周へ進む。読み取り側で既に待っている。</summary>
+        public static StreamPollStep Again(DateTime? lastSentUpdatedAt) => new(false, false, lastSentUpdatedAt);
+
+        /// <summary>ポーリング間隔を待ってから次の周へ進む。</summary>
+        public static StreamPollStep Wait(DateTime? lastSentUpdatedAt) => new(false, true, lastSentUpdatedAt);
+    }
+
+    /// <summary>
+    /// スナップショットの更新時刻と実行 status を読み、変わったときだけグラフを送る。
+    /// </summary>
+    /// <param name="response">SSE 応答。</param>
+    /// <param name="executionId">実行 ID。</param>
+    /// <param name="displayId">クライアントへ書く表示 ID。</param>
+    /// <param name="jsonOpts">JSON シリアライズ設定。</param>
+    /// <param name="lastSentUpdatedAt">直前に送信したスナップショットの更新時刻。未送信なら null。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>次の周の動き。</returns>
+    private async Task<StreamPollStep> PollStreamOnceAsync(
+        HttpResponse response,
+        Guid executionId,
+        string displayId,
+        JsonSerializerOptions jsonOpts,
+        DateTime? lastSentUpdatedAt,
+        CancellationToken ct)
+    {
+        var updatedAtResult = await TryGetSnapshotUpdatedAtAsync(response, executionId, ct).ConfigureAwait(false);
+        if (!updatedAtResult.ShouldContinue)
+            return StreamPollStep.End(lastSentUpdatedAt);
+        if (updatedAtResult.UpdatedAt is null)
+            return StreamPollStep.Again(lastSentUpdatedAt);
+
+        var statusResult = await TryGetExecutionStatusAsync(response, executionId, ct).ConfigureAwait(false);
+        if (!statusResult.ShouldContinue)
+            return StreamPollStep.End(lastSentUpdatedAt);
+        if (statusResult.Status is null)
+            return StreamPollStep.Again(lastSentUpdatedAt);
+
+        var observedUpdatedAt = updatedAtResult.UpdatedAt.Value;
+        var executionTerminal = ExecutionProjectionStatuses.IsTerminal(statusResult.Status);
+        if (lastSentUpdatedAt == observedUpdatedAt)
+        {
+            return executionTerminal
+                ? StreamPollStep.End(lastSentUpdatedAt)
+                : StreamPollStep.Wait(lastSentUpdatedAt);
+        }
+
+        var snapshotResult = await TryGetSnapshotGraphJsonAsync(response, executionId, ct).ConfigureAwait(false);
+        if (!snapshotResult.ShouldContinue)
+            return StreamPollStep.End(lastSentUpdatedAt);
+        if (snapshotResult.GraphJson is null)
+            return StreamPollStep.Again(lastSentUpdatedAt);
+
+        if (!await ProcessGraphUpdateAsync(response, snapshotResult.GraphJson, displayId, jsonOpts, ct).ConfigureAwait(false))
+            return StreamPollStep.End(lastSentUpdatedAt);
+
+        return executionTerminal
+            ? StreamPollStep.End(observedUpdatedAt)
+            : StreamPollStep.Wait(observedUpdatedAt);
     }
 
     private static bool IsStreamCancellation(HttpResponse response, CancellationToken ct) =>
@@ -105,6 +158,58 @@ public sealed class ExecutionStreamService
         {
             return false;
         }
+    }
+
+    private async Task<(bool ShouldContinue, DateTime? UpdatedAt)> TryGetSnapshotUpdatedAtAsync(
+        HttpResponse response,
+        Guid executionId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var updatedAt = await _executions.TryGetSnapshotUpdatedAtByExecutionIdAsync(executionId, ct).ConfigureAwait(false);
+            if (updatedAt is null)
+                return (false, null);
+
+            return (true, updatedAt);
+        }
+        catch (OperationCanceledException) when (IsStreamCancellation(response, ct))
+        {
+            return (false, null);
+        }
+#pragma warning disable CA1031 // SSE ポーリング: 時刻読み取りの失敗では接続を切らず、観測済みも更新しない
+        catch (Exception)
+        {
+            var canContinue = await DelayNextPollAsync(response, ct).ConfigureAwait(false);
+            return (canContinue, null);
+        }
+#pragma warning restore CA1031
+    }
+
+    private async Task<(bool ShouldContinue, string? Status)> TryGetExecutionStatusAsync(
+        HttpResponse response,
+        Guid executionId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var status = await _executions.TryGetExecutionStatusByExecutionIdAsync(executionId, ct).ConfigureAwait(false);
+            if (status is null)
+                return (false, null);
+
+            return (true, status);
+        }
+        catch (OperationCanceledException) when (IsStreamCancellation(response, ct))
+        {
+            return (false, null);
+        }
+#pragma warning disable CA1031 // SSE ポーリング: status 読み取りの失敗では接続を切らず、観測済みも更新しない
+        catch (Exception)
+        {
+            var canContinue = await DelayNextPollAsync(response, ct).ConfigureAwait(false);
+            return (canContinue, null);
+        }
+#pragma warning restore CA1031
     }
 
     private async Task<(bool ShouldContinue, string? GraphJson)> TryGetSnapshotGraphJsonAsync(HttpResponse response, Guid executionId, CancellationToken ct)
@@ -157,86 +262,16 @@ public sealed class ExecutionStreamService
         JsonSerializerOptions jsonOpts,
         CancellationToken ct)
     {
-        var patchNodes = ExecutionViewMapper.MapGraphPatchNodes(graphJson);
+        var update = ExecutionViewMapper.ReadGraphUpdate(graphJson);
         var payload = JsonSerializer.Serialize(
             new
             {
                 type = "GraphUpdated",
                 executionId = displayId,
-                patch = new { nodes = patchNodes }
+                patch = new { nodes = update.Nodes }
             },
             jsonOpts);
 
-        if (!await TryWriteAsync(response, payload, ct).ConfigureAwait(false))
-            return false;
-
-        if (IsTerminalSnapshotGraph(graphJson))
-            return false;
-
-        return true;
-    }
-
-    private static bool IsTerminalSnapshotGraph(string graphJson)
-    {
-        if (string.IsNullOrWhiteSpace(graphJson))
-            return false;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(graphJson);
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("nodes", out var nodesElement) || nodesElement.ValueKind != JsonValueKind.Array)
-                return false;
-
-            var sinkNodeIds = GetSinkNodeIds(root, nodesElement);
-            return nodesElement.EnumerateArray().Any(node =>
-                IsTerminalNodeFact(node) || IsCompletedSinkNode(node, sinkNodeIds));
-        }
-        catch (JsonException)
-        {
-            // 不正 JSON は終端扱いにせず次回ポーリングで再評価する。
-            return false;
-        }
-    }
-
-    private static HashSet<string> GetSinkNodeIds(JsonElement root, JsonElement nodesElement)
-    {
-        var nodeIds = nodesElement
-            .EnumerateArray()
-            .Select(node => node.TryGetProperty("nodeId", out var idElement) ? idElement.GetString() : null)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
-            .ToHashSet(StringComparer.Ordinal);
-
-        if (!root.TryGetProperty("edges", out var edgesElement) || edgesElement.ValueKind != JsonValueKind.Array)
-            return nodeIds;
-
-        foreach (var edge in edgesElement.EnumerateArray())
-        {
-            if (!edge.TryGetProperty("from", out var fromElement))
-                continue;
-            var fromId = fromElement.GetString();
-            if (string.IsNullOrWhiteSpace(fromId))
-                continue;
-            nodeIds.Remove(fromId);
-        }
-
-        return nodeIds;
-    }
-
-    private static bool IsTerminalNodeFact(JsonElement node)
-    {
-        var fact = node.TryGetProperty("fact", out var factElement) ? factElement.GetString() : null;
-        return fact is not null && TerminalStatuses.Contains(fact);
-    }
-
-    private static bool IsCompletedSinkNode(JsonElement node, HashSet<string> sinkNodeIds)
-    {
-        if (!node.TryGetProperty("nodeId", out var nodeIdElement))
-            return false;
-        var nodeId = nodeIdElement.GetString();
-        if (string.IsNullOrWhiteSpace(nodeId) || !sinkNodeIds.Contains(nodeId))
-            return false;
-        return node.TryGetProperty("completedAt", out var completedAtElement) && completedAtElement.ValueKind != JsonValueKind.Null;
+        return await TryWriteAsync(response, payload, ct).ConfigureAwait(false);
     }
 }
