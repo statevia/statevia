@@ -18,13 +18,22 @@ internal sealed class ExecutionRepository : IExecutionRepository
         uow.GetDb().Executions.IgnoreQueryFilters().AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct);
 
+    /// <summary>
+    /// テナント内 execution をページングする。件数と items は <c>execution_branches.execution_id</c> に無いルートのみ。
+    /// </summary>
+    /// <param name="uow">読み取り単位。</param>
+    /// <param name="tenantId">対象テナント。</param>
+    /// <param name="query">フィルタ、ソート、ページ。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>ルートだけの件数と、そのページの execution と displayId。</returns>
     public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
         ExecutionListPageQuery query,
         CancellationToken ct)
     {
-        var joinQuery = QueryExecutionsWithDisplayIds(uow.GetDb(), tenantId);
+        var db = uow.GetDb();
+        var joinQuery = QueryExecutionsWithDisplayIds(db, tenantId);
 
         if (!string.IsNullOrWhiteSpace(query.StatusFilter))
             joinQuery = joinQuery.Where(x => x.Execution.Status == query.StatusFilter);
@@ -45,6 +54,9 @@ internal sealed class ExecutionRepository : IExecutionRepository
                 joinQuery = joinQuery.Where(x => x.DisplayId != null && x.DisplayId.Contains(needle));
             }
         }
+
+        joinQuery = joinQuery.Where(
+            x => !db.ExecutionBranches.Any(branch => branch.ExecutionId == x.Execution.ExecutionId));
 
         var sortedQuery = ApplyExecutionsSort(joinQuery, query.Sort.SortBy, query.Sort.SortOrder);
 

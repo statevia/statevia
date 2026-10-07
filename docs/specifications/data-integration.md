@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.8 |
-| 更新日 | 2026-09-17 |
+| Version | 1.9 |
+| 更新日 | 2026-10-07 |
 | Scope | Core-Engine / Service API / UI |
 | 関連 | [concepts/durability.md](../concepts/durability.md), [api-http.md](api-http.md) |
 
@@ -21,6 +21,8 @@
 責務の背景は [Concept: 永続化](../concepts/durability.md) を参照。
 
 ---
+
+**Version 1.9（2026-10-07）**: `GET /v1/executions` の一覧と件数は、`execution_branches.execution_id` に無いルートのみ。
 
 **Version 1.8（2026-09-17）**: 投影の graph JSON 未変化 skip。durable Wait が無い Running では `execution_cursors` を書かない。終端の GET graph 鮮度は変えない。
 
@@ -162,6 +164,7 @@ UIが依存してよいレスポンス形を固定する。
   - `sortBy`（`createdAt` / `name`）
   - `sortOrder`（`asc` / `desc`）
 - `GET /v1/executions`
+  - 対象は `execution_branches.execution_id` に無いルートのみ（`items` と `totalCount`）
   - `limit` / `offset`（ページング）
   - `status`（完全一致）
   - `name`（`display_id` 部分一致。Guid 形式時は `execution_id` 完全一致も許容）
