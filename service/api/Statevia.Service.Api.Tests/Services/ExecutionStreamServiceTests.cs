@@ -12,8 +12,28 @@ public sealed class ExecutionStreamServiceTests
         private readonly DateTime[] _updatedAts;
         private readonly int _failUpdatedAtCount;
         private int _updatedAtCalls;
+        private int _statusCalls;
         public int GetGraphJsonCalls { get; private set; }
         public int GetUpdatedAtCalls { get; private set; }
+        public int GetStatusCalls { get; private set; }
+
+        /// <summary>status 読み取りをこの回数だけ失敗させる。</summary>
+        public int FailStatusCount { get; init; }
+
+        /// <summary>実行行が無いときと同じく status を null にする。</summary>
+        public bool StatusMissing { get; init; }
+
+        /// <summary>UpdatedAt はあるが snapshot 本文が消えた状態にする。</summary>
+        public bool GraphMissing { get; init; }
+
+        /// <summary>UpdatedAt 読み取りを取消例外にする。</summary>
+        public bool CancelOnUpdatedAt { get; init; }
+
+        /// <summary>status 読み取りを取消例外にする。</summary>
+        public bool CancelOnStatus { get; init; }
+
+        /// <summary>グラフ JSON を返す直前に呼ぶ。書き込み前の取消に使う。</summary>
+        public Action? OnBeforeReturnGraph { get; set; }
 
         public FakeExecutionService(
             string graphJson,
@@ -46,11 +66,18 @@ public sealed class ExecutionStreamServiceTests
         public Task<string?> TryGetSnapshotGraphJsonByExecutionIdAsync(Guid executionId, CancellationToken ct)
         {
             GetGraphJsonCalls++;
+            OnBeforeReturnGraph?.Invoke();
+            if (GraphMissing)
+                return Task.FromResult<string?>(null);
+
             return Task.FromResult<string?>(_graphJson);
         }
 
         public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid executionId, CancellationToken ct)
         {
+            if (CancelOnUpdatedAt)
+                throw new OperationCanceledException(ct);
+
             _updatedAtCalls++;
             GetUpdatedAtCalls = _updatedAtCalls;
             if (_updatedAtCalls <= _failUpdatedAtCount)
@@ -61,8 +88,21 @@ public sealed class ExecutionStreamServiceTests
             return Task.FromResult<DateTime?>(_updatedAts[index]);
         }
 
-        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct) =>
-            Task.FromResult<string?>(_status);
+        public Task<string?> TryGetExecutionStatusByExecutionIdAsync(Guid executionId, CancellationToken ct)
+        {
+            if (CancelOnStatus)
+                throw new OperationCanceledException(ct);
+
+            _statusCalls++;
+            GetStatusCalls = _statusCalls;
+            if (_statusCalls <= FailStatusCount)
+                return Task.FromException<string?>(new InvalidOperationException("transient status"));
+
+            if (StatusMissing)
+                return Task.FromResult<string?>(null);
+
+            return Task.FromResult<string?>(_status);
+        }
 
         public Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct) => throw new NotSupportedException();
         public Task<ExecutionViewDto> GetExecutionViewAtSeqAsync(string idOrUuid, long atSeq, CancellationToken ct) => throw new NotSupportedException();
@@ -703,6 +743,181 @@ public sealed class ExecutionStreamServiceTests
         Assert.Equal(1, count);
         Assert.Equal(1, fakeExecutions.GetGraphJsonCalls);
         Assert.True(fakeExecutions.GetUpdatedAtCalls >= 3);
+    }
+
+    /// <summary>実行 status が無いときはグラフを読まずに接続を閉じる。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenExecutionStatusMissing_EndsWithoutGraphRead()
+    {
+        // Arrange
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            StatusMissing = true
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-NO-STATUS"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        var body = new MemoryStream();
+        http.Response.Body = body;
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, executions.GetStatusCalls);
+        Assert.Equal(0, executions.GetGraphJsonCalls);
+        Assert.Equal(0, body.Length);
+    }
+
+    /// <summary>status 読み取りが一度失敗しても、待ったあと次の周で更新を書く。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenStatusReadThrowsOnce_RetriesThenWritesGraphUpdated()
+    {
+        // Arrange
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            FailStatusCount = 1
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-STATUS-RETRY"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(ExecutionStreamService.GraphPollingIntervalMilliseconds * 2 + 500);
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", cts.Token);
+
+        // Assert
+        var bodyText = System.Text.Encoding.UTF8.GetString(((MemoryStream)http.Response.Body).ToArray());
+        Assert.Contains("GraphUpdated", bodyText);
+        Assert.Equal(1, executions.GetGraphJsonCalls);
+        Assert.True(executions.GetStatusCalls >= 2);
+    }
+
+    /// <summary>UpdatedAt と status のあと snapshot 本文が無いときは本文を書かずに閉じる。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenSnapshotDisappearsAfterStatus_EndsWithoutWriting()
+    {
+        // Arrange
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            GraphMissing = true
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-GRAPH-GONE"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        var body = new MemoryStream();
+        http.Response.Body = body;
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, executions.GetUpdatedAtCalls);
+        Assert.Equal(1, executions.GetStatusCalls);
+        Assert.Equal(1, executions.GetGraphJsonCalls);
+        Assert.Equal(0, body.Length);
+    }
+
+    /// <summary>UpdatedAt 読み取りがクライアント切断で取消されたときは接続を閉じる。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenUpdatedAtReadCanceled_EndsStream()
+    {
+        // Arrange
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            CancelOnUpdatedAt = true
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-CANCEL-UPDATED"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+        http.RequestAborted = aborted.Token;
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, executions.GetStatusCalls);
+        Assert.Equal(0, executions.GetGraphJsonCalls);
+        Assert.Equal(0, http.Response.Body.Length);
+    }
+
+    /// <summary>status 読み取りがクライアント切断で取消されたときはグラフを読まずに閉じる。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenStatusReadCanceled_EndsWithoutGraphRead()
+    {
+        // Arrange
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            CancelOnStatus = true
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-CANCEL-STATUS"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+        http.RequestAborted = aborted.Token;
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, executions.GetUpdatedAtCalls);
+        Assert.Equal(0, executions.GetGraphJsonCalls);
+        Assert.Equal(0, http.Response.Body.Length);
+    }
+
+    /// <summary>グラフ送信前に切断されたときは GraphUpdated を書かずに閉じる。</summary>
+    [Fact]
+    public async Task WriteStreamAsync_WhenCanceledBeforeGraphWrite_EndsWithoutGraphUpdated()
+    {
+        // Arrange
+        using var cts = new CancellationTokenSource();
+        var executions = new FakeExecutionService("{\"nodes\":[]}")
+        {
+            OnBeforeReturnGraph = () => cts.Cancel()
+        };
+        var display = new FakeDisplayIdService
+        {
+            ResolveResult = Guid.NewGuid(),
+            GetDisplayIdResult = "EXEC-CANCEL-WRITE"
+        };
+        var sut = new ExecutionStreamService(executions, display);
+        var http = new DefaultHttpContext();
+        http.Response.Body = new MemoryStream();
+
+        // Act
+        await sut.WriteStreamAsync(http.Response, idOrUuid: "X", cts.Token);
+
+        // Assert
+        var bodyText = System.Text.Encoding.UTF8.GetString(((MemoryStream)http.Response.Body).ToArray());
+        Assert.DoesNotContain("GraphUpdated", bodyText);
+        Assert.Equal(1, executions.GetGraphJsonCalls);
     }
 }
 

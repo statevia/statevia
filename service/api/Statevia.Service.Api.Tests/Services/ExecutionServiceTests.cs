@@ -520,11 +520,15 @@ public sealed class ExecutionServiceTests
             return SnapshotByExecutionId;
         }
 
+        public DateTime? SnapshotUpdatedAt { get; set; }
+
+        public string? ExecutionStatus { get; set; }
+
         public Task<DateTime?> TryGetSnapshotUpdatedAtByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
-            throw new NotImplementedException();
+            Task.FromResult(SnapshotUpdatedAt);
 
         public Task<string?> TryGetExecutionStatusByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
-            throw new NotImplementedException();
+            Task.FromResult(ExecutionStatus);
 
         public async Task UpdateExecutionAndSnapshotAsync(
             ICoreUnitOfWork uow,
@@ -5074,6 +5078,96 @@ public sealed class ExecutionServiceTests
 
         // Assert
         Assert.Null(json);
+    }
+
+    /// <summary>スナップショット行の UpdatedAt を execution ID で取得できる。</summary>
+    [Fact]
+    public async Task TryGetSnapshotUpdatedAtByExecutionIdAsync_ReturnsUpdatedAt()
+    {
+        // Arrange
+        var executionId = Guid.NewGuid();
+        var expected = new DateTime(2026, 5, 16, 11, 0, 0, DateTimeKind.Utc);
+        var executionRepo = new FakeExecutionRepository
+        {
+            SnapshotUpdatedAt = expected
+        };
+        var sut = MakeSut(
+            new FakeCommandDedupService(null),
+            new FakeCommandDedupRepository(),
+            new FakeExecutionEngine(),
+            new FakeDisplayIdService(),
+            executionRepo,
+            new FakeEventStoreRepository());
+
+        // Act
+        var updatedAt = await sut.TryGetSnapshotUpdatedAtByExecutionIdAsync(executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(expected, updatedAt);
+    }
+
+    /// <summary>スナップショット行が無いとき UpdatedAt は null。</summary>
+    [Fact]
+    public async Task TryGetSnapshotUpdatedAtByExecutionIdAsync_ReturnsNull_WhenMissing()
+    {
+        // Arrange
+        var sut = MakeSut(
+            new FakeCommandDedupService(null),
+            new FakeCommandDedupRepository(),
+            new FakeExecutionEngine(),
+            new FakeDisplayIdService(),
+            new FakeExecutionRepository(),
+            new FakeEventStoreRepository());
+
+        // Act
+        var updatedAt = await sut.TryGetSnapshotUpdatedAtByExecutionIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Null(updatedAt);
+    }
+
+    /// <summary>実行行の status を execution ID で取得できる。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsStatus()
+    {
+        // Arrange
+        var executionRepo = new FakeExecutionRepository
+        {
+            ExecutionStatus = "Running"
+        };
+        var sut = MakeSut(
+            new FakeCommandDedupService(null),
+            new FakeCommandDedupRepository(),
+            new FakeExecutionEngine(),
+            new FakeDisplayIdService(),
+            executionRepo,
+            new FakeEventStoreRepository());
+
+        // Act
+        var status = await sut.TryGetExecutionStatusByExecutionIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Running", status);
+    }
+
+    /// <summary>実行行が無いとき status は null。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsNull_WhenMissing()
+    {
+        // Arrange
+        var sut = MakeSut(
+            new FakeCommandDedupService(null),
+            new FakeCommandDedupRepository(),
+            new FakeExecutionEngine(),
+            new FakeDisplayIdService(),
+            new FakeExecutionRepository(),
+            new FakeEventStoreRepository());
+
+        // Act
+        var status = await sut.TryGetExecutionStatusByExecutionIdAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Null(status);
     }
 
     /// <summary>Engine にスナップショットが無いとき投影更新をスキップする。</summary>

@@ -596,6 +596,40 @@ public sealed class ExecutionRepositoryTests
         Assert.Contains("updated_at", snapshotSql, StringComparison.Ordinal);
     }
 
+    /// <summary>実行行があるとき status だけを返す。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsStatus_WhenRowExists()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var executionId = Guid.NewGuid();
+        await SeedExecutionForSnapshotUpdateAsync(db, executionId, "{\"nodes\":[1]}");
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await new TestCoreUnitOfWorkFactory(db.Factory).CreateAsync();
+        var status = await repo.TryGetExecutionStatusByExecutionIdAsync(uow, executionId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Running", status);
+    }
+
+    /// <summary>実行行が無いとき status は null。</summary>
+    [Fact]
+    public async Task TryGetExecutionStatusByExecutionIdAsync_ReturnsNull_WhenMissing()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var repo = new ExecutionRepository();
+
+        // Act
+        await using var uow = await new TestCoreUnitOfWorkFactory(db.Factory).CreateAsync();
+        var status = await repo.TryGetExecutionStatusByExecutionIdAsync(uow, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Null(status);
+    }
+
     /// <summary>
     /// ExecuteUpdate 検証用に、定義 FK 付きの実行行と任意の snapshot を投入する。
     /// </summary>
