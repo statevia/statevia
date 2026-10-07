@@ -9,10 +9,12 @@ public static class DatabaseConnection
 {
     /// <summary>
     /// 環境変数・設定から Npgsql 用接続文字列を解決する。
+    /// <c>DATABASE_URL</c> と設定の <c>DefaultConnection</c> は、<c>postgres://</c> なら Npgsql 形式へ正規化する。
     /// </summary>
     /// <param name="configuration">アプリケーション設定。</param>
     /// <param name="connectionStringOverride">CLI 等で明示した接続文字列。指定時は環境変数より優先する。</param>
     /// <returns>Npgsql 接続文字列。</returns>
+    /// <exception cref="InvalidOperationException">接続文字列が未設定のとき。</exception>
     public static string Resolve(IConfiguration configuration, string? connectionStringOverride = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -21,9 +23,17 @@ public static class DatabaseConnection
             return NormalizeConnectionString(connectionStringOverride.Trim());
 
         var rawDatabaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-        return (string.IsNullOrWhiteSpace(rawDatabaseUrl) ? null : NormalizeConnectionString(rawDatabaseUrl))
-            ?? configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Database=statevia;Username=statevia;Password=statevia";
+        if (!string.IsNullOrWhiteSpace(rawDatabaseUrl))
+            return NormalizeConnectionString(rawDatabaseUrl);
+
+        var configured = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            throw new InvalidOperationException(
+                "DATABASE_URL or ConnectionStrings:DefaultConnection is required.");
+        }
+
+        return NormalizeConnectionString(configured);
     }
 
     /// <summary>

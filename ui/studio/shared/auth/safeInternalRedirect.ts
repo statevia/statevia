@@ -1,5 +1,5 @@
-/** `URL` 解析用の固定オリジン（実際のホストには使わない）。 */
-const INTERNAL_REDIRECT_ORIGIN = "http://statevia.internal";
+/** `URL` 解析用の固定オリジン。実際のホストへは接続しない。スキームは https にする。 */
+const INTERNAL_REDIRECT_ORIGIN = "https://statevia.internal";
 
 /** ログイン後の既定遷移先。 */
 export const DEFAULT_POST_LOGIN_PATH = "/dashboard";

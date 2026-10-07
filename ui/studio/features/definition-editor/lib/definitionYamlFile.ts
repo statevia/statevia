@@ -7,8 +7,8 @@ const YAML_FILE_EXTENSIONS = [".yaml", ".yml"] as const;
 /** ダウンロード名に使えない文字。パス区切りと Windows 予約。 */
 const UNSAFE_DOWNLOAD_NAME_CHARACTERS = /[\\/:*?"<>|]/g;
 
-/** 先頭末尾の空白とドット。ディレクトリトラバーサルと空名を避ける。 */
-const LEADING_OR_TRAILING_SPACE_OR_DOT = /^[\s.]+|[\s.]+$/g;
+/** 空白またはドット。先頭末尾の除去にだけ使う。 */
+const SPACE_OR_DOT = /[\s.]/u;
 
 /** 定義名が空のときのダウンロード名。 */
 const DEFAULT_DOWNLOAD_FILE_NAME = "definition.yaml";
@@ -72,13 +72,31 @@ export function assertDefinitionYamlSize(text: string): "ok" | "tooLarge" {
 }
 
 /**
+ * 先頭と末尾の空白・ドットを除く。中間はそのまま残す。
+ * 交互の正規表現は末尾不一致で二次のバックトラックになるため、端の 1 文字判定にする。
+ * @param value 使えない文字を置換したあとの定義名。
+ * @returns トリム後。全体が対象文字なら空文字。
+ */
+function trimLeadingAndTrailingSpacesAndDots(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && SPACE_OR_DOT.test(value.charAt(start))) {
+    start += 1;
+  }
+  while (end > start && SPACE_OR_DOT.test(value.charAt(end - 1))) {
+    end -= 1;
+  }
+  return value.slice(start, end);
+}
+
+/**
  * 定義名からダウンロードファイル名を作る。使えない文字は `_` にする。
  * @param definitionName 画面の定義名。空なら `definition.yaml`。
  * @returns `.yaml` で終わるファイル名。
  */
 export function buildDefinitionYamlDownloadFileName(definitionName: string): string {
   const replaced = definitionName.replace(UNSAFE_DOWNLOAD_NAME_CHARACTERS, "_");
-  const trimmed = replaced.replace(LEADING_OR_TRAILING_SPACE_OR_DOT, "");
+  const trimmed = trimLeadingAndTrailingSpacesAndDots(replaced);
   if (trimmed.length === 0) {
     return DEFAULT_DOWNLOAD_FILE_NAME;
   }

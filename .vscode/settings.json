@@ -4,5 +4,6 @@
     "connectionId": "statevia",
     "projectKey": "statevia_statevia_engine"
   },
-  "dotnet.defaultSolution": "statevia.sln"
+  "dotnet.defaultSolution": "statevia.sln",
+  "json.schemaDownload.enable": true
 }
