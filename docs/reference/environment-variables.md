@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.12 |
-| 更新日 | 2026-09-27 |
+| Version | 1.13 |
+| 更新日 | 2026-10-08 |
 
 ---
+
+**Version 1.13（2026-10-08）**: `STATEVIA_SECRETS_KEY` / `Statevia:Secrets:EncryptionKey`。起動には不要。Production / Staging では保護 API の呼び出し時に検証する。
 
 **Version 1.12（2026-09-27）**: `EnableInProcessScheduleDispatcher`（API 内の定期実行 Dispatcher。既定 On）。
 
@@ -66,6 +68,8 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | `Statevia:ExecutionPolicy:Sandbox:Docker:GrpcPort` | コンテナ内 gRPC ポート（1024〜65535） | 範囲外 → **起動失敗** |
 | `Statevia:ExecutionPolicy:Sandbox:Docker:NetworkMode` | Docker NetworkMode（`none` 不可。空白は `bridge`＋Warning） | `none` → **起動失敗** |
 | `Auth:Jwt:SigningKey` | JWT 署名シークレット（**Service API のみ**。専用 Worker / Scheduler は読まない） | 空 → **起動失敗**。Production / Staging では開発既定値および 32 文字未満も **起動失敗**（メッセージに鍵値は出さない）。Development の開発既定値は可 |
+| `STATEVIA_SECRETS_KEY` | テナント秘密のマスター鍵（標準 Base64 の 32 バイト）。非空白なら `Statevia:Secrets:EncryptionKey` より優先する。Worker と Action Host は鍵を要求しない | 未設定でも **起動は成功**する。Production / Staging で保護 API を呼んだとき、未設定・開発用鍵・32 バイト以外は失敗する（メッセージに鍵値は出さない）。起動失敗ではない |
+| `Statevia:Secrets:EncryptionKey` | `STATEVIA_SECRETS_KEY` が無いときに使うマスター鍵 | 上と同じ。未設定でも **起動は成功**する |
 | `Auth:Jwt:AccessTokenLifetimeMinutes` | トークン有効期間（分、≥1） | 範囲外 → **起動失敗** |
 | `ExecutionProjectionQueue:*` | Projection キュー（サイズ・リトライ遅延等） | 範囲外・矛盾 → **起動失敗** |
 | `EventDelivery:Retry:*` | イベント配送リトライ | 範囲外・`MaxDelayMs < BaseDelayMs` → **起動失敗** |
