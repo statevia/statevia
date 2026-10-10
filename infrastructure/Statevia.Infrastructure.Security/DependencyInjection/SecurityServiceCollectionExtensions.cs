@@ -15,6 +15,7 @@ public static class SecurityServiceCollectionExtensions
     /// <remarks>
     /// JWT 発行と SigningKey の起動検証は含まない。HTTP API は <see cref="AddStateviaJwtAuth"/> を別途登録する。
     /// 専用 Worker は JWT を発行しないため、本メソッドだけを使う。
+    /// テナント秘密の保護 API はシングルトンで登録する。鍵の ValidateOnStart は付けない。
     /// </remarks>
     public static IServiceCollection AddStateviaInfrastructureSecurity(
         this IServiceCollection services,
@@ -25,6 +26,9 @@ public static class SecurityServiceCollectionExtensions
 
         services.AddSingleton<ITenantContextAccessor, TenantContextAccessor>();
         services.AddSingleton<PasswordCredentialService>();
+        services.AddOptions<SecretProtectionOptions>()
+            .Bind(configuration.GetSection(SecretProtectionOptions.SectionName));
+        services.AddSingleton<ITenantSecretProtector, TenantSecretProtector>();
         services.AddScoped<IPlatformDataAccess, PlatformDataAccess>();
         services.AddScoped<IPrincipalDataAccess, PrincipalDataAccessAdapter>();
         services.AddScoped<IApiKeyAuthenticationService, ApiKeyAuthenticationService>();
