@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Engine;
 using Statevia.Service.Api.Hosting;
@@ -13,16 +15,21 @@ namespace Statevia.Service.Api.Tests.Services;
 public sealed class SchedulerHostStartAcceptanceTests
 {
     /// <summary>Development の Host と同じく、構築時に DI グラフを検証できる。</summary>
+    /// <remarks>
+    /// <see cref="IHostEnvironment"/> と <see cref="IConfiguration"/> は Generic Host が供給する。このテストは <see cref="ServiceCollection"/> を直接組むため、同じ依存を登録してから検証する。
+    /// </remarks>
     [Fact]
     public void AddStateviaSchedulerProcess_ValidateOnBuild_Succeeds()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IHostEnvironment>(new SchedulerHostTestEnvironment(Environments.Development));
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:DefaultConnection"] = "Host=127.0.0.1;Database=statevia;Username=x;Password=y"
         }).Build();
+        services.AddSingleton<IConfiguration>(configuration);
         services.AddStateviaSchedulerProcess(configuration);
 
         // Act
@@ -111,5 +118,22 @@ public sealed class SchedulerHostStartAcceptanceTests
         var item = Assert.Single(await verify.ExecutionWorkItems.ToListAsync());
         Assert.Equal(ExecutionWorkItemKinds.Start, item.Kind);
         Assert.Equal(started.ResourceId, item.ExecutionId);
+    }
+
+    /// <summary>Scheduler ホスト検証用の <see cref="IHostEnvironment"/>。</summary>
+    /// <param name="environmentName">ホスト環境名。Development の Generic Host に合わせる。</param>
+    private sealed class SchedulerHostTestEnvironment(string environmentName) : IHostEnvironment
+    {
+        /// <inheritdoc />
+        public string EnvironmentName { get; set; } = environmentName;
+
+        /// <inheritdoc />
+        public string ApplicationName { get; set; } = "Statevia.Service.Api.Tests";
+
+        /// <inheritdoc />
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        /// <inheritdoc />
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }
