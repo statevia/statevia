@@ -29,7 +29,10 @@ public sealed class AdminControllerTests
         };
         var accessor = new SettableTenantContextAccessor();
         accessor.Set(TestTenantIds.DefaultContext with { PrincipalId = expected[0].PrincipalId });
-        var controller = new AdminController(new FakeAdminService { Users = expected }, accessor);
+        var controller = new AdminController(
+            new FakeAdminService { Users = expected },
+            new FakeNotificationSmtpService(),
+            accessor);
 
         // Act
         var result = await controller.ListUsers(CancellationToken.None);
@@ -170,6 +173,27 @@ public sealed class AdminControllerTests
             Guid serviceAccountId,
             ReplacePrincipalResourceGrantsRequest request,
             CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+    }
+
+    /// <summary>通知 SMTP はユーザー一覧テストでは呼ばない。</summary>
+    private sealed class FakeNotificationSmtpService : ITenantNotificationSmtpService
+    {
+        /// <inheritdoc />
+        public Task<TenantNotificationSmtpDto> GetAsync(
+            Guid callerPrincipalId,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task<TenantNotificationSmtpDto> ReplaceAsync(
+            Guid callerPrincipalId,
+            PutTenantNotificationSmtpRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task DeleteAsync(Guid callerPrincipalId, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
     }
 }

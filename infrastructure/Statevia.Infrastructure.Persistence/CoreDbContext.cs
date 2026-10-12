@@ -134,6 +134,11 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string Manual = "manual";
         public const string Outcome = "outcome";
         public const string ResourceKind = "resource_kind";
+        public const string Host = "host";
+        public const string Port = "port";
+        public const string SmtpUser = "smtp_user";
+        public const string PasswordProtected = "password_protected";
+        public const string DefaultFrom = "default_from";
     }
 
     private static class ColumnTypes
@@ -197,6 +202,9 @@ internal class CoreDbContext : DbContext, ICoreDatabase
 
     /// <summary>Principal の project / definition 許可。</summary>
     public DbSet<PrincipalResourceGrantRow> PrincipalResourceGrants => Set<PrincipalResourceGrantRow>();
+
+    /// <summary>テナント通知 SMTP。1 テナント 1 行。</summary>
+    public DbSet<TenantNotificationSmtpRow> TenantNotificationSmtps => Set<TenantNotificationSmtpRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -661,6 +669,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         ConfigureCoreTenantIdEntityFilters(modelBuilder);
         ConfigureScheduleTenantIdEntityFilters(modelBuilder);
         ConfigureSecurityTenantIdEntityFilters(modelBuilder);
+        ConfigureNotificationSmtpTenantIdEntityFilter(modelBuilder);
     }
 
     private void ConfigureCoreTenantIdEntityFilters(ModelBuilder modelBuilder)
@@ -729,6 +738,14 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
 
         modelBuilder.Entity<PrincipalResourceGrantRow>().HasQueryFilter(e =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+    }
+
+    /// <summary>通知 SMTP のテナント query filter。</summary>
+    private void ConfigureNotificationSmtpTenantIdEntityFilter(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TenantNotificationSmtpRow>().HasQueryFilter(e =>
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
     }
@@ -933,6 +950,23 @@ internal class CoreDbContext : DbContext, ICoreDatabase
                 .WithMany()
                 .HasForeignKey(x => new { x.TenantKey, x.Username })
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TenantNotificationSmtpRow>(e =>
+        {
+            e.ToTable("tenant_notification_smtp");
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.Host).HasMaxLength(255).HasColumnName(Columns.Host);
+            e.Property(x => x.Port).HasColumnName(Columns.Port);
+            e.Property(x => x.SmtpUser).HasMaxLength(256).HasColumnName(Columns.SmtpUser);
+            e.Property(x => x.PasswordProtected).HasColumnName(Columns.PasswordProtected);
+            e.Property(x => x.DefaultFrom).HasMaxLength(256).HasColumnName(Columns.DefaultFrom);
+            e.Property(x => x.UpdatedAt).HasColumnName(Columns.UpdatedAt);
+            e.HasOne<TenantRow>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

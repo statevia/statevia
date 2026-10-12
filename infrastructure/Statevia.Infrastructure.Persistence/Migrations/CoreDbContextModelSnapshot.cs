@@ -1301,6 +1301,46 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                     b.ToTable("service_accounts", (string)null);
                 });
 
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantNotificationSmtpRow", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("DefaultFrom")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("default_from");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("host");
+
+                    b.Property<string>("PasswordProtected")
+                        .HasColumnType("text")
+                        .HasColumnName("password_protected");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer")
+                        .HasColumnName("port");
+
+                    b.Property<string>("SmtpUser")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("smtp_user");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("tenant_notification_smtp", (string)null);
+                });
+
             modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantRow", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -1628,6 +1668,15 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("TenantKey", "Username")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantNotificationSmtpRow", b =>
+                {
+                    b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

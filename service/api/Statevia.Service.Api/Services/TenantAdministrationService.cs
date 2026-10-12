@@ -155,6 +155,13 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
     private readonly PrincipalResourceGrantAdminService _resourceGrants;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="dbFactory">テナントフィルタ付きの DbContext。</param>
+    /// <param name="tenantContext">呼び出しテナント。</param>
+    /// <param name="tenantAdminAuthorization">テナント管理者判定。</param>
+    /// <param name="passwordCredentialService">ユーザーパスワードの一方向ハッシュ。</param>
+    /// <param name="idGenerator">新規 ID。</param>
+    /// <param name="logger">管理操作ログ。</param>
+    /// <param name="resourceGrants">実行リソース許可。</param>
     public TenantAdministrationService(
         IDbContextFactory<CoreDbContext> dbFactory,
         ITenantContextAccessor tenantContext,

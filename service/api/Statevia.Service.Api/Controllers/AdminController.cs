@@ -10,12 +10,20 @@ namespace Statevia.Service.Api.Controllers;
 public sealed class AdminController : ControllerBase
 {
     private readonly ITenantAdministrationService _administration;
+    private readonly ITenantNotificationSmtpService _notificationSmtp;
     private readonly ITenantContextAccessor _tenantContext;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
-    public AdminController(ITenantAdministrationService administration, ITenantContextAccessor tenantContext)
+    /// <param name="administration">ユーザー、グループ、API キー、ServiceAccount。</param>
+    /// <param name="notificationSmtp">通知 SMTP。</param>
+    /// <param name="tenantContext">呼び出し主体。</param>
+    public AdminController(
+        ITenantAdministrationService administration,
+        ITenantNotificationSmtpService notificationSmtp,
+        ITenantContextAccessor tenantContext)
     {
         _administration = administration;
+        _notificationSmtp = notificationSmtp;
         _tenantContext = tenantContext;
     }
 
@@ -209,10 +217,41 @@ public sealed class AdminController : ControllerBase
                 ct)
             .ConfigureAwait(false));
 
+    /// <summary>GET /v1/admin/notification-smtp — 自テナントの通知 SMTP。パスワードは返さない。</summary>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>未設定でも 200。</returns>
+    [HttpGet("notification-smtp")]
+    [ProducesResponseType(typeof(TenantNotificationSmtpDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TenantNotificationSmtpDto>> GetNotificationSmtp(CancellationToken ct) =>
+        Ok(await _notificationSmtp.GetAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
+
+    /// <summary>PUT /v1/admin/notification-smtp — 自テナントの通知 SMTP を全体置換する。</summary>
+    /// <param name="request">ホスト、ポート、資格情報、既定 From。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>保存後の参照。パスワードは含まない。</returns>
+    [HttpPut("notification-smtp")]
+    [ProducesResponseType(typeof(TenantNotificationSmtpDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TenantNotificationSmtpDto>> ReplaceNotificationSmtp(
+        [FromBody] PutTenantNotificationSmtpRequest request,
+        CancellationToken ct) =>
+        Ok(await _notificationSmtp.ReplaceAsync(RequirePrincipalId(), request, ct).ConfigureAwait(false));
+
+    /// <summary>DELETE /v1/admin/notification-smtp — 自テナントの通知 SMTP を消す。</summary>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>行が無くても 204。</returns>
+    [HttpDelete("notification-smtp")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteNotificationSmtp(CancellationToken ct)
+    {
+        await _notificationSmtp.DeleteAsync(RequirePrincipalId(), ct).ConfigureAwait(false);
+        return NoContent();
+    }
+
     private Guid RequirePrincipalId()
     {
-        if (!_tenantContext.IsResolved || _tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
-        return principalId;
+        if (_tenantContext.IsResolved && _tenantContext.PrincipalId is { } principalId)
+            return principalId;
+
+        throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
     }
 }

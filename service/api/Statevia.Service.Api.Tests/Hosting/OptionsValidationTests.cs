@@ -463,6 +463,106 @@ public sealed class OptionsValidationTests
         Assert.Equal(customKey, jwt.SigningKey);
     }
 
+    /// <summary>Development の Service API はマスター鍵未設定でも起動検証が成功する。</summary>
+    [Fact]
+    public void SecretProtectionOptions_WhenDevelopmentAndKeyUnset_StartupValidationSucceeds()
+    {
+        // Arrange
+        using var provider = CreateProvider(environmentName: Environments.Development);
+
+        // Act
+        var exception = Record.Exception(ValidateOnStart);
+
+        // Assert
+        Assert.Null(exception);
+
+        void ValidateOnStart()
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        }
+    }
+
+    /// <summary>Production の Service API はマスター鍵未設定で起動検証が失敗し、開発用鍵を出さない。</summary>
+    [Fact]
+    public void SecretProtectionOptions_WhenProductionAndKeyUnset_StartupValidationFails()
+    {
+        // Arrange
+        using var provider = CreateProvider(
+            new Dictionary<string, string?>
+            {
+                ["Auth:Jwt:SigningKey"] = "test-signing-key-at-least-32-bytes-long!!"
+            },
+            Environments.Production);
+
+        // Act
+        var exception = Assert.Throws<OptionsValidationException>(ValidateOnStart);
+
+        // Assert
+        Assert.Contains(SecretProtectionOptions.RestrictedEnvironmentKeyMessage, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyAscii, exception.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyBase64, exception.ToString(), StringComparison.Ordinal);
+
+        void ValidateOnStart()
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        }
+    }
+
+    /// <summary>Production の Service API は開発用鍵で起動検証が失敗し、鍵の値を出さない。</summary>
+    [Fact]
+    public void SecretProtectionOptions_WhenProductionAndDevelopmentKey_StartupValidationFails()
+    {
+        // Arrange
+        using var provider = CreateProvider(
+            new Dictionary<string, string?>
+            {
+                ["Auth:Jwt:SigningKey"] = "test-signing-key-at-least-32-bytes-long!!",
+                [$"{SecretProtectionOptions.SectionName}:EncryptionKey"] = SecretProtectionOptions.DevelopmentKeyBase64
+            },
+            Environments.Production);
+
+        // Act
+        var exception = Assert.Throws<OptionsValidationException>(ValidateOnStart);
+
+        // Assert
+        Assert.Contains(SecretProtectionOptions.RestrictedEnvironmentKeyMessage, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyAscii, exception.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyBase64, exception.ToString(), StringComparison.Ordinal);
+
+        void ValidateOnStart()
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        }
+    }
+
+    /// <summary>Staging の Service API はマスター鍵未設定で起動検証が失敗する。</summary>
+    [Fact]
+    public void SecretProtectionOptions_WhenStagingAndKeyUnset_StartupValidationFails()
+    {
+        // Arrange
+        using var provider = CreateProvider(
+            new Dictionary<string, string?>
+            {
+                ["Auth:Jwt:SigningKey"] = "test-signing-key-at-least-32-bytes-long!!"
+            },
+            Environments.Staging);
+
+        // Act
+        var exception = Assert.Throws<OptionsValidationException>(ValidateOnStart);
+
+        // Assert
+        Assert.Contains(SecretProtectionOptions.RestrictedEnvironmentKeyMessage, exception.Message, StringComparison.Ordinal);
+
+        void ValidateOnStart()
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        }
+    }
+
     /// <summary>ValidateOnStart 登録により主要 Options が起動検証対象になる。</summary>
     [Fact]
     public void AddStateviaServiceApi_RegistersValidateOnStartForCriticalOptions()

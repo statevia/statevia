@@ -1,5 +1,7 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Statevia.Infrastructure.Security.Configuration;
 using Statevia.Core.Actions.Abstractions.Catalog;
 using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Core.Actions.Abstractions.Visibility;
@@ -50,7 +52,35 @@ public static class ServiceCollectionExtensions
         services.AddStateviaExecutionRuntime(configuration);
         services.AddHostedService<SystemScheduleEnsureHostedService>();
         services.AddStateviaApiHost(configuration);
+        services.AddOptions<SecretProtectionOptions>()
+            .Bind(configuration.GetSection(SecretProtectionOptions.SectionName))
+            .Validate<IHostEnvironment>(
+                (options, environment) => AcceptsSecretsKeyAtStartup(options, environment, configuration),
+                SecretProtectionOptions.RestrictedEnvironmentKeyMessage)
+            .ValidateOnStart();
         return services;
+    }
+
+    /// <summary>
+    /// Service API の起動時に、保護 API と同じ鍵解決でマスター鍵を受理できるか判定する。
+    /// </summary>
+    /// <param name="options">bind された <c>Statevia:Secrets:EncryptionKey</c>。</param>
+    /// <param name="environment">ホスト環境。Development の未設定は開発用鍵で成功する。</param>
+    /// <param name="configuration"><c>STATEVIA_SECRETS_KEY</c> が非空白ならオプションより優先する。</param>
+    /// <returns>受理できるとき true。失敗メッセージに鍵値は出さない。</returns>
+    private static bool AcceptsSecretsKeyAtStartup(
+        SecretProtectionOptions options,
+        IHostEnvironment environment,
+        IConfiguration configuration)
+    {
+        var configuredKey = SecretProtectionOptions.SelectConfiguredKey(
+            configuration[SecretProtectionOptions.EnvironmentVariableName],
+            options.EncryptionKey);
+        if (!SecretProtectionOptions.TryGetAcceptedKey(configuredKey, environment, out var key))
+            return false;
+
+        CryptographicOperations.ZeroMemory(key);
+        return true;
     }
     /// <summary>
     /// Worker 専用ホスト向けに実行ランタイムのみを登録する（HTTP アダプタなし）。
@@ -224,6 +254,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<PrincipalResourceGrantAdminService>();
         services.AddScoped<ITenantAdministrationService, TenantAdministrationService>();
+        services.AddScoped<ITenantNotificationSmtpService, TenantNotificationSmtpService>();
         services.AddOptions<DevAdminBootstrapOptions>()
             .Bind(configuration.GetSection(DevAdminBootstrapOptions.SectionName));
         services.AddHostedService<TenantBootstrapHostedService>();
