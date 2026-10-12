@@ -1,17 +1,15 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
+using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Infrastructure.Persistence;
+using Statevia.Infrastructure.Security;
 using Statevia.Service.Api.Application.Actions.Execution;
-using Statevia.Service.Api.Contracts.Admin;
 using Statevia.Service.Api.Tests.Infrastructure;
 
 namespace Statevia.Service.Api.Tests.Application.Actions.Execution;
 
-/// <summary>実行テナントの SMTP 行を接続へ復元する。</summary>
+/// <summary><see cref="NotificationSmtpConnectionLoader"/> がテナント行を接続へ写す範囲。</summary>
 public sealed class NotificationSmtpConnectionLoaderTests
 {
-    private const string Password = "smtp-secret-value-9f3a";
+    private const string Password = "smtp-secret-value";
 
     /// <summary>行が無いテナントは固定文で失敗する。</summary>
     [Fact]
@@ -19,7 +17,7 @@ public sealed class NotificationSmtpConnectionLoaderTests
     {
         // Arrange
         using var database = new SqliteTestDatabase();
-        var sut = CreateLoader(database);
+        var sut = new NotificationSmtpConnectionLoader(database.Factory, new ScriptedProtector(Password));
 
         // Act
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -29,58 +27,47 @@ public sealed class NotificationSmtpConnectionLoaderTests
         Assert.Equal("Notification SMTP is not configured for the execution tenant.", exception.Message);
     }
 
-    /// <summary>保護済みパスワードを同じテナントと用途で復元し、空の既定 From は null にする。</summary>
+    /// <summary>他テナントの行は読まず、指定テナントのパスワードだけを復元する。</summary>
     [Fact]
-    public async Task LoadAsync_WhenRowExists_RestoresPassword()
+    public async Task LoadAsync_WhenRowExists_RestoresThatTenantOnly()
     {
         // Arrange
         using var database = new SqliteTestDatabase();
-        var protector = CreateDevelopmentProtector();
-        await InsertRowAsync(
-            database,
-            TestTenantIds.DefaultTenantId,
-            "mailer",
-            protector.Protect(TestTenantIds.DefaultTenantId, TenantNotificationSmtpDto.PasswordPurpose, Password),
-            "  ");
-        var sut = CreateLoader(database, protector);
+        await InsertAsync(database, TestTenantIds.T1TenantId, "other.example.com", 25, "other", "other-secret", "other@example.com");
+        await InsertAsync(database, TestTenantIds.DefaultTenantId, "smtp.example.com", 2525, "mailer", "protected", " from@example.com ");
+        var sut = new NotificationSmtpConnectionLoader(database.Factory, new ScriptedProtector(Password));
 
         // Act
         var connection = await sut.LoadAsync(TestTenantIds.DefaultTenantId, CancellationToken.None);
 
         // Assert
-        Assert.Equal("smtp.example.com", connection.Host);
-        Assert.Equal(2525, connection.Port);
-        Assert.Equal("mailer", connection.User);
-        Assert.Equal(Password, connection.Password);
-        Assert.Null(connection.DefaultFrom);
+        Assert.Equal(new NotificationSmtpDispatch("smtp.example.com", 2525, "mailer", Password, " from@example.com "), connection);
     }
 
-    /// <summary>ユーザーが空の行はパスワードを復元しない。</summary>
+    /// <summary>ユーザーが空の行はパスワードを復元せず、空白の既定 From は null にする。</summary>
     [Fact]
-    public async Task LoadAsync_WhenUserIsEmpty_ReturnsNullPassword()
+    public async Task LoadAsync_WhenUserEmpty_OmitsPasswordAndBlankFrom()
     {
         // Arrange
         using var database = new SqliteTestDatabase();
-        await InsertRowAsync(database, TestTenantIds.DefaultTenantId, "", null, "from@example.com");
-        var sut = CreateLoader(database);
+        await InsertAsync(database, TestTenantIds.DefaultTenantId, "smtp.example.com", 587, "", "protected", "  ");
+        var sut = new NotificationSmtpConnectionLoader(database.Factory, new ScriptedProtector(Password));
 
         // Act
         var connection = await sut.LoadAsync(TestTenantIds.DefaultTenantId, CancellationToken.None);
 
         // Assert
-        Assert.Null(connection.User);
-        Assert.Null(connection.Password);
-        Assert.Equal("from@example.com", connection.DefaultFrom);
+        Assert.Equal(new NotificationSmtpDispatch("smtp.example.com", 587, null, null, null), connection);
     }
 
-    /// <summary>ユーザーがあるのに保護文字列が空なら、理由を区別しない固定文で失敗する。</summary>
+    /// <summary>ユーザーがあるのに保護文字列が空なら復元失敗の固定文にする。</summary>
     [Fact]
-    public async Task LoadAsync_WhenProtectedPasswordMissing_ThrowsFixedMessage()
+    public async Task LoadAsync_WhenPasswordMissing_ThrowsRestoreFailed()
     {
         // Arrange
         using var database = new SqliteTestDatabase();
-        await InsertRowAsync(database, TestTenantIds.DefaultTenantId, "mailer", null, null);
-        var sut = CreateLoader(database);
+        await InsertAsync(database, TestTenantIds.DefaultTenantId, "smtp.example.com", 587, "mailer", null, null);
+        var sut = new NotificationSmtpConnectionLoader(database.Factory, new ScriptedProtector(Password));
 
         // Act
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -88,36 +75,33 @@ public sealed class NotificationSmtpConnectionLoaderTests
 
         // Assert
         Assert.Equal("Notification SMTP password could not be restored.", exception.Message);
-        Assert.Null(exception.InnerException);
-    }
-
-    /// <summary>復元できない保護文字列は、内側の例外を出さず固定文で失敗する。</summary>
-    [Fact]
-    public async Task LoadAsync_WhenUnprotectFails_ThrowsFixedMessage()
-    {
-        // Arrange
-        using var database = new SqliteTestDatabase();
-        await InsertRowAsync(database, TestTenantIds.DefaultTenantId, "mailer", "not-a-payload", null);
-        var sut = CreateLoader(database);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.LoadAsync(TestTenantIds.DefaultTenantId, CancellationToken.None));
-
-        // Assert
-        Assert.Equal("Notification SMTP password could not be restored.", exception.Message);
-        Assert.Null(exception.InnerException);
         Assert.DoesNotContain(Password, exception.ToString(), StringComparison.Ordinal);
     }
 
-    private static NotificationSmtpConnectionLoader CreateLoader(
-        SqliteTestDatabase database,
-        TenantSecretProtector? protector = null) =>
-        new(database.Factory, protector ?? CreateDevelopmentProtector());
+    /// <summary>復元例外は固定文に置き、内側の文を残さない。</summary>
+    [Fact]
+    public async Task LoadAsync_WhenUnprotectFails_ThrowsRestoreFailedWithoutInnerMessage()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        await InsertAsync(database, TestTenantIds.DefaultTenantId, "smtp.example.com", 587, "mailer", "protected", null);
+        var sut = new NotificationSmtpConnectionLoader(database.Factory, new ScriptedProtector(Password, fail: true));
 
-    private static async Task InsertRowAsync(
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.LoadAsync(TestTenantIds.DefaultTenantId, CancellationToken.None));
+
+        // Assert
+        Assert.Equal("Notification SMTP password could not be restored.", exception.Message);
+        Assert.DoesNotContain(Password, exception.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("cipher", exception.ToString(), StringComparison.Ordinal);
+    }
+
+    private static async Task InsertAsync(
         SqliteTestDatabase database,
         Guid tenantId,
+        string host,
+        int port,
         string smtpUser,
         string? passwordProtected,
         string? defaultFrom)
@@ -126,8 +110,8 @@ public sealed class NotificationSmtpConnectionLoaderTests
         db.TenantNotificationSmtps.Add(new TenantNotificationSmtpRow
         {
             TenantId = tenantId,
-            Host = "smtp.example.com",
-            Port = 2525,
+            Host = host,
+            Port = port,
             SmtpUser = smtpUser,
             PasswordProtected = passwordProtected,
             DefaultFrom = defaultFrom,
@@ -136,26 +120,19 @@ public sealed class NotificationSmtpConnectionLoaderTests
         await db.SaveChangesAsync();
     }
 
-    private static TenantSecretProtector CreateDevelopmentProtector() =>
-        new(
-            Options.Create(new SecretProtectionOptions()),
-            new DevelopmentHostEnvironment(),
-            new ConfigurationBuilder().Build());
-
-    /// <summary>ローダーテスト用の Development ホスト。</summary>
-    private sealed class DevelopmentHostEnvironment : IHostEnvironment
+    /// <summary>テストが指定した平文、または復元失敗を返す。</summary>
+    private sealed class ScriptedProtector(string plaintext, bool fail = false) : ITenantSecretProtector
     {
         /// <inheritdoc />
-        public string EnvironmentName { get; set; } = Environments.Development;
+        public string Protect(Guid tenantId, string purpose, string value) => value;
 
         /// <inheritdoc />
-        public string ApplicationName { get; set; } = "Statevia.Service.Api.Tests";
+        public string Unprotect(Guid tenantId, string purpose, string protectedPayload)
+        {
+            if (fail)
+                throw new InvalidOperationException("cipher:" + plaintext);
 
-        /// <inheritdoc />
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        /// <inheritdoc />
-        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
-            new Microsoft.Extensions.FileProviders.NullFileProvider();
+            return plaintext;
+        }
     }
 }

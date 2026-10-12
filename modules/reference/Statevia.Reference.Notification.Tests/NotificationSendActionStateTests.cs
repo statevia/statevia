@@ -134,6 +134,67 @@ public sealed class NotificationSendActionStateTests
         Assert.True(invoked);
     }
 
+    /// <summary>送信が SmtpException のとき固定文で失敗し、例外文にパスワードを残さない。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenSenderThrowsSmtpException_ThrowsFixedMessage()
+    {
+        // Arrange
+        const string password = "smtp-secret-value";
+        var state = new NotificationSendActionState((_, _, _) =>
+            throw new SmtpException("auth failed " + password));
+        var input = new Dictionary<string, object?>
+        {
+            ["channel"] = "email",
+            ["to"] = "user@example.com",
+            ["subject"] = "hello",
+            ["body"] = "world",
+            ["from"] = "noreply@example.com",
+        };
+
+        // Act
+        InvalidOperationException exception;
+        using (NotificationSmtpDispatchScope.Begin(SampleConnection(password)))
+        {
+            exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                state.ExecuteAsync(CreateContext(), input, CancellationToken.None));
+        }
+
+        // Assert
+        Assert.Equal("SMTP send failed.", exception.Message);
+        Assert.DoesNotContain(password, exception.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>既定の送信先が拒否したとき固定文で失敗し、パスワードを残さない。</summary>
+    [Fact]
+    public async Task ExecuteAsync_DefaultSender_WhenConnectionRefused_ThrowsFixedMessage()
+    {
+        // Arrange
+        const string password = "smtp-secret-value";
+        var state = new NotificationSendActionState();
+        var input = new Dictionary<string, object?>
+        {
+            ["channel"] = "email",
+            ["to"] = "user@example.com",
+            ["subject"] = "hello",
+            ["body"] = "world",
+            ["from"] = "noreply@example.com",
+        };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        // Act
+        InvalidOperationException exception;
+        using (NotificationSmtpDispatchScope.Begin(
+            new NotificationSmtpDispatch("127.0.0.1", 1, "mailer", password, "noreply@example.com")))
+        {
+            exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                state.ExecuteAsync(CreateContext(), input, timeout.Token));
+        }
+
+        // Assert
+        Assert.Equal("SMTP send failed.", exception.Message);
+        Assert.DoesNotContain(password, exception.ToString(), StringComparison.Ordinal);
+    }
+
     /// <summary>Module が send Action を公開する。</summary>
     [Fact]
     public void Module_ExposesSendAction()
@@ -183,8 +244,8 @@ public sealed class NotificationSendActionStateTests
         return candidate;
     }
 
-    private static NotificationSmtpDispatch SampleConnection() =>
-        new("smtp.example.com", 587, "mailer", "secret", "noreply@example.com");
+    private static NotificationSmtpDispatch SampleConnection(string password = "secret") =>
+        new("smtp.example.com", 587, "mailer", password, "noreply@example.com");
 
     private static StateContext CreateContext() =>
         new()

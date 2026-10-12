@@ -176,7 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITenantQueryFilterOptions>(EnabledTenantQueryFilterOptions.Instance);
         services.AddStateviaInfrastructurePersistence(connectionString);
         services.AddStateviaInfrastructureSecurity(configuration);
-        // DbContext ファクトリと保護 API は singleton。実行のたびにコンテキストを作るので、singleton の IActionExecutor から解決できる。
+        // DbContextFactory と保護 API だけに依存する。Singleton の IActionExecutor が構築時に解決するため Scoped にはしない。
         services.AddSingleton<INotificationSmtpConnectionLoader, NotificationSmtpConnectionLoader>();
         services.AddStateviaRuntimeOptions(configuration);
         services.AddSingleton<INodesSchemaProvider, NodesSchemaProvider>();
