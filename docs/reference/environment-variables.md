@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.14 |
-| 更新日 | 2026-10-10 |
+| Version | 1.15 |
+| 更新日 | 2026-10-12 |
 
 ---
+
+**Version 1.15（2026-10-12）**: 専用 Worker の Production / Staging でも `STATEVIA_SECRETS_KEY` が起動必須。Scheduler と Action Host は必須ではない。
 
 **Version 1.14（2026-10-10）**: Service API の Production / Staging では `STATEVIA_SECRETS_KEY`（または `Statevia:Secrets:EncryptionKey`）が起動必須。専用 Worker、Scheduler、Action Host はこの変更では起動必須にしない。
 
@@ -70,7 +72,7 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | `Statevia:ExecutionPolicy:Sandbox:Docker:GrpcPort` | コンテナ内 gRPC ポート（1024〜65535） | 範囲外 → **起動失敗** |
 | `Statevia:ExecutionPolicy:Sandbox:Docker:NetworkMode` | Docker NetworkMode（`none` 不可。空白は `bridge`＋Warning） | `none` → **起動失敗** |
 | `Auth:Jwt:SigningKey` | JWT 署名シークレット（**Service API のみ**。専用 Worker / Scheduler は読まない） | 空 → **起動失敗**。Production / Staging では開発既定値および 32 文字未満も **起動失敗**（メッセージに鍵値は出さない）。Development の開発既定値は可 |
-| `STATEVIA_SECRETS_KEY` | テナント秘密のマスター鍵（標準 Base64 の 32 バイト）。非空白なら `Statevia:Secrets:EncryptionKey` より優先する。専用 Worker、Scheduler、Action Host はこの鍵を起動時に要求しない | **Service API** の Production / Staging では未設定・開発用鍵・32 バイト以外 → **起動失敗**（メッセージに鍵値は出さない）。Development の未設定は起動する |
+| `STATEVIA_SECRETS_KEY` | テナント秘密のマスター鍵（標準 Base64 の 32 バイト）。非空白なら `Statevia:Secrets:EncryptionKey` より優先する。Scheduler と Action Host はこの鍵を起動時に要求しない | **Service API** と **専用 Worker** の Production / Staging では未設定・開発用鍵・32 バイト以外 → **起動失敗**（メッセージに鍵値は出さない）。Development の未設定は起動する |
 | `Statevia:Secrets:EncryptionKey` | `STATEVIA_SECRETS_KEY` が無いときに使うマスター鍵 | 上と同じ。Service API の Production / Staging では起動必須 |
 | `Auth:Jwt:AccessTokenLifetimeMinutes` | トークン有効期間（分、≥1） | 範囲外 → **起動失敗** |
 | `ExecutionProjectionQueue:*` | Projection キュー（サイズ・リトライ遅延等） | 範囲外・矛盾 → **起動失敗** |

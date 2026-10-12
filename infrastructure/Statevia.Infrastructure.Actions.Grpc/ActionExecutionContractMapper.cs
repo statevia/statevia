@@ -34,6 +34,18 @@ public static class ActionExecutionContractMapper
         if (request.Deadline is { } deadline)
             rpc.DeadlineUnixMs = deadline.ToUnixTimeMilliseconds();
 
+        if (request.NotificationSmtp is { } smtp)
+        {
+            rpc.NotificationSmtp = new NotificationSmtpConnection
+            {
+                Host = smtp.Host,
+                Port = smtp.Port,
+                User = smtp.User ?? "",
+                Password = smtp.Password ?? "",
+                DefaultFrom = smtp.DefaultFrom ?? "",
+            };
+        }
+
         return rpc;
     }
 
@@ -55,6 +67,14 @@ public static class ActionExecutionContractMapper
             Deadline = rpc.HasDeadlineUnixMs
                 ? DateTimeOffset.FromUnixTimeMilliseconds(rpc.DeadlineUnixMs)
                 : null,
+            NotificationSmtp = rpc.NotificationSmtp is null
+                ? null
+                : new NotificationSmtpDispatch(
+                    rpc.NotificationSmtp.Host,
+                    rpc.NotificationSmtp.Port,
+                    EmptyToNull(rpc.NotificationSmtp.User),
+                    EmptyToNull(rpc.NotificationSmtp.Password),
+                    EmptyToNull(rpc.NotificationSmtp.DefaultFrom)),
         };
     }
 
@@ -106,4 +126,7 @@ public static class ActionExecutionContractMapper
         using var document = JsonDocument.Parse(json);
         return document.RootElement.Clone();
     }
+
+    private static string? EmptyToNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }

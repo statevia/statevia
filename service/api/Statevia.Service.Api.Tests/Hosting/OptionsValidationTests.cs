@@ -674,7 +674,10 @@ public sealed class OptionsValidationTests
         // Arrange
         var services = new ServiceCollection();
         services.AddSingleton<IHostEnvironment>(new JwtTestHostEnvironment(Environments.Production));
-        services.AddStateviaWorkerHost(BuildValidConfiguration());
+        services.AddStateviaWorkerHost(BuildValidConfiguration(new Dictionary<string, string?>
+        {
+            [$"{SecretProtectionOptions.SectionName}:EncryptionKey"] = Convert.ToBase64String(new byte[32])
+        }));
         using var provider = services.BuildServiceProvider();
 
         // Act
@@ -688,6 +691,50 @@ public sealed class OptionsValidationTests
         var exception = Record.Exception(act);
         Assert.Null(exception);
         Assert.Null(provider.GetService<Statevia.Infrastructure.Security.JwtTokenService>());
+    }
+
+    /// <summary>Production の専用 Worker はマスター鍵未設定で起動検証が失敗し、鍵の値を出さない。</summary>
+    [Fact]
+    public void AddStateviaWorkerHost_WhenProductionAndKeyUnset_StartupValidationFails()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IHostEnvironment>(new JwtTestHostEnvironment(Environments.Production));
+        services.AddStateviaWorkerHost(BuildValidConfiguration());
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var exception = Assert.Throws<OptionsValidationException>(() =>
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        });
+
+        // Assert
+        Assert.Contains(SecretProtectionOptions.RestrictedEnvironmentKeyMessage, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyAscii, exception.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(SecretProtectionOptions.DevelopmentKeyBase64, exception.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>Development の専用 Worker はマスター鍵未設定でも起動検証が成功する。</summary>
+    [Fact]
+    public void AddStateviaWorkerHost_WhenDevelopmentAndKeyUnset_StartupValidationSucceeds()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IHostEnvironment>(new JwtTestHostEnvironment(Environments.Development));
+        services.AddStateviaWorkerHost(BuildValidConfiguration());
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var exception = Record.Exception(() =>
+        {
+            foreach (var validator in provider.GetServices<IStartupValidator>())
+                validator.Validate();
+        });
+
+        // Assert
+        Assert.Null(exception);
     }
 
     /// <summary>

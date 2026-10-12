@@ -21,6 +21,17 @@ message ActionExecutionRpcRequest {
   optional string correlation_id = 6;
   // UTC の Unix エポックからのミリ秒。省略時は期限なし。
   optional int64 deadline_unix_ms = 7;
+  // notification.send の接続。input_json には入れない。他 Action では省略する。
+  optional NotificationSmtpConnection notification_smtp = 8;
+}
+
+// 1 回の notification.send に渡す SMTP 接続。マスター鍵は含まない。
+message NotificationSmtpConnection {
+  string host = 1;
+  int32 port = 2;
+  optional string user = 3;
+  optional string password = 4;
+  optional string default_from = 5;
 }
 
 // OutOfProcess 実行結果。RuntimeOutput は InProcess 専用のため含めない。

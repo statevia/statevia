@@ -26,6 +26,9 @@ public sealed record ActionExecutionRequest
     /// <summary>入力（OutOfProcess 向け。InProcess は StateContext 経由でも可）。</summary>
     public JsonElement? Input { get; init; }
 
+    /// <summary><c>notification.send</c> の 1 回分の SMTP 接続。他 Action では null。input には入れない。</summary>
+    public NotificationSmtpDispatch? NotificationSmtp { get; init; }
+
     /// <summary>相関 ID（任意）。</summary>
     public string? CorrelationId { get; init; }
 

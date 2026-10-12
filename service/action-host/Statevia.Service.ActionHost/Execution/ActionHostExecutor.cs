@@ -56,6 +56,7 @@ internal sealed class ActionHostExecutor
 
         try
         {
+            using var smtpScope = NotificationSmtpDispatch.BeginScopeForAction(request);
             var runtimeOutput = await registration.Executor
                 .ExecuteAsync(stateContext, request.Input, linkedCts.Token)
                 .ConfigureAwait(false);

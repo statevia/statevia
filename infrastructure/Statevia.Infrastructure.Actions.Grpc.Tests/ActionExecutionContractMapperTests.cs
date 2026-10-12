@@ -38,6 +38,35 @@ public sealed class ActionExecutionContractMapperTests
         Assert.Equal(
             original.Input?.GetRawText(),
             restored.Input?.GetRawText());
+        Assert.Null(restored.NotificationSmtp);
+    }
+
+    /// <summary>接続フィールドは input JSON に混ざらず往復する。</summary>
+    [Fact]
+    public void Request_RoundTrip_KeepsNotificationSmtpOutOfInput()
+    {
+        // Arrange
+        const string password = "smtp-secret-value";
+        var original = new ActionExecutionRequest
+        {
+            ExecutionId = "exec-smtp",
+            StateName = "SendMail",
+            ActionId = NotificationSmtpDispatch.ActionId,
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Input = JsonDocument.Parse("""{"channel":"email","to":"a@example.com"}""").RootElement,
+            NotificationSmtp = new NotificationSmtpDispatch("smtp.example.com", 2525, "mailer", password, "from@example.com"),
+        };
+
+        // Act
+        var rpc = ActionExecutionContractMapper.ToRpcRequest(original);
+        var restored = ActionExecutionContractMapper.FromRpcRequest(rpc);
+
+        // Assert
+        Assert.DoesNotContain(password, rpc.InputJson, StringComparison.Ordinal);
+        Assert.Equal("smtp.example.com", restored.NotificationSmtp?.Host);
+        Assert.Equal(2525, restored.NotificationSmtp?.Port);
+        Assert.Equal(password, restored.NotificationSmtp?.Password);
+        Assert.Equal(original.Input?.GetRawText(), restored.Input?.GetRawText());
     }
 
     /// <summary>最小リクエストは省略フィールドなしで往復できる。</summary>

@@ -1,3 +1,4 @@
+using Statevia.Core.Actions.Abstractions.Execution;
 using System.Net;
 using System.Net.Mail;
 
@@ -8,7 +9,7 @@ internal static class SmtpMailSender
 {
     /// <summary>組み立て済みメールを SMTP で送る。</summary>
     public static async Task SendAsync(
-        SmtpEnvironmentSettings settings,
+        NotificationSmtpDispatch settings,
         MailMessage message,
         CancellationToken cancellationToken)
     {

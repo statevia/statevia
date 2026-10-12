@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Core.Engine.Abstractions;
 using System.Net.Mail;
 
@@ -12,7 +13,7 @@ public sealed class NotificationSendActionStateTests
     public async Task ExecuteAsync_NonEmailChannel_Throws()
     {
         // Arrange
-        var state = new NotificationSendActionState((_, _) => Task.CompletedTask);
+        var state = new NotificationSendActionState((_, _, _) => Task.CompletedTask);
         var input = new Dictionary<string, object?>
         {
             ["channel"] = "slack",
@@ -34,7 +35,7 @@ public sealed class NotificationSendActionStateTests
     {
         // Arrange
         MailMessage? captured = null;
-        var state = new NotificationSendActionState((message, _) =>
+        var state = new NotificationSendActionState((message, _, _) =>
         {
             captured = message;
             return Task.CompletedTask;
@@ -49,7 +50,11 @@ public sealed class NotificationSendActionStateTests
         };
 
         // Act
-        var result = await state.ExecuteAsync(CreateContext(), input, CancellationToken.None);
+        object? result;
+        using (NotificationSmtpDispatchScope.Begin(SampleConnection()))
+        {
+            result = await state.ExecuteAsync(CreateContext(), input, CancellationToken.None);
+        }
 
         // Assert
         Assert.NotNull(captured);
@@ -64,7 +69,7 @@ public sealed class NotificationSendActionStateTests
     public async Task ExecuteAsync_NonObjectInput_Throws()
     {
         // Arrange
-        var state = new NotificationSendActionState((_, _) => Task.CompletedTask);
+        var state = new NotificationSendActionState((_, _, _) => Task.CompletedTask);
 
         // Act / Assert
         var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -78,7 +83,7 @@ public sealed class NotificationSendActionStateTests
     {
         // Arrange
         var invoked = false;
-        var state = new NotificationSendActionState((_, _) =>
+        var state = new NotificationSendActionState((_, _, _) =>
         {
             invoked = true;
             return Task.CompletedTask;
@@ -93,7 +98,10 @@ public sealed class NotificationSendActionStateTests
         };
 
         // Act
-        await state.ExecuteAsync(CreateContext(), input, CancellationToken.None);
+        using (NotificationSmtpDispatchScope.Begin(SampleConnection()))
+        {
+            await state.ExecuteAsync(CreateContext(), input, CancellationToken.None);
+        }
 
         // Assert
         Assert.True(invoked);
@@ -147,6 +155,9 @@ public sealed class NotificationSendActionStateTests
 
         return candidate;
     }
+
+    private static NotificationSmtpDispatch SampleConnection() =>
+        new("smtp.example.com", 587, "mailer", "secret", "noreply@example.com");
 
     private static StateContext CreateContext() =>
         new()
