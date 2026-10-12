@@ -64,6 +64,33 @@ public sealed class NotificationSendActionStateTests
         Assert.Equal("email", dict["channel"]);
     }
 
+    /// <summary>実送信が SMTP で拒否されたとき、サーバ詳細を含まない固定文で失敗する。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenSmtpRejectsConnection_ThrowsWithoutServerDetail()
+    {
+        // Arrange
+        var state = new NotificationSendActionState();
+        var input = new Dictionary<string, object?>
+        {
+            ["channel"] = "email",
+            ["to"] = "user@example.com",
+            ["subject"] = "hello",
+            ["body"] = "world",
+            ["from"] = "noreply@example.com",
+        };
+        using var scope = NotificationSmtpDispatchScope.Begin(
+            new NotificationSmtpDispatch("127.0.0.1", 1, "mailer", "secret", "noreply@example.com"));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            state.ExecuteAsync(CreateContext(), input, cancellation.Token));
+
+        // Assert
+        Assert.Equal("SMTP send failed.", exception.Message);
+        Assert.Null(exception.InnerException);
+    }
+
     /// <summary>入力がオブジェクトでないとき失敗する。</summary>
     [Fact]
     public async Task ExecuteAsync_NonObjectInput_Throws()
