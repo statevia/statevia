@@ -10,8 +10,8 @@ type ButtonProps = {
 
 const BUTTON_VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    "rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg",
-  secondary: "rounded border border-md-outline-variant px-3 py-1.5 text-sm",
+    "rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg",
+  secondary: "rounded-sm border border-md-outline-variant px-3 py-1.5 text-sm",
 };
 
 /**

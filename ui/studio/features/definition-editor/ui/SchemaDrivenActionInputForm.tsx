@@ -124,7 +124,7 @@ function InputFieldTreeNode({
       propertyName: node.logicalPath.split(".").at(-1)
     });
     return (
-      <fieldset className="rounded border border-md-outline-variant p-2">
+      <fieldset className="rounded-sm border border-md-outline-variant p-2">
         <legend className="px-1 text-xs font-medium">{label}</legend>
         <div className="space-y-2">
           {node.children.map((child) => (
@@ -201,7 +201,7 @@ function renderFieldControl({
   const widget = hints?.widget ?? inferWidget(propertySchema);
   const stringValue = formatScalarFieldDisplayValue(fieldValue);
   const inputClassName =
-    "mt-1 w-full rounded border border-md-outline px-2 py-1 text-xs";
+    "mt-1 w-full rounded-sm border border-md-outline px-2 py-1 text-xs";
 
   if (widget === "select" && propertySchema.enum && propertySchema.enum.length > 0) {
     return (

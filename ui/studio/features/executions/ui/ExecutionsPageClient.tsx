@@ -37,7 +37,7 @@ function ExecutionsPageClientInner() {
       primaryActions={
         <button
           type="button"
-          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
           onClick={() => setIngressOpen(true)}
         >
           {uiText.executionsPage.ingress.open}
@@ -57,7 +57,7 @@ function ExecutionsPageClientInner() {
       />
 
       {page.definitionId && (
-        <output className="block rounded border border-md-primary bg-md-primary-container px-3 py-2 text-sm text-md-on-primary-container" aria-live="polite">
+        <output className="block rounded-sm border border-md-primary bg-md-primary-container px-3 py-2 text-sm text-md-on-primary-container" aria-live="polite">
           <span className="text-md-on-primary-container">{uiText.executionsPage.filter.contextActivePrefix} </span>
           <span className="font-mono break-all">{page.definitionId}</span>
           <button

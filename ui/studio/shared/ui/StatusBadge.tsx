@@ -15,7 +15,7 @@ type StatusBadgeProps = {
 export function StatusBadge({ status, className }: Readonly<StatusBadgeProps>) {
   const { badgeClass } = getStatusStyle(status);
   const badgeClassName = [
-    "inline-flex w-28 items-center justify-center rounded px-2 py-0.5 text-xs font-medium",
+    "inline-flex w-28 items-center justify-center rounded-sm px-2 py-0.5 text-xs font-medium",
     badgeClass,
     className
   ]

@@ -60,9 +60,9 @@ export function TenantMissingBanner() {
       role="alert"
     >
       {noticeParts.beforePrimaryEnv}
-      <code className="mx-1 rounded bg-amber-100 px-1">NEXT_PUBLIC_TENANT_ID</code>
+      <code className="mx-1 rounded-sm bg-amber-100 px-1">NEXT_PUBLIC_TENANT_ID</code>
       {noticeParts.betweenEnvs}
-      <code className="mx-1 rounded bg-amber-100 px-1">SERVICE_API_TENANT_ID</code>
+      <code className="mx-1 rounded-sm bg-amber-100 px-1">SERVICE_API_TENANT_ID</code>
       {noticeParts.afterSecondaryEnv}
       <span className="mt-1 block">{uiText.auth.login.sessionHint}</span>
     </div>

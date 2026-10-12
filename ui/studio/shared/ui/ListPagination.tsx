@@ -42,7 +42,7 @@ export function ListPagination({
     <nav className={navClassName} aria-label={ariaLabel}>
       <button
         type="button"
-        className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onPrev}
         disabled={!hasPrev}
       >
@@ -51,7 +51,7 @@ export function ListPagination({
       <span className="text-md-on-surface-variant">{currentPageLabel}</span>
       <button
         type="button"
-        className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-md-on-surface hover:bg-md-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onNext}
         disabled={!hasNext}
       >

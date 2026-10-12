@@ -58,7 +58,7 @@ export function ActionIdCombobox({
   return (
     <div className="relative">
       <input
-        className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+        className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
         list={loading ? undefined : listId}
         value={value}
         disabled={loading}

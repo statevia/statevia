@@ -13,11 +13,11 @@ type TracePayloadDisclosureProps = {
 function TracePayloadDisclosure({ heading, payloadText, emptyLabel }: Readonly<TracePayloadDisclosureProps>) {
   const display = payloadText === "" ? emptyLabel : payloadText;
   return (
-    <details className="mt-1 rounded-lg border border-md-outline-variant bg-[var(--md-sys-color-surface-container-high)]/60">
-      <summary className="cursor-pointer select-none list-none px-2 py-1.5 text-xs font-medium text-md-on-surface outline-none marker:content-none [&::-webkit-details-marker]:hidden">
+    <details className="mt-1 rounded-lg border border-md-outline-variant bg-(--md-sys-color-surface-container-high)/60">
+      <summary className="cursor-pointer select-none list-none px-2 py-1.5 text-xs font-medium text-md-on-surface outline-hidden marker:content-none [&::-webkit-details-marker]:hidden">
         {heading}
       </summary>
-      <pre className="mx-2 mb-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-md-surface-container-high p-2 text-[10px] leading-snug text-md-on-surface">
+      <pre className="mx-2 mb-2 max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word rounded-lg bg-md-surface-container-high p-2 text-[10px] leading-snug text-md-on-surface">
         {display}
       </pre>
     </details>
@@ -131,7 +131,7 @@ export function NodeDetailStatusPanels({
           <div className="mt-1 space-y-0.5 text-red-800">
             {node.cancelReason != null && node.cancelReason !== "" && <div>reason: {node.cancelReason}</div>}
             {node.canceledByExecution && (
-              <div className="rounded bg-red-100 px-2 py-1">{uiText.nodeDetail.cancel.convergedByExecutionCancel}</div>
+              <div className="rounded-sm bg-red-100 px-2 py-1">{uiText.nodeDetail.cancel.convergedByExecutionCancel}</div>
             )}
           </div>
         </div>
@@ -141,7 +141,7 @@ export function NodeDetailStatusPanels({
           <div className="font-medium text-red-900">{uiText.nodeDetail.failure.title}</div>
           <div className="mt-1 text-red-800">
             {node.error?.message != null && node.error.message !== "" ? (
-              <div className="break-words">{node.error.message}</div>
+              <div className="wrap-break-word">{node.error.message}</div>
             ) : (
               <div className="text-red-600">{uiText.nodeDetail.failure.noMessage}</div>
             )}

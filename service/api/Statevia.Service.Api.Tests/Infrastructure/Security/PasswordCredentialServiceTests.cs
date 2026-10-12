@@ -24,7 +24,7 @@ public sealed class PasswordCredentialServiceTests
     public void HashApiKey_AndApiKeyPrefix_ReturnExpectedValues()
     {
         // Arrange
-        const string plainKey = "sk_live_abcdefghijklmnop";
+        const string plainKey = "stv_test_abcdefghijklmnop";
 
         // Act
         var hash = PasswordCredentialService.HashApiKey(plainKey);
@@ -34,7 +34,7 @@ public sealed class PasswordCredentialServiceTests
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(hash));
         Assert.Equal(PasswordCredentialService.HashApiKey(plainKey), hash);
-        Assert.Equal("sk_live_", prefix);
+        Assert.Equal("stv_test", prefix);
         Assert.Equal("abc", shortPrefix);
     }
 

@@ -86,13 +86,13 @@ export function ExecutionsFilterForm({
   const filterText = uiText.executionsPage.filter;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
+    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
       <h2 className="text-sm font-medium text-md-on-surface">{filterText.title}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm text-md-on-surface">
           <span className="text-md-on-surface-variant">{uiText.labels.status}</span>
           <select
-            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
+            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
             value={status}
             onChange={(event) => onStatusChange(event.target.value)}
           >
@@ -106,7 +106,7 @@ export function ExecutionsFilterForm({
         <label className="block text-sm text-md-on-surface">
           <span className="text-md-on-surface-variant">{filterText.definitionLabelWithHint(uiText.labels.definitionId)}</span>
           <input
-            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
+            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
             value={definitionDraft}
             onChange={(event) => onDefinitionDraftChange(event.target.value)}
             placeholder={filterText.definitionPlaceholder}
@@ -118,7 +118,7 @@ export function ExecutionsFilterForm({
         <label className="min-w-[260px] flex-1 text-sm text-md-on-surface">
           <span className="text-md-on-surface-variant">{filterText.nameInputHint}</span>
           <input
-            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
+            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
             value={nameDraft}
             onChange={(event) => onNameDraftChange(event.target.value)}
             autoComplete="off"
@@ -126,7 +126,7 @@ export function ExecutionsFilterForm({
         </label>
         <button
           type="submit"
-          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
           disabled={loading}
         >
           {filterText.search}
@@ -134,7 +134,7 @@ export function ExecutionsFilterForm({
         <label className="text-sm text-md-on-surface">
           <span className="text-md-on-surface-variant">{filterText.sortByLabel}</span>
           <select
-            className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
+            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
             value={sortBy}
             onChange={(event) => onSortByChange(event.target.value)}
           >
@@ -145,7 +145,7 @@ export function ExecutionsFilterForm({
         <label className="text-sm text-md-on-surface">
           <span className="text-md-on-surface-variant">{filterText.sortOrderLabel}</span>
           <select
-            className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
+            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
             value={sortOrder}
             onChange={(event) => onSortOrderChange(event.target.value)}
           >
@@ -155,7 +155,7 @@ export function ExecutionsFilterForm({
         </label>
         <button
           type="button"
-          className="rounded border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
+          className="rounded-sm border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
           onClick={onClear}
           disabled={loading && !status && !nameDraft && !definitionDraft}
         >

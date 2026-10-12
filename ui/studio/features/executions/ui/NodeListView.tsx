@@ -71,7 +71,7 @@ export function NodeListView({
   };
 
   return (
-    <div className="overflow-auto rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+    <div className="overflow-auto rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{uiText.nodeList.title}</h2>
         <div className="flex items-center gap-3">
@@ -196,7 +196,7 @@ function NodeListDataRow({
 }: Readonly<NodeListDataRowProps>) {
   const style = getStatusStyle(node.status);
   const runningClass = node.status === "RUNNING" ? "opacity-80" : "";
-  const selectedClass = selected ? "outline outline-2 outline-md-primary" : "";
+  const selectedClass = selected ? "outline-solid outline-2 outline-md-primary" : "";
   const durationText = listDurationText(node);
 
   return (

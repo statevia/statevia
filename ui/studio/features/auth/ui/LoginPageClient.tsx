@@ -128,7 +128,7 @@ export function LoginPageClient() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-sm"
+        className="space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-xs"
         noValidate
       >
         <div>

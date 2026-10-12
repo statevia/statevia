@@ -27,7 +27,7 @@ export function GraphLegend() {
   return (
     <section
       aria-label={uiText.graphLegend.aria.root}
-      className="absolute bottom-3 left-14 z-10 flex max-h-[min(50vh,280px)] flex-col gap-3 overflow-auto rounded-xl border border-md-outline bg-[var(--md-sys-color-surface)]/95 px-3 py-2.5 shadow-md backdrop-blur-sm sm:bottom-4 sm:left-16 sm:gap-4 sm:px-4 sm:py-3"
+      className="absolute bottom-3 left-14 z-10 flex max-h-[min(50vh,280px)] flex-col gap-3 overflow-auto rounded-xl border border-md-outline bg-(--md-sys-color-surface)/95 px-3 py-2.5 shadow-md backdrop-blur-xs sm:bottom-4 sm:left-16 sm:gap-4 sm:px-4 sm:py-3"
     >
       <section aria-label={uiText.graphLegend.aria.nodeStatus} className="flex flex-col gap-1">
         <h3 className="text-[9px] font-semibold uppercase tracking-wide text-md-on-surface-variant">
@@ -39,10 +39,10 @@ export function GraphLegend() {
             return (
               <li key={status} className="flex items-center gap-1">
                 <span
-                  className={`inline-block h-3 w-3 shrink-0 rounded border sm:h-3.5 sm:w-3.5 ${style.borderClass} ${style.bgClass}`}
+                  className={`inline-block h-3 w-3 shrink-0 rounded-sm border sm:h-3.5 sm:w-3.5 ${style.borderClass} ${style.bgClass}`}
                   aria-hidden
                 />
-                <span className={`rounded px-1 py-0.5 text-[9px] font-semibold ${style.badgeClass}`}>
+                <span className={`rounded-sm px-1 py-0.5 text-[9px] font-semibold ${style.badgeClass}`}>
                   {status}
                 </span>
               </li>

@@ -65,7 +65,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
 
       {!loading && row && (
         <section
-          className="rounded-lg border border-md-outline bg-md-surface p-4 text-sm text-md-on-surface shadow-sm"
+          className="rounded-lg border border-md-outline bg-md-surface p-4 text-sm text-md-on-surface shadow-xs"
           aria-label={uiText.definitionDetail.ariaMeta}
         >
           <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-2">
@@ -113,7 +113,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
           </button>
           <button
             type="button"
-            className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
+            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
             onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/run`)}
             disabled={deleting}
           >
@@ -122,7 +122,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
           {row && !confirmDelete && (
             <button
               type="button"
-              className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
+              className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
               onClick={onDeleteClick}
               disabled={deleting || loading}
             >
@@ -133,7 +133,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
             <>
               <button
                 type="button"
-                className="rounded border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
+                className="rounded-sm border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
                 onClick={onDeleteClick}
                 disabled={deleting}
               >
@@ -143,7 +143,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
               </button>
               <button
                 type="button"
-                className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
+                className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
                 onClick={() => setConfirmDelete(false)}
                 disabled={deleting}
               >

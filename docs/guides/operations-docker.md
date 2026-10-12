@@ -95,6 +95,7 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 ## ヘルス
 
 - Service API: `GET http://localhost:8080/v1/health` → `{ "status": "ok" }`
+- compose の `service-api` は同じ URL をコンテナ内から確認し、成功するまで `ui-studio` を起動しない。データベースへの到達は見ない。
 
 ## 容量・負荷計測
 

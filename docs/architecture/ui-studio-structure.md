@@ -54,8 +54,7 @@ ui/studio/
 │  └─ lib/                   # dateTime, errors, validation, theme, graphLayout
 ├─ public/
 ├─ Dockerfile                # build 時に app / features / shared を COPY
-├─ .dockerignore
-└─ tailwind.config.ts        # content に app / features / shared を含める
+└─ .dockerignore
 ```
 
 旧 `app/lib` / `app/components` / `app/graphs` / `app/features` は削除済み。長期の互換 re-export は残さない。小規模 feature（admin / auth / dashboard）は必ずしも `api` / `hooks` 層を分けない。
@@ -122,7 +121,7 @@ flowchart LR
 2. `app/**/page.tsx` は薄い wrapper のみにする（表示・ロジックは feature 側）。
 3. 横断関心のみ `shared/` に置く（ドメイン知識を `shared` に落とさない）。
 4. 文言を追加する場合は feature の i18n 切片を更新し、`shared/i18n/uiText*.ts` の合成を維持する。
-5. Tailwind クラスを `features` / `shared` に書く場合、`tailwind.config.ts` の `content` に当該 glob が含まれていることを確認する（含まれないと本番 CSS から落ちる）。
+5. Tailwind CSS 4 はクラスをソースから自動検出する。`features` / `shared` のクラスは、Dockerfile がそれらのディレクトリを COPY していれば本番 CSS に含まれる。
 6. `npm run lint` / `typecheck` / `test:run` を通す。
 7. Docker イメージを使う場合は `ui/studio/Dockerfile` が `features` / `shared` を COPY していること、および再ビルドを前提にする。
 
@@ -155,7 +154,7 @@ flowchart LR
 
 ## 8. 色トークンと操作部品
 
-色の正本は `app/globals.css` の CSS 変数である。Tailwind からは `tailwind.config.ts` の `theme.extend.colors` を使う。
+色の正本は `app/globals.css` の CSS 変数である。Tailwind のユーティリティへは、同じファイルの `@theme` が写す。
 
 | 変数の接頭辞 | ユーティリティの例 |
 | --- | --- |

@@ -33,7 +33,6 @@ export default defineConfig({
         "coverage/**",
         "**/dist/**",
         "postcss.config.js",
-        "tailwind.config.js",
         "vitest.config.ts",
         "eslint.config.js",
         "playwright.config.ts",

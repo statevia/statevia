@@ -80,7 +80,7 @@ export function AdminGroupsPageClient() {
               <p className="font-medium text-md-on-surface">
                 {item.name}
                 {item.isSystem ? (
-                  <span className="ml-2 rounded bg-md-surface-container-high px-2 py-0.5 text-xs">
+                  <span className="ml-2 rounded-sm bg-md-surface-container-high px-2 py-0.5 text-xs">
                     {pageUi.systemBadge}
                   </span>
                 ) : null}
@@ -107,7 +107,7 @@ export function AdminGroupsPageClient() {
         onSubmit={(event) => {
           void handleCreate(event);
         }}
-        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
+        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
       >
         <h2 className="mb-3 text-lg font-medium">{pageUi.createTitle}</h2>
         <label htmlFor="admin-group-name" className="mb-1 block text-sm font-medium">

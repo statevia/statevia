@@ -59,7 +59,7 @@ function CandidateTextField({ label, value, options, onChange }: Readonly<Candid
       autoComplete="off"
     >
       {listOpen && visibleOptions.length > 0 && (
-        <ul className="absolute left-0 top-full z-10 mt-1 max-h-48 w-full overflow-auto rounded border border-md-outline-variant bg-md-surface-container shadow-lg">
+        <ul className="absolute left-0 top-full z-10 mt-1 max-h-48 w-full overflow-auto rounded-sm border border-md-outline-variant bg-md-surface-container shadow-lg">
           {visibleOptions.map((option) => (
             <li key={option.value || "empty"}>
               <button

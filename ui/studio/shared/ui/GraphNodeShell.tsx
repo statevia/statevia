@@ -17,11 +17,11 @@ type GraphNodeShellProps = {
 
 /** フォーク: 上帯（primary） */
 const forkBandClass =
-  "shrink-0 border-b border-[var(--md-sys-color-outline)]/15 bg-[var(--md-sys-color-primary)]/28 dark:bg-[var(--md-sys-color-primary)]/22";
+  "shrink-0 border-b border-(--md-sys-color-outline)/15 bg-(--md-sys-color-primary)/28 dark:bg-(--md-sys-color-primary)/22";
 
 /** ジョイン: 下帯（secondary） */
 const joinBandClass =
-  "shrink-0 border-t border-[var(--md-sys-color-outline)]/15 bg-[var(--md-sys-color-secondary)]/28 dark:bg-[var(--md-sys-color-secondary)]/22";
+  "shrink-0 border-t border-(--md-sys-color-outline)/15 bg-(--md-sys-color-secondary)/28 dark:bg-(--md-sys-color-secondary)/22";
 
 /**
  * ワークフロー／定義グラフ共通のノード外観。
@@ -37,16 +37,16 @@ export function GraphNodeShell({
   className: shellExtraClass,
   children
 }: Readonly<GraphNodeShellProps>) {
-  const outline = selected ? "outline outline-2 outline-md-primary outline-offset-2" : "";
+  const outline = selected ? "outline-solid outline-2 outline-md-primary outline-offset-2" : "";
   const running = isRunning ? "opacity-80 text-md-on-surface-variant" : "";
   const ring = diffRing ?? "";
 
-  const roundedFrame = `relative overflow-hidden rounded-xl border-2 shadow-sm ${borderClass} ${bgClass} ${running} ${outline} ${ring}`;
+  const roundedFrame = `relative overflow-hidden rounded-xl border-2 shadow-xs ${borderClass} ${bgClass} ${running} ${outline} ${ring}`;
   const extra = shellExtraClass?.trim() ? ` ${shellExtraClass.trim()}` : "";
 
   if (shapeKind === "stadium") {
     return (
-      <div className={`rounded-full border-2 px-3 py-3 shadow-sm ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
+      <div className={`rounded-full border-2 px-3 py-3 shadow-xs ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
         {children}
       </div>
     );
@@ -54,7 +54,7 @@ export function GraphNodeShell({
 
   if (shapeKind === "roundedRect") {
     return (
-      <div className={`relative rounded-xl border-2 p-3 shadow-sm ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
+      <div className={`relative rounded-xl border-2 p-3 shadow-xs ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
         {children}
       </div>
     );
@@ -79,7 +79,7 @@ export function GraphNodeShell({
   }
 
   return (
-    <div className={`relative rounded-xl border-2 p-3 shadow-sm ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
+    <div className={`relative rounded-xl border-2 p-3 shadow-xs ${borderClass} ${bgClass} ${running} ${outline} ${ring}${extra}`}>
       {children}
     </div>
   );

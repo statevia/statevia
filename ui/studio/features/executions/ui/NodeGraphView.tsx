@@ -137,7 +137,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
           <button
             type="button"
             aria-label={uiText.nodeGraph.aria.selectNode(data.label)}
-            className={`min-h-0 flex-1 cursor-grab text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-md-primary active:cursor-grabbing ${isGateway ? "border-0 bg-transparent p-0" : ""}`}
+            className={`min-h-0 flex-1 cursor-grab text-left outline-hidden ring-offset-2 focus-visible:ring-2 focus-visible:ring-md-primary active:cursor-grabbing ${isGateway ? "border-0 bg-transparent p-0" : ""}`}
             onClick={() => data.onSelect(data.name)}
           >
             {nodeMainSection}
@@ -214,8 +214,8 @@ function WaitingResumeControls({
 
 function GroupNodeComponent({ data }: NodeProps<GroupNodeData>) {
   return (
-    <div className="h-full w-full rounded-2xl border border-dashed border-md-outline bg-[var(--md-sys-color-surface-container)]/70 p-2">
-      <span className="rounded bg-md-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-md-on-surface">{data.label}</span>
+    <div className="h-full w-full rounded-2xl border border-dashed border-md-outline bg-(--md-sys-color-surface-container)/70 p-2">
+      <span className="rounded-sm bg-md-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-md-on-surface">{data.label}</span>
     </div>
   );
 }
@@ -369,7 +369,7 @@ export function NodeGraphView({
   const graphHeightClass = heightClassName ?? "h-[620px]";
 
   return (
-    <div className={`relative ${graphHeightClass} overflow-hidden rounded-2xl border border-md-outline bg-md-surface shadow-sm`}>
+    <div className={`relative ${graphHeightClass} overflow-hidden rounded-2xl border border-md-outline bg-md-surface shadow-xs`}>
       <ReactFlow
         nodes={displayNodes}
         edges={graphEdges}

@@ -25,7 +25,7 @@ function joinClassNames(base: string, extra?: string): string {
  */
 export function TextField({ label, className, children, ...inputProps }: Readonly<TextFieldProps>) {
   const inputClassName = joinClassNames(
-    "mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm",
+    "mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm",
     className
   );
 
