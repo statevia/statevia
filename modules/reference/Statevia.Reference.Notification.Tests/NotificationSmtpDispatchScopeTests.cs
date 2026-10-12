@@ -68,6 +68,71 @@ public sealed class NotificationSmtpDispatchScopeTests
         Assert.Equal("SMTP from address is not configured.", exception.Message);
     }
 
+    /// <summary>対象外の Action はスコープを開かない。</summary>
+    [Fact]
+    public void BeginScopeForAction_WhenOtherAction_ReturnsNull()
+    {
+        // Arrange
+        var request = Request("statevia.action.builtin.execution.noop", SampleConnection());
+
+        // Act
+        var scope = NotificationSmtpDispatch.BeginScopeForAction(request);
+
+        // Assert
+        Assert.Null(scope);
+        Assert.Null(NotificationSmtpDispatchScope.Current);
+    }
+
+    /// <summary>notification.send でも接続が無ければスコープを開かない。</summary>
+    [Fact]
+    public void BeginScopeForAction_WhenConnectionMissing_ReturnsNull()
+    {
+        // Arrange
+        var request = Request(NotificationSmtpDispatch.ActionId, connection: null);
+
+        // Act
+        var scope = NotificationSmtpDispatch.BeginScopeForAction(request);
+
+        // Assert
+        Assert.Null(scope);
+        Assert.Null(NotificationSmtpDispatchScope.Current);
+    }
+
+    /// <summary>notification.send は実行中だけ接続を見せ、破棄で戻す。</summary>
+    [Fact]
+    public void BeginScopeForAction_WhenNotificationSend_ExposesConnectionUntilDisposed()
+    {
+        // Arrange
+        var connection = SampleConnection();
+        var request = Request(NotificationSmtpDispatch.ActionId, connection);
+
+        // Act
+        var scope = NotificationSmtpDispatch.BeginScopeForAction(request);
+        var during = NotificationSmtpDispatchScope.Current;
+        scope?.Dispose();
+
+        // Assert
+        Assert.NotNull(scope);
+        Assert.Equal("smtp.example.com", during?.Host);
+        Assert.Null(NotificationSmtpDispatchScope.Current);
+    }
+
+    /// <summary>リクエストが null ならスコープを開かない。</summary>
+    [Fact]
+    public void BeginScopeForAction_WhenRequestNull_Throws()
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentNullException>(() => NotificationSmtpDispatch.BeginScopeForAction(null!));
+    }
+
+    /// <summary>接続が null ならスコープを開かない。</summary>
+    [Fact]
+    public void Begin_WhenConnectionNull_Throws()
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentNullException>(() => NotificationSmtpDispatchScope.Begin(null!));
+    }
+
     /// <summary>スコープを閉じたあと接続は読めない。</summary>
     [Fact]
     public void Begin_WhenDisposed_ClearsCurrent()
@@ -84,6 +149,19 @@ public sealed class NotificationSmtpDispatchScopeTests
         Assert.Equal("smtp.example.com", during?.Host);
         Assert.Null(NotificationSmtpDispatchScope.Current);
     }
+
+    private static NotificationSmtpDispatch SampleConnection() =>
+        new("smtp.example.com", 587, "mailer", "secret", "noreply@example.com");
+
+    private static ActionExecutionRequest Request(string actionId, NotificationSmtpDispatch? connection) =>
+        new()
+        {
+            ExecutionId = "exec-1",
+            StateName = "Notify",
+            ActionId = actionId,
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            NotificationSmtp = connection,
+        };
 
     private static Dictionary<string, object?> EmailInput(string? from) =>
         new()

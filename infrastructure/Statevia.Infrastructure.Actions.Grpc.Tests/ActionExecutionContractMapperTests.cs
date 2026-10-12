@@ -69,6 +69,31 @@ public sealed class ActionExecutionContractMapperTests
         Assert.Equal(original.Input?.GetRawText(), restored.Input?.GetRawText());
     }
 
+    /// <summary>空のユーザー、パスワード、既定 From は往復後も null のままにする。</summary>
+    [Fact]
+    public void Request_RoundTrip_BlankSmtpFieldsBecomeNull()
+    {
+        // Arrange
+        var original = new ActionExecutionRequest
+        {
+            ExecutionId = "exec-smtp-blank",
+            StateName = "SendMail",
+            ActionId = NotificationSmtpDispatch.ActionId,
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            NotificationSmtp = new NotificationSmtpDispatch("smtp.example.com", 25, null, "  ", null),
+        };
+
+        // Act
+        var restored = ActionExecutionContractMapper.FromRpcRequest(
+            ActionExecutionContractMapper.ToRpcRequest(original));
+
+        // Assert
+        Assert.Equal("smtp.example.com", restored.NotificationSmtp?.Host);
+        Assert.Null(restored.NotificationSmtp?.User);
+        Assert.Null(restored.NotificationSmtp?.Password);
+        Assert.Null(restored.NotificationSmtp?.DefaultFrom);
+    }
+
     /// <summary>最小リクエストは省略フィールドなしで往復できる。</summary>
     [Fact]
     public void Request_RoundTrip_MinimalFields()

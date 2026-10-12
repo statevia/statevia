@@ -48,6 +48,65 @@ public sealed class NotificationSmtpActionExecutorTests
         Assert.Null(request.NotificationSmtp);
     }
 
+    /// <summary>ローダー未登録の notification.send は内側を呼ばず、固定文で失敗する。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenLoaderMissing_ReturnsFailure()
+    {
+        // Arrange
+        var inner = new RecordingExecutor();
+        var sut = new NotificationSmtpActionExecutor(inner, smtpConnections: null);
+        var request = Request(NotificationSmtpDispatch.ActionId);
+
+        // Act
+        var result = await sut.ExecuteAsync(request, CreateContext(), null, CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("ActionExecutionFailed", result.ErrorCode);
+        Assert.Equal("Notification SMTP is not configured for the execution tenant.", result.ErrorMessage);
+        Assert.Null(inner.ExecutionRequest);
+    }
+
+    /// <summary>テナント ID が UUID でない notification.send は接続を読まず失敗する。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenTenantIdInvalid_ReturnsFailure()
+    {
+        // Arrange
+        var inner = new RecordingExecutor();
+        var loader = new RecordingLoader();
+        var sut = new NotificationSmtpActionExecutor(inner, loader);
+        var request = Request(NotificationSmtpDispatch.ActionId, tenantId: "not-a-tenant");
+
+        // Act
+        var result = await sut.ExecuteAsync(request, CreateContext(), null, CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Notification SMTP is not configured for the execution tenant.", result.ErrorMessage);
+        Assert.Equal(0, loader.CallCount);
+        Assert.Null(inner.ExecutionRequest);
+    }
+
+    /// <summary>ローダーの失敗文をそのまま返し、内側へは渡さない。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenLoaderThrows_ReturnsLoaderMessage()
+    {
+        // Arrange
+        var inner = new RecordingExecutor();
+        var loader = new RecordingLoader { FailureMessage = "Notification SMTP password could not be restored." };
+        var sut = new NotificationSmtpActionExecutor(inner, loader);
+        var request = Request(NotificationSmtpDispatch.ActionId);
+
+        // Act
+        var result = await sut.ExecuteAsync(request, CreateContext(), null, CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Notification SMTP password could not be restored.", result.ErrorMessage);
+        Assert.Null(inner.ExecutionRequest);
+        Assert.Null(request.NotificationSmtp);
+    }
+
     private static ActionExecutionRequest Request(string actionId, string? tenantId = null) =>
         new()
         {
@@ -92,10 +151,15 @@ public sealed class NotificationSmtpActionExecutorTests
 
         public Guid TenantId { get; private set; }
 
+        public string? FailureMessage { get; init; }
+
         public Task<NotificationSmtpDispatch> LoadAsync(Guid tenantId, CancellationToken cancellationToken)
         {
             CallCount++;
             TenantId = tenantId;
+            if (FailureMessage is not null)
+                throw new InvalidOperationException(FailureMessage);
+
             return Task.FromResult(_connection);
         }
     }

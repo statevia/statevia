@@ -18,6 +18,10 @@ internal interface INotificationSmtpConnectionLoader
 }
 
 /// <summary><see cref="INotificationSmtpConnectionLoader"/> の永続化実装。</summary>
+/// <remarks>
+/// 依存は DbContext ファクトリと保護 API だけなので Singleton で登録する。
+/// Scoped にすると Singleton の <c>IActionExecutor</c> が構築時に捕まえ、定義コンパイルの解決で失敗する。
+/// </remarks>
 /// <param name="dbFactory">コア DbContext。</param>
 /// <param name="secretProtector">保存時と同じ用途で復元する。</param>
 internal sealed class NotificationSmtpConnectionLoader(
