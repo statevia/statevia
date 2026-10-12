@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.9 |
-| 更新日 | 2026-09-05 |
+| Version | 1.5.10 |
+| 更新日 | 2026-10-12 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -24,6 +24,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.10（2026-10-12）**: `notification.send` の接続は実行テナントの保存済み SMTP をホストが渡す。モジュールは `STATEVIA_SMTP_*` を読まない。
 
 **Version 1.5.8（2026-09-02）**: `http.request` の URL はホスト名の DNS 解決後 IP も拒否する。
 
@@ -201,10 +203,10 @@ states:
   | `to` | はい | 宛先 |
   | `subject` | はい | 件名 |
   | `body` | はい | 本文 |
-  | `from` | いいえ | 差出人。省略時はプラットフォーム既定 |
+  | `from` | いいえ | 差出人。省略時はテナントの既定 From |
 
 - **output**: `{ channel, messageId? }`
-- **接続設定（SMTP 等）**: workflow `input` には含めない。モジュールが環境変数 `STATEVIA_SMTP_HOST` / `STATEVIA_SMTP_PORT` / `STATEVIA_SMTP_USER` / `STATEVIA_SMTP_PASSWORD` / `STATEVIA_SMTP_FROM` を読む。ホストの `Infrastructure.Notification` には依存しない。未署名リファレンスの TrustLevel は Community。
+- **接続設定（SMTP）**: workflow `input` には含めない。実行テナントの保存済み SMTP をホストが `notification.send` の実行にだけ渡す。モジュールは `STATEVIA_SMTP_*` を読まない。未設定、パスワードを復元できない、差出人が決まらないときは失敗し、運用者の SMTP には寄せない。ホストの `Infrastructure.Notification` には依存しない。未署名リファレンスの TrustLevel は Community。
 
 #### signal（`statevia.action.builtin.execution.signal`）
 

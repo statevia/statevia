@@ -46,7 +46,7 @@ internal sealed class DispatchingActionExecutor : IActionExecutor
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(stateContext);
 
-        if (!TryGetRegistration(request, out var registration) || registration is null)
+        if (!TryGetRegistration(request, out var registration))
         {
             return Failure("UnknownAction", $"Unknown action '{request.ActionId}'.");
         }

@@ -45,6 +45,7 @@ internal sealed class InProcessBackend : IActionExecutionBackend
         }
 
         var executor = factory(_serviceProvider);
+        using var smtpScope = NotificationSmtpDispatch.BeginScopeForAction(invocation.Request);
         var output = await executor
             .ExecuteAsync(stateContext, invocation.RuntimeInput, cancellationToken)
             .ConfigureAwait(false);

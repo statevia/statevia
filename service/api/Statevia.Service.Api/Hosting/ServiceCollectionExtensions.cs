@@ -105,7 +105,14 @@ public static class ServiceCollectionExtensions
                 [$"{RuntimeOptions.SectionName}:EnableInProcessScheduleDispatcher"] = "false"
             })
             .Build();
-        return services.AddStateviaExecutionRuntime(workerConfiguration);
+        return services.AddStateviaExecutionRuntime(workerConfiguration)
+            .AddOptions<SecretProtectionOptions>()
+            .Bind(configuration.GetSection(SecretProtectionOptions.SectionName))
+            .Validate<IHostEnvironment>(
+                (options, environment) => AcceptsSecretsKeyAtStartup(options, environment, configuration),
+                SecretProtectionOptions.RestrictedEnvironmentKeyMessage)
+            .ValidateOnStart()
+            .Services;
     }
 
     /// <summary>
@@ -169,8 +176,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITenantQueryFilterOptions>(EnabledTenantQueryFilterOptions.Instance);
         services.AddStateviaInfrastructurePersistence(connectionString);
         services.AddStateviaInfrastructureSecurity(configuration);
+        // DbContextFactory と保護 API だけに依存する。Singleton の IActionExecutor が構築時に解決するため Scoped にはしない。
+        services.AddSingleton<INotificationSmtpConnectionLoader, NotificationSmtpConnectionLoader>();
         services.AddStateviaRuntimeOptions(configuration);
-        services.AddSingleton<INodesSchemaProvider, Application.Definition.NodesSchemaProvider>();
+        services.AddSingleton<INodesSchemaProvider, NodesSchemaProvider>();
         services.AddStateviaCoreApplication();
         services.AddScoped<IExecutionMutationPersistence, ExecutionMutationPersistence>();
         services.AddScoped<DisplayIdServiceImpl>();
@@ -225,7 +234,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEphemeralActionHostExecutor, GrpcEphemeralActionHostExecutor>();
         services.AddSingleton<IActionSandboxRuntime, DockerSandboxRuntime>();
         services.AddSingleton<IActionExecutionBackendSelector, ActionExecutionBackendSelector>();
-        services.AddSingleton<IActionExecutor, DispatchingActionExecutor>();
+        services.AddSingleton<DispatchingActionExecutor>();
+        services.AddSingleton<IActionExecutor>(sp => new NotificationSmtpActionExecutor(
+            sp.GetRequiredService<DispatchingActionExecutor>(),
+            sp.GetService<INotificationSmtpConnectionLoader>()));
         services.AddSingleton<StateWorkflowDefinitionLoader>();
         services.AddSingleton<NodesWorkflowDefinitionLoader>();
         services.AddSingleton<IDefinitionLoadStrategy, DefinitionLoadStrategy>();
