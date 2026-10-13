@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Statevia.Core.Actions.Abstractions.Execution;
+using Statevia.Infrastructure.Modules;
 using Statevia.Service.Api.Application.Actions.Execution;
 
 namespace Statevia.Service.Api.Tests.Application.Actions.Execution;
@@ -29,10 +30,12 @@ public sealed class DockerSandboxRuntimeTests
         Assert.Equal(1, docker.StartCount);
         Assert.Equal(1, docker.StopCount);
         Assert.NotNull(docker.LastStartRequest);
-        Assert.Equal(0.5, docker.LastStartRequest!.CpuLimit);
+        Assert.Equal(0.5, docker.LastStartRequest.CpuLimit);
         Assert.Equal(256, docker.LastStartRequest.MemoryLimitMiB);
         Assert.Equal("bridge", docker.LastStartRequest.NetworkMode);
-        Assert.Equal("/host/modules", docker.LastStartRequest.ModulesHostPath);
+        Assert.Equal(
+            TenantModulePath.ResolveTenantModulesRoot("/host/modules", "acme"),
+            docker.LastStartRequest.ModulesHostPath);
         Assert.Equal(host.LastBaseUrl, docker.StartedBaseUrl);
     }
 
@@ -200,7 +203,7 @@ public sealed class DockerSandboxRuntimeTests
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(docker.LastStartRequest);
-        Assert.Equal("bridge", docker.LastStartRequest!.NetworkMode);
+        Assert.Equal("bridge", docker.LastStartRequest.NetworkMode);
         Assert.Equal(DockerSandboxOptions.DefaultModulesContainerPath, docker.LastStartRequest.ModulesContainerPath);
         Assert.Equal(DockerSandboxOptions.DefaultGrpcPort, docker.LastStartRequest.ContainerGrpcPort);
         Assert.Contains(
@@ -271,11 +274,73 @@ public sealed class DockerSandboxRuntimeTests
         Assert.Equal(0, docker.StartCount);
     }
 
+    /// <summary>ModulesHostPath が無いときはマウントせず、テナント解決もしない。</summary>
+    [Fact]
+    public async Task RunAsync_WhenModulesHostPathMissing_DoesNotMountOrResolveTenant()
+    {
+        // Arrange
+        var docker = new FakeDockerContainerClient();
+        var tenantKeys = new FakeSandboxTenantKeyLookup("acme");
+        var dockerOptions = CreateDockerOptions();
+        dockerOptions.ModulesHostPath = null;
+        var sut = CreateSut(docker, new FakeEphemeralActionHostExecutor(), dockerOptions, tenantKeys: tenantKeys);
+
+        // Act
+        var result = await sut.RunAsync(CreateRequest(), new SandboxLimits(null, null, null), CancellationToken.None);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(1, docker.StartCount);
+        Assert.NotNull(docker.LastStartRequest);
+        Assert.Null(docker.LastStartRequest.ModulesHostPath);
+        Assert.Equal(0, tenantKeys.CallCount);
+    }
+
+    /// <summary>tenant_key を解決できないときは Docker を呼ばず、秘密をメッセージに出さない。</summary>
+    [Fact]
+    public async Task RunAsync_WhenTenantKeyMissing_ReturnsUnavailableWithoutStartingDocker()
+    {
+        // Arrange
+        var docker = new FakeDockerContainerClient();
+        var tenantKeys = new FakeSandboxTenantKeyLookup(null);
+        var sut = CreateSut(docker, new FakeEphemeralActionHostExecutor(), CreateDockerOptions(), tenantKeys: tenantKeys);
+
+        // Act
+        var result = await sut.RunAsync(CreateRequest(), new SandboxLimits(null, null, null), CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("SandboxTenantModulesUnavailable", result.ErrorCode);
+        Assert.Equal("Tenant modules directory is unavailable.", result.ErrorMessage);
+        Assert.Equal(0, docker.StartCount);
+    }
+
+    /// <summary>tenant_key が modules ルートに解けないときは Docker を呼ばない。</summary>
+    [Fact]
+    public async Task RunAsync_WhenTenantKeyEscapesModulesRoot_ReturnsUnavailableWithoutStartingDocker()
+    {
+        // Arrange
+        const string leakedKey = "LeakMarker";
+        var docker = new FakeDockerContainerClient();
+        var tenantKeys = new FakeSandboxTenantKeyLookup(leakedKey);
+        var sut = CreateSut(docker, new FakeEphemeralActionHostExecutor(), CreateDockerOptions(), tenantKeys: tenantKeys);
+
+        // Act
+        var result = await sut.RunAsync(CreateRequest(), new SandboxLimits(null, null, null), CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("SandboxTenantModulesUnavailable", result.ErrorCode);
+        Assert.Equal(0, docker.StartCount);
+        Assert.DoesNotContain(leakedKey, result.ErrorMessage, StringComparison.Ordinal);
+    }
+
     private static DockerSandboxRuntime CreateSut(
         IDockerContainerClient docker,
         IEphemeralActionHostExecutor host,
         DockerSandboxOptions dockerOptions,
-        ILogger<DockerSandboxRuntime>? logger = null)
+        ILogger<DockerSandboxRuntime>? logger = null,
+        ISandboxTenantKeyLookup? tenantKeys = null)
     {
         var options = Options.Create(new ExecutionPolicyOptions
         {
@@ -289,6 +354,7 @@ public sealed class DockerSandboxRuntimeTests
             options,
             docker,
             host,
+            tenantKeys ?? new FakeSandboxTenantKeyLookup("acme"),
             logger ?? NullLogger<DockerSandboxRuntime>.Instance);
     }
 
@@ -337,6 +403,19 @@ public sealed class DockerSandboxRuntimeTests
             ActionId = "test.module.action",
             TenantId = ActionExecutionTestSupport.DefaultTenantId.ToString("D"),
         };
+
+    private sealed class FakeSandboxTenantKeyLookup(string? tenantKey) : ISandboxTenantKeyLookup
+    {
+        public int CallCount { get; private set; }
+
+        public Task<string?> FindTenantKeyAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            _ = tenantId;
+            _ = cancellationToken;
+            CallCount++;
+            return Task.FromResult(tenantKey);
+        }
+    }
 
     private sealed class FakeDockerContainerClient : IDockerContainerClient
     {

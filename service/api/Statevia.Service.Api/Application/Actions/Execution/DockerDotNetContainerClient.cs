@@ -24,11 +24,7 @@ internal sealed class DockerDotNetContainerClient(IOptions<ExecutionPolicyOption
 
         using var client = CreateClient();
         var grpcPortKey = $"{request.ContainerGrpcPort}/tcp";
-        var env = new List<string>
-        {
-            $"ASPNETCORE_URLS=http://+:{request.ContainerGrpcPort}",
-            $"STATEVIA_MODULES_PATH={request.ModulesContainerPath.TrimEnd('/')}",
-        };
+        var env = BuildContainerEnvironment(request.ContainerGrpcPort, request.ModulesContainerPath);
 
         var hostConfig = new HostConfig
         {
@@ -56,13 +52,10 @@ internal sealed class DockerDotNetContainerClient(IOptions<ExecutionPolicyOption
             hostConfig.NanoCPUs = (long)(cpu * 1_000_000_000d);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.ModulesHostPath))
+        var modulesBind = BuildReadOnlyModulesBind(request.ModulesHostPath, request.ModulesContainerPath);
+        if (modulesBind is not null)
         {
-            var hostPath = Path.GetFullPath(request.ModulesHostPath);
-            hostConfig.Binds =
-            [
-                $"{hostPath}:{request.ModulesContainerPath.TrimEnd('/')}:ro",
-            ];
+            hostConfig.Binds = [modulesBind];
         }
 
         var create = await client.Containers.CreateContainerAsync(
@@ -161,6 +154,33 @@ internal sealed class DockerDotNetContainerClient(IOptions<ExecutionPolicyOption
         }
 
         await SafeRemoveAsync(client, containerId, CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// コンテナに渡す環境変数。<code>ASPNETCORE_URLS</code> と <code>STATEVIA_MODULES_PATH</code> だけである。
+    /// </summary>
+    /// <param name="containerGrpcPort">コンテナ内の gRPC ポート。</param>
+    /// <param name="modulesContainerPath">コンテナ内の modules パス。</param>
+    /// <returns>環境変数の 2 要素。</returns>
+    internal static List<string> BuildContainerEnvironment(int containerGrpcPort, string modulesContainerPath) =>
+    [
+        $"ASPNETCORE_URLS=http://+:{containerGrpcPort}",
+        $"STATEVIA_MODULES_PATH={modulesContainerPath.TrimEnd('/')}",
+    ];
+
+    /// <summary>ホストの modules パスを読み取り専用でバインドする。未設定のときはマウントしない。</summary>
+    /// <param name="modulesHostPath">ホスト側パス。テナントディレクトリまで絞った値を渡す。</param>
+    /// <param name="modulesContainerPath">コンテナ内の modules パス。</param>
+    /// <returns><c>host:container:ro</c>。ホストパスが空なら null。</returns>
+    internal static string? BuildReadOnlyModulesBind(string? modulesHostPath, string modulesContainerPath)
+    {
+        if (string.IsNullOrWhiteSpace(modulesHostPath))
+        {
+            return null;
+        }
+
+        var hostPath = Path.GetFullPath(modulesHostPath);
+        return $"{hostPath}:{modulesContainerPath.TrimEnd('/')}:ro";
     }
 
     private DockerClient CreateClient()

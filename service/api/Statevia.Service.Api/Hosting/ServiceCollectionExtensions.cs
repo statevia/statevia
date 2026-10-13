@@ -230,6 +230,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IActionExecutionBackend, OutOfProcessBackend>();
         services.AddSingleton<IActionExecutionBackend, ContainerActionBackend>();
         services.AddSingleton<IActionExecutionBackend, WasmActionBackend>();
+        services.AddSingleton<ISandboxTenantKeyLookup, SandboxTenantKeyLookup>();
         services.AddSingleton<IDockerContainerClient, DockerDotNetContainerClient>();
         services.AddSingleton<IEphemeralActionHostExecutor, GrpcEphemeralActionHostExecutor>();
         services.AddSingleton<IActionSandboxRuntime, DockerSandboxRuntime>();

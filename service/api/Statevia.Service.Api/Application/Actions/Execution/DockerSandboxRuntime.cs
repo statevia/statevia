@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Statevia.Core.Actions.Abstractions.Execution;
+using Statevia.Infrastructure.Modules;
 
 namespace Statevia.Service.Api.Application.Actions.Execution;
 
@@ -14,14 +15,18 @@ namespace Statevia.Service.Api.Application.Actions.Execution;
 /// <param name="options">実行ポリシー（Sandbox.Docker 含む）。</param>
 /// <param name="docker">Docker クライアント境界。</param>
 /// <param name="hostExecutor">一時 BaseUrl 向け Host 実行。</param>
+/// <param name="tenantKeys">実行テナントの tenant_key。</param>
 /// <param name="logger">構造化ログ（機密を含めない）。</param>
 internal sealed class DockerSandboxRuntime(
     IOptions<ExecutionPolicyOptions> options,
     IDockerContainerClient docker,
     IEphemeralActionHostExecutor hostExecutor,
+    ISandboxTenantKeyLookup tenantKeys,
     ILogger<DockerSandboxRuntime> logger) : IActionSandboxRuntime
 {
     private const string SandboxRuntimeUnavailableCode = "SandboxRuntimeUnavailable";
+    private const string SandboxTenantModulesUnavailableCode = "SandboxTenantModulesUnavailable";
+    private const string TenantModulesUnavailableMessage = "Tenant modules directory is unavailable.";
 
     /// <inheritdoc />
     public string ProviderKey => "docker";
@@ -83,13 +88,22 @@ internal sealed class DockerSandboxRuntime(
         DockerStartedContainer? started = null;
         try
         {
+            var mount = await ResolveTenantModulesMountAsync(
+                request,
+                dockerOptions.ModulesHostPath,
+                timeoutCts.Token).ConfigureAwait(false);
+            if (mount.RejectedResult is not null)
+            {
+                return mount.RejectedResult;
+            }
+
             started = await docker.StartActionHostContainerAsync(
                 new DockerContainerStartRequest(
                     dockerOptions.Image.Trim(),
                     networkMode,
                     limits.CpuLimit,
                     limits.MemoryLimitMiB,
-                    dockerOptions.ModulesHostPath,
+                    mount.HostPath,
                     modulesContainerPath,
                     grpcPort),
                 timeoutCts.Token).ConfigureAwait(false);
@@ -132,6 +146,54 @@ internal sealed class DockerSandboxRuntime(
             }
         }
     }
+
+    /// <summary>
+    /// <paramref name="configuredModulesHostPath"/> が無いときはマウントしない。
+    /// あるときは実行テナントのディレクトリだけを返す。解決できないときは Docker を呼ばない。
+    /// </summary>
+    private async Task<TenantModulesMount> ResolveTenantModulesMountAsync(
+        ActionExecutionRequest request,
+        string? configuredModulesHostPath,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(configuredModulesHostPath))
+        {
+            return new TenantModulesMount(null, null);
+        }
+
+        if (!Guid.TryParse(request.TenantId, out var tenantId))
+        {
+            DockerSandboxRuntimeLog.TenantModulesMountRejected(logger);
+            return new TenantModulesMount(null, Failure(SandboxTenantModulesUnavailableCode, TenantModulesUnavailableMessage));
+        }
+
+        string? tenantKey;
+        try
+        {
+            tenantKey = await tenantKeys.FindTenantKeyAsync(tenantId, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(tenantKey))
+            {
+                var hostPath = TenantModulePath.ResolveTenantModulesRoot(configuredModulesHostPath.Trim(), tenantKey);
+                return new TenantModulesMount(hostPath, null);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // 解決失敗はホストを落とさず、その Action の失敗にする。例外本文は秘密を含み得る
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            DockerSandboxRuntimeLog.TenantModulesMountRejected(logger);
+            return new TenantModulesMount(null, Failure(SandboxTenantModulesUnavailableCode, TenantModulesUnavailableMessage));
+        }
+
+        DockerSandboxRuntimeLog.TenantModulesMountRejected(logger);
+        return new TenantModulesMount(null, Failure(SandboxTenantModulesUnavailableCode, TenantModulesUnavailableMessage));
+    }
+
+    private readonly record struct TenantModulesMount(string? HostPath, ActionExecutionResult? RejectedResult);
 
     private static bool IsValidDefaultTimeoutSeconds(int configuredSeconds) =>
         configuredSeconds is >= DockerSandboxOptions.MinDefaultTimeoutSeconds
@@ -178,25 +240,26 @@ internal sealed class DockerSandboxRuntime(
         CancellationToken cancellationToken)
     {
         const int maxAttempts = 40;
-        ActionExecutionResult? last = null;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        var attempt = 0;
+        ActionExecutionResult result;
+        do
         {
+            attempt++;
             cancellationToken.ThrowIfCancellationRequested();
-            last = await hostExecutor.ExecuteAsync(baseUrl, request, cancellationToken).ConfigureAwait(false);
-            if (last.Success || !IsTransientStartupFailure(last))
+            result = await hostExecutor.ExecuteAsync(baseUrl, request, cancellationToken).ConfigureAwait(false);
+            if (result.Success || !IsTransientStartupFailure(result))
             {
-                return last;
+                return result;
             }
 
-            if (attempt == maxAttempts)
+            if (attempt < maxAttempts)
             {
-                break;
+                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
             }
-
-            await Task.Delay(200, cancellationToken).ConfigureAwait(false);
         }
+        while (attempt < maxAttempts);
 
-        return last ?? Failure(SandboxRuntimeUnavailableCode, "Docker sandbox runtime is unavailable.");
+        return result;
     }
 
     private static bool IsTransientStartupFailure(ActionExecutionResult result)
@@ -256,4 +319,11 @@ internal static partial class DockerSandboxRuntimeLog
         Level = LogLevel.Warning,
         Message = "Docker sandbox option {OptionKey} was empty; using configured default")]
     public static partial void OptionsFallbackApplied(ILogger logger, string optionKey);
+
+    /// <summary>テナントディレクトリを解決できなかった。パスと秘密は出さない。</summary>
+    [LoggerMessage(
+        EventId = 6,
+        Level = LogLevel.Warning,
+        Message = "Docker sandbox tenant modules mount was rejected")]
+    public static partial void TenantModulesMountRejected(ILogger logger);
 }

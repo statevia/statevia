@@ -3,14 +3,16 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3 |
-| 更新日 | 2026-09-02 |
+| Version | 1.4 |
+| 更新日 | 2026-10-13 |
 | Scope | Service API / ModuleHost / Action 実行 |
 | 関連 | [module-zip-layout.md](module-zip-layout.md), [../../concepts/actions.md](../../concepts/actions.md) |
 
 ---
 
 Action Module の発見・登録・可視性・実行ポリシー・dispatch の Normative 概要。実装は `core/actions/Statevia.Core.Actions.Abstractions` と Service API の composition root にある。
+
+**Version 1.4（2026-10-13）**: Container は実行テナントの modules ディレクトリだけを読み取り専用でマウントする。
 
 **Version 1.3（2026-09-02）**: OutOfProcess の gRPC deadline と `http.request` の解決後 IP 検査を現行として書く。
 
@@ -62,7 +64,7 @@ Policy が返しうるモード（実装状況はバージョンにより異な�
 | --- | --- |
 | InProcess | Service API プロセス内 ALC |
 | OutOfProcess | Action Host（gRPC）。`Statevia:ActionHost:BaseUrl` 必須。実行要求に Deadline があるときだけ gRPC deadline を付ける。無いときは CancellationToken のみ |
-| Container | `ContainerProvider=docker` 時、短命 Action Host コンテナ（gRPC）。`Sandbox:Docker:Image` 等。未構成は `SandboxRuntimeNotConfigured` / `SandboxRuntimeUnavailable` |
+| Container | `ContainerProvider=docker` 時、短命 Action Host コンテナ（gRPC）。`Sandbox:Docker:Image` 等。未構成は `SandboxRuntimeNotConfigured` / `SandboxRuntimeUnavailable`。`ModulesHostPath` があるときは実行テナントのディレクトリだけを読み取り専用でマウントし、解決できないときは `SandboxTenantModulesUnavailable`。渡す環境変数は `ASPNETCORE_URLS` と `STATEVIA_MODULES_PATH` だけである |
 | Wasm | ランタイム未実装（正式リリース対象外）。未構成は `SandboxRuntimeNotConfigured` |
 | Remote | 未登録時は UnsupportedExecutionMode |
 

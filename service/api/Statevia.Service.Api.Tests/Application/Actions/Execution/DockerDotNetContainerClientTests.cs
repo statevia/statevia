@@ -103,6 +103,31 @@ public sealed class DockerDotNetContainerClientTests
         Assert.Null(port);
     }
 
+    /// <summary>コンテナ環境変数は待受 URL と modules パスの 2 つだけで、マウントは読み取り専用である。</summary>
+    [Fact]
+    public void BuildContainerParameters_WhenTenantDirectorySet_UsesTwoVariablesAndReadOnlyBind()
+    {
+        // Arrange
+        const string secretName = "DATABASE_URL";
+        var modulesRoot = Path.Combine(Path.GetTempPath(), "statevia-tenant-mount");
+        var tenantDirectory = Path.Combine(modulesRoot, "acme");
+
+        // Act
+        var environment = DockerDotNetContainerClient.BuildContainerEnvironment(5001, "/app/modules/");
+        var bind = DockerDotNetContainerClient.BuildReadOnlyModulesBind(tenantDirectory, "/app/modules/");
+        var withoutHost = DockerDotNetContainerClient.BuildReadOnlyModulesBind(null, "/app/modules");
+
+        // Assert
+        Assert.Equal(
+            ["ASPNETCORE_URLS=http://+:5001", "STATEVIA_MODULES_PATH=/app/modules"],
+            environment);
+        Assert.DoesNotContain(environment, value => value.Contains(secretName, StringComparison.Ordinal));
+        Assert.NotNull(bind);
+        Assert.EndsWith(":ro", bind, StringComparison.Ordinal);
+        Assert.Contains(Path.GetFullPath(tenantDirectory), bind, StringComparison.Ordinal);
+        Assert.Null(withoutHost);
+    }
+
     private static DockerDotNetContainerClient CreateSut() =>
         new(Options.Create(new ExecutionPolicyOptions
         {
