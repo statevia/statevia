@@ -57,7 +57,8 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - ./modules:/app/modules
+      # Module の配置は service-api が書く。Action Host からは置き換えられないように読み取り専用。
+      - ./modules:/app/modules:ro
 
   ui-studio:
     build:

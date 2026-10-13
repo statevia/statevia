@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0 |
-| 更新日 | 2026-07-07 |
+| Version | 1.1 |
+| 更新日 | 2026-10-13 |
 | 関連 | [../concepts/actions.md](../concepts/actions.md), [operations-docker.md](operations-docker.md) |
 
 ---
+
+**Version 1.1（2026-10-13）**: Action Host は秘密の環境変数で起動せず、modules は読み取り専用。Container は実行テナントのディレクトリだけをマウントする。
 
 **Action Host**（`service/action-host/`）は、Policy が **OutOfProcess** を要求する Action を gRPC で実行するサンドボックスプロセスです。Service API から `Statevia:ActionHost:BaseUrl` で到達します。
 
@@ -48,6 +50,24 @@ Service API 側は `System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport` 
 ## Docker Compose
 
 `docker compose` ではサービス名 `action-host`、Service API から `http://action-host:5001` を参照する構成が一般的です。
+
+`action-host` の `./modules` は読み取り専用でマウントする。`service-api` の同じパスは、配置とリモート取得のために読み書きのままである。
+
+## 環境変数
+
+次の名前が空白以外の値でプロセス環境にあると、Action Host は起動しない。失敗メッセージに値は出ない。
+
+- `DATABASE_URL`
+- `STATEVIA_SECRETS_KEY`
+- `Statevia__Secrets__EncryptionKey`
+- `STATEVIA_SMTP_HOST`、`STATEVIA_SMTP_PORT`、`STATEVIA_SMTP_USER`、`STATEVIA_SMTP_PASSWORD`、`STATEVIA_SMTP_FROM`
+- `STATEVIA_NOTIFICATION_SMTP_SOURCE`
+- `STATEVIA_BOOTSTRAP_PASSWORD`
+- `Auth__Jwt__SigningKey`
+
+未設定または空白だけの名前は拒否理由にしない。許可リスト外のその他は、Module をロードする前にプロセス環境から消して起動を続ける。残すのは `ASPNETCORE_`、`DOTNET_`、`COMPlus_` で始まる名前、`STATEVIA_MODULES_PATH`、プロセスとロケール（`PATH`、`HOME`、`USER`、`HOSTNAME`、`LANG`、`LC_ALL`、`TZ`）、一時ディレクトリ（`TMP`、`TEMP`、`TMPDIR`）、TLS 信頼ストア（`SSL_CERT_FILE`、`SSL_CERT_DIR`）である。Service API の環境変数は削らない。
+
+Container が短命 Action Host を起動するとき渡す環境変数は `ASPNETCORE_URLS` と `STATEVIA_MODULES_PATH` だけである。`ModulesHostPath` があるときは、実行テナントのディレクトリだけを読み取り専用でマウントする。テナントを解決できないとき、またはパスが modules ルートの外に出るときは、コンテナを起動せずその Action を失敗させる。`ModulesHostPath` が未設定のときはマウントしない。
 
 ## Module の reload
 

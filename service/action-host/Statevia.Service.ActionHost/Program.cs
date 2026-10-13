@@ -4,6 +4,8 @@ using Statevia.Service.ActionHost.Execution;
 using Statevia.Service.ActionHost.Grpc;
 using Statevia.Service.ActionHost.Modules;
 
+ActionHostProcessEnvironment.ApplyToProcess();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 平文 gRPC（h2c）用。Http1AndHttp2 は TLS 無しだと HTTP/1.1 のみになり gRPC が Unavailable になる。

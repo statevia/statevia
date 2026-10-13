@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.15 |
-| 更新日 | 2026-10-12 |
+| Version | 1.16 |
+| 更新日 | 2026-10-13 |
 
 ---
+
+**Version 1.16（2026-10-13）**: Action Host は禁止した環境変数で起動せず、許可リスト外は起動時に消す。compose の Action Host modules は読み取り専用。
 
 **Version 1.15（2026-10-12）**: 専用 Worker の Production / Staging でも `STATEVIA_SECRETS_KEY` が起動必須。Scheduler と Action Host は必須ではない。
 
@@ -15,12 +17,6 @@
 **Version 1.13（2026-10-08）**: `STATEVIA_SECRETS_KEY` / `Statevia:Secrets:EncryptionKey`。起動には不要。Production / Staging では保護 API の呼び出し時に検証する。
 
 **Version 1.12（2026-09-27）**: `EnableInProcessScheduleDispatcher`（API 内の定期実行 Dispatcher。既定 On）。
-
-**Version 1.11（2026-09-21）**: 任意の `SENTRY_DSN`（未設定ならエラー監視 SDK は動かない）。
-
-**Version 1.10（2026-09-18）**: 分離 compose の Worker `MaxConcurrency` 未設定時は 16（コード既定 1 は据え置き）。
-
-**Version 1.9（2026-09-05）**: EF Core の SQL 本文ログは Development のみ。本番は Warning。
 
 Service API / UI / Module の主要な環境変数と `appsettings` キー。**調べ物**用。Normative 契約は各 Specification を正とする。
 
@@ -51,7 +47,7 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | `SENTRY_DSN` | 任意。想定外例外のエラー監視（Sentry 互換）。未設定・空なら SDK を初期化せず送信しない。受信側は製品 compose に含めない |
 | `Logging:LogLevel:Microsoft.EntityFrameworkCore` | 既定 `Warning`。EF の SQL 本文は出さない。失敗したコマンドは Error のまま |
 | `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` | Development のみ `Information`（SQL 本文）。本番で一時確認するときは `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information`。遅いクエリは PostgreSQL 側で分析する |
-| `STATEVIA_MODULES_PATH` | Action Module ルート（未設定時は設定ファイル） |
+| `STATEVIA_MODULES_PATH` | Action Module ルート（未設定時は設定ファイル）。Action Host が起動時に残す Statevia の名前はこの 1 つだけである |
 
 ## Action / 実行ポリシー（appsettings）
 
@@ -72,7 +68,7 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 | `Statevia:ExecutionPolicy:Sandbox:Docker:GrpcPort` | コンテナ内 gRPC ポート（1024〜65535） | 範囲外 → **起動失敗** |
 | `Statevia:ExecutionPolicy:Sandbox:Docker:NetworkMode` | Docker NetworkMode（`none` 不可。空白は `bridge`＋Warning） | `none` → **起動失敗** |
 | `Auth:Jwt:SigningKey` | JWT 署名シークレット（**Service API のみ**。専用 Worker / Scheduler は読まない） | 空 → **起動失敗**。Production / Staging では開発既定値および 32 文字未満も **起動失敗**（メッセージに鍵値は出さない）。Development の開発既定値は可 |
-| `STATEVIA_SECRETS_KEY` | テナント秘密のマスター鍵（標準 Base64 の 32 バイト）。非空白なら `Statevia:Secrets:EncryptionKey` より優先する。Scheduler と Action Host はこの鍵を起動時に要求しない | **Service API** と **専用 Worker** の Production / Staging では未設定・開発用鍵・32 バイト以外 → **起動失敗**（メッセージに鍵値は出さない）。Development の未設定は起動する |
+| `STATEVIA_SECRETS_KEY` | テナント秘密のマスター鍵（標準 Base64 の 32 バイト）。非空白なら `Statevia:Secrets:EncryptionKey` より優先する。Scheduler と Action Host はこの鍵を起動時に要求しない。Action Host では空白以外の値があると起動失敗する | **Service API** と **専用 Worker** の Production / Staging では未設定・開発用鍵・32 バイト以外 → **起動失敗**（メッセージに鍵値は出さない）。Development の未設定は起動する。Action Host は値があるだけで起動失敗する |
 | `Statevia:Secrets:EncryptionKey` | `STATEVIA_SECRETS_KEY` が無いときに使うマスター鍵 | 上と同じ。Service API の Production / Staging では起動必須 |
 | `Auth:Jwt:AccessTokenLifetimeMinutes` | トークン有効期間（分、≥1） | 範囲外 → **起動失敗** |
 | `ExecutionProjectionQueue:*` | Projection キュー（サイズ・リトライ遅延等） | 範囲外・矛盾 → **起動失敗** |
@@ -85,6 +81,8 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 
 検証方針（起動失敗 / 警告＋既定値 / 機能無効）の規約は [`docs/development-guidelines.md`](../development-guidelines.md) §4.1（Options 検証）を参照。
 
-詳細: [actions/platform.md](../specifications/actions/platform.md)、[operations-docker.md](../guides/operations-docker.md)。
+Action Host のプロセス環境では、`DATABASE_URL`、`STATEVIA_SECRETS_KEY`、`Statevia__Secrets__EncryptionKey`、`STATEVIA_SMTP_HOST`、`STATEVIA_SMTP_PORT`、`STATEVIA_SMTP_USER`、`STATEVIA_SMTP_PASSWORD`、`STATEVIA_SMTP_FROM`、`STATEVIA_NOTIFICATION_SMTP_SOURCE`、`STATEVIA_BOOTSTRAP_PASSWORD`、`Auth__Jwt__SigningKey` に空白以外の値があると起動しない。メッセージに値は出ない。許可リスト外のその他は Module ロード前に消える。compose の `action-host` は `./modules` を読み取り専用でマウントし、`service-api` は読み書きのままである。Container は `ModulesHostPath` があるとき実行テナントのディレクトリだけを読み取り専用で渡し、環境変数は `ASPNETCORE_URLS` と `STATEVIA_MODULES_PATH` だけである。
+
+詳細: [actions/platform.md](../specifications/actions/platform.md)、[operations-docker.md](../guides/operations-docker.md)、[action-host.md](../guides/action-host.md)。
 
 OpenAPI: [api-openapi.md](api-openapi.md)。
