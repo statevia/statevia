@@ -335,6 +335,82 @@ public sealed class DockerSandboxRuntimeTests
         Assert.DoesNotContain(leakedKey, result.ErrorMessage, StringComparison.Ordinal);
     }
 
+    /// <summary>tenant_id が UUID でないときは解決せず Docker を呼ばない。</summary>
+    [Fact]
+    public async Task RunAsync_WhenTenantIdIsNotGuid_ReturnsUnavailableWithoutStartingDocker()
+    {
+        // Arrange
+        var docker = new FakeDockerContainerClient();
+        var tenantKeys = new FakeSandboxTenantKeyLookup("acme");
+        var sut = CreateSut(docker, new FakeEphemeralActionHostExecutor(), CreateDockerOptions(), tenantKeys: tenantKeys);
+        var request = CreateRequest() with { TenantId = "not-a-guid" };
+
+        // Act
+        var result = await sut.RunAsync(request, new SandboxLimits(null, null, null), CancellationToken.None);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("SandboxTenantModulesUnavailable", result.ErrorCode);
+        Assert.Equal(0, docker.StartCount);
+        Assert.Equal(0, tenantKeys.CallCount);
+    }
+
+    /// <summary>テナント解決がキャンセルされたときはコンテナを起動しない。</summary>
+    [Fact]
+    public async Task RunAsync_WhenTenantLookupIsCancelled_ReturnsCancelled()
+    {
+        // Arrange
+        var docker = new FakeDockerContainerClient();
+        var sut = CreateSut(
+            docker,
+            new FakeEphemeralActionHostExecutor(),
+            CreateDockerOptions(),
+            tenantKeys: new CancellingTenantKeyLookup());
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        // Act
+        var result = await sut.RunAsync(
+            CreateRequest(),
+            new SandboxLimits(null, null, TimeSpan.FromSeconds(30)),
+            cancellation.Token);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Cancelled", result.ErrorCode);
+        Assert.Equal(0, docker.StartCount);
+    }
+
+    /// <summary>一時的な Host 未起動のあとに成功したときはその結果を返す。</summary>
+    [Fact]
+    public async Task RunAsync_WhenHostIsTemporarilyUnavailable_RetriesThenSucceeds()
+    {
+        // Arrange
+        var docker = new FakeDockerContainerClient();
+        var host = new FakeEphemeralActionHostExecutor
+        {
+            Results =
+            [
+                new ActionExecutionResult
+                {
+                    Success = false,
+                    ErrorCode = "ActionHostUnavailable",
+                    ErrorMessage = "unavailable",
+                },
+                new ActionExecutionResult { Success = true },
+            ],
+        };
+        var sut = CreateSut(docker, host, CreateDockerOptions());
+
+        // Act
+        var result = await sut.RunAsync(CreateRequest(), new SandboxLimits(null, null, TimeSpan.FromSeconds(30)), CancellationToken.None);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(2, host.CallCount);
+        Assert.Equal(1, docker.StartCount);
+    }
+
     private static DockerSandboxRuntime CreateSut(
         IDockerContainerClient docker,
         IEphemeralActionHostExecutor host,
@@ -404,6 +480,15 @@ public sealed class DockerSandboxRuntimeTests
             TenantId = ActionExecutionTestSupport.DefaultTenantId.ToString("D"),
         };
 
+    private sealed class CancellingTenantKeyLookup : ISandboxTenantKeyLookup
+    {
+        public Task<string?> FindTenantKeyAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            _ = tenantId;
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
     private sealed class FakeSandboxTenantKeyLookup(string? tenantKey) : ISandboxTenantKeyLookup
     {
         public int CallCount { get; private set; }
@@ -461,6 +546,10 @@ public sealed class DockerSandboxRuntimeTests
     {
         public ActionExecutionResult Result { get; init; } = new() { Success = true };
 
+        public IReadOnlyList<ActionExecutionResult>? Results { get; init; }
+
+        public int CallCount { get; private set; }
+
         public TimeSpan Delay { get; init; }
 
         public string? LastBaseUrl { get; private set; }
@@ -471,9 +560,16 @@ public sealed class DockerSandboxRuntimeTests
             CancellationToken cancellationToken)
         {
             LastBaseUrl = baseUrl;
+            CallCount++;
             if (Delay > TimeSpan.Zero)
             {
                 await Task.Delay(Delay, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (Results is { Count: > 0 })
+            {
+                var index = Math.Min(CallCount - 1, Results.Count - 1);
+                return Results[index];
             }
 
             return Result;
