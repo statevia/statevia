@@ -48,8 +48,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 ARG APP_UID=10001
 ARG APP_GID=10001
 
+# compose の healthcheck が /v1/health を呼ぶ。実行イメージに HTTP クライアントは無い。
 RUN groupadd --gid "$APP_GID" statevia \
-    && useradd --uid "$APP_UID" --gid "$APP_GID" --no-create-home --shell /usr/sbin/nologin statevia
+    && useradd --uid "$APP_UID" --gid "$APP_GID" --no-create-home --shell /usr/sbin/nologin statevia \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build /app/publish .

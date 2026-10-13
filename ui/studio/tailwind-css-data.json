@@ -1,0 +1,9 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@theme",
+      "description": "Tailwind CSS v4 のデザイントークンを定義する。色の実体は CSS 変数側に置く。"
+    }
+  ]
+}

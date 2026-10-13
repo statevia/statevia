@@ -124,7 +124,7 @@ export function DefinitionsPageClient() {
             {uiText.definitionsPage.search.label}
           </span>
           <input
-            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
+            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder={uiText.definitionsPage.search.placeholder}
@@ -132,14 +132,14 @@ export function DefinitionsPageClient() {
         </label>
         <button
           type="submit"
-          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
           disabled={loading}
         >
           {uiText.definitionsPage.search.submit}
         </button>
         <button
           type="button"
-          className="rounded border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
+          className="rounded-sm border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
           onClick={() => {
             setSearchInput("");
             goTo({
@@ -157,7 +157,7 @@ export function DefinitionsPageClient() {
             {uiText.definitionsPage.sortByLabel}
           </span>
           <select
-            className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
+            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
             value={effectiveSortBy}
             onChange={(event) =>
               goTo({
@@ -176,7 +176,7 @@ export function DefinitionsPageClient() {
             {uiText.definitionsPage.sortOrderLabel}
           </span>
           <select
-            className="mt-1 rounded border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
+            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
             value={effectiveSortOrder}
             onChange={(event) =>
               goTo({
@@ -207,7 +207,7 @@ export function DefinitionsPageClient() {
         </label>
         <button
           type="button"
-          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
           onClick={() => router.push("/definitions/new")}
         >
           {uiText.definitionsPage.actions.createNew}
@@ -227,7 +227,7 @@ export function DefinitionsPageClient() {
             </p>
             {paginationNav}
           </div>
-          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm">
+          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs">
             {items.map((definition) => {
               const deleted = isDeletedDefinition(definition);
               const isDeletePending =
@@ -248,7 +248,7 @@ export function DefinitionsPageClient() {
                     >
                       <span className="truncate">{definition.name}</span>
                       {deleted && (
-                        <span className="shrink-0 rounded border border-md-outline-variant px-1.5 py-0.5 text-xs font-normal text-md-on-surface-variant">
+                        <span className="shrink-0 rounded-sm border border-md-outline-variant px-1.5 py-0.5 text-xs font-normal text-md-on-surface-variant">
                           {uiText.definitionsPage.deletedBadge}
                         </span>
                       )}
@@ -282,7 +282,7 @@ export function DefinitionsPageClient() {
                           <>
                             <button
                               type="button"
-                              className="rounded border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
+                              className="rounded-sm border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
                               disabled={isDeleting}
                               onClick={() => handleDeleteClick(definition.displayId)}
                             >
@@ -292,7 +292,7 @@ export function DefinitionsPageClient() {
                             </button>
                             <button
                               type="button"
-                              className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
+                              className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
                               disabled={isDeleting}
                               onClick={() => setPendingConfirm(null)}
                             >
@@ -302,7 +302,7 @@ export function DefinitionsPageClient() {
                         ) : (
                           <button
                             type="button"
-                            className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
+                            className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
                             disabled={deletingId !== null || restoringId !== null}
                             onClick={() => handleDeleteClick(definition.displayId)}
                           >
@@ -317,7 +317,7 @@ export function DefinitionsPageClient() {
                           <>
                             <button
                               type="button"
-                              className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
+                              className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
                               disabled={isRestoring}
                               onClick={() => handleRestoreClick(definition.displayId)}
                             >
@@ -327,7 +327,7 @@ export function DefinitionsPageClient() {
                             </button>
                             <button
                               type="button"
-                              className="rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
+                              className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
                               disabled={isRestoring}
                               onClick={() => setPendingConfirm(null)}
                             >
@@ -337,7 +337,7 @@ export function DefinitionsPageClient() {
                         ) : (
                           <button
                             type="button"
-                            className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
+                            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
                             disabled={deletingId !== null || restoringId !== null}
                             onClick={() => handleRestoreClick(definition.displayId)}
                           >

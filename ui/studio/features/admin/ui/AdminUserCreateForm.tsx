@@ -81,7 +81,7 @@ export function AdminUserCreateForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-sm"
+      className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
     >
       <h2 className="mb-3 text-lg font-medium">{uiText.admin.users.createTitle}</h2>
       <div className="grid gap-3 sm:grid-cols-2">

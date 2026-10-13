@@ -80,7 +80,7 @@ curl -s -X POST "http://localhost:8080/v1/executions" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Idempotency-Key: demo-run-1" \
+  -H "X-Idempotency-Key: demo-1" \
   -d "{\"definitionId\":\"$DEF_ID\",\"input\":{}}"
 ```
 

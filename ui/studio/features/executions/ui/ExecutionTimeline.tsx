@@ -65,7 +65,7 @@ export function ExecutionTimeline({
   const showLoading = useDelayedVisibility(loading);
 
   return (
-    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
       <div className="flex items-center justify-between gap-2 border-b border-md-outline pb-2">
         <button
           type="button"

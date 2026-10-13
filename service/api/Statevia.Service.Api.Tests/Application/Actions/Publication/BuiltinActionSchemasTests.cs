@@ -37,7 +37,7 @@ public sealed class BuiltinActionSchemasTests
         // Act
         var required = root.GetProperty("required")
             .EnumerateArray()
-            .Select(element => element.GetString())
+            .Select(element => element.GetString()!)
             .ToArray();
 
         // Assert
@@ -56,7 +56,7 @@ public sealed class BuiltinActionSchemasTests
         // Act
         var required = root.GetProperty("required")
             .EnumerateArray()
-            .Select(element => element.GetString())
+            .Select(element => element.GetString()!)
             .ToArray();
         var properties = root.GetProperty("properties");
 
@@ -80,7 +80,7 @@ public sealed class BuiltinActionSchemasTests
         // Act
         var required = root.GetProperty("required")
             .EnumerateArray()
-            .Select(element => element.GetString())
+            .Select(element => element.GetString()!)
             .ToArray();
         var properties = root.GetProperty("properties");
 

@@ -352,7 +352,7 @@ export function DefinitionGraphEditor({
         <h3 className="text-sm font-semibold text-md-on-surface">{labels.title}</h3>
         <button
           type="button"
-          className="ml-auto rounded border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs"
+          className="ml-auto rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs"
           onClick={canvas.toggleFullscreen}
         >
           {canvas.isFullscreen ? labels.fullscreenExit : labels.fullscreenEnter}
@@ -361,7 +361,7 @@ export function DefinitionGraphEditor({
 
       <div className={gridClassName}>
         <div
-          className={`${graphHeightClassName} min-h-0 min-w-0 rounded border border-md-outline-variant`}
+          className={`${graphHeightClassName} min-h-0 min-w-0 rounded-sm border border-md-outline-variant`}
         >
           <ReactFlow
             nodes={canvas.nodes}
@@ -383,8 +383,8 @@ export function DefinitionGraphEditor({
             <Background />
           </ReactFlow>
         </div>
-        <div className="flex h-full min-h-0 flex-col gap-2 rounded border border-md-outline-variant bg-md-surface-container p-2">
-          <section className="shrink-0 space-y-2 rounded border border-md-outline bg-md-surface p-2">
+        <div className="flex h-full min-h-0 flex-col gap-2 rounded-sm border border-md-outline-variant bg-md-surface-container p-2">
+          <section className="shrink-0 space-y-2 rounded-sm border border-md-outline bg-md-surface p-2">
             <p className="text-sm font-medium">{labels.addNodeDialogTitle}</p>
             <div className="grid grid-cols-2 gap-2">
               {canvas.availableNodeTypes.map((entry) => (
@@ -392,7 +392,7 @@ export function DefinitionGraphEditor({
                   key={entry.type}
                   type="button"
                   disabled={entry.disabled}
-                  className="rounded border border-md-outline px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-sm border border-md-outline px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => canvas.addNode(entry.type)}
                   title={entry.reason}
                 >
@@ -596,12 +596,12 @@ function GraphNodeInspector({
   const formValue = inputToFormRecord(node.input);
 
   return (
-    <section className="space-y-2 rounded border border-md-outline-variant bg-md-surface-container p-3">
+    <section className="space-y-2 rounded-sm border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.nodeInspectorTitle}</p>
       <label className="block text-xs">
         <span className="block">name</span>
         <input
-          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+          className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
           value={node.name}
           onChange={(changeEvent) => {
             const nextName = changeEvent.target.value;
@@ -629,7 +629,7 @@ function GraphNodeInspector({
             />
           ) : (
             <input
-              className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+              className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
               value={actionOrEventDraft}
               onChange={(changeEvent) => {
                 setActionOrEventDraft(changeEvent.target.value);
@@ -649,7 +649,7 @@ function GraphNodeInspector({
       {node.type === "wait" && waitEditMode === "legacy" && (
         <button
           type="button"
-          className="rounded border border-md-outline-variant px-2 py-1 text-xs"
+          className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
           onClick={() => {
             onDocumentChange(convertLegacyWaitToEvents(document, node.name));
           }}
@@ -667,7 +667,7 @@ function GraphNodeInspector({
           {node.events !== undefined && (
             <button
               type="button"
-              className="rounded border border-md-outline-variant px-2 py-1 text-xs"
+              className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
               onClick={() => {
                 onDocumentChange(setWaitEvents(document, node.name, node.events ?? {}));
               }}
@@ -678,7 +678,7 @@ function GraphNodeInspector({
           {node.subscribe !== undefined && (
             <button
               type="button"
-              className="rounded border border-md-outline-variant px-2 py-1 text-xs"
+              className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
               onClick={() => {
                 onDocumentChange(
                   setWaitSubscribe(
@@ -713,7 +713,7 @@ function GraphNodeInspector({
           />
           <button
             type="button"
-            className="rounded border border-md-outline-variant px-2 py-1 text-xs"
+            className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "subscribe"));
             }}
@@ -740,7 +740,7 @@ function GraphNodeInspector({
           />
           <button
             type="button"
-            className="rounded border border-md-outline-variant px-2 py-1 text-xs"
+            className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "events"));
             }}
@@ -753,7 +753,7 @@ function GraphNodeInspector({
         <label className="block text-xs">
           <span className="block">{labels.actionErrorLabel}</span>
           <input
-            className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+            className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
             value={node.error ?? ""}
             onChange={(changeEvent) => {
               const nextValue = changeEvent.target.value.trim();
@@ -828,7 +828,7 @@ function GraphNodeInspector({
         <label className="block text-xs">
           <span className="block">branches (comma separated)</span>
           <input
-            className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+            className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
             value={(node.branches ?? []).join(", ")}
             onChange={(changeEvent) => {
               const branches = changeEvent.target.value
@@ -843,7 +843,7 @@ function GraphNodeInspector({
       <div className="flex justify-end">
         <button
           type="button"
-          className="rounded border border-rose-400 px-2 py-1 text-xs text-rose-700"
+          className="rounded-sm border border-rose-400 px-2 py-1 text-xs text-rose-700"
           onClick={() => {
             onDocumentChange({
               ...document,
@@ -1073,12 +1073,12 @@ function GraphEdgeInspector({
   }
 
   return (
-    <section className="space-y-2 rounded border border-md-outline-variant bg-md-surface-container p-3">
+    <section className="space-y-2 rounded-sm border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.edgeInspectorTitle}</p>
       <label className="block text-xs">
         <span className="block">to</span>
         <input
-          className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+          className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
           value={targetEdge.to}
           onChange={(changeEvent) => {
             onDocumentChange(
@@ -1117,7 +1117,7 @@ function GraphEdgeInspector({
             <label className="block text-xs">
               <span className="block">when.path</span>
               <input
-                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+                className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={conditionalEdge?.when?.path ?? ""}
                 placeholder={labels.whenPathPlaceholder}
                 disabled={isWhenFieldsDisabled}
@@ -1150,7 +1150,7 @@ function GraphEdgeInspector({
             <label className="block text-xs">
               <span className="block">when.op</span>
               <select
-                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+                className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={selectedWhenOp}
                 disabled={isWhenFieldsDisabled}
                 onChange={(changeEvent) => {
@@ -1187,7 +1187,7 @@ function GraphEdgeInspector({
             <label className="block text-xs">
               <span className="block">when.value</span>
               <input
-                className="mt-1 w-full rounded border border-md-outline px-2 py-1"
+                className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={formatWhenValue(conditionalEdge?.when?.value)}
                 placeholder={labels.whenValuePlaceholder}
                 disabled={isWhenFieldsDisabled || isWhenValueDisabled}
@@ -1222,7 +1222,7 @@ function GraphEdgeInspector({
       <div className="flex justify-end">
         <button
           type="button"
-          className="rounded border border-rose-400 px-2 py-1 text-xs text-rose-700"
+          className="rounded-sm border border-rose-400 px-2 py-1 text-xs text-rose-700"
           onClick={() => {
             onDocumentChange(removeSelectedEdge(document, sourceNode, selection));
             onClearSelection();

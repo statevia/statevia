@@ -318,7 +318,7 @@ export function YamlCodeEditor({
   return (
     <div
       ref={hostRef}
-      className="mt-1 min-h-[26rem] overflow-hidden rounded border border-md-outline-variant bg-md-surface-container text-xs"
+      className="mt-1 min-h-104 overflow-hidden rounded-sm border border-md-outline-variant bg-md-surface-container text-xs"
       aria-label="YAML editor"
     />
   );

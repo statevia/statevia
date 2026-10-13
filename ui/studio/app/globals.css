@@ -1,6 +1,71 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/*
+  色の正本は下の CSS 変数。ここは同じ変数を Tailwind のユーティリティへ写す。
+  値の変更は変数側で行う。md 接頭辞は既定パレットを上書きしないため。
+*/
+
+@theme {
+    --color-md-primary: var(--md-sys-color-primary);
+    --color-md-on-primary: var(--md-sys-color-on-primary);
+    --color-md-primary-container: var(--md-sys-color-primary-container);
+    --color-md-on-primary-container: var(--md-sys-color-on-primary-container);
+    --color-md-secondary-container: var(--md-sys-color-secondary-container);
+    --color-md-surface: var(--md-sys-color-surface);
+    --color-md-surface-container: var(--md-sys-color-surface-container);
+    --color-md-surface-container-high: var(--md-sys-color-surface-container-high);
+    --color-md-on-surface: var(--md-sys-color-on-surface);
+    --color-md-on-surface-variant: var(--md-sys-color-on-surface-variant);
+    --color-md-outline: var(--md-sys-color-outline);
+    --color-md-outline-variant: var(--md-sys-color-outline-variant);
+    --color-md-info: var(--md-sys-color-info);
+    --color-md-on-info: var(--md-sys-color-on-info);
+    --color-md-info-container: var(--md-sys-color-info-container);
+    --color-md-on-info-container: var(--md-sys-color-on-info-container);
+    --color-md-success: var(--md-sys-color-success);
+    --color-md-on-success: var(--md-sys-color-on-success);
+    --color-md-success-container: var(--md-sys-color-success-container);
+    --color-md-on-success-container: var(--md-sys-color-on-success-container);
+    --color-md-warning: var(--md-sys-color-warning);
+    --color-md-on-warning: var(--md-sys-color-on-warning);
+    --color-md-warning-container: var(--md-sys-color-warning-container);
+    --color-md-on-warning-container: var(--md-sys-color-on-warning-container);
+    --color-md-error: var(--md-sys-color-error);
+    --color-md-on-error: var(--md-sys-color-on-error);
+    --color-md-error-container: var(--md-sys-color-error-container);
+    --color-md-on-error-container: var(--md-sys-color-on-error-container);
+    --color-md-edge-error-accent: var(--md-sys-color-edge-error-accent);
+    --color-md-neutral: var(--md-sys-color-neutral);
+    --color-md-on-neutral: var(--md-sys-color-on-neutral);
+    --color-md-neutral-container: var(--md-sys-color-neutral-container);
+    --color-md-on-neutral-container: var(--md-sys-color-on-neutral-container);
+    --color-brand-header-bg: var(--brand-header-bg);
+    --color-brand-header-fg: var(--brand-header-fg);
+    --color-brand-header-fg-muted: var(--brand-header-fg-muted);
+    --color-brand-cta-bg: var(--brand-cta-bg);
+    --color-brand-cta-fg: var(--brand-cta-fg);
+    --color-brand-cta-border: var(--brand-cta-border);
+    --color-brand-cta-bg-hover: var(--brand-cta-bg-hover);
+    --color-editor-caret: var(--editor-caret);
+    --color-editor-caret-border: var(--editor-caret-border);
+}
+
+
+/*
+  Tailwind CSS v4 では枠線の既定色が currentcolor になった。
+  v3 と同じ見え方にするため、色を指定していない枠線は gray-200 のままにする。
+*/
+
+@layer base {
+    *,
+     ::after,
+     ::before,
+     ::backdrop,
+     ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+}
+
 :root {
     color-scheme: light;
     /* Brand (keep custom identity) */

@@ -33,6 +33,13 @@ services:
     depends_on:
       - postgres
       - action-host
+    # プロセスが /v1/health に応答することだけを見る。データベースへの到達は見ない。
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/v1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
     ports:
       - "8080:8080"
     volumes:
@@ -60,7 +67,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - service-api
+      service-api:
+        condition: service_healthy
 
 volumes:
   pgdata: {}

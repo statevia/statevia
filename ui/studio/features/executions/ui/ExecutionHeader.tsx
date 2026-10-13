@@ -53,7 +53,7 @@ export function ExecutionHeader({
   const status = execution?.status;
 
   return (
-    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex-1">
           {executionIdEditable ? (
@@ -63,7 +63,7 @@ export function ExecutionHeader({
               </label>
               <input
                 id="execution-id-input"
-                className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-none focus:border-md-primary"
+                className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-hidden focus:border-md-primary"
                 value={executionId}
                 onChange={(event) => onExecutionIdChange(event.target.value)}
                 placeholder={uiText.executionHeader.placeholderExecutionId}
@@ -107,7 +107,7 @@ export function ExecutionHeader({
                 type="checkbox"
                 checked={compareMode}
                 onChange={(e) => onCompareModeChange(e.target.checked)}
-                className="rounded border-md-outline-variant bg-md-surface-container"
+                className="rounded-sm border-md-outline-variant bg-md-surface-container"
               />
               <span>{uiText.executionHeader.compareLabel}</span>
             </label>
@@ -118,7 +118,7 @@ export function ExecutionHeader({
                 type="checkbox"
                 checked={streamEnabled}
                 onChange={(e) => onStreamEnabledChange(e.target.checked)}
-                className="rounded border-md-outline-variant bg-md-surface-container"
+                className="rounded-sm border-md-outline-variant bg-md-surface-container"
               />
               <span>{uiText.executionHeader.realtimeSseLabel}</span>
             </label>

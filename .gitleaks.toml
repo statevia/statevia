@@ -1,0 +1,13 @@
+title = "statevia"
+
+[extend]
+useDefault = true
+
+# 過去コミットに残る例示。現行ファイルは規則の最小長に満たないダミーへ置換してある。
+[[allowlists]]
+description = "履歴上の curl 例とテスト用ダミーキー"
+regexes = [
+  '''demo-run-1''',
+  '''io15-smoke-1''',
+  '''sk_live_abcdefghijklmnop''',
+]

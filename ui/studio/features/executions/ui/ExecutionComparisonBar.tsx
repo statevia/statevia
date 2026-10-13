@@ -49,14 +49,14 @@ function DiffRow({
       <span className="text-md-on-surface-variant">{label}</span>
       {item.statusLeft != null && styleLeft && (
         <span
-          className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold ${styleLeft.badgeClass}`}
+          className={`inline-flex rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${styleLeft.badgeClass}`}
         >
           A: {item.statusLeft}
         </span>
       )}
       {item.statusRight != null && styleRight && (
         <span
-          className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold ${styleRight.badgeClass}`}
+          className={`inline-flex rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${styleRight.badgeClass}`}
         >
           B: {item.statusRight}
         </span>
@@ -81,7 +81,7 @@ export function ExecutionComparisonBar({
   const otherDiffs = diff?.nodeDiffs.filter((d) => !d.isFailureOrCancel) ?? [];
 
   return (
-    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
       <div className="mb-3 text-sm font-semibold text-md-on-surface">{uiText.executionComparison.title}</div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
@@ -104,7 +104,7 @@ export function ExecutionComparisonBar({
           <div className="mt-1 flex gap-2">
             <input
               id="execution-b-id"
-              className="flex-1 rounded-lg border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-xs text-md-on-surface outline-none focus:border-md-primary"
+              className="flex-1 rounded-lg border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-xs text-md-on-surface outline-hidden focus:border-md-primary"
               value={executionIdRight}
               onChange={(e) => onExecutionIdRightChange(e.target.value)}
               placeholder={uiText.executionComparison.executionIdPlaceholder}
@@ -127,7 +127,7 @@ export function ExecutionComparisonBar({
         <div className="sm:col-span-2 lg:col-span-1">
           <div className="text-xs font-semibold text-md-on-surface-variant">{uiText.executionComparison.summary.title}</div>
           {diff ? (
-            <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-md-outline bg-[var(--md-sys-color-surface-container)]/60">
+            <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-md-outline bg-(--md-sys-color-surface-container)/60">
               {failureOrCancelDiffs.length > 0 && (
                 <div className="border-b border-md-outline px-2 py-1.5">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-red-600">

@@ -167,7 +167,7 @@ export function NodeDetail({
   nodeVisitNavigation
 }: Readonly<NodeDetailProps>) {
   const uiText = useUiText();
-  const baseClassName = "rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm";
+  const baseClassName = "rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs";
   const asideClassName = className ? `${baseClassName} ${className}` : baseClassName;
   const resumeEvents = node ? resolveWaitResumeEvents(node) : [];
   const [selectedResumeEvent, setSelectedResumeEvent] = useState(resumeEvents[0] ?? "");
@@ -204,7 +204,7 @@ export function NodeDetail({
           <div className="flex h-5 items-center gap-1">
             <button
               type="button"
-              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-5 rounded-sm border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={uiText.nodeDetail.visitNavigation.jumpToLatest}
               disabled={!nodeVisitNavigation.canJumpToLatest}
               onClick={nodeVisitNavigation.onJumpToLatest}
@@ -213,7 +213,7 @@ export function NodeDetail({
             </button>
             <button
               type="button"
-              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-5 rounded-sm border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={uiText.nodeDetail.visitNavigation.stepNewer}
               disabled={!nodeVisitNavigation.canStepNewer}
               onClick={nodeVisitNavigation.onStepNewer}
@@ -223,7 +223,7 @@ export function NodeDetail({
             <span className="px-1 text-xs leading-5 text-md-on-surface">{uiText.nodeDetail.meta.attempt(nodeVisitNavigation.attempt)}</span>
             <button
               type="button"
-              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-5 rounded-sm border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={uiText.nodeDetail.visitNavigation.stepOlder}
               disabled={!nodeVisitNavigation.canStepOlder}
               onClick={nodeVisitNavigation.onStepOlder}
@@ -232,7 +232,7 @@ export function NodeDetail({
             </button>
             <button
               type="button"
-              className="h-5 rounded border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-5 rounded-sm border border-md-outline bg-md-surface px-1.5 font-mono text-xs leading-5 text-md-on-surface hover:bg-md-surface-container disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={uiText.nodeDetail.visitNavigation.jumpToFirst}
               disabled={!nodeVisitNavigation.canJumpToFirst}
               onClick={nodeVisitNavigation.onJumpToFirst}

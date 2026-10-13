@@ -29,7 +29,7 @@ export function AdminApiKeyIssuedNotice({
   const uiText = useUiText();
 
   return (
-    <section className="mb-6 rounded-xl border border-amber-500/60 bg-amber-50 p-4 text-sm text-amber-950 shadow-sm dark:bg-amber-950/30 dark:text-amber-100">
+    <section className="mb-6 rounded-xl border border-amber-500/60 bg-amber-50 p-4 text-sm text-amber-950 shadow-xs dark:bg-amber-950/30 dark:text-amber-100">
       <h2 className="mb-2 text-lg font-medium">{uiText.admin.apiKeys.issuedTitle}</h2>
       <p className="mb-3">{uiText.admin.apiKeys.issuedWarning}</p>
       <label htmlFor="issued-plain-key" className="mb-1 block font-medium">

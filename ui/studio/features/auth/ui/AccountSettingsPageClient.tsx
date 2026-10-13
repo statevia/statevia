@@ -54,7 +54,7 @@ export function AccountSettingsPageClient() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="max-w-md space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-sm"
+        className="max-w-md space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-xs"
       >
         <div>
           <label htmlFor="account-current-password" className="mb-1 block text-sm font-medium">

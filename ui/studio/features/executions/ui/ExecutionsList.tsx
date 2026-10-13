@@ -29,7 +29,7 @@ export function ExecutionsList({ items, onOpen }: Readonly<ExecutionsListProps>)
 
   return (
     <ul
-      className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm"
+      className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs"
       aria-label={uiText.lists.executions}
     >
       {items.map((execution) => {

@@ -163,13 +163,13 @@ function ExecutionDashboardView({
           <Toast toast={toast} onClose={onCloseToast} />
 
           {operationsEnabled && showExecutionPanels && isPublishEventAvailable(execution) && (
-            <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-sm">
+            <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
               <h2 className="text-sm font-semibold text-md-on-surface">{uiText.executionDashboard.actions.sectionTitle}</h2>
               <div className="mt-3 flex flex-wrap items-end gap-2">
-                <label className="block min-w-[14rem] flex-1 text-xs text-md-on-surface-variant">
+                <label className="block min-w-56 flex-1 text-xs text-md-on-surface-variant">
                   <span>{uiText.executionDashboard.actions.eventNameLabel}</span>
                   <input
-                    className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-none focus:border-md-primary"
+                    className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-hidden focus:border-md-primary"
                     value={eventName}
                     onChange={(event) => setEventName(event.target.value)}
                     placeholder={uiText.executionDashboard.actions.eventNamePlaceholder}

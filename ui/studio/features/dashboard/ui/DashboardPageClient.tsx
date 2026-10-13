@@ -79,7 +79,7 @@ export function DashboardPageClient() {
               {uiText.actions.reload}
             </button>
           </div>
-          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-sm">
+          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs">
             {items.map((execution) => {
               const updated = execution.updatedAt ?? execution.startedAt;
               return (

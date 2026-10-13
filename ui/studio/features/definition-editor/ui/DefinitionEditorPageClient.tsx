@@ -26,7 +26,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
   const editor = useDefinitionEditorPage({ definitionId });
   const yamlFileInputRef = useRef<HTMLInputElement>(null);
   const modeButtonClass = (selected: boolean) =>
-    `rounded border px-3 py-1 text-xs ${selected ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`;
+    `rounded-sm border px-3 py-1 text-xs ${selected ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`;
 
   return (
     <PageShell
@@ -45,11 +45,11 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <PageState state="loading" message={uiText.definitionEditor.loadingMeta} />
       )}
 
-      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
+      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
         <label className="block text-sm">
           <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.name}</span>
           <input
-            className="mt-1 w-full rounded border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
+            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
             value={editor.definitionName}
             onChange={(event) => editor.setDefinitionName(event.target.value)}
             autoComplete="off"
@@ -109,7 +109,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
               <>
                 <button
                   type="button"
-                  className="rounded border border-red-700 bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-800"
+                  className="rounded-sm border border-red-700 bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-800"
                   onClick={editor.confirmYamlOverwrite}
                 >
                   {uiText.definitionEditor.actions.confirmOverwrite}
@@ -153,7 +153,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         )}
         {editor.hasYamlError && <p className="text-xs text-rose-600">{uiText.definitionEditor.validation.yamlLintInvalid}</p>}
         {editor.hintMessages.length > 0 && (
-          <section className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <section className="rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <p className="font-medium">{uiText.definitionEditor.hints.title}</p>
             <ul className="mt-2 list-inside list-disc space-y-1">
               {editor.hintMessages.slice(0, 8).map((message) => (
@@ -166,7 +166,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="w-full rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50 sm:w-auto"
             onClick={() => void editor.save()}
             disabled={editor.saving || editor.hasYamlError}
           >
@@ -174,7 +174,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
           </button>
           <button
             type="button"
-            className="w-full rounded border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high sm:ml-auto sm:w-auto"
+            className="w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high sm:ml-auto sm:w-auto"
             onClick={editor.resetToInitial}
             disabled={editor.saving || !editor.canResetToInitial}
           >

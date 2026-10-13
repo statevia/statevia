@@ -95,7 +95,7 @@ export function DefinitionRunStartPage() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-sm">
+      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
         <label className="block text-sm">
           <span className="text-md-on-surface-variant">
             {uiText.definitionRunPage.inputLabelWithHint(uiText.labels.input)}
@@ -106,12 +106,12 @@ export function DefinitionRunStartPage() {
             placeholder={uiText.definitionRunPage.inputJsonPlaceholder}
             syntaxHighlight="jsonOnly"
             ariaLabel={uiText.labels.input}
-            className="min-h-[7rem] w-full border-md-outline-variant bg-md-surface-container"
+            className="min-h-28 w-full border-md-outline-variant bg-md-surface-container"
           />
         </label>
         <button
           type="button"
-          className="rounded border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50"
+          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50"
           onClick={() => void handleStart()}
           disabled={starting || !definitionId.trim()}
         >
