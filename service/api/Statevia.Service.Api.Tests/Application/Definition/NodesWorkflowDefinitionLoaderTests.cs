@@ -2133,4 +2133,48 @@ public sealed class NodesWorkflowDefinitionLoaderTests
             ex.Message.Contains("events", StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("subscribe", StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>引用符の無い整数・真偽値・小数はリテラル型のまま残り、引用符付きとパスは文字列のままである。</summary>
+    [Fact]
+    public void Load_ActionInputPlainScalars_PreserveLiteralTypes()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: Scalars
+            nodes:
+              - name: start
+                type: start
+                next: call
+              - name: call
+                type: action
+                action: noop
+                input:
+                  timeout: 30
+                  enabled: true
+                  ratio: 1.5
+                  quoted: "30"
+                  duration: 5s
+                  source: $.states.Start.output
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var definition = _loader.Load(yaml);
+
+        // Assert
+        var values = definition.States["call"].Input!.Values!;
+        Assert.Equal(30L, values["timeout"].Literal);
+        Assert.Null(values["timeout"].Path);
+        Assert.True(Assert.IsType<bool>(values["enabled"].Literal));
+        Assert.Equal(1.5d, Assert.IsType<double>(values["ratio"].Literal));
+        Assert.Equal("30", values["quoted"].Literal);
+        Assert.Null(values["quoted"].Path);
+        Assert.Equal("5s", values["duration"].Literal);
+        Assert.Equal("$.states.Start.output", values["source"].Path);
+        Assert.Null(values["source"].Literal);
+    }
 }

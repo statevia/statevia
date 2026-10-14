@@ -1,3 +1,5 @@
+extern alias HttpReference;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Statevia.Core.Actions.Abstractions.Catalog;
@@ -64,6 +66,35 @@ public sealed class DefinitionCompilerServiceTests
                 Visibility = ActionVisibility.Builtin,
             },
             new ActionCatalogEntry(InProcessFactory: _ => new DefaultStateExecutor(execute)));
+    }
+
+    /// <summary>
+    /// <c>statevia.action.reference.http.request</c> の publication を、スキーマ検証できるよう Catalog に載せる。
+    /// </summary>
+    /// <param name="catalog">Builtin 登録済みの Catalog。</param>
+    private static void RegisterHttpRequestReferenceAction(IActionCatalog catalog)
+    {
+        using var provider = new ServiceCollection().BuildServiceProvider();
+        var registration = new HttpReference::Statevia.Reference.Http.HttpReferenceModule()
+            .GetActions(provider)
+            .Single(action => action.ActionId == HttpReference::Statevia.Reference.Http.HttpReferenceActionIds.Request);
+        if (registration.Publication is null)
+        {
+            throw new InvalidOperationException("http.request publication is required.");
+        }
+
+        catalog.Register(
+            new ActionDescriptor
+            {
+                ActionId = registration.ActionId,
+                ModuleId = HttpReference::Statevia.Reference.Http.HttpReferenceActionIds.ModuleId,
+                Version = "1.0.0",
+                TrustLevel = ActionTrustLevel.Trusted,
+                Source = ActionSourceKind.Filesystem,
+                Visibility = ActionVisibility.Builtin,
+            },
+            new ActionCatalogEntry(InProcessFactory: registration.ExecutorFactory),
+            registration.Publication);
     }
 
     private static DefinitionCompilerService CreateSutWithCatalog(out IActionCatalog catalog)
@@ -772,6 +803,79 @@ public sealed class DefinitionCompilerServiceTests
 
         Assert.NotNull(compiled);
         Assert.Equal("start", compiled.InitialState, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Nodes の整数 <c>timeout</c> は <c>http.request</c> の整数スキーマを通過する。</summary>
+    [Fact]
+    public void ValidateAndCompile_NodesHttpRequestIntegerTimeout_Succeeds()
+    {
+        // Arrange
+        var catalog = ActionExecutionTestSupport.CreateCatalogWithBuiltins();
+        RegisterHttpRequestReferenceAction(catalog);
+        var svc = CreateSut(catalog);
+        var yaml = """
+            version: 1
+            workflow:
+              name: Http
+            nodes:
+              - name: start
+                type: start
+                next: call
+              - name: call
+                type: action
+                action: statevia.action.reference.http.request
+                input:
+                  url: https://example.com/orders
+                  method: GET
+                  timeout: 30
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var (compiled, _) = svc.ValidateAndCompile("Http", yaml);
+
+        // Assert
+        Assert.NotNull(compiled);
+        Assert.Equal(30L, compiled.StateInputs["call"].Values!["timeout"].Literal);
+    }
+
+    /// <summary>引用符付きの <c>timeout</c> は整数スキーマで拒否する。</summary>
+    [Fact]
+    public void ValidateAndCompile_NodesHttpRequestQuotedTimeout_ThrowsSchemaValidationException()
+    {
+        // Arrange
+        var catalog = ActionExecutionTestSupport.CreateCatalogWithBuiltins();
+        RegisterHttpRequestReferenceAction(catalog);
+        var svc = CreateSut(catalog);
+        var yaml = """
+            version: 1
+            workflow:
+              name: Http
+            nodes:
+              - name: start
+                type: start
+                next: call
+              - name: call
+                type: action
+                action: statevia.action.reference.http.request
+                input:
+                  url: https://example.com/orders
+                  method: GET
+                  timeout: "30"
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var ex = Assert.Throws<ActionInputSchemaValidationException>(() => svc.ValidateAndCompile("Http", yaml));
+
+        // Assert
+        Assert.Contains(ex.Errors, error =>
+            error.JsonPath == "$.input.timeout"
+            && error.Message.Contains("integer", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -10,8 +10,11 @@ using static NodesSchemaLiteral;
 /// <summary>nodes（UI）形式ルート → <see cref="WorkflowDefinition"/>。</summary>
 internal sealed class NodesWorkflowDefinitionLoader : WorkflowDefinitionLoaderBase
 {
+    /// <summary>
+    /// States 形式と同じく、引用符の無い整数・真偽値・小数をその型のリテラルとして読む。
+    /// </summary>
     public NodesWorkflowDefinitionLoader()
-        : base()
+        : base(useScalarPreservingNodeTypeResolver: true)
     {
     }
 
