@@ -2,6 +2,7 @@
 # 初回: cp .env.example .env（POSTGRES_*）。マイグレーションは docs/operations-docker.md を参照services:
 services:
   postgres:
+    container_name: statevia-postgres
     image: postgres:16
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -14,6 +15,7 @@ services:
     # C# API は EF Core マイグレーションでスキーマ作成するため init SQL は不要
 
   service-api:
+    container_name: statevia-service-api
     build:
       context: .
       dockerfile: service/api/Dockerfile
@@ -22,7 +24,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:8080"
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      Statevia__ActionHost__BaseUrl: "http://action-host:5001"
+      # appsettings の BaseUrl を空にして、Endpoints と併記しない。
+      Statevia__ActionHost__BaseUrl: ""
+      Statevia__ActionHost__Endpoints__0: "http://action-host-1:5001"
+      Statevia__ActionHost__Endpoints__1: "http://action-host-2:5001"
       # 既定は API 内 HostedService On。分離は docker-compose.split-runtime.yml を追加する。
       Statevia__Runtime__EnableInProcessWorker: "true"
       Statevia__Runtime__EnableInProcessDelayWaitScheduler: "true"
@@ -32,7 +37,8 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       - postgres
-      - action-host
+      - action-host-1
+      - action-host-2
     # プロセスが /v1/health に応答することだけを見る。データベースへの到達は見ない。
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/v1/health"]
@@ -46,7 +52,8 @@ services:
       # Action Module 配置（ホスト ./modules → コンテナ既定ルート /app/modules）
       - ./modules:/app/modules
 
-  action-host:
+  action-host-1:
+    container_name: statevia-action-host-1
     build:
       context: .
       dockerfile: service/action-host/Dockerfile
@@ -60,7 +67,22 @@ services:
       # Module の配置は service-api が書く。Action Host からは置き換えられないように読み取り専用。
       - ./modules:/app/modules:ro
 
+  action-host-2:
+    container_name: statevia-action-host-2
+    build:
+      context: .
+      dockerfile: service/action-host/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:5001"
+      STATEVIA_MODULES_PATH: "/app/modules"
+    ports:
+      - "5002:5001"
+    volumes:
+      - ./modules:/app/modules:ro
+
   ui-studio:
+    container_name: statevia-ui-studio
     build:
       context: ui/studio
     environment:

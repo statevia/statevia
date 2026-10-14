@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.14 |
-| 更新日 | 2026-09-27 |
+| Version | 1.15 |
+| 更新日 | 2026-10-14 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
+
+**Version 1.15（2026-10-14）**: 台数を増やさないコンテナは `container_name` でレプリカ番号を付けない。`worker` は `--scale` のため付けない。
 
 **Version 1.14（2026-09-27）**: 分離 scheduler が定期実行の claim と Start enqueue を担う。API 側 `EnableInProcessScheduleDispatcher` は overlay で false。
 
@@ -43,7 +45,7 @@ docker compose up -d
 
 - **PostgreSQL**: `localhost:5432`（ユーザー/DB: `statevia` / `statevia`）
 - **Service API**: `http://localhost:8080`（`DATABASE_URL` は compose 内で `POSTGRES_*` から組み立て。ホストからの `ef` は `.env` または手元の URL）
-- **Action Host**（gRPC）: `http://localhost:5001`。compose は `Statevia__ActionHost__BaseUrl=http://action-host:5001` を Service API / Worker に渡す。OutOfProcess 実行に使う。
+- **Action Host**（gRPC）: ホストからは `http://localhost:5001` と `http://localhost:5002`。compose は `Statevia__ActionHost__Endpoints__0=http://action-host-1:5001` と `Endpoints__1=http://action-host-2:5001` を Service API / Worker に渡し、`BaseUrl` は空にする。OutOfProcess 実行に使う。
 - **UI**: `http://localhost:3000`（`SERVICE_API_INTERNAL_BASE=http://service-api:8080`）
 
 ## ランタイム分離（任意: Worker / Scheduler）
@@ -66,7 +68,7 @@ docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
 
 分離 overlay は API の `EnableInProcessScheduleDispatcher` も `false` にします。API 内 Dispatcher を true のまま scheduler コンテナを足すと、同じ枠を二重に claim し得ます。専用 scheduler プロセスは当該フラグでは止まらず、DelayWait・OwnershipRecovery・スケジュール発火を常時担当します。外部 Cron から `POST /v1/executions` する運用は残ります。Studio にスケジュール画面はありません。
 
-`worker` には `container_name` が無いので、台数は `--scale worker=N` で増やせます。プロセス内スロットと Cancel ループは環境変数です（未設定時は 16 と 1。許容範囲は [environment-variables.md](../reference/environment-variables.md)）。
+`worker` には `container_name` が無いので、台数は `--scale worker=N` で増やせます。それ以外のサービスは名前を固定し、Compose が付ける末尾のレプリカ番号は付きません。プロセス内スロットと Cancel ループは環境変数です（未設定時は 16 と 1。許容範囲は [environment-variables.md](../reference/environment-variables.md)）。
 
 スロットは未設定時 16 です。変えるときだけ `STATEVIA_WORKER_MAX_CONCURRENCY` を付けます。
 
@@ -126,7 +128,7 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 | service-api | `DATABASE_URL`（`POSTGRES_*` から組み立て）, `ASPNETCORE_URLS`, `ASPNETCORE_ENVIRONMENT`（compose では `Development`）。分離時は override で `Statevia__Runtime__EnableInProcess*=false`。ブラウザから API へ直叩きする場合のみ `Statevia__Cors__AllowedOrigins__0`（未設定時はクロスオリジン不許可。Studio はプロキシ） |
 | postgres    | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`（`.env` / `.env.example`） |
 | action-host | `ASPNETCORE_URLS`（compose では `http://+:5001`）, `STATEVIA_MODULES_PATH`（`/app/modules`） |
-| scheduler / worker | `DATABASE_URL`（`docker-compose.split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__BaseUrl` も共有。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 16。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
+| scheduler / worker | `DATABASE_URL`（`docker-compose.split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__Endpoints__0` と `Endpoints__1` を API と共有し、`BaseUrl` は空。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 16。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
 | ui-studio  | `SERVICE_API_INTERNAL_BASE` |
 
 詳細は `docker-compose.yml` / `docker-compose.split-runtime.yml` と [environment-variables.md](../reference/environment-variables.md) を参照してください。
@@ -135,7 +137,7 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 
 Service API は起動時に **modules ルート**（`STATEVIA_MODULES_PATH` または `Statevia:Modules:Path`、未設定時は `{ContentRoot}/modules`）を **テナント別**（`{modulesRoot}/{tenantKey}/{module}/`）に scan して Action Module を load する。更新・削除の反映は **再起動**または **明示 reload** が必要（add-only watcher は新規追加のみ）。
 
-**Action Host**（`docker compose` の `action-host` サービス）は同じ `./modules` ボリュームをマウントし、**別プロセス**で Module を ALC load して gRPC 実行する。Service API は `Statevia:ActionHost:BaseUrl`（compose では `http://action-host:5001`）で接続する。未設定のとき、OutOfProcess が必要な実行は失敗する（安全側）。手順は [action-host.md](action-host.md)。
+**Action Host**（`docker compose` の `action-host-1` と `action-host-2`）は同じ `./modules` ボリュームをマウントし、**別プロセス**で Module を ALC load して gRPC 実行する。Service API は `Statevia:ActionHost:Endpoints`（compose では `http://action-host-1:5001` と `http://action-host-2:5001`）で接続する。未設定のとき、OutOfProcess が必要な実行は失敗する（安全側）。手順は [action-host.md](action-host.md)。
 
 ### 配置（CLI）
 

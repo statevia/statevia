@@ -3,11 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.1 |
-| 更新日 | 2026-10-13 |
+| Version | 1.3 |
+| 更新日 | 2026-10-14 |
 | 関連 | [../concepts/actions.md](../concepts/actions.md), [operations-docker.md](operations-docker.md) |
 
 ---
+
+**Version 1.3（2026-10-14）**: 既定の compose は Action Host を 2 台にし、`Endpoints` でそれぞれの URI を渡す。
+
+**Version 1.2（2026-10-14）**: プロセスが 1 つのとき OutOfProcess は直列になる。同時に進める本数は `Endpoints` で増やす。環境変数は実行の前後で起動時の値に戻る。
 
 **Version 1.1（2026-10-13）**: Action Host は秘密の環境変数で起動せず、modules は読み取り専用。Container は実行テナントのディレクトリだけをマウントする。
 
@@ -19,6 +23,12 @@
 - プロセス内（InProcess）では隔離が不十分な運用プロファイル（例: `saas-shared`）
 
 未設定時、OutOfProcess が必要な実行は `ActionHostNotConfigured` で失敗します（安全側）。
+
+## 同時実行
+
+プロセスが 1 つのとき、OutOfProcess の Action はそのプロセスで 1 本ずつ実行されます。環境変数は各実行の前後で、そのプロセスが起動したときの値に戻ります。
+
+同時に進める本数を増やすときは、Service API と専用 Worker の `Statevia:ActionHost:Endpoints` に絶対 URI を列挙します。`BaseUrl` と同時には設定しません。同じホストポートを複数の固定公開で重ねないでください。compose の既定は `BaseUrl` 1 件のままです。
 
 ## ローカル起動（例）
 
@@ -49,9 +59,9 @@ Service API 側は `System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport` 
 
 ## Docker Compose
 
-`docker compose` ではサービス名 `action-host`、Service API から `http://action-host:5001` を参照する構成が一般的です。
+`docker compose` は `action-host-1` と `action-host-2` の 2 台です。コンテナ内の待受はどちらも `5001` で、ホストへは `5001` と `5002` を別々に出します。Service API と専用 Worker は `Statevia:ActionHost:Endpoints` に `http://action-host-1:5001` と `http://action-host-2:5001` を渡し、`BaseUrl` は空にします。
 
-`action-host` の `./modules` は読み取り専用でマウントする。`service-api` の同じパスは、配置とリモート取得のために読み書きのままである。
+`action-host-1` と `action-host-2` の `./modules` は読み取り専用でマウントする。`service-api` の同じパスは、配置とリモート取得のために読み書きのままである。
 
 ## 環境変数
 

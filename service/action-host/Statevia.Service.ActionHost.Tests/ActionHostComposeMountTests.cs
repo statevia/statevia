@@ -10,15 +10,18 @@ public sealed class ActionHostComposeMountTests
         // Arrange
         var compose = File.ReadAllText(FindRepoFile("docker-compose.yml"));
         var api = SliceService(compose, "service-api");
-        var actionHost = SliceService(compose, "action-host");
+        var actionHost1 = SliceService(compose, "action-host-1");
+        var actionHost2 = SliceService(compose, "action-host-2");
 
         // Act
         var apiModulesLine = FindModulesMount(api);
-        var actionHostModulesLine = FindModulesMount(actionHost);
+        var actionHost1ModulesLine = FindModulesMount(actionHost1);
+        var actionHost2ModulesLine = FindModulesMount(actionHost2);
 
         // Assert
         Assert.Equal("./modules:/app/modules", apiModulesLine);
-        Assert.Equal("./modules:/app/modules:ro", actionHostModulesLine);
+        Assert.Equal("./modules:/app/modules:ro", actionHost1ModulesLine);
+        Assert.Equal("./modules:/app/modules:ro", actionHost2ModulesLine);
     }
 
     private static string FindModulesMount(string serviceBlock)

@@ -234,7 +234,13 @@ public sealed class ActionHostExecutorTests
     {
         var registry = new ActionHostActionRegistry();
         Assert.True(registry.TryRegister(registration));
-        return new ActionHostExecutor(registry, NullLogger<ActionHostExecutor>.Instance);
+        var baseline = new ProcessEnvironmentBaseline(new DictionaryProcessEnvironment());
+        baseline.Capture();
+        return new ActionHostExecutor(
+            registry,
+            NullLogger<ActionHostExecutor>.Instance,
+            baseline,
+            static () => { });
     }
 
     private static LoadedActionRegistration CreateEchoRegistration(string actionId) =>
