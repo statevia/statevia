@@ -334,6 +334,12 @@ public static class ServiceCollectionExtensions
             .Validate(
                 IsValidActionHostBaseUrl,
                 "Statevia:ActionHost:BaseUrl must be an absolute http(s) URI when set.")
+            .Validate(
+                IsValidActionHostEndpoints,
+                "Statevia:ActionHost:Endpoints must contain only absolute http(s) URIs.")
+            .Validate(
+                IsExclusiveActionHostAddress,
+                "Statevia:ActionHost:BaseUrl and Statevia:ActionHost:Endpoints must not both be set.")
             .ValidateOnStart();
     }
     /// <summary>イベント配送リトライ Options のバインドと起動時検証（分類 A）。</summary>
@@ -382,15 +388,22 @@ public static class ServiceCollectionExtensions
     private static bool IsSupportedDockerNetworkMode(ExecutionPolicyOptions options) =>
         string.IsNullOrWhiteSpace(options.Sandbox.Docker.NetworkMode)
         || !string.Equals(options.Sandbox.Docker.NetworkMode.Trim(), "none", StringComparison.OrdinalIgnoreCase);
-    private static bool IsValidActionHostBaseUrl(ActionHostClientOptions options)
+    private static bool IsValidActionHostBaseUrl(ActionHostClientOptions options) =>
+        string.IsNullOrWhiteSpace(options.BaseUrl) || IsAbsoluteHttpUri(options.BaseUrl);
+
+    private static bool IsValidActionHostEndpoints(ActionHostClientOptions options) =>
+        (options.Endpoints ?? []).All(endpoint => string.IsNullOrWhiteSpace(endpoint) || IsAbsoluteHttpUri(endpoint));
+
+    private static bool IsExclusiveActionHostAddress(ActionHostClientOptions options)
     {
-        if (string.IsNullOrWhiteSpace(options.BaseUrl))
-        {
-            return true;
-        }
-        return Uri.TryCreate(options.BaseUrl.Trim(), UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+        var hasBaseUrl = !string.IsNullOrWhiteSpace(options.BaseUrl);
+        var hasEndpoints = (options.Endpoints ?? []).Any(static endpoint => !string.IsNullOrWhiteSpace(endpoint));
+        return !hasBaseUrl || !hasEndpoints;
     }
+
+    private static bool IsAbsoluteHttpUri(string value) =>
+        Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     /// <summary>
     /// 設定されたオリジンだけを許可する既定 CORS ポリシーを登録する。未設定時は ACAO を付けない。
     /// </summary>

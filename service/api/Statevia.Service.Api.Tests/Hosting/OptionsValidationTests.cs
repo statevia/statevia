@@ -33,6 +33,7 @@ public sealed class OptionsValidationTests
             DockerSandboxOptions.MinDefaultTimeoutSeconds,
             DockerSandboxOptions.MaxDefaultTimeoutSeconds);
         Assert.Null(actionHost.BaseUrl);
+        Assert.Empty(actionHost.Endpoints);
         Assert.False(string.IsNullOrWhiteSpace(jwt.SigningKey));
         var worker = provider.GetRequiredService<IOptions<WorkerRuntimeOptions>>().Value;
         Assert.Equal(WorkerRuntimeOptions.MinMaxConcurrency, worker.MaxConcurrency);
@@ -322,6 +323,87 @@ public sealed class OptionsValidationTests
         // Assert
         var ex = Assert.Throws<OptionsValidationException>(act);
         Assert.Contains("BaseUrl", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("localhost:5001", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>ActionHost BaseUrl だけならプールは 1 件で起動する。</summary>
+    [Fact]
+    public void ActionHostClientOptions_WhenOnlyBaseUrl_ResolvesSingleEndpoint()
+    {
+        // Arrange
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            ["Statevia:ActionHost:BaseUrl"] = "http://localhost:5001"
+        });
+
+        // Act
+        var options = provider.GetRequiredService<IOptions<ActionHostClientOptions>>().Value;
+
+        // Assert
+        Assert.Equal(["http://localhost:5001"], options.ResolveEndpoints());
+    }
+
+    /// <summary>ActionHost Endpoints が複数の絶対 URI ならその一覧をプールにする。</summary>
+    [Fact]
+    public void ActionHostClientOptions_WhenEndpointsAreAbsolute_ResolvesAll()
+    {
+        // Arrange
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            ["Statevia:ActionHost:Endpoints:0"] = "http://localhost:5001",
+            ["Statevia:ActionHost:Endpoints:1"] = "https://action-host-b:5001"
+        });
+
+        // Act
+        var options = provider.GetRequiredService<IOptions<ActionHostClientOptions>>().Value;
+
+        // Assert
+        Assert.Equal(
+            ["http://localhost:5001", "https://action-host-b:5001"],
+            options.ResolveEndpoints());
+    }
+
+    /// <summary>BaseUrl と Endpoints の併記は起動失敗にし、URI はメッセージに出さない。</summary>
+    [Fact]
+    public void ActionHostClientOptions_WhenBaseUrlAndEndpointsBothSet_ThrowsWithoutUri()
+    {
+        // Arrange
+        const string baseUrl = "http://localhost:5001";
+        const string endpoint = "http://localhost:5002";
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            ["Statevia:ActionHost:BaseUrl"] = baseUrl,
+            ["Statevia:ActionHost:Endpoints:0"] = endpoint
+        });
+
+        // Act
+        var act = () => _ = provider.GetRequiredService<IOptions<ActionHostClientOptions>>().Value;
+
+        // Assert
+        var ex = Assert.Throws<OptionsValidationException>(act);
+        Assert.Contains("must not both be set", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(baseUrl, ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(endpoint, ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Endpoints の不正 URI は起動失敗にし、値はメッセージに出さない。</summary>
+    [Fact]
+    public void ActionHostClientOptions_WhenEndpointIsRelative_ThrowsWithoutUri()
+    {
+        // Arrange
+        const string endpoint = "localhost:5002";
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            ["Statevia:ActionHost:Endpoints:0"] = endpoint
+        });
+
+        // Act
+        var act = () => _ = provider.GetRequiredService<IOptions<ActionHostClientOptions>>().Value;
+
+        // Assert
+        var ex = Assert.Throws<OptionsValidationException>(act);
+        Assert.Contains("Endpoints", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(endpoint, ex.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Retry MaxDelayMs が BaseDelayMs 未満だと失敗する。</summary>

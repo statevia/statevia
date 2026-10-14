@@ -3,10 +3,12 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.16 |
-| 更新日 | 2026-10-13 |
+| Version | 1.17 |
+| 更新日 | 2026-10-14 |
 
 ---
+
+**Version 1.17（2026-10-14）**: `Statevia:ActionHost:Endpoints`。複数プロセスの絶対 URI。`BaseUrl` との併記は起動失敗。値は起動エラーに出さない。
 
 **Version 1.16（2026-10-13）**: Action Host は禁止した環境変数で起動せず、許可リスト外は起動時に消す。compose の Action Host modules は読み取り専用。
 
@@ -53,7 +55,8 @@ Service API / UI / Module の主要な環境変数と `appsettings` キー。**�
 
 | キー | 説明 | 不正時 |
 | --- | --- | --- |
-| `Statevia:ActionHost:BaseUrl` | OutOfProcess 用 Action Host（絶対 http(s) URI） | 非空で不正 URI → **起動失敗**。未設定 → 実行時 `ActionHostNotConfigured` |
+| `Statevia:ActionHost:BaseUrl` | OutOfProcess 用 Action Host 1 件（絶対 http(s) URI）。`Endpoints` が空のときのプール | 非空で不正 URI → **起動失敗**。未設定かつ `Endpoints` も空 → 実行時 `ActionHostNotConfigured` |
+| `Statevia:ActionHost:Endpoints` | OutOfProcess 用 Action Host の絶対 http(s) URI 一覧。`BaseUrl` と同時には設定しない | 併記、または非空で不正 URI → **起動失敗**（値は出さない）。空きが期限までに無い実行は `ActionHostBusy` |
 | `Statevia:Modules:Signing:*` | 署名検証・TrustLevel | （本表では検証対象外） |
 | `Statevia:Modules:Oci:*` | OCI Module Source | 未設定時はソース無効 |
 | `Statevia:Modules:S3:*` | S3 Module Source（`Enabled` / `Artifacts` 等） | 未設定時はソース無効 |

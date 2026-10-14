@@ -1,52 +1,40 @@
-using Grpc.Net.Client;
 using Microsoft.Extensions.Options;
 using Statevia.Core.Actions.Abstractions.Execution;
-using Statevia.Infrastructure.Actions.Grpc.Contracts;
 
 namespace Statevia.Service.Api.Application.Actions.Execution;
 
-/// <summary>gRPC 経由の Action Host 実行クライアント。</summary>
+/// <summary>OutOfProcess の Action を、空いている Action Host へ送る。</summary>
+/// <remarks>InProcess と Container はこのクライアントを使わない。エンドポイントが複数のときは 1 本のチャネルへ固定しない。</remarks>
 internal sealed class GrpcActionHostExecutionClient : IActionHostExecutionClient, IDisposable
 {
-    private readonly GrpcChannel? _channel;
-    private readonly ActionExecutionService.ActionExecutionServiceClient? _client;
+    private readonly ActionHostEndpointPool _pool;
 
-    /// <summary>gRPC クライアントを構築する。</summary>
+    /// <summary>設定からエンドポイントごとのチャネルを開く。</summary>
     /// <param name="options">Action Host 接続設定。</param>
     public GrpcActionHostExecutionClient(IOptions<ActionHostClientOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        var actionHostOptions = options.Value;
-
-        if (string.IsNullOrWhiteSpace(actionHostOptions.BaseUrl))
-        {
-            return;
-        }
-
-        // ローカル / Compose の Action Host は平文 gRPC（h2c）を使う。
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        _channel = GrpcChannel.ForAddress(actionHostOptions.BaseUrl.Trim());
-        _client = new ActionExecutionService.ActionExecutionServiceClient(_channel);
+        var calls = options.Value.ResolveEndpoints()
+            .Select(static address => (IActionHostCall)new GrpcActionHostCall(address))
+            .ToArray();
+        _pool = new ActionHostEndpointPool(calls);
+    }
+
+    /// <summary>テスト用に呼び出し先を差し替える。</summary>
+    /// <param name="calls">エンドポイントごとの呼び出し。空なら未設定。</param>
+    internal GrpcActionHostExecutionClient(IReadOnlyList<IActionHostCall> calls)
+    {
+        ArgumentNullException.ThrowIfNull(calls);
+        _pool = new ActionHostEndpointPool(calls);
     }
 
     /// <inheritdoc />
     public Task<ActionExecutionResult> ExecuteAsync(
         ActionExecutionRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (_client is null)
-        {
-            return Task.FromResult(new ActionExecutionResult
-            {
-                Success = false,
-                ErrorCode = "ActionHostNotConfigured",
-                ErrorMessage = "Action Host base URL is not configured.",
-            });
-        }
-
-        return ActionHostGrpcInvoker.ExecuteAsync(_client, request, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        _pool.ExecuteAsync(request, cancellationToken);
 
     /// <inheritdoc />
-    public void Dispose() => _channel?.Dispose();
+    public void Dispose() => _pool.Dispose();
 }

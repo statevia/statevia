@@ -24,6 +24,7 @@ x-fluentd-logging: &fluentd-logging
 
 services:
   loki:
+    container_name: statevia-loki
     image: grafana/loki:3.4.2
     command: ["-config.file=/etc/loki/config.yml"]
     volumes:
@@ -34,6 +35,7 @@ services:
     restart: unless-stopped
 
   fluent-bit:
+    container_name: statevia-fluent-bit
     image: fluent/fluent-bit:3.2.10
     command: ["-c", "/fluent-bit/etc/fluent-bit.conf"]
     volumes:
@@ -47,6 +49,7 @@ services:
     restart: unless-stopped
 
   grafana:
+    container_name: statevia-grafana
     image: grafana/grafana:13.2.1
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -79,7 +82,7 @@ services:
     depends_on:
       - fluent-bit
 
-  action-host:
+  action-host-1:
     environment:
       Logging__Console__FormatterName: json
       Logging__Console__FormatterOptions__IncludeScopes: "true"
@@ -87,7 +90,19 @@ services:
       <<: *fluentd-logging
       options:
         <<: *fluentd-options
-        tag: action-host
+        tag: action-host-1
+    depends_on:
+      - fluent-bit
+
+  action-host-2:
+    environment:
+      Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
+    logging:
+      <<: *fluentd-logging
+      options:
+        <<: *fluentd-options
+        tag: action-host-2
     depends_on:
       - fluent-bit
 
