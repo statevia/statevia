@@ -50,7 +50,7 @@ public sealed class ActionHostModuleLoaderTests
     {
         // Arrange
         var modulesRoot = CreateTempDirectory();
-        var moduleDirectory = Path.Combine(modulesRoot, "broken.module");
+        var moduleDirectory = Path.Combine(modulesRoot, "default", "broken.module");
         Directory.CreateDirectory(moduleDirectory);
         var hostDll = typeof(ActionHostModuleLoader).Assembly.Location;
         File.Copy(hostDll, Path.Combine(moduleDirectory, "broken.module.dll"), overwrite: true);
@@ -108,7 +108,7 @@ public sealed class ActionHostModuleLoaderTests
     {
         // Arrange
         var modulesRoot = CreateTempDirectory();
-        var moduleDirectory = Path.Combine(modulesRoot, "corrupt.module");
+        var moduleDirectory = Path.Combine(modulesRoot, "default", "corrupt.module");
         Directory.CreateDirectory(moduleDirectory);
         File.WriteAllText(Path.Combine(moduleDirectory, "corrupt.module.dll"), "not-a-valid-assembly");
         using var factory = ActionHostWebApplicationFactory.ForModulesRoot(modulesRoot);

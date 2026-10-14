@@ -104,13 +104,19 @@ internal static class TestModuleLayout
     /// <param name="moduleDirectoryName">module ディレクトリ名（DLL 名にも使用）。</param>
     /// <param name="modulesRoot">既存の modules ルート。未指定時は一時ディレクトリを作成する。</param>
     /// <param name="assemblyFileName">コピー元の fixture DLL 名。</param>
+    /// <summary>ビルド済み fixture DLL を <c>{modulesRoot}/default/{moduleId}/</c> へコピーする。</summary>
+    /// <param name="moduleDirectoryName">module ディレクトリ名（DLL 名にも使用）。</param>
+    /// <param name="modulesRoot">既存の modules ルート。未指定時は一時ディレクトリを作成する。</param>
+    /// <param name="assemblyFileName">コピー元の fixture DLL 名。</param>
+    /// <returns>modules ルート。</returns>
+    /// <remarks>常駐 Action Host は直下をテナント段として読む。テストのテナントキーは <c>default</c>。</remarks>
     public static string CopyBuiltAssembly(
         string moduleDirectoryName,
         string? modulesRoot = null,
         string assemblyFileName = "TestActionModule.dll")
     {
         modulesRoot ??= CreateTempDirectory();
-        var moduleDirectory = Path.Combine(modulesRoot, moduleDirectoryName);
+        var moduleDirectory = Path.Combine(modulesRoot, "default", moduleDirectoryName);
         Directory.CreateDirectory(moduleDirectory);
 
         var builtAssemblyPath = Path.Combine(AppContext.BaseDirectory, assemblyFileName);
