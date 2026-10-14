@@ -1,6 +1,9 @@
 namespace Statevia.Service.ActionHost.Modules;
 
 /// <summary>modules ルートから entry DLL を列挙する（load は行わない）。</summary>
+/// <remarks>
+/// 直下はテナントディレクトリ、その子が Module ディレクトリである。データベースは見ない。
+/// </remarks>
 internal sealed class FilesystemModuleDiscoverer
 {
     private readonly ILogger<FilesystemModuleDiscoverer> _logger;
@@ -10,10 +13,14 @@ internal sealed class FilesystemModuleDiscoverer
     public FilesystemModuleDiscoverer(ILogger<FilesystemModuleDiscoverer> logger) =>
         _logger = logger;
 
-    /// <summary>modules ルート配下の Action Module を発見する。</summary>
+    /// <summary>テナントディレクトリの子から Action Module を発見する。</summary>
     /// <param name="modulesRoot">modules ルート絶対パス。</param>
     /// <param name="cancellationToken">キャンセル。</param>
-    /// <returns>発見済み module 一覧。</returns>
+    /// <returns>発見済み module 一覧。直下のテナントディレクトリ自体は含まない。</returns>
+    /// <remarks>
+    /// 配置は <c>{modulesRoot}/{tenantKey}/{moduleId}/</c>。入口 DLL は <see cref="TryResolveEntryAssemblyPath"/>。
+    /// 子ディレクトリのさらに下（<c>bin</c> や <c>obj</c>）は見ない。入口パスが modules ルートの外なら発見しない。
+    /// </remarks>
     public IReadOnlyList<DiscoveredModule> Discover(string modulesRoot, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modulesRoot);
@@ -25,8 +32,30 @@ internal sealed class FilesystemModuleDiscoverer
             return Array.Empty<DiscoveredModule>();
         }
 
+        var modulesRootFullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(modulesRoot));
         var discovered = new List<DiscoveredModule>();
-        foreach (var moduleDirectory in Directory.EnumerateDirectories(modulesRoot))
+        foreach (var tenantDirectory in Directory.EnumerateDirectories(modulesRoot))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DiscoverUnderTenantDirectory(discovered, modulesRootFullPath, tenantDirectory, cancellationToken);
+        }
+
+        return discovered;
+    }
+
+    /// <summary>テナントディレクトリ直下の子だけを Module 候補にする。</summary>
+    /// <param name="discovered">発見結果の追記先。</param>
+    /// <param name="modulesRootFullPath">正規化済み modules ルート。</param>
+    /// <param name="tenantDirectory">テナントディレクトリ。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    private void DiscoverUnderTenantDirectory(
+        List<DiscoveredModule> discovered,
+        string modulesRootFullPath,
+        string tenantDirectory,
+        CancellationToken cancellationToken)
+    {
+        var tenantDirectoryName = Path.GetFileName(tenantDirectory);
+        foreach (var moduleDirectory in Directory.EnumerateDirectories(tenantDirectory))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -36,16 +65,33 @@ internal sealed class FilesystemModuleDiscoverer
                 continue;
             }
 
-            if (!TryResolveEntryAssemblyPath(moduleDirectory, moduleDirectoryName, out var entryAssemblyPath, out var reason))
+            if (!TryResolveEntryAssemblyPath(moduleDirectory, moduleDirectoryName, out var entryAssemblyPath, out var reason)
+                || !IsEntryInsideModulesRoot(modulesRootFullPath, entryAssemblyPath))
             {
-                FilesystemModuleDiscovererLog.ModuleDirectorySkipped(_logger, moduleDirectoryName, reason);
+                var skipReason = string.IsNullOrEmpty(reason)
+                    ? "entry path is outside the modules root"
+                    : reason;
+                FilesystemModuleDiscovererLog.ModuleDirectorySkipped(
+                    _logger,
+                    $"{tenantDirectoryName}/{moduleDirectoryName}",
+                    skipReason);
                 continue;
             }
 
             discovered.Add(new DiscoveredModule(moduleDirectoryName, entryAssemblyPath));
         }
+    }
 
-        return discovered;
+    /// <summary>入口 DLL が modules ルート配下に収まるかを返す。</summary>
+    /// <param name="modulesRootFullPath">正規化済み modules ルート。</param>
+    /// <param name="entryAssemblyPath">解決済み入口 DLL。</param>
+    /// <returns>ルート配下なら <see langword="true"/>。</returns>
+    internal static bool IsEntryInsideModulesRoot(string modulesRootFullPath, string entryAssemblyPath)
+    {
+        var relative = Path.GetRelativePath(modulesRootFullPath, entryAssemblyPath);
+        return !string.IsNullOrWhiteSpace(relative)
+            && !relative.StartsWith("..", StringComparison.Ordinal)
+            && !Path.IsPathRooted(relative);
     }
 
     internal static bool TryResolveEntryAssemblyPath(

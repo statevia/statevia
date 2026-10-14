@@ -79,6 +79,10 @@ Service API 側は `System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport` 
 
 Container が短命 Action Host を起動するとき渡す環境変数は `ASPNETCORE_URLS` と `STATEVIA_MODULES_PATH` だけである。`ModulesHostPath` があるときは、実行テナントのディレクトリだけを読み取り専用でマウントする。テナントを解決できないとき、またはパスが modules ルートの外に出るときは、コンテナを起動せずその Action を失敗させる。`ModulesHostPath` が未設定のときはマウントしない。
 
+## Module の配置
+
+常駐の Action Host は、起動時に `{modulesRoot}/{tenantKey}/{moduleId}/` の入口 DLL を読む。modules ルートの直下はテナントのディレクトリであり、Module 本体とはみなさない。入口 DLL が無い子と、`bin` や `obj` の中は読まない。Container がマウントする範囲は、実行テナントのディレクトリだけのままである。
+
 ## Module の reload
 
 Module zip を配置したあと、Service API が新 DLL を読み込むには再起動または `POST /internal/modules/reload` が必要です（[operations-docker.md](operations-docker.md)、[cli-reference.md](cli-reference.md)）。
