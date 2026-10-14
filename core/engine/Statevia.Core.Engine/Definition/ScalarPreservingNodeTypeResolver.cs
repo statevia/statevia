@@ -1,10 +1,12 @@
+using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
 namespace Statevia.Core.Engine.Definition;
 
 /// <summary>
-/// Deserialize 先が object のとき、YAML スカラーを文字列ではなく bool / int / float として扱うための NodeTypeResolver。
+/// Deserialize 先が object のとき、引用符の無い YAML スカラーを文字列ではなく bool / int / float として扱う。
+/// 引用符付きのスカラーは文字列のまま残す。
 /// </summary>
 internal sealed class ScalarPreservingNodeTypeResolver : INodeTypeResolver
 {
@@ -30,7 +32,12 @@ internal sealed class ScalarPreservingNodeTypeResolver : INodeTypeResolver
             return false;
         }
 
-        // プレーンスカラー: 値から bool / int / float を推定
+        // 引用符付きは文字列のまま残す。プレーンスカラーだけ値から型を推定する。
+        if (scalar.Style != ScalarStyle.Plain)
+        {
+            return false;
+        }
+
         var value = scalar.Value;
         if (value is "true" or "false")
         {
