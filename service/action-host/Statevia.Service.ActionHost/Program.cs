@@ -32,8 +32,11 @@ builder.Services.AddGrpc();
 builder.Services.AddSingleton<ActionHostActionRegistry>();
 builder.Services.AddSingleton<FilesystemModuleDiscoverer>();
 builder.Services.AddSingleton<ActionHostModuleLoader>();
+builder.Services.AddSingleton<IProcessEnvironment, SystemProcessEnvironment>();
+builder.Services.AddSingleton<ProcessEnvironmentBaseline>();
 builder.Services.AddSingleton<ActionHostExecutor>();
 builder.Services.AddHostedService<ActionHostStartupService>();
+builder.Services.AddHostedService<ActionHostEnvironmentBaselineService>();
 
 var app = builder.Build();
 
