@@ -138,7 +138,8 @@ public sealed class OutOfProcessExecutionIntegrationTests : IAsyncLifetime
     private static string CreateModuleLayoutFromBuiltAssembly(string moduleDirectoryName)
     {
         var modulesRoot = Path.Combine(Path.GetTempPath(), "statevia-oop-test", Guid.NewGuid().ToString("N"));
-        var moduleDirectory = Path.Combine(modulesRoot, moduleDirectoryName);
+        // 常駐 Host は {modulesRoot}/{tenantKey}/{moduleId}/ だけを Module として読む。
+        var moduleDirectory = Path.Combine(modulesRoot, "default", moduleDirectoryName);
         Directory.CreateDirectory(moduleDirectory);
 
         var builtAssemblyPath = Path.Combine(AppContext.BaseDirectory, "TestActionModule.dll");
