@@ -140,7 +140,7 @@ function BindingRow({
   onDraftActions,
   onSave,
   onDelete
-}: {
+}: Readonly<{
   binding: TenantActionBinding;
   draftValue: string;
   draftActions: string;
@@ -149,7 +149,7 @@ function BindingRow({
   onDraftActions: (value: string) => void;
   onSave: () => void;
   onDelete: () => void;
-}) {
+}>) {
   const text = useUiText().admin.actionBindings;
   return (
     <form
