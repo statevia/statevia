@@ -31,7 +31,7 @@ public sealed class DefinitionCompilerServiceTests
             new UuidV7ExecutionIdGenerator(),
             NullLoggerFactory.Instance);
 
-    private static IDefinitionLoadStrategy CreateDefaultStrategy() =>
+    private static DefinitionLoadStrategy CreateDefaultStrategy() =>
         new DefinitionLoadStrategy(new StateWorkflowDefinitionLoader(), new NodesWorkflowDefinitionLoader());
 
     private static readonly Guid TestTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -1807,6 +1807,39 @@ public sealed class DefinitionCompilerServiceTests
             },
             new ActionCatalogEntry(InProcessFactory: _ => DefaultStateExecutor.Create(new NoOpState())),
             publication);
+    }
+
+    /// <summary>bindings 付き Nodes サンプルは登録でき、InProcess 実行では参照を渡す前に失敗する。</summary>
+    [Fact]
+    public async Task ValidateAndCompile_ActionBindingsSample_RegistersAndRejectsInProcess()
+    {
+        // Arrange
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
+        var samplePath = Path.Combine(repoRoot, "docs", "samples", "ui-action-bindings.yaml");
+        Assert.True(File.Exists(samplePath), samplePath);
+        var svc = CreateSut();
+        var yaml = await File.ReadAllTextAsync(samplePath);
+        var ctx = new StateContext
+        {
+            Events = null!,
+            Store = null!,
+            ExecutionId = "exec-bindings",
+            StateName = "flow.query",
+        };
+
+        // Act
+        var (compiled, _) = svc.ValidateAndCompile("ActionBindingsSample", yaml);
+        var executor = compiled.StateExecutorFactory.GetExecutor("flow.query");
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            executor!.ExecuteAsync(ctx, null, CancellationToken.None));
+
+        // Assert
+        Assert.NotNull(executor);
+        Assert.Contains(
+            "Bindings are not available for InProcess execution.",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("order-page-size", exception.Message, StringComparison.Ordinal);
     }
 
     /// <summary>入れ子 workflow の公式サンプル YAML が nodes としてコンパイルできる。</summary>

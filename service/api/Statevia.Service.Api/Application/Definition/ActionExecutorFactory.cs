@@ -16,6 +16,7 @@ internal sealed class ActionExecutorFactory : IStateExecutorFactory
     private readonly IActionCatalog _catalog;
     private readonly IActionExecutor _actionExecutor;
     private readonly ITenantContextAccessor _tenantContext;
+    private readonly IReadOnlyDictionary<string, ActionBindingReferences> _nodeBindings;
 
     /// <summary>
     /// 定義と Catalog から状態実行器ファクトリを構築する。
@@ -24,17 +25,20 @@ internal sealed class ActionExecutorFactory : IStateExecutorFactory
     /// <param name="stateActionBindings">状態別 Action バインディング（版ピン付き）。</param>
     /// <param name="catalog">Action Catalog。</param>
     /// <param name="serviceProvider">Platform 実行層とテナント文脈の解決用。</param>
+    /// <param name="nodeBindings">Nodes 形式の状態名から参照マップ。States 形式では空。</param>
     public ActionExecutorFactory(
         WorkflowDefinition definition,
         IReadOnlyDictionary<string, StateActionBinding> stateActionBindings,
         IActionCatalog catalog,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IReadOnlyDictionary<string, ActionBindingReferences>? nodeBindings = null)
     {
         _definition = definition;
         _stateActionBindings = stateActionBindings;
         _catalog = catalog;
         _actionExecutor = serviceProvider.GetRequiredService<IActionExecutor>();
         _tenantContext = serviceProvider.GetRequiredService<ITenantContextAccessor>();
+        _nodeBindings = nodeBindings ?? new Dictionary<string, ActionBindingReferences>(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />
@@ -64,11 +68,13 @@ internal sealed class ActionExecutorFactory : IStateExecutorFactory
         var tenantId = _tenantContext.TenantId?.ToString("D")
             ?? throw new InvalidOperationException("Tenant context is required for action execution.");
 
+        _nodeBindings.TryGetValue(stateName, out var nodeBindings);
         return new StateActionExecutorAdapter(
             binding.LogicalActionId,
             binding.ResolvedModuleVersion,
             tenantId,
-            _actionExecutor);
+            _actionExecutor,
+            nodeBindings);
     }
 
     /// <summary>

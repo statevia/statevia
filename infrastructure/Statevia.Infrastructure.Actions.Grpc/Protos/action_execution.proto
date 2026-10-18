@@ -23,6 +23,8 @@ message ActionExecutionRpcRequest {
   optional int64 deadline_unix_ms = 7;
   // notification.send の接続。input_json には入れない。他 Action では省略する。
   optional NotificationSmtpConnection notification_smtp = 8;
+  // 解決済みスロット。input_json と notification_smtp には入れない。空なら省略する。
+  map<string, string> bindings = 9;
 }
 
 // 1 回の notification.send に渡す SMTP 接続。マスター鍵は含まない。

@@ -85,6 +85,29 @@ export type AdminFeatureUiText = {
       dismissIssued: string;
       forbidden: string;
     };
+    actionBindings: {
+      title: string;
+      description: string;
+      createTitle: string;
+      nameLabel: string;
+      kindLabel: string;
+      kindVariable: string;
+      kindSecret: string;
+      valueLabel: string;
+      secretValueHint: string;
+      allowedActionIdsLabel: string;
+      allowedActionIdsHint: string;
+      createSubmit: string;
+      creating: string;
+      save: string;
+      saving: string;
+      delete: string;
+      deleting: string;
+      empty: string;
+      forbidden: string;
+      valueConfigured: string;
+      updatedAt: (value: string) => string;
+    };
 
   };
 };

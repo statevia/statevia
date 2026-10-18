@@ -46,6 +46,14 @@ public static class ActionExecutionContractMapper
             };
         }
 
+        if (request.Bindings is { Count: > 0 } bindings)
+        {
+            foreach (var (slot, value) in bindings)
+            {
+                rpc.Bindings[slot] = value;
+            }
+        }
+
         return rpc;
     }
 
@@ -75,6 +83,9 @@ public static class ActionExecutionContractMapper
                     EmptyToNull(rpc.NotificationSmtp.User),
                     EmptyToNull(rpc.NotificationSmtp.Password),
                     EmptyToNull(rpc.NotificationSmtp.DefaultFrom)),
+            Bindings = rpc.Bindings.Count == 0
+                ? null
+                : rpc.Bindings.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
         };
     }
 

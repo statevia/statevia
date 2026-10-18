@@ -10,6 +10,7 @@ internal sealed class StateActionExecutorAdapter : IStateExecutor
     private readonly string? _resolvedModuleVersion;
     private readonly string _tenantId;
     private readonly IActionExecutor _actionExecutor;
+    private readonly ActionBindingReferences? _bindings;
 
     /// <summary>
     /// Adapter を構築する。
@@ -18,11 +19,13 @@ internal sealed class StateActionExecutorAdapter : IStateExecutor
     /// <param name="resolvedModuleVersion">compile 時にピンした Module 版（任意）。</param>
     /// <param name="tenantId"><c>tenants.tenant_id</c> UUID 文字列。</param>
     /// <param name="actionExecutor">Platform 実行ディスパッチャ。</param>
+    /// <param name="bindings">状態の参照。空なら解決しない。</param>
     public StateActionExecutorAdapter(
         string actionId,
         string? resolvedModuleVersion,
         string tenantId,
-        IActionExecutor actionExecutor)
+        IActionExecutor actionExecutor,
+        ActionBindingReferences? bindings = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(actionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
@@ -31,6 +34,7 @@ internal sealed class StateActionExecutorAdapter : IStateExecutor
         _resolvedModuleVersion = string.IsNullOrWhiteSpace(resolvedModuleVersion) ? null : resolvedModuleVersion.Trim();
         _tenantId = tenantId;
         _actionExecutor = actionExecutor;
+        _bindings = bindings is { IsEmpty: false } ? bindings : null;
     }
 
     /// <inheritdoc />
@@ -43,6 +47,7 @@ internal sealed class StateActionExecutorAdapter : IStateExecutor
             ActionId = _actionId,
             ResolvedModuleVersion = _resolvedModuleVersion,
             TenantId = _tenantId,
+            BindingReferences = ToBindingReferences(_bindings),
         };
 
         var result = await _actionExecutor
@@ -56,5 +61,18 @@ internal sealed class StateActionExecutorAdapter : IStateExecutor
         }
 
         return ActionExecutionRuntimeInputMapper.ToRuntimeOutput(result);
+    }
+
+    /// <summary>定義の参照を、解決前のリクエストフィールドへ写す。値はコピーしない。</summary>
+    /// <param name="bindings">状態の参照。空なら null。</param>
+    /// <returns>未解決の参照。</returns>
+    private static ActionBindingReferences? ToBindingReferences(ActionBindingReferences? bindings)
+    {
+        if (bindings is null || bindings.IsEmpty)
+        {
+            return null;
+        }
+
+        return new ActionBindingReferences(bindings.Secrets, bindings.Variables);
     }
 }

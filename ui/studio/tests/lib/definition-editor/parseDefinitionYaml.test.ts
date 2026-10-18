@@ -36,6 +36,43 @@ nodes:
     expect(again.document?.nodes.find((n) => n.name === "a")?.input).toBe("$.input.x");
   });
 
+  it("action の bindings を編集フォームなしで往復する", () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: a
+  - name: a
+    type: action
+    action: orders.query
+    bindings:
+      secrets:
+        connection: order-db
+      variables:
+        pageSize: order-page-size
+    input:
+      customerId: $.vars.customerId
+    next: e
+  - name: e
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    const node = parsed.document?.nodes.find((candidate) => candidate.name === "a");
+    expect(node?.bindings).toEqual({
+      secrets: { connection: "order-db" },
+      variables: { pageSize: "order-page-size" }
+    });
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+    const again = parseDefinitionYaml(serializeDefinitionYaml(parsed.document), parseOpts);
+    expect(again.document?.nodes.find((candidate) => candidate.name === "a")?.bindings).toEqual(
+      node?.bindings
+    );
+  });
+
   it("edges[].to がオブジェクトのとき name に正規化する", () => {
     const yaml = `version: 1
 workflow:

@@ -7,7 +7,6 @@ using System.Text.Json;
 namespace Statevia.Service.ActionHost.Execution;
 
 /// <summary>登録済み Module Action を OutOfProcess 向けに実行する。</summary>
-/// <summary>登録済み Module Action を OutOfProcess 向けに実行する。</summary>
 /// <remarks>
 /// <para>プロセス内の実行は 1 本に制限する。開始前と終了時に、待受開始時のプロセス環境へ戻す。</para>
 /// <para>復元に失敗したときは、その Action を失敗させてプロセスを終了する。静的フィールドは消さない。</para>
@@ -167,16 +166,19 @@ internal sealed class ActionHostExecutor
 
         try
         {
-            using var smtpScope = NotificationSmtpDispatch.BeginScopeForAction(request);
-            var runtimeOutput = await registration.Executor
-                .ExecuteAsync(stateContext, request.Input, linkedCts.Token)
-                .ConfigureAwait(false);
-
-            return new ActionExecutionResult
+            using (ActionBindingScope.Begin(request.Bindings))
+            using (NotificationSmtpDispatch.BeginScopeForAction(request))
             {
-                Success = true,
-                Output = SerializeOutput(runtimeOutput),
-            };
+                var runtimeOutput = await registration.Executor
+                    .ExecuteAsync(stateContext, request.Input, linkedCts.Token)
+                    .ConfigureAwait(false);
+
+                return new ActionExecutionResult
+                {
+                    Success = true,
+                    Output = SerializeOutput(runtimeOutput),
+                };
+            }
         }
         catch (OperationCanceledException) when (linkedCts.IsCancellationRequested)
         {

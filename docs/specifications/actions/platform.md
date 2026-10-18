@@ -3,14 +3,16 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.4 |
-| 更新日 | 2026-10-13 |
+| Version | 1.5 |
+| 更新日 | 2026-10-15 |
 | Scope | Service API / ModuleHost / Action 実行 |
 | 関連 | [module-zip-layout.md](module-zip-layout.md), [../../concepts/actions.md](../../concepts/actions.md) |
 
 ---
 
 Action Module の発見・登録・可視性・実行ポリシー・dispatch の Normative 概要。実装は `core/actions/Statevia.Core.Actions.Abstractions` と Service API の composition root にある。
+
+**Version 1.5（2026-10-15）**: 状態の `bindings` は input とは別フィールドで 1 回だけ渡す。InProcess は復号前に `ActionBindingRejected`。解決できないときは `ActionBindingUnavailable`。
 
 **Version 1.4（2026-10-13）**: Container は実行テナントの modules ディレクトリだけを読み取り専用でマウントする。
 
@@ -85,6 +87,14 @@ Policy が返しうるモード（実装状況はバージョンにより異な�
 | `Sandbox:Docker:GrpcPort` | 1024 | 65535 | 5001 | well-known 帯は拒否 |
 | `Sandbox:Docker:NetworkMode` | — | — | `bridge` | `none` は拒否。空白は Warning のうえ `bridge` |
 | `Sandbox:Docker:Image` | — | — | 未設定 | 未設定でも起動継続（実行時 fail-safe） |
+
+## 4.2 Action バインディング
+
+テナント管理者は `/v1/admin/action-bindings` に変数とシークレットを保存する。定義は参照名だけを持ち、値は workflow input、定義 YAML、プロセス環境変数、コンテナ環境変数に置かない。
+
+実行時は、その状態が参照した名前だけを実行テナントから解決する。OutOfProcess と Container では、解決後の canonical actionId が許可一覧にあるとき、gRPC の `bindings`（`input_json` とは別）でスロットを渡す。Action Host は呼び出しスコープを開き、終了時に閉じる。復号とデータベース参照は Action Host では行わない。
+
+InProcess で参照がある状態は `ActionBindingRejected`（`Bindings are not available for InProcess execution.`）。名前が無い、種別が違う、許可外、復元できないときは `ActionBindingUnavailable`。メッセージはスロット名または参照名までとし、値は含めない。
 
 ## 5. MUST / SHOULD
 

@@ -33,6 +33,10 @@ describe("AdminNavLinks", () => {
     expect(await screen.findByRole("link", { name: "ユーザー管理" })).toHaveAttribute("href", "/admin/users");
     expect(screen.getByRole("link", { name: "グループ管理" })).toHaveAttribute("href", "/admin/groups");
     expect(screen.getByRole("link", { name: "API キー" })).toHaveAttribute("href", "/admin/api-keys");
+    expect(screen.getByRole("link", { name: "Action バインディング" })).toHaveAttribute(
+      "href",
+      "/admin/action-bindings"
+    );
   });
 
   it("非管理者には管理ナビを表示しない", async () => {

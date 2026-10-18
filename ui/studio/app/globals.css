@@ -164,6 +164,12 @@ html[data-theme="dark"] {
     --md-sys-color-on-neutral-container: #e5e5e5;
 }
 
+html[data-theme="dark"] select,
+html[data-theme="dark"] option {
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
 html {
     scrollbar-gutter: auto;
     overflow-y: scroll;

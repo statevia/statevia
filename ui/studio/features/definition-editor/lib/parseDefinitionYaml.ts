@@ -177,7 +177,49 @@ function applyOptionalNodeFields(node: DefinitionGraphNode, value: Record<string
   if (typeof value.input === "string" || isRecord(value.input)) {
     node.input = value.input;
   }
+  const bindings = parseNodeBindings(value.bindings);
+  if (bindings !== undefined) {
+    node.bindings = bindings;
+  }
   applyJoinModeField(node, value);
+}
+
+/**
+ * bindings の文字列マップだけを残す。編集フォームは作らない。
+ * @param value YAML の bindings。
+ * @returns secrets / variables。どちらも無ければ undefined。
+ */
+function parseNodeBindings(value: unknown): DefinitionGraphNode["bindings"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const secrets = parseBindingNameMap(value.secrets);
+  const variables = parseBindingNameMap(value.variables);
+  if (secrets === undefined && variables === undefined) {
+    return undefined;
+  }
+  return {
+    ...(secrets === undefined ? {} : { secrets }),
+    ...(variables === undefined ? {} : { variables })
+  };
+}
+
+/**
+ * スロット名から参照名への文字列マップを読む。
+ * @param value secrets または variables。
+ * @returns 1 件以上あるときだけ返す。
+ */
+function parseBindingNameMap(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const names = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string"
+  );
+  if (names.length === 0) {
+    return undefined;
+  }
+  return Object.fromEntries(names);
 }
 
 function parseNode(value: unknown): DefinitionGraphNode | null {

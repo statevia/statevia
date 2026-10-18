@@ -53,6 +53,14 @@ export type DefinitionGraphNode = {
   edges?: DefinitionGraphEdge[];
   /** action: パス文字列・リテラル、またはキー→パス／リテラルのマップ（ローダー ParseStrictInputMapping と整合） */
   input?: string | Record<string, unknown>;
+  /**
+   * action: スロット名からテナント側の名前への参照。値は持たない。
+   * グラフの編集フォームは無い。YAML 往復で落とさない。
+   */
+  bindings?: {
+    secrets?: Record<string, string>;
+    variables?: Record<string, string>;
+  };
   /** join: conversion spec では省略可。指定時は `all` のみ */
   mode?: "all";
 };

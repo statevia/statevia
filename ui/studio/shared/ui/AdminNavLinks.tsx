@@ -35,6 +35,9 @@ export function AdminNavLinks() {
       <Link href="/admin/api-keys" className="hover:text-brand-header-fg hover:underline">
         {uiText.navigation.adminApiKeys}
       </Link>
+      <Link href="/admin/action-bindings" className="hover:text-brand-header-fg hover:underline">
+        {uiText.navigation.adminActionBindings}
+      </Link>
     </>
   );
 }

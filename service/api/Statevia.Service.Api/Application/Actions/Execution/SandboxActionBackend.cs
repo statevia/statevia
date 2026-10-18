@@ -11,9 +11,11 @@ namespace Statevia.Service.Api.Application.Actions.Execution;
 /// </remarks>
 /// <param name="runtimes">DI 登録されたサンドボックスランタイム群。</param>
 /// <param name="options">サンドボックス設定を含む実行ポリシー設定。</param>
+/// <param name="bindingResolver">参照の解決。未登録で参照があるときは失敗する。</param>
 internal abstract class SandboxActionBackend(
     IEnumerable<IActionSandboxRuntime> runtimes,
-    IOptions<ExecutionPolicyOptions> options) : IActionExecutionBackend
+    IOptions<ExecutionPolicyOptions> options,
+    IActionBindingResolver? bindingResolver = null) : IActionExecutionBackend
 {
     private readonly Dictionary<string, IActionSandboxRuntime> _runtimesByProviderKey = runtimes
         .GroupBy(runtime => runtime.ProviderKey, StringComparer.Ordinal)
@@ -32,7 +34,7 @@ internal abstract class SandboxActionBackend(
     protected abstract string? ResolveRuntimeProviderKey(SandboxOptions sandbox);
 
     /// <inheritdoc />
-    public Task<ActionExecutionResult> ExecuteAsync(
+    public async Task<ActionExecutionResult> ExecuteAsync(
         ActionBackendInvocation invocation,
         CancellationToken cancellationToken)
     {
@@ -44,17 +46,25 @@ internal abstract class SandboxActionBackend(
         if (string.IsNullOrWhiteSpace(runtimeProviderKey)
             || !_runtimesByProviderKey.TryGetValue(runtimeProviderKey, out var runtime))
         {
-            return Task.FromResult(new ActionExecutionResult
+            return new ActionExecutionResult
             {
                 Success = false,
                 ErrorCode = "SandboxRuntimeNotConfigured",
                 ErrorMessage = $"No sandbox runtime is configured for execution mode '{Mode}'.",
-            });
+            };
         }
 
         var request = ActionExecutionRuntimeInputMapper.WithRuntimeInput(
             invocation.Request,
             invocation.RuntimeInput);
-        return runtime.RunAsync(request, sandbox.ToLimits(), cancellationToken);
+        var prepared = await ActionBindingDispatch
+            .ResolveIfNeededAsync(request, bindingResolver, cancellationToken)
+            .ConfigureAwait(false);
+        if (prepared.Failure is not null)
+        {
+            return prepared.Failure;
+        }
+
+        return await runtime.RunAsync(prepared.Request, sandbox.ToLimits(), cancellationToken).ConfigureAwait(false);
     }
 }

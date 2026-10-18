@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.29 |
-| 更新日 | 2026-10-10 |
+| Version | 1.30 |
+| 更新日 | 2026-10-15 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.30（2026-10-15）**: `GET` / `POST /v1/admin/action-bindings` と `PUT` / `DELETE /v1/admin/action-bindings/{name}`。テナント管理者のみ。シークレットの値は応答に出さない。契約外は 422（`VALIDATION_ERROR`）。
 
 **Version 1.29（2026-10-10）**: `GET` / `PUT` / `DELETE /v1/admin/notification-smtp`。テナント管理者のみ。GET はパスワードを返さず、未設定は 200。契約外の資格情報は 422（`VALIDATION_ERROR`）。
 
@@ -594,6 +596,10 @@ Request:
 | GET | `/notification-smtp` | 自テナントの通知 SMTP。`configured`、`host`、`port`、`user`、`defaultFrom`、`passwordConfigured`。パスワードは項目ごと返さない。未設定は 200 で `configured=false`、接続項目は null |
 | PUT | `/notification-smtp` | 自テナントの通知 SMTP を全体置換（`host` 1〜255、`port` 1〜65535、`user?` 最大 256、`password?`、`defaultFrom?` 最大 256）。ユーザーが空ならパスワードも空。ユーザーがあるときパスワードは UTF-8 で 1〜1024 バイト。成功は GET と同じ形。契約外は **422**（`VALIDATION_ERROR`）。パスワードは応答に出ない |
 | DELETE | `/notification-smtp` | 自テナントの通知 SMTP を削除。行が無くても **204** |
+| GET | `/action-bindings` | 自テナントの変数とシークレット。`name`、`kind`（`variable` / `secret`）、`allowedActionIds`、`updatedAt`。変数だけ `value`。シークレットは `valueConfigured: true` で `value` は出さない |
+| POST | `/action-bindings` | 作成（`name`、`kind`、`value`、`allowedActionIds`）。名前はテナント内で一意。許可 actionId は canonical 形式で 1〜8 個。値は空白のみ不可、UTF-8 で 1〜4096 バイト。合計 64 件まで。成功は GET の 1 要素。契約外と名前の重複は **422**（`VALIDATION_ERROR`）。値はエラーに出さない |
+| PUT | `/action-bindings/{name}` | 許可一覧を全体置換。変数は `value` 必須。シークレットは `value` を省略すると暗号文を維持し、送ると置換する。名前と種別の変更は **422**。行が無いときも **422** |
+| DELETE | `/action-bindings/{name}` | 行を削除。行が無くても **204** |
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 

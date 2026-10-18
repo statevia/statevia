@@ -80,3 +80,6 @@ tools/capacity/results/
 tools/api-tat/results/
 # ビルドで copy するリファレンス Module DLL（実行時配置）
 modules/default/statevia.action.reference.*/
+# 手元実験用 Module。ソースも default テナントへの配置もコミットしない。
+modules/local/
+modules/default/statevia.local.playground/

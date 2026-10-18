@@ -27,4 +27,19 @@ internal static partial class TenantAdministrationLogMessages
         this ILogger logger,
         Guid actorPrincipalId,
         bool passwordConfigured);
+
+    /// <summary>テナント管理者が Action バインディングを保存した。値と保護文字列は出さない。</summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="actorPrincipalId">呼び出し主体。</param>
+    /// <param name="kind"><c>variable</c> または <c>secret</c>。</param>
+    /// <param name="secretValueReplaced">シークレットの暗号文を置換したか。</param>
+    [LoggerMessage(
+        EventId = 4042,
+        Level = LogLevel.Information,
+        Message = "Admin saved tenant action binding. ActorPrincipalId={actorPrincipalId} Kind={kind} SecretValueReplaced={secretValueReplaced}")]
+    public static partial void ActionBindingSaved(
+        this ILogger logger,
+        Guid actorPrincipalId,
+        string kind,
+        bool secretValueReplaced);
 }

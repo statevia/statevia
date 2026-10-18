@@ -37,6 +37,7 @@ export const uiTextEn: UiText = {
     adminUsers: "Users",
     adminGroups: "Groups",
     adminApiKeys: "API keys",
+    adminActionBindings: "Action bindings",
     account: "Account",
     logout: "Sign out",
 
