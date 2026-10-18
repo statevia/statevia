@@ -1301,6 +1301,72 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                     b.ToTable("service_accounts", (string)null);
                 });
 
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantActionBindingActionRow", b =>
+                {
+                    b.Property<Guid>("BindingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("binding_id");
+
+                    b.Property<string>("ActionId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("action_id");
+
+                    b.HasKey("BindingId", "ActionId");
+
+                    b.ToTable("tenant_action_binding_actions", (string)null);
+                });
+
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantActionBindingRow", b =>
+                {
+                    b.Property<Guid>("BindingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("binding_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("ValuePlaintext")
+                        .HasColumnType("text")
+                        .HasColumnName("value_plaintext");
+
+                    b.Property<string>("ValueProtected")
+                        .HasColumnType("text")
+                        .HasColumnName("value_protected");
+
+                    b.HasKey("BindingId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("tenant_action_bindings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_tenant_action_bindings_kind_value", "(kind = 'variable' AND value_plaintext IS NOT NULL AND value_protected IS NULL) OR (kind = 'secret' AND value_plaintext IS NULL AND value_protected IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantNotificationSmtpRow", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -1671,6 +1737,26 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantActionBindingActionRow", b =>
+                {
+                    b.HasOne("Statevia.Infrastructure.Persistence.TenantActionBindingRow", "Binding")
+                        .WithMany("AllowedActions")
+                        .HasForeignKey("BindingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Binding");
+                });
+
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantActionBindingRow", b =>
+                {
+                    b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantNotificationSmtpRow", b =>
                 {
                     b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
@@ -1678,6 +1764,11 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Statevia.Infrastructure.Persistence.TenantActionBindingRow", b =>
+                {
+                    b.Navigation("AllowedActions");
                 });
 #pragma warning restore 612, 618
         }

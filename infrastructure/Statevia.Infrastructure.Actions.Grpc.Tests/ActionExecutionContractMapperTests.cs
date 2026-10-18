@@ -38,6 +38,7 @@ public sealed class ActionExecutionContractMapperTests
         Assert.Equal(
             original.Input?.GetRawText(),
             restored.Input?.GetRawText());
+        Assert.Null(restored.Bindings);
         Assert.Null(restored.NotificationSmtp);
     }
 
@@ -161,6 +162,38 @@ public sealed class ActionExecutionContractMapperTests
         Assert.Equal(original.ErrorCode, restored.ErrorCode);
         Assert.Equal(original.ErrorMessage, restored.ErrorMessage);
         Assert.Null(restored.Output);
+    }
+
+    /// <summary>スロットマップは input_json と分かれ、未設定では空のまま戻る。</summary>
+    [Fact]
+    public void Request_Bindings_StayOutOfInputJson()
+    {
+        // Arrange
+        const string secret = "binding-secret-value-9f3a";
+        var original = new ActionExecutionRequest
+        {
+            ExecutionId = "exec-1",
+            StateName = "Query",
+            ActionId = "acme.order.query",
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Input = JsonDocument.Parse("""{"customerId":"c1"}""").RootElement,
+            Bindings = new Dictionary<string, string> { ["connection"] = secret },
+            BindingReferences = new ActionBindingReferences(
+                new Dictionary<string, string> { ["connection"] = "order-db" },
+                new Dictionary<string, string>()),
+        };
+
+        // Act
+        var rpc = ActionExecutionContractMapper.ToRpcRequest(original);
+        var restored = ActionExecutionContractMapper.FromRpcRequest(rpc);
+
+        // Assert
+        Assert.Equal(secret, rpc.Bindings["connection"]);
+        Assert.DoesNotContain(secret, rpc.InputJson, StringComparison.Ordinal);
+        Assert.Equal(secret, restored.Bindings!["connection"]);
+        Assert.Null(restored.BindingReferences);
+        Assert.NotNull(restored.Input);
+        Assert.DoesNotContain(secret, restored.Input.Value.GetRawText(), StringComparison.Ordinal);
     }
 
     /// <summary>生成された gRPC サービス型がロードできる。</summary>

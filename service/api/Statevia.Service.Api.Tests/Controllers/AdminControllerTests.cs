@@ -32,6 +32,7 @@ public sealed class AdminControllerTests
         var controller = new AdminController(
             new FakeAdminService { Users = expected },
             new FakeNotificationSmtpService(),
+            new FakeActionBindingService(),
             accessor);
 
         // Act
@@ -194,6 +195,35 @@ public sealed class AdminControllerTests
 
         /// <inheritdoc />
         public Task DeleteAsync(Guid callerPrincipalId, CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+    }
+
+    /// <summary>Action バインディングはユーザー一覧テストでは呼ばない。</summary>
+    private sealed class FakeActionBindingService : ITenantActionBindingService
+    {
+        /// <inheritdoc />
+        public Task<IReadOnlyList<TenantActionBindingDto>> ListAsync(
+            Guid callerPrincipalId,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task<TenantActionBindingDto> CreateAsync(
+            Guid callerPrincipalId,
+            CreateTenantActionBindingRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task<TenantActionBindingDto> UpdateAsync(
+            Guid callerPrincipalId,
+            string name,
+            UpdateTenantActionBindingRequest request,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task DeleteAsync(Guid callerPrincipalId, string name, CancellationToken cancellationToken) =>
             throw new NotImplementedException();
     }
 }

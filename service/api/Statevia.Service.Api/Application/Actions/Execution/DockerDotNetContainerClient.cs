@@ -157,7 +157,7 @@ internal sealed class DockerDotNetContainerClient(IOptions<ExecutionPolicyOption
     }
 
     /// <summary>
-    /// コンテナに渡す環境変数。<code>ASPNETCORE_URLS</code> と <code>STATEVIA_MODULES_PATH</code> だけである。
+    /// コンテナに渡す環境変数。<code>ASPNETCORE_URLS</code> と <code>STATEVIA_MODULES_PATH</code> だけである。Action バインディングの値はコピーしない。
     /// </summary>
     /// <param name="containerGrpcPort">コンテナ内の gRPC ポート。</param>
     /// <param name="modulesContainerPath">コンテナ内の modules パス。</param>

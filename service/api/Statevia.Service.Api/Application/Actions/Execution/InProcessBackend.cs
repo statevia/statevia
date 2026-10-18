@@ -28,6 +28,11 @@ internal sealed class InProcessBackend : IActionExecutionBackend
     {
         ArgumentNullException.ThrowIfNull(invocation);
 
+        if (ActionBindingDispatch.RejectInProcess(invocation.Request) is { } rejected)
+        {
+            return rejected;
+        }
+
         if (invocation.Registration is not { } registration)
         {
             throw new InvalidOperationException("InProcess backend requires a catalog registration.");

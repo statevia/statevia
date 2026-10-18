@@ -99,6 +99,44 @@ function assignOptionalNodeFields(
       target.input = node.input;
     }
   }
+  const bindings = copyBindings(node.bindings);
+  if (bindings !== undefined) {
+    target.bindings = bindings;
+  }
+}
+
+/**
+ * 参照マップを YAML に戻す。空の種別は出さない。
+ * @param bindings ノードの参照。未設定可。
+ * @returns secrets / variables。どちらも無ければ undefined。
+ */
+function copyBindings(
+  bindings: DefinitionGraphNode["bindings"]
+): Record<string, Record<string, string>> | undefined {
+  if (bindings === undefined) {
+    return undefined;
+  }
+  const secrets = copyStringMap(bindings.secrets);
+  const variables = copyStringMap(bindings.variables);
+  if (secrets === undefined && variables === undefined) {
+    return undefined;
+  }
+  return {
+    ...(secrets === undefined ? {} : { secrets }),
+    ...(variables === undefined ? {} : { variables })
+  };
+}
+
+/**
+ * 空でない文字列マップをコピーする。
+ * @param names スロット名から参照名。
+ * @returns 1 件以上あるときだけ返す。
+ */
+function copyStringMap(names: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (names === undefined || !isNonEmptyRecord(names)) {
+    return undefined;
+  }
+  return { ...names };
 }
 
 /**

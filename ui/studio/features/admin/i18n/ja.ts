@@ -1,3 +1,4 @@
+import { actionBindingText } from "./actionBindingText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -87,6 +88,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       dismissIssued: "閉じる",
       forbidden: "テナント管理者のみ利用できます。",
     },
+    actionBindings: actionBindingText("ja"),
 
   },
 };

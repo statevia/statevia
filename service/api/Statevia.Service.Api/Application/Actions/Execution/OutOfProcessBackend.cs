@@ -7,11 +7,16 @@ namespace Statevia.Service.Api.Application.Actions.Execution;
 internal sealed class OutOfProcessBackend : IActionExecutionBackend
 {
     private readonly IActionHostExecutionClient _client;
+    private readonly IActionBindingResolver? _bindingResolver;
 
     /// <summary>OutOfProcess Backend を構築する。</summary>
     /// <param name="client">Action Host 実行クライアント。</param>
-    public OutOfProcessBackend(IActionHostExecutionClient client) =>
+    /// <param name="bindingResolver">参照の解決。未登録で参照があるときは失敗する。</param>
+    public OutOfProcessBackend(IActionHostExecutionClient client, IActionBindingResolver? bindingResolver = null)
+    {
         _client = client;
+        _bindingResolver = bindingResolver;
+    }
 
     /// <inheritdoc />
     public ActionExecutionMode Mode => ActionExecutionMode.OutOfProcess;
@@ -20,7 +25,7 @@ internal sealed class OutOfProcessBackend : IActionExecutionBackend
     public string ProviderKey => "action-host";
 
     /// <inheritdoc />
-    public Task<ActionExecutionResult> ExecuteAsync(
+    public async Task<ActionExecutionResult> ExecuteAsync(
         ActionBackendInvocation invocation,
         CancellationToken cancellationToken)
     {
@@ -29,6 +34,14 @@ internal sealed class OutOfProcessBackend : IActionExecutionBackend
         var hostRequest = ActionExecutionRuntimeInputMapper.WithRuntimeInput(
             invocation.Request,
             invocation.RuntimeInput);
-        return _client.ExecuteAsync(hostRequest, cancellationToken);
+        var prepared = await ActionBindingDispatch
+            .ResolveIfNeededAsync(hostRequest, _bindingResolver, cancellationToken)
+            .ConfigureAwait(false);
+        if (prepared.Failure is not null)
+        {
+            return prepared.Failure;
+        }
+
+        return await _client.ExecuteAsync(prepared.Request, cancellationToken).ConfigureAwait(false);
     }
 }

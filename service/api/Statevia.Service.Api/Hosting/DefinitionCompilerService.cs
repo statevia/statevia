@@ -22,7 +22,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
         PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
     };
 
-    private readonly IDefinitionLoadStrategy _definitionLoadStrategy;
+    private readonly DefinitionLoadStrategy _definitionLoadStrategy;
     private readonly IActionCatalog _actionCatalog;
     private readonly IActionVisibilityResolver _visibilityResolver;
     private readonly IServiceProvider _serviceProvider;
@@ -39,7 +39,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
     public DefinitionCompilerService(
         IActionCatalog actionCatalog,
         IActionVisibilityResolver visibilityResolver,
-        IDefinitionLoadStrategy definitionLoadStrategy,
+        DefinitionLoadStrategy definitionLoadStrategy,
         IServiceProvider serviceProvider,
         ILogger<DefinitionCompilerService> logger)
     {
@@ -56,7 +56,8 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
         string yaml,
         Guid? tenantId = null)
     {
-        var def = _definitionLoadStrategy.Load(yaml);
+        var loaded = _definitionLoadStrategy.LoadWithBindings(yaml);
+        var def = loaded.Definition;
         var compileBindings = ModuleActionCompileBinder.Bind(def, _actionCatalog);
         def = ResolveActionNames(def);
         var validation = DefinitionValidator.Validate(def);
@@ -72,7 +73,8 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             def,
             compileBindings.StateActionBindings,
             _actionCatalog,
-            _serviceProvider);
+            _serviceProvider,
+            loaded.NodeBindings);
         var compiler = new DefinitionCompiler(factory);
         var compiled = compiler.Compile(
             def,
@@ -99,7 +101,8 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
     /// <inheritdoc />
     public CompiledWorkflowDefinition RestoreFromStoredVersion(string sourceYaml, string compiledJson)
     {
-        var def = _definitionLoadStrategy.Load(sourceYaml);
+        var loaded = _definitionLoadStrategy.LoadWithBindings(sourceYaml);
+        var def = loaded.Definition;
         var compileBindings = StoredDefinitionBindingResolver.Resolve(def, compiledJson, _actionCatalog);
         def = ResolveActionNames(def);
         ValidateRegisteredActions(compileBindings.StateActionBindings, tenantId: null);
@@ -108,7 +111,8 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             def,
             compileBindings.StateActionBindings,
             _actionCatalog,
-            _serviceProvider);
+            _serviceProvider,
+            loaded.NodeBindings);
         return CompiledDefinitionJsonReader.Read(
             compiledJson,
             factory,

@@ -135,6 +135,10 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string Outcome = "outcome";
         public const string ResourceKind = "resource_kind";
         public const string Host = "host";
+        public const string BindingId = "binding_id";
+        public const string ValuePlaintext = "value_plaintext";
+        public const string ValueProtected = "value_protected";
+        public const string ActionId = "action_id";
         public const string Port = "port";
         public const string SmtpUser = "smtp_user";
         public const string PasswordProtected = "password_protected";
@@ -205,6 +209,9 @@ internal class CoreDbContext : DbContext, ICoreDatabase
 
     /// <summary>テナント通知 SMTP。1 テナント 1 行。</summary>
     public DbSet<TenantNotificationSmtpRow> TenantNotificationSmtps => Set<TenantNotificationSmtpRow>();
+
+    /// <summary>テナントの Action 変数とシークレット。</summary>
+    public DbSet<TenantActionBindingRow> TenantActionBindings => Set<TenantActionBindingRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -670,6 +677,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         ConfigureScheduleTenantIdEntityFilters(modelBuilder);
         ConfigureSecurityTenantIdEntityFilters(modelBuilder);
         ConfigureNotificationSmtpTenantIdEntityFilter(modelBuilder);
+        ConfigureActionBindingTenantIdEntityFilter(modelBuilder);
     }
 
     private void ConfigureCoreTenantIdEntityFilters(ModelBuilder modelBuilder)
@@ -748,6 +756,17 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         modelBuilder.Entity<TenantNotificationSmtpRow>().HasQueryFilter(e =>
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+    }
+
+    /// <summary>Action バインディングのテナント query filter。</summary>
+    private void ConfigureActionBindingTenantIdEntityFilter(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TenantActionBindingRow>().HasQueryFilter(e =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
+        modelBuilder.Entity<TenantActionBindingActionRow>().HasQueryFilter(action =>
+            !_queryFilterOptions.IsEnabled ||
+            (_tenantAccessor.IsResolved && action.Binding!.TenantId == _tenantAccessor.TenantId));
     }
 
     private static void ConfigureSecurityEntities(ModelBuilder modelBuilder)
@@ -967,6 +986,42 @@ internal class CoreDbContext : DbContext, ICoreDatabase
                 .WithMany()
                 .HasForeignKey(x => x.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TenantActionBindingRow>(e =>
+        {
+            e.ToTable("tenant_action_bindings", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_tenant_action_bindings_kind_value",
+                    "(kind = 'variable' AND value_plaintext IS NOT NULL AND value_protected IS NULL) OR (kind = 'secret' AND value_plaintext IS NULL AND value_protected IS NOT NULL)");
+            });
+            e.HasKey(x => x.BindingId);
+            e.Property(x => x.BindingId).HasColumnName(Columns.BindingId);
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.Name).HasMaxLength(64).HasColumnName(Columns.Name);
+            e.Property(x => x.Kind).HasMaxLength(16).HasColumnName(Columns.Kind);
+            e.Property(x => x.ValuePlaintext).HasColumnName(Columns.ValuePlaintext);
+            e.Property(x => x.ValueProtected).HasColumnName(Columns.ValueProtected);
+            e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
+            e.Property(x => x.UpdatedAt).HasColumnName(Columns.UpdatedAt);
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.HasOne<TenantRow>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.AllowedActions)
+                .WithOne(x => x.Binding!)
+                .HasForeignKey(x => x.BindingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TenantActionBindingActionRow>(e =>
+        {
+            e.ToTable("tenant_action_binding_actions");
+            e.HasKey(x => new { x.BindingId, x.ActionId });
+            e.Property(x => x.BindingId).HasColumnName(Columns.BindingId);
+            e.Property(x => x.ActionId).HasMaxLength(256).HasColumnName(Columns.ActionId);
         });
     }
 }

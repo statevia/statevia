@@ -154,7 +154,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IActionVisibilityResolver, DefaultActionVisibilityResolver>();
         services.AddSingleton<StateWorkflowDefinitionLoader>();
         services.AddSingleton<NodesWorkflowDefinitionLoader>();
-        services.AddSingleton<IDefinitionLoadStrategy, DefinitionLoadStrategy>();
+        services.AddSingleton<DefinitionLoadStrategy>();
+        services.AddSingleton<IDefinitionLoadStrategy>(sp => sp.GetRequiredService<DefinitionLoadStrategy>());
         services.AddSingleton<IDefinitionCompilerService, DefinitionCompilerService>();
         AddEventDeliveryRetryOptions(services, configuration);
         AddForkChildExpansionOptions(services, configuration);
@@ -178,6 +179,7 @@ public static class ServiceCollectionExtensions
         services.AddStateviaInfrastructureSecurity(configuration);
         // DbContextFactory と保護 API だけに依存する。Singleton の IActionExecutor が構築時に解決するため Scoped にはしない。
         services.AddSingleton<INotificationSmtpConnectionLoader, NotificationSmtpConnectionLoader>();
+        services.AddSingleton<IActionBindingResolver, ActionBindingResolver>();
         services.AddStateviaRuntimeOptions(configuration);
         services.AddSingleton<INodesSchemaProvider, NodesSchemaProvider>();
         services.AddStateviaCoreApplication();
@@ -241,7 +243,8 @@ public static class ServiceCollectionExtensions
             sp.GetService<INotificationSmtpConnectionLoader>()));
         services.AddSingleton<StateWorkflowDefinitionLoader>();
         services.AddSingleton<NodesWorkflowDefinitionLoader>();
-        services.AddSingleton<IDefinitionLoadStrategy, DefinitionLoadStrategy>();
+        services.AddSingleton<DefinitionLoadStrategy>();
+        services.AddSingleton<IDefinitionLoadStrategy>(sp => sp.GetRequiredService<DefinitionLoadStrategy>());
         services.AddSingleton<IDefinitionCompilerService, DefinitionCompilerService>();
         AddEventDeliveryRetryOptions(services, configuration);
         AddForkChildExpansionOptions(services, configuration);
@@ -268,6 +271,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PrincipalResourceGrantAdminService>();
         services.AddScoped<ITenantAdministrationService, TenantAdministrationService>();
         services.AddScoped<ITenantNotificationSmtpService, TenantNotificationSmtpService>();
+        services.AddScoped<ITenantActionBindingService, TenantActionBindingService>();
         services.AddOptions<DevAdminBootstrapOptions>()
             .Bind(configuration.GetSection(DevAdminBootstrapOptions.SectionName));
         services.AddHostedService<TenantBootstrapHostedService>();

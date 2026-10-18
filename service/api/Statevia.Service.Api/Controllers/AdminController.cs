@@ -11,19 +11,23 @@ public sealed class AdminController : ControllerBase
 {
     private readonly ITenantAdministrationService _administration;
     private readonly ITenantNotificationSmtpService _notificationSmtp;
+    private readonly ITenantActionBindingService _actionBindings;
     private readonly ITenantContextAccessor _tenantContext;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
     /// <param name="administration">ユーザー、グループ、API キー、ServiceAccount。</param>
     /// <param name="notificationSmtp">通知 SMTP。</param>
+    /// <param name="actionBindings">Action の変数とシークレット。</param>
     /// <param name="tenantContext">呼び出し主体。</param>
     public AdminController(
         ITenantAdministrationService administration,
         ITenantNotificationSmtpService notificationSmtp,
+        ITenantActionBindingService actionBindings,
         ITenantContextAccessor tenantContext)
     {
         _administration = administration;
         _notificationSmtp = notificationSmtp;
+        _actionBindings = actionBindings;
         _tenantContext = tenantContext;
     }
 
@@ -244,6 +248,50 @@ public sealed class AdminController : ControllerBase
     public async Task<IActionResult> DeleteNotificationSmtp(CancellationToken ct)
     {
         await _notificationSmtp.DeleteAsync(RequirePrincipalId(), ct).ConfigureAwait(false);
+        return NoContent();
+    }
+
+    /// <summary>GET /v1/admin/action-bindings — 自テナントの変数とシークレット。シークレットの値は返さない。</summary>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>名前順の一覧。</returns>
+    [HttpGet("action-bindings")]
+    [ProducesResponseType(typeof(IReadOnlyList<TenantActionBindingDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TenantActionBindingDto>>> ListActionBindings(CancellationToken ct) =>
+        Ok(await _actionBindings.ListAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
+
+    /// <summary>POST /v1/admin/action-bindings — 変数またはシークレットを作成する。</summary>
+    /// <param name="request">名前、種別、値、許可 actionId。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>作成した行。シークレットの値は含まない。</returns>
+    [HttpPost("action-bindings")]
+    [ProducesResponseType(typeof(TenantActionBindingDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TenantActionBindingDto>> CreateActionBinding(
+        [FromBody] CreateTenantActionBindingRequest request,
+        CancellationToken ct) =>
+        Ok(await _actionBindings.CreateAsync(RequirePrincipalId(), request, ct).ConfigureAwait(false));
+
+    /// <summary>PUT /v1/admin/action-bindings/{name} — 許可一覧を置換する。</summary>
+    /// <param name="name">作成時の名前。変更しない。</param>
+    /// <param name="request">種別、値、許可一覧。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>更新後の行。</returns>
+    [HttpPut("action-bindings/{name}")]
+    [ProducesResponseType(typeof(TenantActionBindingDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TenantActionBindingDto>> UpdateActionBinding(
+        string name,
+        [FromBody] UpdateTenantActionBindingRequest request,
+        CancellationToken ct) =>
+        Ok(await _actionBindings.UpdateAsync(RequirePrincipalId(), name, request, ct).ConfigureAwait(false));
+
+    /// <summary>DELETE /v1/admin/action-bindings/{name} — 行を消す。</summary>
+    /// <param name="name">名前。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>行が無くても 204。</returns>
+    [HttpDelete("action-bindings/{name}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteActionBinding(string name, CancellationToken ct)
+    {
+        await _actionBindings.DeleteAsync(RequirePrincipalId(), name, ct).ConfigureAwait(false);
         return NoContent();
     }
 

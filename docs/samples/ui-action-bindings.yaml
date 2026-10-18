@@ -1,0 +1,45 @@
+# =============================================================================
+# UI 動作確認用: Nodes 形式の action bindings
+# -----------------------------------------------------------------------------
+# 配置: docs/samples/ui-action-bindings.yaml
+#
+# 確認手順（概要）:
+#   1. Studio で定義を新規作成し、本 YAML を貼り付けて保存する
+#   2. 保存できること（参照名 order-page-size が未作成でも登録は成功する）
+#   3. 再取得した YAML に bindings が残ること
+#   4. 実行を開始すると flow.query は InProcess の noop のため失敗する
+#      メッセージは Bindings are not available for InProcess execution.
+#      値や order-page-size の中身は出ない
+#
+# States 形式には bindings を書かない。エンジン単体のローダーは読み飛ばす。
+# =============================================================================
+
+version: 1
+
+workflow:
+  id: sample.action.bindings
+  name: ActionBindingsSample
+  description: >
+    Nodes 形式の action に、テナント変数 order-page-size への参照だけを付ける。
+    接続文字列や値は定義に書かない。
+
+nodes:
+  - name: flow.start
+    type: start
+    label: 開始
+    next: flow.query
+
+  - name: flow.query
+    type: action
+    label: 参照付き noop
+    action: statevia.action.builtin.execution.noop
+    bindings:
+      variables:
+        pageSize: order-page-size
+    input:
+      customerId: $.vars.customerId
+    next: flow.end
+
+  - name: flow.end
+    type: end
+    label: 終了

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.10 |
-| 更新日 | 2026-10-12 |
+| Version | 1.5.12 |
+| 更新日 | 2026-10-16 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -15,6 +15,7 @@
 - **MUST**: Join 供給は `next` / `wait.events` / `wait.subscribe[].next` / `edges` の **1 経路**で足りる。`error` / `on.Failed` は供給に数えない。
 - **MUST**: publish 時に参照する `action` ID は Catalog に存在すること。未登録はエラー。
 - **MUST**: `wait` または `join` を持つ状態に `action` を併記してはならない。
+- **MUST**: Nodes 形式の `bindings` はスロット名からテナント側の名前への参照だけを持つ。値、`wait` / `join` との併記、`action` 省略との併記は拒否する。`input` へはマージしない。States 形式はこのキーを解釈しない。
 - **MUST**: Wait は `wait.events`（Signal）または `wait.subscribe`（Subscribe）の一方。いずれも非空で、遷移先が定義内に存在すること。
 - **MUST**: 同一 Wait 内のイベント名重複、予約語（`Completed` / `Failed` / `Cancelled` / `Joined`）、自己遷移を拒否する（422）。
 - **MUST**: 状態名・ノード名・イベント名・module alias・action の各セグメントは ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。YAML コメントと `description` / `label` / `ui` / `metadata` / `tags` は対象外。
@@ -612,6 +613,7 @@ Definition Editor は YAML 編集とグラフ編集で同じドキュメント�
 
 - **workflow**: `id` / `name` / `description`。`name` が無く `id` だけの場合、ローダーはワークフロー名に `id` を使うため、エディタも表示名を同様に解決し、`id` を別フィールドとして保持する。
 - **action.input**: 文字列（`$` / `$.` パスやリテラル）またはオブジェクト（キー→パス／リテラル）。グラフのノードインスペクターからも編集できる。
+- **action.bindings**: スロット名からテナント側の名前への参照（§2.2）。グラフの編集フォームは無い。YAML の再保存でもキーは残す。States 形式には無い。
 - **wait.events**: グラフの Wait ノードインスペクタでイベント行（イベント名 → 遷移先ノード名）を追加・変更・削除できる。新規 Wait は `events` 形式（Signal）を既定とする。旧形式（`event` + `next` / `edges`）は閲覧・単一 event 編集と、明示的な `events` への変換を維持する。Subscribe への自動変換はしない。
 - **wait.subscribe**: グラフの Wait ノードインスペクタで購読行（`topic` / 任意 `key` / `next`）を追加・変更・削除できる。YAML と往復しても `subscribe` は欠落しない。空の `key` は YAML では省略する。`events` との併用は保存前検証でエラー（黙って片方を捨てない）。モード切替は破壊的で、イベント名と topic の機械変換はしない。
 - **edges[].to**: 文字列、または **`{ name: "<nodeName>" }`**。パース時にエディタは常に遷移先ノード名文字列へ正規化する。
@@ -627,14 +629,14 @@ Action の `input` では、引用符の無い整数・真偽値・小数を Sta
 |--------|--------------------|------------|
 | start  | next               | 開始ノード。1 つのみ。 |
 | end    | —                  | 終端ノード。 |
-| action | action, next       | input, error, label 等（`onError` は現行変換では使用しない）。 |
+| action | action, next       | input, bindings, error, label 等（`onError` は現行変換では使用しない）。 |
 | wait   | `events` または `subscribe`（どちらか一方・1 件以上） | 旧 `event`+`next` は Loader が `events` へ正規化。timeout / onTimeout は現行変換では未使用。 |
 | fork   | branches           | 2 要素以上の配列。 |
 | join   | next               | mode: all 等。 |
 
 - **start**: `next` で次ノード名。
 - **end**: `next` なし。
-- **action**: `action` はアクション参照（§1.1.1。例: `mail.send`、`statevia.action.builtin.execution.noop`）。`next` で通常遷移先、`error` で失敗時遷移先（action のみ）。`input` で入力マップ（§1.1.2）。
+- **action**: `action` はアクション参照（§1.1.1。例: `mail.send`、`statevia.action.builtin.execution.noop`）。`next` で通常遷移先、`error` で失敗時遷移先（action のみ）。`input` で入力マップ（§1.1.2）。`bindings` でテナント側の名前への参照。左がスロット名、右がテナントに保存した名前である。値は書かない。`secrets` と `variables` は片方だけでもよい。両方空、スロット名の重複、識別子でない名前、1 ノード 17 スロット以上、`action` 以外との併記は検証エラーである。名前とスロット名は長さ 1〜64 の ASCII 識別子。キーが無いノードは参照なしである。参照先が未作成でも保存は成功し、実在は実行時に見る。許可 actionId は YAML に書かない。InProcess で参照があるノードは復号前に `ActionBindingRejected` で失敗する。OutOfProcess と Container では、解決後の canonical actionId が許可一覧にあるときだけ、input とは別のフィールドでその 1 回に渡す。欠落、種別違い、許可外、復元失敗は `ActionBindingUnavailable` で、値はメッセージに出ない。プロセス環境変数とコンテナ環境変数にはコピーしない。
 - **wait**: Signal 正本は **`events`**（イベント名 → 次ノード名）。Subscribe 正本は **`subscribe`**（`topic` / 任意 `key` / `next` の配列）。同時指定不可。単一イベントの旧形式 `event` + `next` も受理し、Loader が `events` へ正規化する。`timeout`（ISO 8601 duration）は現行変換では未使用。
 - **fork**: `branches` に並列ブランチのノード名の配列。
 - **join**: すべてのブランチの完了を待ち、`next` へ進む。

@@ -1,3 +1,4 @@
+using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Core.Engine.Definition;
 using Statevia.Core.Engine.Definition.Validation;
 using Statevia.Core.Engine.FSM;
@@ -8,8 +9,29 @@ namespace Statevia.Service.Api.Application.Definition;
 using static NodesSchemaLiteral;
 
 /// <summary>nodes（UI）形式ルート → <see cref="WorkflowDefinition"/>。</summary>
+/// <remarks><c>bindings</c> はこの形式だけが読む。呼び出し中の辞書へ集め、States 形式の定義モデルには載せない。</remarks>
 internal sealed class NodesWorkflowDefinitionLoader : WorkflowDefinitionLoaderBase
 {
+    private static readonly AsyncLocal<Dictionary<string, ActionBindingReferences>?> BindingSink = new();
+
+    /// <summary>定義と、ノード名から参照マップを返す。States 形式では使わない。</summary>
+    /// <param name="content">nodes 形式の YAML。</param>
+    /// <returns>エンジン定義と、空でない参照だけを含むマップ。</returns>
+    internal (WorkflowDefinition Definition, IReadOnlyDictionary<string, ActionBindingReferences> Bindings) LoadWithBindings(
+        string content)
+    {
+        var bindings = new Dictionary<string, ActionBindingReferences>(StringComparer.OrdinalIgnoreCase);
+        var previous = BindingSink.Value;
+        BindingSink.Value = bindings;
+        try
+        {
+            return (Load(content), bindings);
+        }
+        finally
+        {
+            BindingSink.Value = previous;
+        }
+    }
     /// <summary>
     /// States 形式と同じく、引用符の無い整数・真偽値・小数をその型のリテラルとして読む。
     /// </summary>
@@ -55,7 +77,7 @@ internal sealed class NodesWorkflowDefinitionLoader : WorkflowDefinitionLoaderBa
         }
 
         ValidateStructure(parsed);
-        var states = BuildStates(parsed);
+        var states = BuildStates(parsed, BindingSink.Value);
         var name = ResolveWorkflowName(workflowDict);
         var modules = ParseWorkflowModules(workflowDict);
 
@@ -188,14 +210,16 @@ internal sealed class NodesWorkflowDefinitionLoader : WorkflowDefinitionLoaderBa
     /// <summary>
     /// nodes を states へ正規化し、状態名（node.id）をキーにした辞書を構築する。
     /// </summary>
-    private static Dictionary<string, StateDefinition> BuildStates(IReadOnlyList<ParsedNode> nodes)
+    private static Dictionary<string, StateDefinition> BuildStates(
+        IReadOnlyList<ParsedNode> nodes,
+        Dictionary<string, ActionBindingReferences>? bindings)
     {
         var byName = nodes.ToDictionary(n => n.Name, n => n, StringComparer.OrdinalIgnoreCase);
         var states = new Dictionary<string, StateDefinition>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var n in nodes)
         {
-            states[n.Name] = n.ToStateDefinition(byName, n);
+            states[n.Name] = n.ToStateDefinition(byName, n, bindings);
         }
 
         return states;
@@ -1059,8 +1083,21 @@ internal sealed class NodesWorkflowDefinitionLoader : WorkflowDefinitionLoaderBa
             "Critical Code Smell",
             "S3776:Cognitive Complexity of methods should not be too high",
             Justification = "ノード種別ごとの states 変換を switch で網羅している。")]
-        public StateDefinition ToStateDefinition(IReadOnlyDictionary<string, ParsedNode> byName, ParsedNode self)
+        public StateDefinition ToStateDefinition(
+            IReadOnlyDictionary<string, ParsedNode> byName,
+            ParsedNode self,
+            Dictionary<string, ActionBindingReferences>? bindings)
         {
+            var parsedBindings = NodeActionBindingSyntax.Parse(
+                Raw,
+                ActionId,
+                Kind is NodeKind.Wait or NodeKind.Join,
+                Name);
+            if (parsedBindings is not null)
+            {
+                bindings?.Add(Name, parsedBindings);
+            }
+
             switch (Kind)
             {
                 case NodeKind.Start:

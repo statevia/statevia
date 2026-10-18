@@ -1,3 +1,4 @@
+import { actionBindingText } from "./actionBindingText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -89,6 +90,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       dismissIssued: "Dismiss",
       forbidden: "Tenant administrators only.",
     },
+    actionBindings: actionBindingText("en"),
 
   },
 };
