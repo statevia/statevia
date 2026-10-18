@@ -1,3 +1,4 @@
+import { actionBindingText } from "./actionBindingText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -87,29 +88,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       dismissIssued: "閉じる",
       forbidden: "テナント管理者のみ利用できます。",
     },
-    actionBindings: {
-      title: "Action バインディング",
-      description: "独自 Action に渡す変数とシークレットを、定義の外に保存します。",
-      createTitle: "バインディングを作成",
-      nameLabel: "名前",
-      kindLabel: "種別",
-      kindVariable: "変数",
-      kindSecret: "シークレット",
-      valueLabel: "値",
-      secretValueHint: "シークレットの値は保存後に再表示しません。空のまま更新すると、今の値を維持します。",
-      allowedActionIdsLabel: "許可する Action",
-      allowedActionIdsHint: "canonical actionId を 1 行に 1 つ。1〜8 個。",
-      createSubmit: "作成",
-      creating: "作成中…",
-      save: "保存",
-      saving: "保存中…",
-      delete: "削除",
-      deleting: "削除中…",
-      empty: "バインディングはまだありません。",
-      forbidden: "テナント管理者のみ利用できます。",
-      valueConfigured: "設定済み",
-      updatedAt: (value: string) => `更新: ${value}`,
-    },
+    actionBindings: actionBindingText("ja"),
 
   },
 };

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildActionBindingUpdateBody, parseAllowedActionIds } from "@/features/admin/actionBindings";
+import { actionBindingText } from "@/features/admin/i18n/actionBindingText";
 
 describe("action binding write body", () => {
   it("シークレットの空欄は値を送らない", () => {
@@ -19,5 +20,18 @@ describe("action binding write body", () => {
       allowedActionIds: ["acme.order.query"],
       value: "25"
     });
+  });
+});
+
+describe("action binding ui text", () => {
+  it("日英で同じ項目を返し、更新時刻の接頭辞だけが違う", () => {
+    const japanese = actionBindingText("ja");
+    const english = actionBindingText("en");
+
+    expect(japanese.title).toBe("Action バインディング");
+    expect(english.title).toBe("Action bindings");
+    expect(japanese.updatedAt("2026-06-01T00:00:00Z")).toBe("更新: 2026-06-01T00:00:00Z");
+    expect(english.updatedAt("2026-06-01T00:00:00Z")).toBe("Updated: 2026-06-01T00:00:00Z");
+    expect(japanese.secretValueHint).not.toBe(english.secretValueHint);
   });
 });

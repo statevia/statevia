@@ -271,4 +271,70 @@ nodes:
     ]);
     expect(again.document?.nodes.find((n) => n.name === "w1")?.events).toBeUndefined();
   });
+
+  it("bindings が文字列マップでないときはノードへ残さない", () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: bad
+  - name: bad
+    type: action
+    action: noop
+    bindings: []
+    next: empty
+  - name: empty
+    type: action
+    action: noop
+    bindings:
+      secrets:
+        connection: 1
+      variables: {}
+    next: e
+  - name: e
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+
+    expect(parsed.document?.nodes.find((node) => node.name === "bad")?.bindings).toBeUndefined();
+    expect(parsed.document?.nodes.find((node) => node.name === "empty")?.bindings).toBeUndefined();
+  });
+
+  it("片側だけの bindings を往復し、空マップは YAML に出さない", () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: a
+  - name: a
+    type: action
+    action: orders.query
+    bindings:
+      secrets:
+        connection: order-db
+    next: e
+  - name: e
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    const node = parsed.document?.nodes.find((candidate) => candidate.name === "a");
+
+    expect(node?.bindings).toEqual({ secrets: { connection: "order-db" } });
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+    const round = serializeDefinitionYaml(parsed.document);
+    expect(round).toContain("connection: order-db");
+    expect(round).not.toContain("variables:");
+    const omitted = serializeDefinitionYaml({
+      version: 1,
+      workflow: { name: "W" },
+      nodes: [{ name: "a", type: "action", bindings: { secrets: {}, variables: {} } }]
+    });
+    expect(omitted).not.toContain("bindings:");
+  });
 });

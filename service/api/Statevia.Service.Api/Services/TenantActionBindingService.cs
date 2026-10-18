@@ -248,7 +248,10 @@ internal sealed class TenantActionBindingService(
         return value;
     }
 
-    /// <summary>許可 actionId を 1〜8 個の canonical 形式に限る。</summary>
+    /// <summary>
+    /// 許可 actionId を 1〜8 個の canonical 形式に限る。
+    /// 結果リストの容量は上限定数にし、要求の件数ではメモリを確保しない。
+    /// </summary>
     private static List<string> NormalizeAllowed(IReadOnlyList<string>? actionIds)
     {
         if (actionIds is null || actionIds.Count is < 1 or > MaxAllowedActionIds)
@@ -256,7 +259,7 @@ internal sealed class TenantActionBindingService(
             throw new ArgumentException($"An action binding allows 1 to {MaxAllowedActionIds} action IDs.");
         }
 
-        var normalized = new List<string>(actionIds.Count);
+        var normalized = new List<string>(MaxAllowedActionIds);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var actionId in actionIds)
         {

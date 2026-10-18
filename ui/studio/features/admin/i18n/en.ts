@@ -1,3 +1,4 @@
+import { actionBindingText } from "./actionBindingText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -89,29 +90,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       dismissIssued: "Dismiss",
       forbidden: "Tenant administrators only.",
     },
-    actionBindings: {
-      title: "Action bindings",
-      description: "Store variables and secrets for custom actions outside the definition.",
-      createTitle: "Create binding",
-      nameLabel: "Name",
-      kindLabel: "Kind",
-      kindVariable: "Variable",
-      kindSecret: "Secret",
-      valueLabel: "Value",
-      secretValueHint: "Secret values are not shown again. Leave the field empty to keep the current value.",
-      allowedActionIdsLabel: "Allowed actions",
-      allowedActionIdsHint: "One canonical action ID per line. 1 to 8.",
-      createSubmit: "Create",
-      creating: "Creating…",
-      save: "Save",
-      saving: "Saving…",
-      delete: "Delete",
-      deleting: "Deleting…",
-      empty: "No bindings yet.",
-      forbidden: "Tenant administrators only.",
-      valueConfigured: "Configured",
-      updatedAt: (value: string) => `Updated: ${value}`,
-    },
+    actionBindings: actionBindingText("en"),
 
   },
 };
