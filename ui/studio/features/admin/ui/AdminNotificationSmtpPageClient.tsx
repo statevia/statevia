@@ -125,10 +125,10 @@ export function AdminNotificationSmtpPageClient() {
         </div>
       </form>
       {page.deleteOpen ? (
-        <div
-          role="dialog"
+        <dialog
+          open
           aria-labelledby="smtp-delete-title"
-          className="mt-4 rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
+          className="mt-4 w-full max-w-none rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
         >
           <h2 id="smtp-delete-title" className="mb-2 text-lg font-medium">
             {text.deleteConfirmTitle}
@@ -152,7 +152,7 @@ export function AdminNotificationSmtpPageClient() {
               {text.cancel}
             </button>
           </div>
-        </div>
+        </dialog>
       ) : null}
     </PageShell>
   );
