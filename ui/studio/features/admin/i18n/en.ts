@@ -1,4 +1,5 @@
 import { actionBindingText } from "./actionBindingText";
+import { notificationSmtpText } from "./notificationSmtpText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -91,6 +92,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       forbidden: "Tenant administrators only.",
     },
     actionBindings: actionBindingText("en"),
+    notificationSmtp: notificationSmtpText("en"),
 
   },
 };

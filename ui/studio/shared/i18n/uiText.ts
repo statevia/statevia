@@ -46,6 +46,7 @@ export type UiText = DefinitionsFeatureUiText &
     adminGroups: string;
     adminApiKeys: string;
     adminActionBindings: string;
+    adminNotificationSmtp: string;
     account: string;
     logout: string;
 
@@ -151,6 +152,7 @@ export const uiText: UiText = {
     adminGroups: "グループ管理",
     adminApiKeys: "API キー",
     adminActionBindings: "Action バインディング",
+    adminNotificationSmtp: "通知 SMTP",
     account: "アカウント",
     logout: "ログアウト",
 

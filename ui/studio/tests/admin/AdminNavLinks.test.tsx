@@ -37,6 +37,7 @@ describe("AdminNavLinks", () => {
       "href",
       "/admin/action-bindings"
     );
+    expect(screen.getByRole("link", { name: "通知 SMTP" })).toHaveAttribute("href", "/admin/notification-smtp");
   });
 
   it("非管理者には管理ナビを表示しない", async () => {

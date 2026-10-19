@@ -108,6 +108,37 @@ export type AdminFeatureUiText = {
       valueConfigured: string;
       updatedAt: (value: string) => string;
     };
+    notificationSmtp: {
+      title: string;
+      description: string;
+      notConfigured: string;
+      configured: string;
+      hostLabel: string;
+      portLabel: string;
+      userLabel: string;
+      passwordLabel: string;
+      defaultFromLabel: string;
+      passwordConfigured: string;
+      replaceHint: string;
+      save: string;
+      saving: string;
+      delete: string;
+      deleting: string;
+      deleteConfirmTitle: string;
+      deleteConfirmBody: string;
+      deleteConfirm: string;
+      cancel: string;
+      hostInvalid: string;
+      portInvalid: string;
+      userInvalid: string;
+      passwordPairInvalid: string;
+      passwordBytesInvalid: string;
+      defaultFromInvalid: string;
+      loadFailed: string;
+      saveFailed: string;
+      deleteFailed: string;
+      retry: string;
+    };
 
   };
 };

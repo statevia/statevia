@@ -38,6 +38,7 @@ export const uiTextEn: UiText = {
     adminGroups: "Groups",
     adminApiKeys: "API keys",
     adminActionBindings: "Action bindings",
+    adminNotificationSmtp: "Notification SMTP",
     account: "Account",
     logout: "Sign out",
 

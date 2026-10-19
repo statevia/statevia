@@ -1,4 +1,5 @@
 import { actionBindingText } from "./actionBindingText";
+import { notificationSmtpText } from "./notificationSmtpText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -89,6 +90,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       forbidden: "テナント管理者のみ利用できます。",
     },
     actionBindings: actionBindingText("ja"),
+    notificationSmtp: notificationSmtpText("ja"),
 
   },
 };
