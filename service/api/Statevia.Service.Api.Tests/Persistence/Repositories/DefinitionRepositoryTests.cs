@@ -79,7 +79,7 @@ public sealed class DefinitionRepositoryTests
         await using var readUow = await uowFactory.CreateAsync();
         var res = await repo.GetLatestForApiAsync(readUow, OwnerTenantId, defId, default);
         Assert.NotNull(res);
-        Assert.Equal(defId, res!.Definition.DefinitionId);
+        Assert.Equal(defId, res.Definition.DefinitionId);
         Assert.Equal("def-1", res.Definition.Name);
         Assert.Equal(versionId, res.Version.DefinitionVersionId);
     }
@@ -116,7 +116,7 @@ public sealed class DefinitionRepositoryTests
 
         // Assert
         Assert.NotNull(published);
-        Assert.Equal(2, published!.Definition.LatestVersion);
+        Assert.Equal(2, published.Definition.LatestVersion);
         Assert.Equal("def-2", published.Definition.Name);
         Assert.Equal(2, published.Version.Version);
         Assert.Equal("{\"new\":true}", published.Version.CompiledJson);
@@ -124,14 +124,14 @@ public sealed class DefinitionRepositoryTests
         await using var verify = await uowFactory.CreateAsync();
         var v1 = await repo.GetVersionForExecutionAsync(verify, OwnerTenantId, defId, 1, default);
         Assert.NotNull(v1);
-        Assert.Equal("{}", v1!.CompiledJson);
+        Assert.Equal("{}", v1.CompiledJson);
     }
 
     /// <summary>
-    /// 他テナントで呼んでも永続化は版行を返す（認可は Repository の責務ではない）。
+    /// 他テナントの版 ID はテナント境界で返さない。
     /// </summary>
     [Fact]
-    public async Task GetVersionForExecutionByIdAsync_ReturnsVersion_ForOtherTenantCaller()
+    public async Task GetVersionForExecutionByIdAsync_ReturnsNull_ForOtherTenantCaller()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -174,8 +174,7 @@ public sealed class DefinitionRepositoryTests
         var version = await repo.GetVersionForExecutionByIdAsync(uow, otherTenantId, versionId, default);
 
         // Assert
-        Assert.NotNull(version);
-        Assert.Equal(defId, version!.DefinitionId);
+        Assert.Null(version);
     }
 
     /// <summary>
@@ -194,9 +193,11 @@ public sealed class DefinitionRepositoryTests
         var created2 = new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var ctx = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId1, "A", projectId, createdAt: created1);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId2, "B", projectId, createdAt: created2);
             ctx.DisplayIds.Add(new DisplayIdRow
@@ -214,6 +215,7 @@ public sealed class DefinitionRepositoryTests
         var (_, items) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery("createdAt", "asc"),
@@ -244,9 +246,11 @@ public sealed class DefinitionRepositoryTests
         var created3 = new DateTime(2020, 1, 3, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var ctx = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId1, "order-flow", projectId, createdAt: created1);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId2, "payment-flow", projectId, createdAt: created2);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId3, "order-detail", projectId, createdAt: created3);
@@ -258,6 +262,7 @@ public sealed class DefinitionRepositoryTests
         var (total, items) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 1),
                 Sort: new SortQuery(null, null),
@@ -303,7 +308,7 @@ public sealed class DefinitionRepositoryTests
         // Assert
         Assert.Null(apiDetail);
         Assert.NotNull(executionVersion);
-        Assert.Equal(1, executionVersion!.Version);
+        Assert.Equal(1, executionVersion.Version);
     }
 
     /// <summary>
@@ -381,9 +386,11 @@ public sealed class DefinitionRepositoryTests
         var created = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var seed = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(seed, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(seed, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(seed, OwnerTenantId, defId, "def-1", projectId, createdAt: created);
             var definition = await seed.Definitions.FindAsync(defId);
             definition!.DeletedAt = created.AddDays(1);
@@ -395,6 +402,7 @@ public sealed class DefinitionRepositoryTests
         var (defaultTotal, _) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -403,6 +411,7 @@ public sealed class DefinitionRepositoryTests
         var (includedTotal, includedItems) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -448,7 +457,7 @@ public sealed class DefinitionRepositoryTests
 
         // Assert — restore は追跡行から詳細を返す。AsNoTracking+activeOnly はまだ DB 上 deleted。
         Assert.NotNull(restored);
-        Assert.Null(restored!.Definition.DeletedAt);
+        Assert.Null(restored.Definition.DeletedAt);
         Assert.Equal(defId, restored.Definition.DefinitionId);
         Assert.NotNull(restored.Version);
         Assert.Null(apiBeforeSave);

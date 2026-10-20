@@ -210,6 +210,7 @@ public sealed class ForkExpansionHostHandlerTests
         public Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             ExecutionListPageQuery query,
             CancellationToken ct) =>
             throw new NotImplementedException();
@@ -302,6 +303,10 @@ public sealed class ForkExpansionHostHandlerTests
         public Task<Guid?> ResolveProjectIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid definitionId, CancellationToken ct) =>
             throw new NotImplementedException();
 
+        public Task<Guid?> ResolveProjectIdIncludingDeletedAsync(
+            ICoreUnitOfWork uow, Guid tenantId, Guid definitionId, CancellationToken ct) =>
+            throw new NotImplementedException();
+
         public Task AddWithInitialVersionAsync(
             ICoreUnitOfWork uow, DefinitionRow definition, DefinitionVersionRow version, CancellationToken ct) =>
             throw new NotImplementedException();
@@ -311,7 +316,7 @@ public sealed class ForkExpansionHostHandlerTests
             throw new NotImplementedException();
 
         public Task<(int TotalCount, List<(DefinitionDetail Detail, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
-            ICoreUnitOfWork uow, Guid tenantId, DefinitionListPageQuery query, CancellationToken ct) =>
+            ICoreUnitOfWork uow, Guid tenantId, Guid principalId, DefinitionListPageQuery query, CancellationToken ct) =>
             throw new NotImplementedException();
 
         public Task<DefinitionSoftDeleteOutcome> SoftDeleteAsync(

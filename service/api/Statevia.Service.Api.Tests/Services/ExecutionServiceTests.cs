@@ -478,6 +478,9 @@ public sealed class ExecutionServiceTests
         public List<(Guid ExecutionId, string Status, bool? CancelRequested, string GraphJson)> Updates { get; } = [];
         public (int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items) ListWithDisplayIdsPageResult { get; set; } = (0, []);
 
+        /// <summary><see cref="IExecutionRepository.ListWithDisplayIdsPageAsync"/> の呼び出し回数。</summary>
+        public int ListWithDisplayIdsPageCalls { get; private set; }
+
         public async Task<ExecutionRow?> GetByIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid executionId, CancellationToken ct)
         {
             _ = uow;
@@ -491,14 +494,20 @@ public sealed class ExecutionServiceTests
         public Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
             GetByIdAsync(uow, Guid.Empty, executionId, ct);
 
-        public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
+        /// <inheritdoc cref="IExecutionRepository.ListWithDisplayIdsPageAsync" />
+        async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> IExecutionRepository.ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             ExecutionListPageQuery query,
             CancellationToken ct)
         {
             _ = uow;
+            _ = tenantId;
+            _ = principalId;
+            _ = query;
             await Task.Yield(); // async boundary for coverage
+            ListWithDisplayIdsPageCalls++;
             return ListWithDisplayIdsPageResult;
         }
 
@@ -4074,6 +4083,7 @@ public sealed class ExecutionServiceTests
         var page = await sut.ListPagedAsync(new ExecutionListPageQuery(new PageQuery(0, 10), new SortQuery(null, null), null, null, null), CancellationToken.None);
 
         // Assert
+        Assert.Equal(1, executionRepo.ListWithDisplayIdsPageCalls);
         Assert.Equal(2, page.Items.Count);
         Assert.Equal(w1.ExecutionId.ToString("D"), page.Items[0].DisplayId);
         Assert.Equal(w1.ExecutionId, page.Items[0].ResourceId);
@@ -5351,7 +5361,11 @@ public sealed class ExecutionServiceTests
 
         if (sqlite.TenantAccessor.TenantId == TestTenantIds.DefaultTenantId)
         {
-            sqlite.TenantAccessor.Set(TestTenantIds.T1Context);
+            // 一覧・読取の Project メンバー判定用に Principal を載せる（System 経路は呼び出し側で null に戻す）。
+            sqlite.TenantAccessor.Set(TestTenantIds.T1Context with
+            {
+                PrincipalId = Guid.Parse("11111111-1111-4111-8111-111111111111")
+            });
         }
 
         var runtimeAuth = new AllowAllRuntimePermissionAuthorization();

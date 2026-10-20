@@ -171,11 +171,13 @@ internal sealed class StubDefinitionRepository : IDefinitionRepository
     public Task<(int TotalCount, List<(DefinitionDetail Detail, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         DefinitionListPageQuery query,
         CancellationToken ct)
     {
         _ = uow;
         _ = tenantId;
+        _ = principalId;
         _ = query;
         _ = ct;
         return Task.FromResult((0, new List<(DefinitionDetail, string?)>()));
@@ -196,6 +198,28 @@ internal sealed class StubDefinitionRepository : IDefinitionRepository
             return Task.FromResult<Guid?>(null);
 
         return Task.FromResult<Guid?>(LatestDetail.Definition.ProjectId);
+    }
+
+    /// <summary>
+    /// LatestDetail が無いときの project_id（AllowAll 認可の実行読取テスト用）。
+    /// 定義不存在を試すときは <see langword="null"/> にする。
+    /// </summary>
+    public Guid? FallbackProjectId { get; set; } = Guid.Parse("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+
+    /// <inheritdoc />
+    public Task<Guid?> ResolveProjectIdIncludingDeletedAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct)
+    {
+        _ = uow;
+        _ = tenantId;
+        _ = ct;
+        if (LatestDetail is not null && LatestDetail.Definition.DefinitionId == definitionId)
+            return Task.FromResult<Guid?>(LatestDetail.Definition.ProjectId);
+
+        return Task.FromResult(FallbackProjectId);
     }
 
     public Task<DefinitionSoftDeleteOutcome> SoftDeleteAsync(

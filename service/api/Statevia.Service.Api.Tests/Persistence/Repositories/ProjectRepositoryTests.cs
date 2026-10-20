@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
@@ -127,6 +126,44 @@ public sealed class ProjectRepositoryTests
 
         // Assert
         Assert.Equal(ProjectAccessRole.Executor, role);
+    }
+
+    /// <summary>他テナント Principal への付与は 422 相当で拒否する。</summary>
+    [Fact]
+    public async Task GrantAccessAsync_OtherTenantPrincipal_ThrowsApiValidationException()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var tenantId = Guid.NewGuid();
+        var otherTenantId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var repo = new ProjectRepository(new DefaultIdGenerator());
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        SeedTenantProject(db, tenantId, projectId);
+
+        await using (var seed = db.Factory.CreateDbContext())
+        {
+            seed.Tenants.Add(new TenantRow
+            {
+                TenantId = otherTenantId,
+                TenantKey = "other",
+                DisplayName = "Other",
+                Lifecycle = TenantLifecycle.Active,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+            ProjectTestData.AddPrincipal(seed, otherTenantId, principalId);
+            await seed.SaveChangesAsync();
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(() =>
+            repo.GrantAccessAsync(uow, projectId, principalId, ProjectAccessRole.Reader, default));
+
+        // Assert
+        Assert.Contains("same tenant", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>別テナントの Project は null。</summary>

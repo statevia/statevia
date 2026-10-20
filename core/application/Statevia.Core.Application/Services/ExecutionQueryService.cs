@@ -34,10 +34,11 @@ internal sealed class ExecutionQueryService(
         await authorization.EnsureExecutionsReadAsync(ct).ConfigureAwait(false);
 
         var tenantId = tenantContext.GetRequiredTenantId();
+        var principalId = tenantContext.GetRequiredPrincipalId();
         ArgumentNullException.ThrowIfNull(query);
 
         var (total, pairs) = await executor.ExecuteReadOnlyAsync(
-            (uow, innerCt) => executions.ListWithDisplayIdsPageAsync(uow, tenantId, query, innerCt),
+            (uow, innerCt) => executions.ListWithDisplayIdsPageAsync(uow, tenantId, principalId, query, innerCt),
             ct).ConfigureAwait(false);
         var items = pairs.Select(p => new ExecutionResponse
         {
@@ -80,6 +81,10 @@ internal sealed class ExecutionQueryService(
                 var execution = await executions.GetByIdAsync(uow, tenantId, uuid.Value, innerCt).ConfigureAwait(false);
                 if (execution is null)
                     throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
+
+                await authorization
+                    .EnsureCanReadOnDefinitionAsync(uow, tenantId, execution.DefinitionId, innerCt)
+                    .ConfigureAwait(false);
 
                 var displayId = await displayIds.GetDisplayIdAsync(DisplayIdResourceTypes.Execution, idOrUuid, innerCt)
                     .ConfigureAwait(false) ?? execution.ExecutionId.ToString("D");
@@ -152,6 +157,10 @@ internal sealed class ExecutionQueryService(
                 var execution = await executions.GetByIdAsync(uow, tenantId, executionId, innerCt).ConfigureAwait(false);
                 if (execution is null)
                     throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
+
+                await authorization
+                    .EnsureCanReadOnDefinitionAsync(uow, tenantId, execution.DefinitionId, innerCt)
+                    .ConfigureAwait(false);
             },
             ct);
 

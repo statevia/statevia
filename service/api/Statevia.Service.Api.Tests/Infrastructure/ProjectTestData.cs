@@ -43,6 +43,20 @@ internal static class ProjectTestData
         });
     }
 
+    /// <summary>Principal を作り、指定 Project のメンバーにする。</summary>
+    /// <returns>作成した Principal ID。</returns>
+    public static Guid AddMemberPrincipal(
+        CoreDbContext ctx,
+        Guid tenantId,
+        Guid projectId,
+        ProjectAccessRole role = ProjectAccessRole.Reader)
+    {
+        var principalId = Guid.NewGuid();
+        AddPrincipal(ctx, tenantId, principalId);
+        GrantAccess(ctx, projectId, principalId, role);
+        return principalId;
+    }
+
     /// <summary>project_accesses 行を追加する。</summary>
     public static ProjectAccessRow GrantAccess(
         CoreDbContext ctx,

@@ -23,17 +23,19 @@ internal sealed class ExecutionRepository : IExecutionRepository
     /// </summary>
     /// <param name="uow">読み取り単位。</param>
     /// <param name="tenantId">対象テナント。</param>
+    /// <param name="principalId">呼び出し元 Principal。</param>
     /// <param name="query">フィルタ、ソート、ページ。</param>
     /// <param name="ct">キャンセル。</param>
     /// <returns>ルートだけの件数と、そのページの execution と displayId。</returns>
     public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         ExecutionListPageQuery query,
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        var joinQuery = QueryExecutionsWithDisplayIds(db, tenantId);
+        var joinQuery = QueryExecutionsWithDisplayIds(db, tenantId, principalId);
 
         if (!string.IsNullOrWhiteSpace(query.StatusFilter))
             joinQuery = joinQuery.Where(x => x.Execution.Status == query.StatusFilter);
@@ -183,10 +185,18 @@ internal sealed class ExecutionRepository : IExecutionRepository
         row.UpdatedAt = DateTime.UtcNow;
     }
 
-    private static IQueryable<ExecutionWithDisplay> QueryExecutionsWithDisplayIds(CoreDbContext db, Guid tenantId)
+    private static IQueryable<ExecutionWithDisplay> QueryExecutionsWithDisplayIds(
+        CoreDbContext db,
+        Guid tenantId,
+        Guid principalId)
     {
+        var accessibleProjectIds = ProjectAccessQueries.AccessibleProjectIds(db, principalId, ProjectAccessRole.Reader);
+        var accessibleDefinitionIds = db.Definitions.AsNoTracking()
+            .Where(definition => accessibleProjectIds.Contains(definition.ProjectId))
+            .Select(definition => definition.DefinitionId);
         var displayIdsForExecution = db.DisplayIds.Where(x => x.Kind == "execution");
-        return from w in db.Executions.AsNoTracking().Where(x => x.TenantId == tenantId)
+        return from w in db.Executions.AsNoTracking()
+                   .Where(x => x.TenantId == tenantId && accessibleDefinitionIds.Contains(x.DefinitionId))
                join d in displayIdsForExecution on w.ExecutionId equals d.ResourceId into dGroup
                from d in dGroup.DefaultIfEmpty()
                select new ExecutionWithDisplay { Execution = w, DisplayId = d != null ? d.DisplayId : null };

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Statevia.Core.Application.Contracts;
 
 namespace Statevia.Infrastructure.Persistence.Repositories;
 
@@ -72,20 +73,46 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
             .AnyAsync(p => p.ProjectId == projectId && p.TenantId == tenantId, ct);
 
     /// <inheritdoc />
-    public Task GrantAccessAsync(
+    /// <inheritdoc />
+    /// <exception cref="ApiValidationException">Principal と Project のテナントが一致しないとき。</exception>
+    public async Task GrantAccessAsync(
         ICoreUnitOfWork uow,
         Guid projectId,
         Guid principalId,
         ProjectAccessRole role,
         CancellationToken ct)
     {
-        uow.GetDb().ProjectAccesses.Add(new ProjectAccessRow
+        var db = uow.GetDb();
+        var projectTenantId = await db.Projects.AsNoTracking()
+            .Where(p => p.ProjectId == projectId)
+            .Select(p => (Guid?)p.TenantId)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (projectTenantId is null)
+        {
+            throw new ApiValidationException(
+                "Project was not found.",
+                new[] { new { message = "Project was not found.", field = "projectId" } });
+        }
+
+        var principalTenantId = await db.Principals.AsNoTracking()
+            .Where(p => p.PrincipalId == principalId)
+            .Select(p => (Guid?)p.TenantId)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (principalTenantId is null || principalTenantId.Value != projectTenantId.Value)
+        {
+            throw new ApiValidationException(
+                "Principal must belong to the same tenant as the project.",
+                new[] { new { message = "Principal must belong to the same tenant as the project.", field = "principalId" } });
+        }
+
+        db.ProjectAccesses.Add(new ProjectAccessRow
         {
             ProjectId = projectId,
             PrincipalId = principalId,
             Role = role,
             CreatedAt = DateTime.UtcNow
         });
-        return Task.CompletedTask;
     }
 }

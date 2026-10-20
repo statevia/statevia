@@ -11,6 +11,8 @@ namespace Statevia.Service.Api.Tests.Services;
 
 public sealed class DefinitionServiceTests
 {
+    private static readonly Guid TestPrincipalId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+
     private static DefinitionService CreateDefinitionService(
         InMemoryTestDatabase inDb,
         StubDisplayIdService display,
@@ -27,7 +29,8 @@ public sealed class DefinitionServiceTests
             definitionsRepo,
             projectRepo,
             overrides?.ProjectAuth ?? new AllowAllProjectAuthorizationService(),
-            overrides?.TenantAccessor ?? new FixedTenantContextAccessor(TestTenantIds.DefaultContext),
+            overrides?.TenantAccessor ?? new FixedTenantContextAccessor(
+                TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
             overrides?.RuntimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             idGen,
             executor);
@@ -64,6 +67,8 @@ public sealed class DefinitionServiceTests
         }
 
         var project = ProjectTestData.AddDefaultProject(ctx, TestTenantIds.DefaultTenantId, "default");
+        ProjectTestData.AddPrincipal(ctx, TestTenantIds.DefaultTenantId, TestPrincipalId);
+        ProjectTestData.GrantAccess(ctx, project.ProjectId, TestPrincipalId, ProjectAccessRole.Reader);
         await ctx.SaveChangesAsync().ConfigureAwait(false);
         return project.ProjectId;
     }

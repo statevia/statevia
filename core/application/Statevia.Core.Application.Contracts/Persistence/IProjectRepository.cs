@@ -27,6 +27,7 @@ public interface IProjectRepository
         CancellationToken ct);
 
     /// <summary>同一テナントの Principal に Project ロールを付与する。</summary>
+    /// <exception cref="ApiValidationException">Principal と Project のテナントが一致しないとき。</exception>
     Task GrantAccessAsync(
         ICoreUnitOfWork uow,
         Guid projectId,

@@ -144,12 +144,13 @@ internal sealed class DefinitionService : IDefinitionService
         ArgumentNullException.ThrowIfNull(query);
 
         var tenantId = _tenantContext.GetRequiredTenantId();
+        var principalId = _tenantContext.GetRequiredPrincipalId();
 
         return await _executor.ExecuteReadOnlyAsync(
             async (uow, innerCt) =>
             {
                 var (total, pairs) = await _definitions
-                    .ListWithDisplayIdsPageAsync(uow, tenantId, query, innerCt)
+                    .ListWithDisplayIdsPageAsync(uow, tenantId, principalId, query, innerCt)
                     .ConfigureAwait(false);
                 var items = pairs.Select(p => ToResponse(
                     p.Detail,

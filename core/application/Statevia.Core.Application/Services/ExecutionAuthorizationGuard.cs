@@ -69,6 +69,29 @@ internal sealed class ExecutionAuthorizationGuard(
             },
             ct);
 
+    /// <summary>定義が属するプロジェクト上で読取可能かを、既存 UoW 内で要求する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
+    public async Task EnsureCanReadOnDefinitionAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct)
+    {
+        var projectId = await definitions
+            .ResolveProjectIdIncludingDeletedAsync(uow, tenantId, definitionId, ct)
+            .ConfigureAwait(false);
+        if (projectId is null)
+            throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
+
+        await projectAuth
+            .EnsureCanReadAsync(uow, tenantId, projectId.Value, ct)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// User / ServiceAccount の Start に、project 許可と definition 許可の AND を要求する。
     /// </summary>

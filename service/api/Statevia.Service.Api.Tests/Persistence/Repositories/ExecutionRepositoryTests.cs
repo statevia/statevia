@@ -59,7 +59,7 @@ public sealed class ExecutionRepositoryTests
 
         // Assert
         Assert.NotNull(row);
-        Assert.Equal(TestTenantIds.OtherTenantId, row!.TenantId);
+        Assert.Equal(TestTenantIds.OtherTenantId, row.TenantId);
     }
 
     /// <summary>
@@ -82,8 +82,10 @@ public sealed class ExecutionRepositoryTests
         var t1 = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var t2 = new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc);
 
+        Guid principalId;
         await using (var ctx = new CoreDbContext(db.Options))
         {
+            principalId = SeedReadableDefinition(ctx, tenantId, defId);
             ctx.Executions.AddRange(
                 new ExecutionRow
                 {
@@ -122,7 +124,7 @@ public sealed class ExecutionRepositoryTests
         // Assert
         await using var uow = await uowFactory.CreateAsync();
         var (_, items) = await repo.ListWithDisplayIdsPageAsync(
-            uow, tenantId,
+            uow, tenantId, principalId,
             new ExecutionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -151,8 +153,10 @@ public sealed class ExecutionRepositoryTests
         var tenantId = TestTenantIds.T1TenantId;
         var defId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var ctx = new CoreDbContext(db.Options))
         {
+            principalId = SeedReadableDefinition(ctx, tenantId, defId);
             ctx.Executions.AddRange(
                 new ExecutionRow
                 {
@@ -183,7 +187,7 @@ public sealed class ExecutionRepositoryTests
         // Assert
         await using var uow = await uowFactory.CreateAsync();
         var (total, items) = await repo.ListWithDisplayIdsPageAsync(
-            uow, tenantId,
+            uow, tenantId, principalId,
             new ExecutionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -211,8 +215,15 @@ public sealed class ExecutionRepositoryTests
         var wf2 = Guid.NewGuid();
         var started = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        Guid principalId;
         await using (var ctx = new CoreDbContext(db.Options))
         {
+            EnsureTenant(ctx, tenantId);
+            var projectId = Guid.NewGuid();
+            ProjectTestData.AddDefaultProject(ctx, tenantId, "t", projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, tenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, tenantId, def1, "def1", projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, tenantId, def2, "def2", projectId);
             ctx.Executions.AddRange(
                 new ExecutionRow
                 {
@@ -242,7 +253,7 @@ public sealed class ExecutionRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var (total, items) = await repo.ListWithDisplayIdsPageAsync(
-            uow, tenantId,
+            uow, tenantId, principalId,
             new ExecutionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -274,8 +285,10 @@ public sealed class ExecutionRepositoryTests
         var childUpdatedAt = rootUpdatedAt.AddDays(1);
         var grandchildUpdatedAt = rootUpdatedAt.AddDays(2);
 
+        Guid principalId;
         await using (var ctx = new CoreDbContext(db.Options))
         {
+            principalId = SeedReadableDefinition(ctx, tenantId, definitionId);
             ctx.Executions.AddRange(
                 CreateExecution(rootExecutionId, tenantId, definitionId, rootUpdatedAt),
                 CreateExecution(childExecutionId, tenantId, definitionId, childUpdatedAt),
@@ -291,6 +304,7 @@ public sealed class ExecutionRepositoryTests
         var (totalCount, items) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             tenantId,
+            principalId,
             new ExecutionListPageQuery(
                 Page: new PageQuery(0, 1),
                 Sort: new SortQuery(null, null),
@@ -303,6 +317,39 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal(1, totalCount);
         var item = Assert.Single(items);
         Assert.Equal(rootExecutionId, item.Execution.ExecutionId);
+    }
+
+    /// <summary>テナントが無ければ追加する。</summary>
+    private static void EnsureTenant(CoreDbContext ctx, Guid tenantId)
+    {
+        if (ctx.Tenants.Any(t => t.TenantId == tenantId))
+            return;
+
+        var now = DateTime.UtcNow;
+        ctx.Tenants.Add(new TenantRow
+        {
+            TenantId = tenantId,
+            TenantKey = tenantId.ToString("N")[..8],
+            DisplayName = "Tenant",
+            Lifecycle = TenantLifecycle.Active,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+    }
+
+    /// <summary>一覧が読めるよう Project / Definition / メンバーを投入する。</summary>
+    private static Guid SeedReadableDefinition(
+        CoreDbContext ctx,
+        Guid tenantId,
+        Guid definitionId,
+        string name = "def")
+    {
+        EnsureTenant(ctx, tenantId);
+        var projectId = Guid.NewGuid();
+        ProjectTestData.AddDefaultProject(ctx, tenantId, "t", projectId);
+        var principalId = ProjectTestData.AddMemberPrincipal(ctx, tenantId, projectId);
+        DefinitionTestData.AddDefinitionWithVersion(ctx, tenantId, definitionId, name, projectId);
+        return principalId;
     }
 
     /// <summary>一覧テスト用の execution 行を作る。</summary>
@@ -350,8 +397,10 @@ public sealed class ExecutionRepositoryTests
         var wfId = Guid.NewGuid();
         var started = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        Guid principalId;
         await using (var ctx = new CoreDbContext(db.Options))
         {
+            principalId = SeedReadableDefinition(ctx, tenantId, defId);
             ctx.Executions.Add(
                 new ExecutionRow
                 {
@@ -390,7 +439,7 @@ public sealed class ExecutionRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var (total, items) = await repo.ListWithDisplayIdsPageAsync(
-            uow, tenantId,
+            uow, tenantId, principalId,
             new ExecutionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),

@@ -845,9 +845,9 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
 
-                    b.Property<Guid>("TenantId")
+                    b.Property<Guid>("PrincipalId")
                         .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
+                        .HasColumnName("principal_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -859,9 +859,9 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("role");
 
-                    b.HasKey("ProjectId", "TenantId");
+                    b.HasKey("ProjectId", "PrincipalId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("PrincipalId");
 
                     b.ToTable("project_accesses", (string)null);
                 });
@@ -887,25 +887,19 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("display_name");
 
-                    b.Property<Guid>("OwnerTenantId")
+                    b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
-                        .HasColumnName("owner_tenant_id");
-
+                        .HasColumnName("tenant_id");
+                        
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("slug");
 
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("visibility");
-
                     b.HasKey("ProjectId");
 
-                    b.HasIndex("OwnerTenantId", "Slug")
+                    b.HasIndex("TenantId", "Slug")
                         .IsUnique();
 
                     b.ToTable("projects", (string)null);
@@ -1697,15 +1691,15 @@ namespace Statevia.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Statevia.Core.Application.Contracts.Persistence.ProjectAccessRow", b =>
                 {
-                    b.HasOne("Statevia.Core.Application.Contracts.Persistence.ProjectRow", null)
+                    b.HasOne("Statevia.Infrastructure.Persistence.PrincipalRow", null)
                         .WithMany()
-                        .HasForeignKey("ProjectId")
+                        .HasForeignKey("PrincipalId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
+                    b.HasOne("Statevia.Core.Application.Contracts.Persistence.ProjectRow", null)
                         .WithMany()
-                        .HasForeignKey("TenantId")
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1714,7 +1708,7 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("Statevia.Infrastructure.Persistence.TenantRow", null)
                         .WithMany()
-                        .HasForeignKey("OwnerTenantId")
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -465,6 +465,13 @@ public sealed class ExecutionAuthorizationGuardTests
             CancellationToken ct) =>
             Task.FromResult(projectId);
 
+        public Task<Guid?> ResolveProjectIdIncludingDeletedAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid definitionId,
+            CancellationToken ct) =>
+            Task.FromResult(projectId);
+
         public Task<DefinitionDetail?> GetLatestForApiAsync(
             ICoreUnitOfWork uow, Guid tenantId, Guid definitionId, CancellationToken ct) =>
             throw new NotImplementedException();
@@ -502,6 +509,7 @@ public sealed class ExecutionAuthorizationGuardTests
         public Task<(int TotalCount, List<(DefinitionDetail Detail, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             DefinitionListPageQuery query,
             CancellationToken ct) =>
             throw new NotImplementedException();

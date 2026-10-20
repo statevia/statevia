@@ -7,9 +7,11 @@ public interface IExecutionRepository
 
     Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
 
+    /// <summary>呼び出し元 Principal が Reader 以上の定義 Project に属する実行だけをページングする。</summary>
     Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         ExecutionListPageQuery query,
         CancellationToken ct);
 
