@@ -158,7 +158,7 @@ public sealed class ExecutionAuthorizationGuardTests
         var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
 
         // Assert
-        await act();
+        Assert.Null(await Record.ExceptionAsync(act));
     }
 
     /// <summary>project 許可の外は RESOURCE_GRANT_DENIED。</summary>
@@ -231,7 +231,7 @@ public sealed class ExecutionAuthorizationGuardTests
         var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
 
         // Assert
-        await act();
+        Assert.Null(await Record.ExceptionAsync(act));
     }
 
     /// <summary>System Principal は許可行があっても評価しない。</summary>
@@ -362,33 +362,35 @@ public sealed class ExecutionAuthorizationGuardTests
 
     private sealed class FixedPrincipalDataAccess(Guid principalId, Guid tenantId, PrincipalType principalType) : IPrincipalDataAccess
     {
+        private readonly Guid _principalId = principalId;
+
         /// <inheritdoc />
-        public Task<PrincipalInfo?> FindPrincipalAsync(Guid id, CancellationToken cancellationToken)
+        public Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            PrincipalInfo? info = id == principalId
-                ? new PrincipalInfo(principalId, tenantId, principalType, true, null, null)
+            PrincipalInfo? info = principalId == _principalId
+                ? new PrincipalInfo(_principalId, tenantId, principalType, true, null, null)
                 : null;
             return Task.FromResult(info);
         }
 
         /// <inheritdoc />
-        public Task<TenantInfo?> FindTenantAsync(Guid id, CancellationToken cancellationToken) =>
+        public Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
-        public Task<bool> IsTenantAdminAsync(Guid id, CancellationToken cancellationToken) =>
+        public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
         public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
-            Guid id,
+            Guid principalId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
         public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
-            Guid id,
+            Guid principalId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
@@ -440,6 +442,13 @@ public sealed class ExecutionAuthorizationGuardTests
         }
 
         public Task EnsureCanPublishAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid projectId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
+
+        public Task EnsureCanManageMembersAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
             Guid projectId,

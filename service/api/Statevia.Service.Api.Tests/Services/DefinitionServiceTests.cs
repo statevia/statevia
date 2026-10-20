@@ -17,9 +17,7 @@ public sealed class DefinitionServiceTests
         IDefinitionCompilerService compiler,
         IDefinitionRepository definitionsRepo,
         IIdGenerator idGen,
-        IProjectAuthorizationService? projectAuth = null,
-        ITenantContextAccessor? tenantAccessor = null,
-        IRuntimePermissionAuthorization? runtimeAuth = null)
+        DefinitionServiceTestOverrides? overrides = null)
     {
         var executor = new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(inDb.Factory));
         var projectRepo = new ProjectRepository(new DefaultIdGenerator());
@@ -28,11 +26,24 @@ public sealed class DefinitionServiceTests
             compiler,
             definitionsRepo,
             projectRepo,
-            projectAuth ?? new AllowAllProjectAuthorizationService(),
-            tenantAccessor ?? new FixedTenantContextAccessor(TestTenantIds.DefaultContext),
-            runtimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
+            overrides?.ProjectAuth ?? new AllowAllProjectAuthorizationService(),
+            overrides?.TenantAccessor ?? new FixedTenantContextAccessor(TestTenantIds.DefaultContext),
+            overrides?.RuntimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             idGen,
             executor);
+    }
+
+    /// <summary>定義サービスのテストで差し替える認可。</summary>
+    private sealed record DefinitionServiceTestOverrides
+    {
+        /// <summary>Project 認可。未指定時は常に許可する。</summary>
+        public IProjectAuthorizationService? ProjectAuth { get; init; }
+
+        /// <summary>テナント文脈。未指定時は既定テナント。</summary>
+        public ITenantContextAccessor? TenantAccessor { get; init; }
+
+        /// <summary>実行権限。未指定時は常に許可する。</summary>
+        public IRuntimePermissionAuthorization? RuntimeAuth { get; init; }
     }
 
     private static async Task<Guid> SeedDefaultTenantAndProjectAsync(DbContextOptions<CoreDbContext> options)
@@ -206,9 +217,9 @@ public sealed class DefinitionServiceTests
         var version = await verifyDb.DefinitionVersions.FirstOrDefaultAsync(x => x.DefinitionId == defGuid);
         Assert.NotNull(definition);
         Assert.NotNull(version);
-        Assert.Equal("my-def", definition!.Name);
+        Assert.Equal("my-def", definition.Name);
         Assert.Equal(1, definition.LatestVersion);
-        Assert.Equal("{\"nodes\":[]}", version!.CompiledJson);
+        Assert.Equal("{\"nodes\":[]}", version.CompiledJson);
     }
 
     /// <summary>
@@ -391,18 +402,25 @@ public sealed class DefinitionServiceTests
 
         var display = new StubDisplayIdService();
         display.ResolveMap["definition|" + guid] = guid;
+        var tenant = new FixedTenantContextAccessor(new TenantContextState(
+            TestTenantIds.OtherTenantId,
+            "other",
+            Guid.NewGuid(),
+            TenantLifecycle.Active));
         var sut = CreateDefinitionService(
             inDb,
             display,
             new StubCompiler("{}"),
             TestRepositoryFactory.CreateDefinitionRepository(),
             new FixedIdGenerator(Guid.NewGuid()),
-            new ProjectAuthorizationService(new ProjectRepository(new DefaultIdGenerator())),
-            new FixedTenantContextAccessor(new TenantContextState(
-                TestTenantIds.OtherTenantId,
-                "other",
-                null,
-                TenantLifecycle.Active)));
+            new DefinitionServiceTestOverrides
+            {
+                ProjectAuth = new ProjectAuthorizationService(
+                    new ProjectRepository(new DefaultIdGenerator()),
+                    tenant,
+                    new DenyTenantAdminAuthorization()),
+                TenantAccessor = tenant,
+            });
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(guid.ToString(), CancellationToken.None));
@@ -886,7 +904,10 @@ public sealed class DefinitionServiceTests
             compiler,
             new StubDefinitionRepository(),
             new FixedIdGenerator(Guid.NewGuid()),
-            runtimeAuth: new DenyingRuntimePermissionAuthorization());
+            new DefinitionServiceTestOverrides
+            {
+                RuntimeAuth = new DenyingRuntimePermissionAuthorization(),
+            });
 
         // Act
         var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>

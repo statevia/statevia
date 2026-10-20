@@ -7,16 +7,13 @@ public sealed class ProjectRow
 {
     public Guid ProjectId { get; set; }
 
-    /// <summary>オーナーテナント内部 UUID（tenants.tenant_id）。</summary>
-    public Guid OwnerTenantId { get; set; }
+    /// <summary>所属テナント内部 UUID（tenants.tenant_id）。</summary>
+    public Guid TenantId { get; set; }
 
-    /// <summary>オーナーテナント内 slug。</summary>
+    /// <summary>テナント内 slug。</summary>
     public required string Slug { get; set; }
 
     public required string DisplayName { get; set; }
-
-    /// <summary>discoverability ヒント（認可 truth ではない）。</summary>
-    public ProjectVisibility Visibility { get; set; } = ProjectVisibility.Private;
 
     public string? Description { get; set; }
 
@@ -28,8 +25,8 @@ public sealed class ProjectAccessRow
 {
     public Guid ProjectId { get; set; }
 
-    /// <summary>付与先テナント内部 UUID。</summary>
-    public Guid TenantId { get; set; }
+    /// <summary>付与先 Principal。</summary>
+    public Guid PrincipalId { get; set; }
 
     public ProjectAccessRole Role { get; set; }
 

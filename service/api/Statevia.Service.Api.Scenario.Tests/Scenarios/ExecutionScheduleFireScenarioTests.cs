@@ -206,10 +206,9 @@ public sealed class ExecutionScheduleFireScenarioTests
                 seed.Projects.Add(new ProjectRow
                 {
                     ProjectId = projectId,
-                    OwnerTenantId = DefaultTenantId,
+                    TenantId = DefaultTenantId,
                     Slug = $"p-{suffix}",
                     DisplayName = $"p-{suffix}",
-                    Visibility = ProjectVisibility.Private,
                     CreatedAt = now
                 });
                 seed.Definitions.Add(new DefinitionRow

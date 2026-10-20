@@ -130,8 +130,11 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
                 if (projectId is null)
                     throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
 
+                if (_tenantContext.PrincipalId is not { } principalId)
+                    throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+
                 var projectRole = await _projects
-                    .ResolveEffectiveRoleAsync(uow, tenantId, projectId.Value, innerCt)
+                    .ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId.Value, innerCt)
                     .ConfigureAwait(false);
                 if (projectRole is null)
                     throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);

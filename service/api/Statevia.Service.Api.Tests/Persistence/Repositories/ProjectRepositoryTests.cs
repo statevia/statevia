@@ -15,7 +15,7 @@ public sealed class ProjectRepositoryTests
     {
         // Arrange
         using var db = new SqliteTestDatabase();
-        var ownerTenantId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
         var now = DateTime.UtcNow;
         var repo = new ProjectRepository(new DefaultIdGenerator());
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
@@ -24,7 +24,7 @@ public sealed class ProjectRepositoryTests
         {
             seed.Tenants.Add(new TenantRow
             {
-                TenantId = ownerTenantId,
+                TenantId = tenantId,
                 TenantKey = "owner",
                 DisplayName = "Owner",
                 Lifecycle = TenantLifecycle.Active,
@@ -36,15 +36,14 @@ public sealed class ProjectRepositoryTests
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
-        var project = await repo.EnsureDefaultProjectAsync(uow, ownerTenantId, "owner", default);
+        var project = await repo.EnsureDefaultProjectAsync(uow, tenantId, "owner", default);
         await uow.GetDb().SaveChangesAsync();
 
         // Assert
         await using var verify = db.Factory.CreateDbContext();
         var stored = await verify.Projects.SingleAsync(p => p.ProjectId == project.ProjectId);
         Assert.Equal(ProjectRepository.DefaultProjectSlug, stored.Slug);
-        Assert.Equal(ownerTenantId, stored.OwnerTenantId);
-        Assert.Equal(ProjectVisibility.Private, stored.Visibility);
+        Assert.Equal(tenantId, stored.TenantId);
     }
 
     /// <summary>既定 project が既にあるときは既存行を返す。</summary>
@@ -81,74 +80,68 @@ public sealed class ProjectRepositoryTests
         Assert.Equal(projectId, project.ProjectId);
     }
 
-    /// <summary>オーナーテナントは project_access 行なしでも Admin 相当。</summary>
+    /// <summary>所属テナントでもメンバー行が無い Principal は null。</summary>
     [Fact]
-    public async Task ResolveEffectiveRoleAsync_Owner_ReturnsAdmin()
+    public async Task ResolveEffectiveRoleAsync_SameTenantWithoutMembership_ReturnsNull()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
-        var ownerTenantId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
         var repo = new ProjectRepository(new DefaultIdGenerator());
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
-        SeedOwnerProject(db, ownerTenantId, projectId);
+        SeedTenantProject(db, tenantId, projectId);
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
-        var role = await repo.ResolveEffectiveRoleAsync(uow, ownerTenantId, projectId, default);
+        var role = await repo.ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId, default);
 
         // Assert
-        Assert.Equal(ProjectAccessRole.Admin, role);
+        Assert.Null(role);
     }
 
-    /// <summary>付与先テナントは project_access の role を返す。</summary>
+    /// <summary>メンバー行のロールを返す。</summary>
     [Fact]
-    public async Task ResolveEffectiveRoleAsync_Grantee_ReturnsGrantedRole()
+    public async Task ResolveEffectiveRoleAsync_Member_ReturnsGrantedRole()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
-        var ownerTenantId = Guid.NewGuid();
-        var granteeTenantId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
         var repo = new ProjectRepository(new DefaultIdGenerator());
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
-        SeedOwnerProject(db, ownerTenantId, projectId);
+        SeedTenantProject(db, tenantId, projectId);
 
         await using (var seed = db.Factory.CreateDbContext())
         {
-            seed.Tenants.Add(new TenantRow
-            {
-                TenantId = granteeTenantId,
-                TenantKey = "grantee",
-                DisplayName = "Grantee",
-                Lifecycle = TenantLifecycle.Active,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-            ProjectTestData.GrantAccess(seed, projectId, granteeTenantId, ProjectAccessRole.Executor);
+            ProjectTestData.AddPrincipal(seed, tenantId, principalId);
+            ProjectTestData.GrantAccess(seed, projectId, principalId, ProjectAccessRole.Executor);
             await seed.SaveChangesAsync();
         }
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
-        var role = await repo.ResolveEffectiveRoleAsync(uow, granteeTenantId, projectId, default);
+        var role = await repo.ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId, default);
 
         // Assert
         Assert.Equal(ProjectAccessRole.Executor, role);
     }
 
-    /// <summary>未付与テナントは null を返す。</summary>
+    /// <summary>別テナントの Project は null。</summary>
     [Fact]
-    public async Task ResolveEffectiveRoleAsync_NoAccess_ReturnsNull()
+    public async Task ResolveEffectiveRoleAsync_OtherTenant_ReturnsNull()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
-        var ownerTenantId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
         var otherTenantId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
         var repo = new ProjectRepository(new DefaultIdGenerator());
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
-        SeedOwnerProject(db, ownerTenantId, projectId);
+        SeedTenantProject(db, tenantId, projectId);
 
         await using (var seed = db.Factory.CreateDbContext())
         {
@@ -161,34 +154,36 @@ public sealed class ProjectRepositoryTests
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
+            ProjectTestData.AddPrincipal(seed, tenantId, principalId);
+            ProjectTestData.GrantAccess(seed, projectId, principalId, ProjectAccessRole.Admin);
             await seed.SaveChangesAsync();
         }
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
-        var role = await repo.ResolveEffectiveRoleAsync(uow, otherTenantId, projectId, default);
+        var role = await repo.ResolveEffectiveRoleAsync(uow, otherTenantId, principalId, projectId, default);
 
         // Assert
         Assert.Null(role);
     }
 
-    private static void SeedOwnerProject(SqliteTestDatabase db, Guid ownerTenantId, Guid projectId)
+    private static void SeedTenantProject(SqliteTestDatabase db, Guid tenantId, Guid projectId)
     {
         using var seed = db.Factory.CreateDbContext();
-        if (!seed.Tenants.Any(t => t.TenantId == ownerTenantId))
+        if (!seed.Tenants.Any(t => t.TenantId == tenantId))
         {
             seed.Tenants.Add(new TenantRow
             {
-                TenantId = ownerTenantId,
-                TenantKey = "owner",
-                DisplayName = "Owner",
+                TenantId = tenantId,
+                TenantKey = "tenant",
+                DisplayName = "Tenant",
                 Lifecycle = TenantLifecycle.Active,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
         }
 
-        ProjectTestData.AddDefaultProject(seed, ownerTenantId, "owner", projectId);
+        ProjectTestData.AddDefaultProject(seed, tenantId, "tenant", projectId);
         seed.SaveChanges();
     }
 }

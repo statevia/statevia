@@ -283,17 +283,16 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
         await using var db = await _factory.CreateDbContextAsync();
         var existing = await db.Projects
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.OwnerTenantId == ownerTenantId && p.Slug == "default");
+            .FirstOrDefaultAsync(p => p.TenantId == ownerTenantId && p.Slug == "default");
 
         if (existing is null)
         {
             db.Projects.Add(new ProjectRow
             {
                 ProjectId = projectId,
-                OwnerTenantId = ownerTenantId,
+                TenantId = ownerTenantId,
                 Slug = "default",
                 DisplayName = "Scenario Project",
-                Visibility = ProjectVisibility.Private,
                 CreatedAt = now
             });
         }

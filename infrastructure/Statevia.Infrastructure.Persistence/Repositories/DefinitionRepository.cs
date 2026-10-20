@@ -5,8 +5,8 @@ namespace Statevia.Infrastructure.Persistence.Repositories;
 /// <summary>definitions / definition_versions の EF 永続化。project 認可は行わない。</summary>
 /// <remarks>
 /// <para>呼び出し元（Application / Graph ユースケース）が <see cref="IProjectAuthorizationService"/> でゲートする。</para>
-/// <para>一覧のみ <see cref="ProjectAccessQueries"/> で Reader 以上の project 可視性を DB 側に残す。</para>
-/// <para>単体取得は definitionId / versionId で引き、呼び出し元 tenant の行一致では絞らない（project 共有）。</para>
+/// <para>一覧は <see cref="ProjectAccessQueries"/> で、呼び出し元 Principal が Reader 以上の Project に絞る。</para>
+/// <para>単体取得は definitionId / versionId で引く。定義の tenant_id は所属 Project のテナントと一致し、他テナントへは共有しない。</para>
 /// </remarks>
 internal sealed class DefinitionRepository : IDefinitionRepository
 {
@@ -307,12 +307,10 @@ internal sealed class DefinitionRepository : IDefinitionRepository
     private static IQueryable<DefinitionRow> WhereActive(IQueryable<DefinitionRow> query) =>
         query.Where(x => x.DeletedAt == null);
 
-    /// <summary>
-    /// 定義 ID による単体取得ではテナント行フィルタを外す。
-    /// </summary>
+    /// <summary>定義 ID による単体取得ではテナント QueryFilter を外す。</summary>
     /// <remarks>
-    /// 共有 project の定義はオーナーテナントの <c>tenant_id</c> を持つ。呼び出し元テナントの
-    /// グローバルフィルタだと行が見えず、その後の project_access 評価に到達できない。
+    /// 定義の <c>tenant_id</c> は所属 Project のテナントと一致する。
+    /// 行を返したあとの所属判定は、呼び出し元の Principal メンバーシップが行う。
     /// </remarks>
     private static IQueryable<DefinitionRow> DefinitionsIgnoringTenantFilter(ICoreUnitOfWork uow, bool tracked)
     {
@@ -363,29 +361,23 @@ internal sealed class DefinitionRepository : IDefinitionRepository
     }
 }
 
-/// <summary>project_accesses + オーナーによる project 可視性クエリ。</summary>
+/// <summary>Principal のメンバーシップで見える project。</summary>
 internal static class ProjectAccessQueries
 {
-    /// <summary>指定最小ロール以上でアクセス可能な project_id 集合。</summary>
+    /// <summary>指定ロール以上のメンバーである project_id の集合。</summary>
     /// <param name="db">EF コンテキスト。</param>
-    /// <param name="tenantId">呼び出し元テナント。</param>
+    /// <param name="principalId">呼び出し元 Principal。</param>
     /// <param name="minimumRole">一覧に含める最小ロール。</param>
-    /// <returns>アクセス可能な project_id。</returns>
+    /// <returns>メンバーである project_id。</returns>
     public static IQueryable<Guid> AccessibleProjectIds(
         CoreDbContext db,
-        Guid tenantId,
+        Guid principalId,
         ProjectAccessRole minimumRole)
     {
         var allowedRoles = ProjectAccessRolePolicy.RolesAtOrAbove(minimumRole);
 
-        var owned = db.Projects
-            .Where(p => p.OwnerTenantId == tenantId)
-            .Select(p => p.ProjectId);
-
-        var granted = db.ProjectAccesses
-            .Where(pa => pa.TenantId == tenantId && allowedRoles.Contains(pa.Role))
+        return db.ProjectAccesses
+            .Where(pa => pa.PrincipalId == principalId && allowedRoles.Contains(pa.Role))
             .Select(pa => pa.ProjectId);
-
-        return owned.Union(granted);
     }
 }

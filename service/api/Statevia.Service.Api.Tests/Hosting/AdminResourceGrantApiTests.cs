@@ -89,7 +89,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<PrincipalResourceGrantsDto>();
         Assert.NotNull(body);
-        Assert.Equal([projectId], body!.ProjectIds);
+        Assert.Equal([projectId], body.ProjectIds);
         Assert.Equal([definitionId], body.DefinitionIds);
     }
 
@@ -113,7 +113,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var body = await client.GetFromJsonAsync<PrincipalResourceGrantsDto>(
             new Uri($"/v1/admin/users/{userId}/resource-grants", UriKind.Relative));
         Assert.NotNull(body);
-        Assert.Empty(body!.ProjectIds);
+        Assert.Empty(body.ProjectIds);
         Assert.Empty(body.DefinitionIds);
     }
 
@@ -139,7 +139,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var body = await client.GetFromJsonAsync<PrincipalResourceGrantsDto>(
             new Uri($"/v1/admin/users/{userId}/resource-grants", UriKind.Relative));
         Assert.NotNull(body);
-        Assert.Empty(body!.ProjectIds);
+        Assert.Empty(body.ProjectIds);
     }
 
     /// <summary>実行できない project の定義は保存せず 422。</summary>
@@ -220,7 +220,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
             new CreateAdminServiceAccountRequest
             {
                 Name = $"r{Guid.NewGuid():N}"[..16],
-                GroupIds = [group!.GroupId]
+                GroupIds = [group.GroupId]
             });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<AdminServiceAccountListItemDto>();
@@ -230,7 +230,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         // Act
         var response = await PutGrantsAsync(
             client,
-            $"/v1/admin/service-accounts/{created!.ServiceAccountId}/resource-grants",
+            $"/v1/admin/service-accounts/{created.ServiceAccountId}/resource-grants",
             [projectId],
             []);
 
@@ -238,7 +238,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<PrincipalResourceGrantsDto>();
         Assert.NotNull(body);
-        Assert.Equal([projectId], body!.ProjectIds);
+        Assert.Equal([projectId], body.ProjectIds);
         Assert.Empty(body.DefinitionIds);
     }
 
@@ -261,7 +261,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await response.Content.ReadFromJsonAsync<AdminUserListItemDto>();
         Assert.NotNull(created);
-        return created!.UserId;
+        return created.UserId;
     }
 
     private static Task<HttpResponseMessage> PutGrantsAsync(
@@ -320,7 +320,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         return link.UserId;
     }
 
-    private async Task<Guid> SeedProjectAsync(Guid ownerTenantId, ProjectAccessRole? accessForDefault)
+    private async Task<Guid> SeedProjectAsync(Guid tenantId, ProjectAccessRole? accessForDefault)
     {
         var projectId = Guid.NewGuid();
         await using var scope = _factory.Services.CreateAsyncScope();
@@ -329,10 +329,9 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         db.Projects.Add(new ProjectRow
         {
             ProjectId = projectId,
-            OwnerTenantId = ownerTenantId,
+            TenantId = tenantId,
             Slug = $"p{projectId:N}"[..16],
             DisplayName = "grant",
-            Visibility = ProjectVisibility.Private,
             CreatedAt = DateTime.UtcNow
         });
         if (accessForDefault is { } role)

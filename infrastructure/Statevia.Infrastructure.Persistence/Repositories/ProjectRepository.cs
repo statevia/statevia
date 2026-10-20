@@ -11,13 +11,13 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
     /// <inheritdoc />
     public async Task<ProjectRow> EnsureDefaultProjectAsync(
         ICoreUnitOfWork uow,
-        Guid ownerTenantId,
-        string ownerTenantKey,
+        Guid tenantId,
+        string tenantKey,
         CancellationToken ct)
     {
         var existing = await uow.GetDb().Projects
             .FirstOrDefaultAsync(
-                p => p.OwnerTenantId == ownerTenantId && p.Slug == DefaultProjectSlug,
+                p => p.TenantId == tenantId && p.Slug == DefaultProjectSlug,
                 ct)
             .ConfigureAwait(false);
 
@@ -28,10 +28,9 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
         var project = new ProjectRow
         {
             ProjectId = idGenerator.NewSequentialGuid(),
-            OwnerTenantId = ownerTenantId,
+            TenantId = tenantId,
             Slug = DefaultProjectSlug,
-            DisplayName = $"{ownerTenantKey} default",
-            Visibility = ProjectVisibility.Private,
+            DisplayName = $"{tenantKey} default",
             Description = "Auto-created default project",
             CreatedAt = now
         };
@@ -43,6 +42,7 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
     public async Task<ProjectAccessRole?> ResolveEffectiveRoleAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         Guid projectId,
         CancellationToken ct)
     {
@@ -50,15 +50,12 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
             .FirstOrDefaultAsync(p => p.ProjectId == projectId, ct)
             .ConfigureAwait(false);
 
-        if (project is null)
+        if (project is null || project.TenantId != tenantId)
             return null;
-
-        if (project.OwnerTenantId == tenantId)
-            return ProjectAccessRole.Admin;
 
         var access = await uow.GetDb().ProjectAccesses.AsNoTracking()
             .FirstOrDefaultAsync(
-                pa => pa.ProjectId == projectId && pa.TenantId == tenantId,
+                pa => pa.ProjectId == projectId && pa.PrincipalId == principalId,
                 ct)
             .ConfigureAwait(false);
 
@@ -66,17 +63,26 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
     }
 
     /// <inheritdoc />
+    public Task<bool> ExistsInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        uow.GetDb().Projects.AsNoTracking()
+            .AnyAsync(p => p.ProjectId == projectId && p.TenantId == tenantId, ct);
+
+    /// <inheritdoc />
     public Task GrantAccessAsync(
         ICoreUnitOfWork uow,
         Guid projectId,
-        Guid granteeTenantId,
+        Guid principalId,
         ProjectAccessRole role,
         CancellationToken ct)
     {
         uow.GetDb().ProjectAccesses.Add(new ProjectAccessRow
         {
             ProjectId = projectId,
-            TenantId = granteeTenantId,
+            PrincipalId = principalId,
             Role = role,
             CreatedAt = DateTime.UtcNow
         });
