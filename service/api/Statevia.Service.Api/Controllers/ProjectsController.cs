@@ -45,4 +45,37 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
         [FromBody] UpdateProjectRequest request,
         CancellationToken ct) =>
         Ok(await projects.UpdateAsync(projectId, request, ct).ConfigureAwait(false));
+
+    /// <summary>GET /v1/projects/{projectId}/members — メンバー一覧。</summary>
+    [HttpGet("{projectId:guid}/members")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProjectMemberResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<ProjectMemberResponse>>> ListMembers(
+        Guid projectId,
+        CancellationToken ct) =>
+        Ok(await projects.ListMembersAsync(projectId, ct).ConfigureAwait(false));
+
+    /// <summary>PUT /v1/projects/{projectId}/members/{principalId} — 付与またはロール変更。</summary>
+    [HttpPut("{projectId:guid}/members/{principalId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UpsertMember(
+        Guid projectId,
+        Guid principalId,
+        [FromBody] UpsertProjectMemberRequest request,
+        CancellationToken ct)
+    {
+        await projects.UpsertMemberAsync(projectId, principalId, request, ct).ConfigureAwait(false);
+        return NoContent();
+    }
+
+    /// <summary>DELETE /v1/projects/{projectId}/members/{principalId} — メンバー剥奪。</summary>
+    [HttpDelete("{projectId:guid}/members/{principalId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveMember(
+        Guid projectId,
+        Guid principalId,
+        CancellationToken ct)
+    {
+        await projects.RemoveMemberAsync(projectId, principalId, ct).ConfigureAwait(false);
+        return NoContent();
+    }
 }

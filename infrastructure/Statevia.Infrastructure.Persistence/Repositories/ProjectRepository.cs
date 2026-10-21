@@ -192,4 +192,84 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
 
         return query.AnyAsync(ct);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProjectRow>> ListInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var rows = await uow.GetDb().Projects.AsNoTracking()
+            .Where(p => p.TenantId == tenantId)
+            .OrderBy(p => p.Slug)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        return rows;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProjectAccessRow>> ListMembersAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        CancellationToken ct)
+    {
+        var rows = await uow.GetDb().ProjectAccesses.AsNoTracking()
+            .Where(a => a.ProjectId == projectId)
+            .OrderBy(a => a.CreatedAt)
+            .ThenBy(a => a.PrincipalId)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        return rows;
+    }
+
+    /// <inheritdoc />
+    public Task<ProjectAccessRow?> GetAccessForUpdateAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        CancellationToken ct) =>
+        uow.GetDb().ProjectAccesses
+            .FirstOrDefaultAsync(a => a.ProjectId == projectId && a.PrincipalId == principalId, ct);
+
+    /// <inheritdoc />
+    public Task<int> CountByRoleAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        ProjectAccessRole role,
+        CancellationToken ct) =>
+        uow.GetDb().ProjectAccesses
+            .CountAsync(a => a.ProjectId == projectId && a.Role == role, ct);
+
+    /// <inheritdoc />
+    public async Task UpsertAccessAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        ProjectAccessRole role,
+        CancellationToken ct)
+    {
+        var existing = await GetAccessForUpdateAsync(uow, projectId, principalId, ct).ConfigureAwait(false);
+        if (existing is null)
+        {
+            await GrantAccessAsync(uow, projectId, principalId, role, ct).ConfigureAwait(false);
+            return;
+        }
+
+        existing.Role = role;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> RemoveAccessAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        CancellationToken ct)
+    {
+        var existing = await GetAccessForUpdateAsync(uow, projectId, principalId, ct).ConfigureAwait(false);
+        if (existing is null)
+            return false;
+
+        uow.GetDb().ProjectAccesses.Remove(existing);
+        return true;
+    }
 }

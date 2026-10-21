@@ -48,7 +48,9 @@ public sealed class ProjectsControllerTests
         // Arrange & Act
         var deleteMethods = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
-            .Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() is not null)
+            .Where(method => method.GetCustomAttribute<HttpDeleteAttribute>() is { } delete
+                && (delete.Template is null
+                    || !delete.Template.Contains("members", StringComparison.Ordinal)))
             .ToList();
 
         // Assert
@@ -104,5 +106,21 @@ public sealed class ProjectsControllerTests
 
         public Task<ProjectResponse> UpdateAsync(Guid projectId, UpdateProjectRequest request, CancellationToken ct) =>
             Task.FromResult(UpdateResult);
+
+        public Task<IReadOnlyList<ProjectMemberResponse>> ListMembersAsync(Guid projectId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<ProjectMemberResponse>>([]);
+
+        public Task UpsertMemberAsync(
+            Guid projectId,
+            Guid principalId,
+            UpsertProjectMemberRequest request,
+            CancellationToken ct) =>
+            Task.CompletedTask;
+
+        public Task RemoveMemberAsync(Guid projectId, Guid principalId, CancellationToken ct) =>
+            Task.CompletedTask;
+
+        public Task<IReadOnlyList<ProjectResponse>> ListAllForTenantAdminAsync(CancellationToken ct) =>
+            Task.FromResult(ListResult);
     }
 }

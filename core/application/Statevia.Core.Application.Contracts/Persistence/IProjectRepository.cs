@@ -66,4 +66,46 @@ public interface IProjectRepository
         string slug,
         Guid? excludingProjectId,
         CancellationToken ct);
+
+    /// <summary>テナント内の Project を slug 順で返す（メンバーシップでは絞らない）。</summary>
+    Task<IReadOnlyList<ProjectRow>> ListInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        CancellationToken ct);
+
+    /// <summary>Project のメンバー行を作成日時順で返す。</summary>
+    Task<IReadOnlyList<ProjectAccessRow>> ListMembersAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        CancellationToken ct);
+
+    /// <summary>メンバー行を更新用に追跡取得する。無いときは null。</summary>
+    Task<ProjectAccessRow?> GetAccessForUpdateAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        CancellationToken ct);
+
+    /// <summary>指定ロールのメンバー数。</summary>
+    Task<int> CountByRoleAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        ProjectAccessRole role,
+        CancellationToken ct);
+
+    /// <summary>メンバー行が無ければ付与し、あればロールを上書きする。</summary>
+    /// <exception cref="ApiValidationException">Principal と Project のテナントが一致しないとき。</exception>
+    Task UpsertAccessAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        ProjectAccessRole role,
+        CancellationToken ct);
+
+    /// <summary>メンバー行を削除する。行が無ければ false。</summary>
+    Task<bool> RemoveAccessAsync(
+        ICoreUnitOfWork uow,
+        Guid projectId,
+        Guid principalId,
+        CancellationToken ct);
 }

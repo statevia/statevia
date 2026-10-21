@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Statevia.Core.Application.Services;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
@@ -212,11 +214,204 @@ public sealed class ProjectServiceTests
                 CancellationToken.None));
     }
 
+    /// <summary>未所属の tenant.admin が自分を admin にできる。監査に主体・Project・対象が出る。</summary>
+    [Fact]
+    public async Task UpsertMemberAsync_TenantAdminWithoutMembership_GrantsSelfAndAudits()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var logger = new CollectingLogger();
+        var sut = CreateSut(
+            db,
+            OtherPrincipalId,
+            tenantAdmin: new AllowTenantAdminAuthorization(),
+            logger: logger);
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            ProjectTestData.AddPrincipal(seed, TestTenantIds.DefaultTenantId, OtherPrincipalId);
+            await seed.SaveChangesAsync();
+        }
+
+        // Act
+        await sut.UpsertMemberAsync(
+            projectId,
+            OtherPrincipalId,
+            new UpsertProjectMemberRequest { Role = "admin" },
+            CancellationToken.None);
+
+        // Assert
+        await using var verify = new CoreDbContext(db.Options);
+        var access = await verify.ProjectAccesses.SingleAsync(
+            a => a.ProjectId == projectId && a.PrincipalId == OtherPrincipalId);
+        Assert.Equal(ProjectAccessRole.Admin, access.Role);
+        var message = Assert.Single(logger.Messages);
+        Assert.Contains("ActorPrincipalId=", message, StringComparison.Ordinal);
+        Assert.Contains("ProjectId=", message, StringComparison.Ordinal);
+        Assert.Contains("TargetPrincipalId=", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("password", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>他テナント Principal の付与は 422。</summary>
+    [Fact]
+    public async Task UpsertMemberAsync_OtherTenantPrincipal_ThrowsApiValidation()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            seed.Tenants.Add(new TenantRow
+            {
+                TenantId = TestTenantIds.OtherTenantId,
+                TenantKey = "other",
+                DisplayName = "Other",
+                Lifecycle = TenantLifecycle.Active,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+            ProjectTestData.AddPrincipal(seed, TestTenantIds.OtherTenantId, OtherPrincipalId);
+            await seed.SaveChangesAsync();
+        }
+
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApiValidationException>(() =>
+            sut.UpsertMemberAsync(
+                projectId,
+                OtherPrincipalId,
+                new UpsertProjectMemberRequest { Role = "reader" },
+                CancellationToken.None));
+    }
+
+    /// <summary>project.admin は最後の admin を外せない。</summary>
+    [Fact]
+    public async Task RemoveMemberAsync_LastAdminByProjectAdmin_ThrowsApiValidation()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApiValidationException>(() =>
+            sut.RemoveMemberAsync(projectId, CreatorPrincipalId, CancellationToken.None));
+        await using var verify = new CoreDbContext(db.Options);
+        Assert.Equal(
+            ProjectAccessRole.Admin,
+            await verify.ProjectAccesses.Where(a => a.ProjectId == projectId).Select(a => a.Role).SingleAsync());
+    }
+
+    /// <summary>tenant.admin は最後の admin を外せる。</summary>
+    [Fact]
+    public async Task RemoveMemberAsync_LastAdminByTenantAdmin_Removes()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            ProjectTestData.AddPrincipal(seed, TestTenantIds.DefaultTenantId, OtherPrincipalId);
+            await seed.SaveChangesAsync();
+        }
+
+        var sut = CreateSut(db, OtherPrincipalId, tenantAdmin: new AllowTenantAdminAuthorization());
+
+        // Act
+        await sut.RemoveMemberAsync(projectId, CreatorPrincipalId, CancellationToken.None);
+
+        // Assert
+        await using var verify = new CoreDbContext(db.Options);
+        Assert.Empty(await verify.ProjectAccesses.Where(a => a.ProjectId == projectId).ToListAsync());
+    }
+
+    /// <summary>project.admin は最後の admin を降格できない。</summary>
+    [Fact]
+    public async Task UpsertMemberAsync_DemoteLastAdmin_ThrowsApiValidation()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ApiValidationException>(() =>
+            sut.UpsertMemberAsync(
+                projectId,
+                CreatorPrincipalId,
+                new UpsertProjectMemberRequest { Role = "reader" },
+                CancellationToken.None));
+    }
+
+    /// <summary>reader はメンバー一覧を取れない。</summary>
+    [Fact]
+    public async Task ListMembersAsync_Reader_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: false);
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            ProjectTestData.AddPrincipal(seed, TestTenantIds.DefaultTenantId, OtherPrincipalId);
+            ProjectTestData.GrantAccess(seed, projectId, OtherPrincipalId, ProjectAccessRole.Reader);
+            await seed.SaveChangesAsync();
+        }
+
+        var sut = CreateSut(db, OtherPrincipalId);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.ListMembersAsync(projectId, CancellationToken.None));
+        Assert.Equal("PROJECT_ACCESS_DENIED", ex.Code);
+    }
+
+    /// <summary>tenant.admin の全件一覧は未所属 Project を含む。</summary>
+    [Fact]
+    public async Task ListAllForTenantAdminAsync_IncludesProjectsWithoutMembership()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: false);
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            ProjectTestData.AddPrincipal(seed, TestTenantIds.DefaultTenantId, OtherPrincipalId);
+            await seed.SaveChangesAsync();
+        }
+
+        var sut = CreateSut(db, OtherPrincipalId, tenantAdmin: new AllowTenantAdminAuthorization());
+
+        // Act
+        var list = await sut.ListAllForTenantAdminAsync(CancellationToken.None);
+
+        // Assert
+        var item = Assert.Single(list);
+        Assert.Equal(projectId, item.ProjectId);
+        Assert.Null(item.Role);
+    }
+
+    /// <summary>tenant.admin 以外の全件一覧は 403。</summary>
+    [Fact]
+    public async Task ListAllForTenantAdminAsync_NonAdmin_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.ListAllForTenantAdminAsync(CancellationToken.None));
+        Assert.Equal("FORBIDDEN", ex.Code);
+    }
+
     private static ProjectService CreateSut(
         InMemoryTestDatabase db,
         Guid principalId,
         bool denyProjectsCreate = false,
-        ITenantContextAccessor? tenant = null)
+        ITenantContextAccessor? tenant = null,
+        ITenantAdminAuthorization? tenantAdmin = null,
+        ILogger<ProjectService>? logger = null)
     {
         var tenantAccessor = tenant ?? new FixedTenantContextAccessor(
             TestTenantIds.DefaultContext with { PrincipalId = principalId });
@@ -225,14 +420,17 @@ public sealed class ProjectServiceTests
         IRuntimePermissionAuthorization runtimeAuth = denyProjectsCreate
             ? new DenyingRuntimePermissionAuthorization()
             : new AllowAllRuntimePermissionAuthorization();
+        var admin = tenantAdmin ?? new DenyTenantAdminAuthorization();
 
         return new ProjectService(
             projectRepo,
-            new ProjectAuthorizationService(projectRepo, tenantAccessor, new DenyTenantAdminAuthorization()),
+            new ProjectAuthorizationService(projectRepo, tenantAccessor, admin),
             tenantAccessor,
             runtimeAuth,
             new DefaultIdGenerator(),
-            executor);
+            executor,
+            admin,
+            logger ?? NullLogger<ProjectService>.Instance);
     }
 
     private static async Task<Guid> SeedTenantWithProjectAsync(InMemoryTestDatabase db, bool grantCreatorAdmin)
@@ -263,6 +461,38 @@ public sealed class ProjectServiceTests
             _ = permissionKey;
             _ = cancellationToken;
             throw new ForbiddenException("Insufficient permission.", "PERMISSION_DENIED");
+        }
+    }
+
+    private sealed class AllowTenantAdminAuthorization : ITenantAdminAuthorization
+    {
+        public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+    }
+
+    private sealed class CollectingLogger : ILogger<ProjectService>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
         }
     }
 }
