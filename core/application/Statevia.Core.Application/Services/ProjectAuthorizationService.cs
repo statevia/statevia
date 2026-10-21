@@ -92,6 +92,20 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
         throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
     }
 
+    /// <inheritdoc />
+    public Task EnsureCanAdminAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        EnsureMinimumRoleAsync(
+            uow,
+            tenantId,
+            projectId,
+            ProjectAccessRole.Admin,
+            forbiddenWhenBelowMinimum: true,
+            ct);
+
     private async Task EnsureMinimumRoleAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,

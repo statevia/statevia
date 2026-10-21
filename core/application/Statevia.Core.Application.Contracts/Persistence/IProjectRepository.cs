@@ -34,4 +34,36 @@ public interface IProjectRepository
         Guid principalId,
         ProjectAccessRole role,
         CancellationToken ct);
+
+    /// <summary>呼び出し元 Principal がメンバーの Project と実効ロールを一覧する。</summary>
+    Task<IReadOnlyList<(ProjectRow Project, ProjectAccessRole Role)>> ListMembershipAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid principalId,
+        CancellationToken ct);
+
+    /// <summary>テナント内の Project を取得する（追跡しない）。</summary>
+    Task<ProjectRow?> GetInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct);
+
+    /// <summary>テナント内の Project を更新用に追跡取得する。</summary>
+    Task<ProjectRow?> GetInTenantForUpdateAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct);
+
+    /// <summary>Project 行を追加する。</summary>
+    Task AddAsync(ICoreUnitOfWork uow, ProjectRow project, CancellationToken ct);
+
+    /// <summary>テナント内で slug が既に使われているか。</summary>
+    Task<bool> ExistsSlugInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        string slug,
+        Guid? excludingProjectId,
+        CancellationToken ct);
 }

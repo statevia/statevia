@@ -33,4 +33,13 @@ public interface IProjectAuthorizationService
         Guid tenantId,
         Guid projectId,
         CancellationToken ct);
+
+    /// <summary>
+    /// Project 設定変更（表示名・説明・slug）を要求する。当該 Project の <c>project.admin</c> のみ（tenant.admin は注入しない）。
+    /// </summary>
+    Task EnsureCanAdminAsync(
+        Persistence.ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct);
 }

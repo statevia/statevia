@@ -196,8 +196,8 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     /// <param name="permissionKeys">
     /// 付与する permission key。省略時は <c>definitions.write</c> と <c>executions.write</c> を付与する。
     /// </param>
-    /// <returns>作成したユーザー名。</returns>
-    public async Task<string> SeedUserInTenantAsync(
+    /// <returns>作成した Principal UUID。</returns>
+    public async Task<Guid> SeedUserInTenantAsync(
         Guid tenantId,
         string username,
         string password,
@@ -262,19 +262,19 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
 
         await db.SaveChangesAsync();
 
-        return username;
+        return principalId;
     }
 
     /// <summary>
-    /// プロジェクトを作成し、オプションで別テナントへのアクセス権を付与する。
+    /// プロジェクトを用意し、同一テナントの Principal にロールを付与する。
     /// </summary>
-    /// <param name="ownerTenantId">オーナーテナント内部 UUID。</param>
-    /// <param name="consumerTenantId">アクセス付与先テナント UUID（null の場合は付与しない）。</param>
+    /// <param name="ownerTenantId">Project 所属テナント内部 UUID。</param>
+    /// <param name="principalId">付与先 Principal（null の場合は付与しない）。</param>
     /// <param name="role">付与するロール。</param>
-    /// <returns>作成したプロジェクト ID。</returns>
+    /// <returns>作成または既存のプロジェクト ID。</returns>
     public async Task<Guid> SeedProjectWithAccessAsync(
         Guid ownerTenantId,
-        Guid? consumerTenantId,
+        Guid? principalId,
         ProjectAccessRole? role)
     {
         var projectId = Guid.NewGuid();
@@ -301,13 +301,13 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
             projectId = existing.ProjectId;
         }
 
-        if (consumerTenantId.HasValue && role.HasValue)
+        if (principalId is { } grantedPrincipalId && role is { } grantedRole)
         {
             db.ProjectAccesses.Add(new ProjectAccessRow
             {
                 ProjectId = projectId,
-                TenantId = consumerTenantId.Value,
-                Role = role.Value,
+                PrincipalId = grantedPrincipalId,
+                Role = grantedRole,
                 CreatedAt = now
             });
         }

@@ -35,6 +35,14 @@ internal sealed class AllowAllProjectAuthorizationService : IProjectAuthorizatio
         CancellationToken ct) =>
         EnsureCanPublishAsync(uow, tenantId, projectId, ct);
 
+    /// <inheritdoc />
+    public Task EnsureCanAdminAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        EnsureCanManageMembersAsync(uow, tenantId, projectId, ct);
+
     private static Task Allow(
         ICoreUnitOfWork uow,
         Guid tenantId,

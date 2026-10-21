@@ -23,4 +23,7 @@ public static class WellKnownPermissionKeys
 
     /// <summary>Action Module の load catalog 一覧（<c>GET /v1/admin/modules</c>）。</summary>
     public const string ModulesRead = "modules.read";
+
+    /// <summary>Project の作成（<c>POST /v1/projects</c>）。</summary>
+    public const string ProjectsCreate = "projects.create";
 }

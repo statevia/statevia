@@ -454,6 +454,13 @@ public sealed class ExecutionAuthorizationGuardTests
             Guid projectId,
             CancellationToken ct) =>
             throw new NotImplementedException();
+
+        public Task EnsureCanAdminAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid projectId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
     }
 
     private sealed class StubDefinitionRepository(Guid? projectId) : IDefinitionRepository

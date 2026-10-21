@@ -19,6 +19,7 @@ public static class ApplicationServiceCollectionExtensions
 
         services.AddScoped<ICommandDedupService, CommandDedupService>();
         services.AddScoped<IProjectAuthorizationService, ProjectAuthorizationService>();
+        services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IDefinitionService, DefinitionService>();
         services.AddScoped<IExecutionSecuritySnapshotFactory, ExecutionSecuritySnapshotFactory>();
         services.AddSingleton<IActionSchemaService, ActionSchemaService>();

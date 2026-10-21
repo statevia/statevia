@@ -73,7 +73,6 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
             .AnyAsync(p => p.ProjectId == projectId && p.TenantId == tenantId, ct);
 
     /// <inheritdoc />
-    /// <inheritdoc />
     /// <exception cref="ApiValidationException">Principal と Project のテナントが一致しないとき。</exception>
     public async Task GrantAccessAsync(
         ICoreUnitOfWork uow,
@@ -83,11 +82,20 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        var projectTenantId = await db.Projects.AsNoTracking()
+        // 同一 UoW で Add 直後の行も見えるように Local を先に見る。
+        var projectTenantId = db.Projects.Local
             .Where(p => p.ProjectId == projectId)
             .Select(p => (Guid?)p.TenantId)
-            .FirstOrDefaultAsync(ct)
-            .ConfigureAwait(false);
+            .FirstOrDefault();
+        if (projectTenantId is null)
+        {
+            projectTenantId = await db.Projects.AsNoTracking()
+                .Where(p => p.ProjectId == projectId)
+                .Select(p => (Guid?)p.TenantId)
+                .FirstOrDefaultAsync(ct)
+                .ConfigureAwait(false);
+        }
+
         if (projectTenantId is null)
         {
             throw new ApiValidationException(
@@ -95,11 +103,18 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
                 new[] { new { message = "Project was not found.", field = "projectId" } });
         }
 
-        var principalTenantId = await db.Principals.AsNoTracking()
+        var principalTenantId = db.Principals.Local
             .Where(p => p.PrincipalId == principalId)
             .Select(p => (Guid?)p.TenantId)
-            .FirstOrDefaultAsync(ct)
-            .ConfigureAwait(false);
+            .FirstOrDefault();
+        if (principalTenantId is null)
+        {
+            principalTenantId = await db.Principals.AsNoTracking()
+                .Where(p => p.PrincipalId == principalId)
+                .Select(p => (Guid?)p.TenantId)
+                .FirstOrDefaultAsync(ct)
+                .ConfigureAwait(false);
+        }
         if (principalTenantId is null || principalTenantId.Value != projectTenantId.Value)
         {
             throw new ApiValidationException(
@@ -114,5 +129,67 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
             Role = role,
             CreatedAt = DateTime.UtcNow
         });
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<(ProjectRow Project, ProjectAccessRole Role)>> ListMembershipAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid principalId,
+        CancellationToken ct)
+    {
+        var rows = await (
+                from access in uow.GetDb().ProjectAccesses.AsNoTracking()
+                join project in uow.GetDb().Projects.AsNoTracking()
+                    on access.ProjectId equals project.ProjectId
+                where access.PrincipalId == principalId && project.TenantId == tenantId
+                orderby project.Slug
+                select new { project, access.Role })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return rows.ConvertAll(row => (row.project, row.Role));
+    }
+
+    /// <inheritdoc />
+    public Task<ProjectRow?> GetInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        uow.GetDb().Projects.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.ProjectId == projectId && p.TenantId == tenantId, ct);
+
+    /// <inheritdoc />
+    public Task<ProjectRow?> GetInTenantForUpdateAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        uow.GetDb().Projects
+            .FirstOrDefaultAsync(p => p.ProjectId == projectId && p.TenantId == tenantId, ct);
+
+    /// <inheritdoc />
+    public Task AddAsync(ICoreUnitOfWork uow, ProjectRow project, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        uow.GetDb().Projects.Add(project);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ExistsSlugInTenantAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        string slug,
+        Guid? excludingProjectId,
+        CancellationToken ct)
+    {
+        var query = uow.GetDb().Projects.AsNoTracking()
+            .Where(p => p.TenantId == tenantId && p.Slug == slug);
+        if (excludingProjectId is { } excludeId)
+            query = query.Where(p => p.ProjectId != excludeId);
+
+        return query.AnyAsync(ct);
     }
 }

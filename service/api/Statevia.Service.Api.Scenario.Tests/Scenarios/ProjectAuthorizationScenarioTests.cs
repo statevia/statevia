@@ -11,11 +11,11 @@ namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
 /// プロジェクト認可シナリオテスト（要件4）。
 /// </summary>
 /// <remarks>
-/// <para>クロステナントの <c>project_access</c> 制御を HTTP で検証する。</para>
+/// <para>Project メンバーシップ（Principal）による認可を HTTP で検証する。</para>
 /// <list type="bullet">
-///   <item>アクセス未付与の consumer は 404（存在秘匿）</item>
-///   <item>Reader 付与 consumer は Start 403</item>
-///   <item>Executor 付与 consumer は Start 201</item>
+///   <item>他テナントは 404（存在秘匿）</item>
+///   <item>同一テナント Reader は Start 403</item>
+///   <item>同一テナント Executor は Start 201</item>
 /// </list>
 /// </remarks>
 [Trait("Category", "Scenario")]
@@ -106,22 +106,20 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         var defJson = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
         var definitionId = defJson.GetProperty("displayId").GetString()!;
 
-        // consumer テナントを作成し、Reader アクセスを付与する。
-        var consumerTenantId = await _seeder.SeedTenantAsync(suffix);
-        var consumerTenantKey = $"scenario-{suffix}";
-        await _seeder.SeedProjectWithAccessAsync(
-            ScenarioTenantIds.DefaultTenantId,
-            consumerTenantId,
-            ProjectAccessRole.Reader);
+        // 同一テナントの Reader メンバーを投入する。
         var consumerUsername = $"consumer-{suffix}";
-        // Reader 付与。definitions.read + executions.write を持つが project role が Reader のため Start 不可。
-        await _seeder.SeedUserInTenantAsync(
-            consumerTenantId,
+        var consumerPrincipalId = await _seeder.SeedUserInTenantAsync(
+            ScenarioTenantIds.DefaultTenantId,
             consumerUsername,
             "Password1!",
+            isTenantAdmin: false,
             permissionKeys: [WellKnownPermissionKeys.DefinitionsRead, WellKnownPermissionKeys.ExecutionsWrite]);
-        var consumerLogin = await _http.LoginAsync(consumerTenantKey, consumerUsername, "Password1!");
-        using var consumerClient = _http.CreateAuthenticatedClient(consumerLogin.AccessToken, consumerTenantKey);
+        await _seeder.SeedProjectWithAccessAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            consumerPrincipalId,
+            ProjectAccessRole.Reader);
+        var consumerLogin = await _http.LoginAsync("default", consumerUsername, "Password1!");
+        using var consumerClient = _http.CreateAuthenticatedClient(consumerLogin.AccessToken, "default");
 
         // Act
         var response = await consumerClient.PostAsJsonAsync("/v1/executions", new { definitionId });
@@ -156,22 +154,20 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         var defJson = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
         var definitionId = defJson.GetProperty("displayId").GetString()!;
 
-        // consumer テナントを作成し、Executor アクセスを付与する。
-        var consumerTenantId = await _seeder.SeedTenantAsync(suffix);
-        var consumerTenantKey = $"scenario-{suffix}";
-        await _seeder.SeedProjectWithAccessAsync(
-            ScenarioTenantIds.DefaultTenantId,
-            consumerTenantId,
-            ProjectAccessRole.Executor);
+        // 同一テナントの Executor メンバーを投入する。
         var consumerUsername = $"consumer-{suffix}";
-        // Executor 付与。definitions.read + executions.write を持ち、project role も Executor のため Start 可。
-        await _seeder.SeedUserInTenantAsync(
-            consumerTenantId,
+        var consumerPrincipalId = await _seeder.SeedUserInTenantAsync(
+            ScenarioTenantIds.DefaultTenantId,
             consumerUsername,
             "Password1!",
+            isTenantAdmin: false,
             permissionKeys: [WellKnownPermissionKeys.DefinitionsRead, WellKnownPermissionKeys.ExecutionsWrite]);
-        var consumerLogin = await _http.LoginAsync(consumerTenantKey, consumerUsername, "Password1!");
-        using var consumerClient = _http.CreateAuthenticatedClient(consumerLogin.AccessToken, consumerTenantKey);
+        await _seeder.SeedProjectWithAccessAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            consumerPrincipalId,
+            ProjectAccessRole.Executor);
+        var consumerLogin = await _http.LoginAsync("default", consumerUsername, "Password1!");
+        using var consumerClient = _http.CreateAuthenticatedClient(consumerLogin.AccessToken, "default");
 
         // Act
         var response = await consumerClient.PostAsJsonAsync("/v1/executions", new { definitionId });
