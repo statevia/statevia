@@ -17,7 +17,7 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     private readonly NpgsqlScenarioDbContextFactory _factory = CreateFactory(connectionString);
 
     /// <summary>
-    /// テスト用ユーザーを既定テナントに投入し、ユーザー名を返す。
+    /// テスト用ユーザーを既定テナントに投入する。所属 Project は付けない。
     /// </summary>
     /// <param name="username">ユーザー名（テナント内一意）。</param>
     /// <param name="password">平文パスワード。</param>
@@ -25,8 +25,8 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     /// <param name="permissionKeys">
     /// 付与する permission key。省略時は <c>definitions.write</c> と <c>executions.write</c> を付与する。
     /// </param>
-    /// <returns>作成したユーザー名。</returns>
-    public async Task<string> SeedUserAsync(
+    /// <returns>作成した Principal UUID。</returns>
+    public async Task<Guid> SeedUserAsync(
         string username,
         string password,
         bool isTenantAdmin = true,
@@ -91,7 +91,7 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
 
         await db.SaveChangesAsync();
 
-        return username;
+        return principalId;
     }
 
     /// <summary>
@@ -263,6 +263,23 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
         await db.SaveChangesAsync();
 
         return principalId;
+    }
+
+    /// <summary>既存 Project に同一テナント Principal のロールを足す。越境 Principal は渡さない。</summary>
+    /// <param name="projectId">付与先 Project。</param>
+    /// <param name="principalId">付与先 Principal。</param>
+    /// <param name="role">付与するロール。</param>
+    public async Task GrantProjectRoleAsync(Guid projectId, Guid principalId, ProjectAccessRole role)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        db.ProjectAccesses.Add(new ProjectAccessRow
+        {
+            ProjectId = projectId,
+            PrincipalId = principalId,
+            Role = role,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
     }
 
     /// <summary>

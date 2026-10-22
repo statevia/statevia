@@ -39,7 +39,11 @@ public sealed class DefinitionWorkflowScenarioTests : ScenarioTestBase
         SkipIfDockerUnavailable();
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var username = $"user-{suffix}";
-        await _seeder.SeedUserAsync(username, "Password1!");
+        var principalId = await _seeder.SeedUserAsync(username, "Password1!");
+        var projectId = await _seeder.SeedProjectWithAccessAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            principalId,
+            ProjectAccessRole.Admin);
         var login = await _http.LoginAsync("default", username, "Password1!");
         using var client = _http.CreateAuthenticatedClient(login.AccessToken, "default");
 
@@ -48,7 +52,8 @@ public sealed class DefinitionWorkflowScenarioTests : ScenarioTestBase
         var createResponse = await client.PostAsJsonAsync("/v1/definitions", new
         {
             name = $"scenario-wait-{suffix}",
-            yaml
+            yaml,
+            projectId
         });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var defJson = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -83,7 +88,11 @@ public sealed class DefinitionWorkflowScenarioTests : ScenarioTestBase
         SkipIfDockerUnavailable();
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var username = $"user-{suffix}";
-        await _seeder.SeedUserAsync(username, "Password1!");
+        var principalId = await _seeder.SeedUserAsync(username, "Password1!");
+        var projectId = await _seeder.SeedProjectWithAccessAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            principalId,
+            ProjectAccessRole.Admin);
         var login = await _http.LoginAsync("default", username, "Password1!");
         using var client = _http.CreateAuthenticatedClient(login.AccessToken, "default");
 
@@ -92,7 +101,8 @@ public sealed class DefinitionWorkflowScenarioTests : ScenarioTestBase
         var createResponse = await client.PostAsJsonAsync("/v1/definitions", new
         {
             name = $"scenario-wait-{suffix}",
-            yaml
+            yaml,
+            projectId
         });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var defJson = await createResponse.Content.ReadFromJsonAsync<JsonElement>();

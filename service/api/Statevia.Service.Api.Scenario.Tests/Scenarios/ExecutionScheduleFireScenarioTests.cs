@@ -211,6 +211,20 @@ public sealed class ExecutionScheduleFireScenarioTests
                     DisplayName = $"p-{suffix}",
                     CreatedAt = now
                 });
+                seed.ProjectAccesses.Add(new ProjectAccessRow
+                {
+                    ProjectId = projectId,
+                    PrincipalId = creatorPrincipalId,
+                    Role = ProjectAccessRole.Executor,
+                    CreatedAt = now
+                });
+                seed.ProjectAccesses.Add(new ProjectAccessRow
+                {
+                    ProjectId = projectId,
+                    PrincipalId = runAsPrincipalId,
+                    Role = ProjectAccessRole.Executor,
+                    CreatedAt = now
+                });
                 seed.Definitions.Add(new DefinitionRow
                 {
                     DefinitionId = definitionId,
