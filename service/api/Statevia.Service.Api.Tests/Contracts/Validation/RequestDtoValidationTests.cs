@@ -223,12 +223,45 @@ public sealed class RequestDtoValidationTests
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateDefinitionRequest.Name)));
     }
 
+    /// <summary>定義作成で projectId 省略は検証失敗する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenProjectIdMissing_FailsValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest { Name = "order", Yaml = "workflow: {}" };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateDefinitionRequest.ProjectId)));
+    }
+
+    /// <summary>定義作成で空の projectId は検証失敗する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenProjectIdEmpty_FailsValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest
+        {
+            Name = "order",
+            Yaml = "workflow: {}",
+            ProjectId = Guid.Empty
+        };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateDefinitionRequest.ProjectId)));
+    }
+
     /// <summary>許可文字の定義名は検証成功する。</summary>
     [Fact]
     public void CreateDefinitionRequest_WhenNameAsciiIdentifier_PassesValidation()
     {
         // Arrange
-        var request = new CreateDefinitionRequest { Name = "Order_v2.start", Yaml = "workflow: {}" };
+        var request = new CreateDefinitionRequest { Name = "Order_v2.start", Yaml = "workflow: {}", ProjectId = Guid.NewGuid() };
 
         // Act
         var results = Validate(request);

@@ -5,7 +5,7 @@ namespace Statevia.Core.Application.Contracts.Services;
 /// </summary>
 public interface IDefinitionService
 {
-    /// <summary>定義を新規登録する。</summary>
+    /// <summary>定義を新規登録する。<c>projectId</c> は必須で、所属 <c>publisher</c> 以上を要求する。</summary>
     Task<DefinitionResponse> CreateAsync(CreateDefinitionRequest request, CancellationToken ct);
 
     /// <summary>定義 YAML を検証・コンパイルし、catalog へ保存せず結果だけ返す。</summary>

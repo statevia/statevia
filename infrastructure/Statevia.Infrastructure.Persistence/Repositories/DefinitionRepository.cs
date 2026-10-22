@@ -177,6 +177,9 @@ internal sealed class DefinitionRepository : IDefinitionRepository
         if (!string.IsNullOrWhiteSpace(query.NameContains))
             joinQuery = joinQuery.Where(x => x.Definition.Name.Contains(query.NameContains));
 
+        if (query.ProjectId is { } projectId)
+            joinQuery = joinQuery.Where(x => x.Definition.ProjectId == projectId);
+
         var sortedQuery = ApplyDefinitionsSort(joinQuery, query.Sort.SortBy, query.Sort.SortOrder);
 
         var total = await joinQuery.CountAsync(ct).ConfigureAwait(false);

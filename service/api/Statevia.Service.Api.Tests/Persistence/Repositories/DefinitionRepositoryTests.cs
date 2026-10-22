@@ -275,6 +275,58 @@ public sealed class DefinitionRepositoryTests
         Assert.Equal(defId1, items[0].Detail.Definition.DefinitionId);
     }
 
+    /// <summary>projectId 指定は所属 Project の中だけを返す。未所属 Project は空。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_ProjectId_KeepsOnlyMemberProject()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var memberProjectId = Guid.NewGuid();
+        var otherProjectId = Guid.NewGuid();
+        var memberDefinitionId = Guid.NewGuid();
+        var otherDefinitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, memberProjectId);
+            ctx.Projects.Add(new ProjectRow
+            {
+                ProjectId = otherProjectId,
+                TenantId = OwnerTenantId,
+                Slug = "other",
+                DisplayName = "other",
+                CreatedAt = DateTime.UtcNow
+            });
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, memberProjectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, memberDefinitionId, "member", memberProjectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, otherDefinitionId, "other", otherProjectId);
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var memberQuery = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: memberProjectId);
+        var otherQuery = memberQuery with { ProjectId = otherProjectId };
+
+        // Act
+        var (memberTotal, memberItems) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, memberQuery, default);
+        var (otherTotal, otherItems) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, otherQuery, default);
+
+        // Assert
+        Assert.Equal(1, memberTotal);
+        Assert.Equal(memberDefinitionId, Assert.Single(memberItems).Detail.Definition.DefinitionId);
+        Assert.Equal(0, otherTotal);
+        Assert.Empty(otherItems);
+    }
+
     /// <summary>
     /// 削除済み定義は ForApi では取得できないが ForExecution では版を取得できる。
     /// </summary>

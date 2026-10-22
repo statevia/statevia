@@ -200,7 +200,7 @@ public sealed class DefinitionServiceTests
         // Arrange
         var defGuid = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var inDb = new InMemoryTestDatabase();
-        _ = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var projectId = await SeedDefaultTenantAndProjectAsync(inDb.Options);
         var definitionsRepo = TestRepositoryFactory.CreateDefinitionRepository();
 
         // Act
@@ -210,12 +210,18 @@ public sealed class DefinitionServiceTests
 
         var sut = CreateDefinitionService(inDb, display, compiler, definitionsRepo, idGen);
 
-        var request = new CreateDefinitionRequest { Name = "my-def", Yaml = "workflow:\n  name: x\nstates: {}" };
+        var request = new CreateDefinitionRequest
+        {
+            Name = "my-def",
+            Yaml = "workflow:\n  name: x\nstates: {}",
+            ProjectId = projectId
+        };
 
         // Assert
         var res = await sut.CreateAsync(request, CancellationToken.None);
         Assert.Equal("DEF-DISP", res.DisplayId);
         Assert.Equal(defGuid, res.ResourceId);
+        Assert.Equal(projectId, res.ProjectId);
 
         await using var verifyDb = new CoreDbContext(inDb.Options);
         var definition = await verifyDb.Definitions.FirstOrDefaultAsync(x => x.DefinitionId == defGuid);
@@ -223,8 +229,90 @@ public sealed class DefinitionServiceTests
         Assert.NotNull(definition);
         Assert.NotNull(version);
         Assert.Equal("my-def", definition.Name);
+        Assert.Equal(projectId, definition.ProjectId);
         Assert.Equal(1, definition.LatestVersion);
         Assert.Equal("{\"nodes\":[]}", version.CompiledJson);
+    }
+
+    /// <summary>未所属 Project への作成は 404。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenNotProjectMember_ThrowsNotFound()
+    {
+        // Arrange
+        using var inDb = new InMemoryTestDatabase();
+        _ = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var otherProjectId = Guid.NewGuid();
+        await using (var ctx = new CoreDbContext(inDb.Options))
+        {
+            ctx.Projects.Add(new ProjectRow
+            {
+                ProjectId = otherProjectId,
+                TenantId = TestTenantIds.DefaultTenantId,
+                Slug = "other",
+                DisplayName = "other",
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var sut = CreateDefinitionService(
+            inDb,
+            new StubDisplayIdService(),
+            new StubCompiler(compiledJson: "{}"),
+            TestRepositoryFactory.CreateDefinitionRepository(),
+            new FixedIdGenerator(Guid.NewGuid()),
+            new DefinitionServiceTestOverrides
+            {
+                ProjectAuth = new ProjectAuthorizationService(
+                    new ProjectRepository(new DefaultIdGenerator()),
+                    new FixedTenantContextAccessor(TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
+                    new DenyTenantAdminAuthorization())
+            });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sut.CreateAsync(
+                new CreateDefinitionRequest
+                {
+                    Name = "my-def",
+                    Yaml = "workflow:\n  name: x\nstates: {}",
+                    ProjectId = otherProjectId
+                },
+                CancellationToken.None));
+    }
+
+    /// <summary>reader の作成は 403。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenReader_ThrowsForbidden()
+    {
+        // Arrange
+        using var inDb = new InMemoryTestDatabase();
+        var projectId = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var sut = CreateDefinitionService(
+            inDb,
+            new StubDisplayIdService(),
+            new StubCompiler(compiledJson: "{}"),
+            TestRepositoryFactory.CreateDefinitionRepository(),
+            new FixedIdGenerator(Guid.NewGuid()),
+            new DefinitionServiceTestOverrides
+            {
+                ProjectAuth = new ProjectAuthorizationService(
+                    new ProjectRepository(new DefaultIdGenerator()),
+                    new FixedTenantContextAccessor(TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
+                    new DenyTenantAdminAuthorization())
+            });
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.CreateAsync(
+                new CreateDefinitionRequest
+                {
+                    Name = "my-def",
+                    Yaml = "workflow:\n  name: x\nstates: {}",
+                    ProjectId = projectId
+                },
+                CancellationToken.None));
+        Assert.Equal("PROJECT_ACCESS_DENIED", ex.Code);
     }
 
     /// <summary>
@@ -236,7 +324,7 @@ public sealed class DefinitionServiceTests
         // Arrange
         var defGuid = Guid.Parse("22222222-2222-2222-2222-222222222222");
         using var inDb = new InMemoryTestDatabase();
-        _ = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var projectId = await SeedDefaultTenantAndProjectAsync(inDb.Options);
         var display = new PersistingStubDisplayIdService { AllocateValue = "DEF-PARTIAL" };
         var compiler = new StubCompiler(compiledJson: "{}");
         var idGen = new FixedIdGenerator(defGuid);
@@ -249,7 +337,12 @@ public sealed class DefinitionServiceTests
                 AddWithInitialVersionException = new InvalidOperationException("Simulated definition insert failure.")
             },
             idGen);
-        var request = new CreateDefinitionRequest { Name = "my-def", Yaml = "workflow:\n  name: x\nstates: {}" };
+        var request = new CreateDefinitionRequest
+        {
+            Name = "my-def",
+            Yaml = "workflow:\n  name: x\nstates: {}",
+            ProjectId = projectId
+        };
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -304,6 +397,7 @@ public sealed class DefinitionServiceTests
 
         // CreatedAt 昇順
         Assert.Equal(def1.ToString(), page.Items[0].DisplayId);
+        Assert.Equal(projectId, page.Items[0].ProjectId);
         Assert.Equal("DISP-B", page.Items[1].DisplayId);
     }
 
@@ -477,7 +571,7 @@ public sealed class DefinitionServiceTests
         var compiler = new ThrowingCompiler(new ArgumentException("yaml parse failed"));
         var idGen = new FixedIdGenerator(Guid.NewGuid());
         var sut = CreateDefinitionService(inDb, display, compiler, definitionsRepo, idGen);
-        var request = new CreateDefinitionRequest { Name = "def", Yaml = "invalid: [" };
+        var request = new CreateDefinitionRequest { Name = "def", Yaml = "invalid: [", ProjectId = Guid.NewGuid() };
 
         // Act
         var ex = await Assert.ThrowsAsync<ApiValidationException>(() => sut.CreateAsync(request, CancellationToken.None));
@@ -503,7 +597,7 @@ public sealed class DefinitionServiceTests
             ])));
         var idGen = new FixedIdGenerator(Guid.NewGuid());
         var sut = CreateDefinitionService(inDb, display, compiler, definitionsRepo, idGen);
-        var request = new CreateDefinitionRequest { Name = "def", Yaml = "workflow:\n  name: A2" };
+        var request = new CreateDefinitionRequest { Name = "def", Yaml = "workflow:\n  name: A2", ProjectId = Guid.NewGuid() };
 
         // Act
         var ex = await Assert.ThrowsAsync<ApiValidationException>(() => sut.CreateAsync(request, CancellationToken.None));
@@ -687,6 +781,7 @@ public sealed class DefinitionServiceTests
                       Completed:
                         end: true
                 """,
+            ProjectId = Guid.NewGuid(),
         };
 
         // Act
