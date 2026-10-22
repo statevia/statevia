@@ -185,9 +185,9 @@
 - SonarQube MCP 作業: `.cursor/skills/sonarqube-mcp-ops/SKILL.md`
 - Serena MCP（プロジェクト別 MCP の UI トグル切替）: `.cursor/skills/serena-mcp-project-switch/SKILL.md`
 - Serena MCP（調査・設計前調査・実装でのシンボル活用）: `.cursor/skills/serena-workflow-research-impl/SKILL.md`
-- Serena MCP 運用仕様: `.spec/archive/specs/serena-mcp-project-toggle/`
+- Serena MCP 旧仕様（参照のみ。現行は `serena-csharp` と `serena-ui`）: `.spec/archive/specs/serena-mcp-project-toggle/`
 
-明示的に Serena を切り替えるチャットコマンド: `/serena-project-csharp`（C# 既定）、`/serena-project-engine`、`/serena-project-api`、`/serena-project-ui` 等（`.cursor/commands/`）。コンポーネント別は切り戻し用。切替は `activate_project` ではなく Cursor の MCP トグル（対象 `serena-*` を On、他を Off）。
+明示的に Serena を切り替えるチャットコマンド: `/serena-project-csharp`（C#）、`/serena-project-ui`（UI）（`.cursor/commands/`）。切替は `activate_project` ではなく Cursor の MCP トグル（対象を On、もう一方を Off）。
 
 Plan の設計を `.spec/specs/` に書き起こすチャットコマンド: `/spec-from-plan-design`（`.cursor/commands/spec-from-plan-design.md`）。
 
