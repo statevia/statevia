@@ -32,3 +32,28 @@ public sealed class ProjectAccessRow
 
     public DateTime CreatedAt { get; set; }
 }
+
+/// <summary>メンバー画面用の主体。表示は <see cref="DisplayName"/>。Principal UUID は API 識別子。</summary>
+public sealed class ProjectPrincipalLabel
+{
+    public Guid PrincipalId { get; set; }
+
+    /// <summary>ユーザー表示名または API キー名。</summary>
+    public string DisplayName { get; set; } = "";
+
+    public PrincipalType PrincipalType { get; set; }
+}
+
+/// <summary>Project メンバーと表示名。</summary>
+public sealed class ProjectMemberDetail
+{
+    public Guid PrincipalId { get; set; }
+
+    public string DisplayName { get; set; } = "";
+
+    public PrincipalType PrincipalType { get; set; }
+
+    public ProjectAccessRole Role { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+}

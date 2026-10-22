@@ -211,6 +211,59 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ProjectMemberDetail>> ListMemberDetailsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct)
+    {
+        var db = uow.GetDb();
+        var rows = await (
+            from access in db.ProjectAccesses.AsNoTracking()
+            join principal in db.Principals.AsNoTracking()
+                on access.PrincipalId equals principal.PrincipalId
+            where access.ProjectId == projectId && principal.TenantId == tenantId
+            orderby access.CreatedAt, principal.DisplayName
+            select new ProjectMemberDetail
+            {
+                PrincipalId = access.PrincipalId,
+                DisplayName = principal.DisplayName,
+                PrincipalType = principal.PrincipalType,
+                Role = access.Role,
+                CreatedAt = access.CreatedAt
+            }).ToListAsync(ct).ConfigureAwait(false);
+        return rows;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProjectPrincipalLabel>> ListGrantCandidatesAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var db = uow.GetDb();
+        var apiKeyPrincipalIds = db.ApiKeys.Select(key => key.PrincipalId);
+        var rows = await db.Principals.AsNoTracking()
+            .Where(principal => principal.TenantId == tenantId
+                && principal.DeletedAt == null
+                && principal.IsActive
+                && !principal.IsSystem
+                && (principal.PrincipalType == PrincipalType.User
+                    || apiKeyPrincipalIds.Contains(principal.PrincipalId)))
+            .OrderBy(principal => principal.DisplayName)
+            .ThenBy(principal => principal.PrincipalId)
+            .Select(principal => new ProjectPrincipalLabel
+            {
+                PrincipalId = principal.PrincipalId,
+                DisplayName = principal.DisplayName,
+                PrincipalType = principal.PrincipalType
+            })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        return rows;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ProjectAccessRow>> ListMembersAsync(
         ICoreUnitOfWork uow,
         Guid projectId,

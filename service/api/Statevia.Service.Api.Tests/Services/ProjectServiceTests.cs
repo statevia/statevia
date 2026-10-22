@@ -344,6 +344,83 @@ public sealed class ProjectServiceTests
                 CancellationToken.None));
     }
 
+    /// <summary>メンバー一覧は表示名と種別を返す。</summary>
+    [Fact]
+    public async Task ListMembersAsync_Admin_ReturnsDisplayName()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act
+        var members = await sut.ListMembersAsync(projectId, CancellationToken.None);
+
+        // Assert
+        var member = Assert.Single(members);
+        Assert.Equal(CreatorPrincipalId, member.PrincipalId);
+        Assert.Equal("principal", member.DisplayName);
+        Assert.Equal("user", member.Kind);
+        Assert.Equal("admin", member.Role);
+    }
+
+    /// <summary>付与候補は同一テナントのユーザーと API キーだけ。</summary>
+    [Fact]
+    public async Task ListGrantCandidatesAsync_IncludesUsersAndApiKeysOnly()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var projectId = await SeedTenantWithProjectAsync(db, grantCreatorAdmin: true);
+        var apiKeyPrincipalId = Guid.Parse("44444444-4444-4444-8444-444444444444");
+        var serviceAccountId = Guid.Parse("55555555-5555-4555-8555-555555555555");
+        var outsiderId = Guid.Parse("77777777-7777-4777-8777-777777777777");
+        var otherTenantId = Guid.Parse("66666666-6666-4666-8666-666666666666");
+        var now = DateTime.UtcNow;
+        await using (var seed = new CoreDbContext(db.Options))
+        {
+            seed.Tenants.Add(new TenantRow
+            {
+                TenantId = otherTenantId,
+                TenantKey = "other",
+                DisplayName = "Other",
+                Lifecycle = TenantLifecycle.Active,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            AddServicePrincipal(seed, TestTenantIds.DefaultTenantId, apiKeyPrincipalId, "ci-key", now);
+            AddServicePrincipal(seed, TestTenantIds.DefaultTenantId, serviceAccountId, "worker", now);
+            ProjectTestData.AddPrincipal(seed, otherTenantId, outsiderId);
+            seed.ApiKeys.Add(new ApiKeyRow
+            {
+                ApiKeyId = Guid.NewGuid(),
+                TenantId = TestTenantIds.DefaultTenantId,
+                PrincipalId = apiKeyPrincipalId,
+                KeyPrefix = "sv_test",
+                KeyHash = "hash",
+                AllowedScopesJson = "[]",
+                CreatedAt = now
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var sut = CreateSut(db, CreatorPrincipalId);
+
+        // Act
+        var candidates = await sut.ListGrantCandidatesAsync(projectId, CancellationToken.None);
+
+        // Assert
+        Assert.Contains(candidates, candidate =>
+            candidate.PrincipalId == CreatorPrincipalId
+            && candidate.DisplayName == "principal"
+            && candidate.Kind == "user");
+        Assert.Contains(candidates, candidate =>
+            candidate.PrincipalId == apiKeyPrincipalId
+            && candidate.DisplayName == "ci-key"
+            && candidate.Kind == "apiKey");
+        Assert.DoesNotContain(candidates, candidate => candidate.PrincipalId == serviceAccountId);
+        Assert.DoesNotContain(candidates, candidate => candidate.PrincipalId == outsiderId);
+    }
+
     /// <summary>reader はメンバー一覧を取れない。</summary>
     [Fact]
     public async Task ListMembersAsync_Reader_ThrowsForbidden()
@@ -431,6 +508,26 @@ public sealed class ProjectServiceTests
             executor,
             admin,
             logger ?? NullLogger<ProjectService>.Instance);
+    }
+
+    private static void AddServicePrincipal(
+        CoreDbContext seed,
+        Guid tenantId,
+        Guid principalId,
+        string displayName,
+        DateTime now)
+    {
+        seed.Principals.Add(new PrincipalRow
+        {
+            PrincipalId = principalId,
+            TenantId = tenantId,
+            PrincipalScope = PrincipalScope.Tenant,
+            PrincipalType = PrincipalType.ServiceAccount,
+            DisplayName = displayName,
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
     }
 
     private static async Task<Guid> SeedTenantWithProjectAsync(InMemoryTestDatabase db, bool grantCreatorAdmin)

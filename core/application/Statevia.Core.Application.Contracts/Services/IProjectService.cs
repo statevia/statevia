@@ -22,6 +22,9 @@ public interface IProjectService
     /// <summary><c>project.admin</c> または <c>tenant.admin</c> がメンバーを一覧する。</summary>
     Task<IReadOnlyList<ProjectMemberResponse>> ListMembersAsync(Guid projectId, CancellationToken ct);
 
+    /// <summary>同一テナントのユーザーと API キーを、付与候補として名前付きで返す。</summary>
+    Task<IReadOnlyList<ProjectGrantCandidateResponse>> ListGrantCandidatesAsync(Guid projectId, CancellationToken ct);
+
     /// <summary>メンバーを付与またはロール変更する。自己昇格を含む。</summary>
     Task UpsertMemberAsync(
         Guid projectId,
@@ -111,9 +114,17 @@ public sealed class ProjectResponse
 /// <summary>Project メンバー 1 件。</summary>
 public sealed class ProjectMemberResponse
 {
-    /// <summary>付与先 Principal。</summary>
+    /// <summary>付与先 Principal。画面では出さず、付与 API の識別子に使う。</summary>
     [JsonPropertyName("principalId")]
     public Guid PrincipalId { get; set; }
+
+    /// <summary>ユーザー表示名または API キー名。</summary>
+    [JsonPropertyName("displayName")]
+    public string DisplayName { get; set; } = "";
+
+    /// <summary><c>user</c> / <c>apiKey</c> / <c>system</c>。</summary>
+    [JsonPropertyName("kind")]
+    public string Kind { get; set; } = "";
 
     /// <summary>実効ロール（storage 文字列）。</summary>
     [JsonPropertyName("role")]
@@ -122,6 +133,22 @@ public sealed class ProjectMemberResponse
     /// <summary>付与日時（UTC）。</summary>
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>付与候補。ロールは持たない。</summary>
+public sealed class ProjectGrantCandidateResponse
+{
+    /// <summary>付与 API の識別子。画面には出さない。</summary>
+    [JsonPropertyName("principalId")]
+    public Guid PrincipalId { get; set; }
+
+    /// <summary>ユーザー表示名または API キー名。</summary>
+    [JsonPropertyName("displayName")]
+    public string DisplayName { get; set; } = "";
+
+    /// <summary><c>user</c> または <c>apiKey</c>。</summary>
+    [JsonPropertyName("kind")]
+    public string Kind { get; set; } = "";
 }
 
 /// <summary>PUT /v1/projects/{id}/members/{principalId} の本文。</summary>

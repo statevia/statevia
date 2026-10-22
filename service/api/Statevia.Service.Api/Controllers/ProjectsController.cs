@@ -54,6 +54,14 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
         CancellationToken ct) =>
         Ok(await projects.ListMembersAsync(projectId, ct).ConfigureAwait(false));
 
+    /// <summary>GET /v1/projects/{projectId}/member-candidates — 付与できるユーザーと API キー。</summary>
+    [HttpGet("{projectId:guid}/member-candidates")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProjectGrantCandidateResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<ProjectGrantCandidateResponse>>> ListMemberCandidates(
+        Guid projectId,
+        CancellationToken ct) =>
+        Ok(await projects.ListGrantCandidatesAsync(projectId, ct).ConfigureAwait(false));
+
     /// <summary>PUT /v1/projects/{projectId}/members/{principalId} — 付与またはロール変更。</summary>
     [HttpPut("{projectId:guid}/members/{principalId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

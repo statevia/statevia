@@ -110,6 +110,11 @@ public sealed class ProjectsControllerTests
         public Task<IReadOnlyList<ProjectMemberResponse>> ListMembersAsync(Guid projectId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ProjectMemberResponse>>([]);
 
+        public Task<IReadOnlyList<ProjectGrantCandidateResponse>> ListGrantCandidatesAsync(
+            Guid projectId,
+            CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<ProjectGrantCandidateResponse>>([]);
+
         public Task UpsertMemberAsync(
             Guid projectId,
             Guid principalId,

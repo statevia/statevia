@@ -84,6 +84,22 @@ public interface IProjectRepository
         Guid tenantId,
         CancellationToken ct);
 
+    /// <summary>Project のメンバーを表示名付きで作成日時順に返す。Principal 行が無いメンバーは含めない。</summary>
+    Task<IReadOnlyList<ProjectMemberDetail>> ListMemberDetailsAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct);
+
+    /// <summary>
+    /// 付与候補。削除されていない有効なユーザー Principal と、API キーを持つ Principal。
+    /// System と API キーでないサービスアカウントは含めない。
+    /// </summary>
+    Task<IReadOnlyList<ProjectPrincipalLabel>> ListGrantCandidatesAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        CancellationToken ct);
+
     /// <summary>Project のメンバー行を作成日時順で返す。</summary>
     Task<IReadOnlyList<ProjectAccessRow>> ListMembersAsync(
         ICoreUnitOfWork uow,

@@ -158,13 +158,44 @@ internal sealed class ProjectService(
                 await projectAuth
                     .EnsureCanManageMembersAsync(uow, tenantId, projectId, innerCt)
                     .ConfigureAwait(false);
-                var members = await projects.ListMembersAsync(uow, projectId, innerCt).ConfigureAwait(false);
+                var members = await projects
+                    .ListMemberDetailsAsync(uow, tenantId, projectId, innerCt)
+                    .ConfigureAwait(false);
                 return (IReadOnlyList<ProjectMemberResponse>)members
                     .Select(member => new ProjectMemberResponse
                     {
                         PrincipalId = member.PrincipalId,
+                        DisplayName = member.DisplayName,
+                        Kind = ToMemberKind(member.PrincipalType),
                         Role = ProjectAccessRolePolicy.ToStorageValue(member.Role),
                         CreatedAt = member.CreatedAt
+                    })
+                    .ToList();
+            },
+            ct);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ProjectGrantCandidateResponse>> ListGrantCandidatesAsync(
+        Guid projectId,
+        CancellationToken ct)
+    {
+        var tenantId = tenantContext.GetRequiredTenantId();
+        return executor.ExecuteReadOnlyAsync(
+            async (uow, innerCt) =>
+            {
+                await projectAuth
+                    .EnsureCanManageMembersAsync(uow, tenantId, projectId, innerCt)
+                    .ConfigureAwait(false);
+                var candidates = await projects
+                    .ListGrantCandidatesAsync(uow, tenantId, innerCt)
+                    .ConfigureAwait(false);
+                return (IReadOnlyList<ProjectGrantCandidateResponse>)candidates
+                    .Select(candidate => new ProjectGrantCandidateResponse
+                    {
+                        PrincipalId = candidate.PrincipalId,
+                        DisplayName = candidate.DisplayName,
+                        Kind = ToMemberKind(candidate.PrincipalType)
                     })
                     .ToList();
             },
@@ -357,6 +388,15 @@ internal sealed class ProjectService(
             "The last project admin can only be removed by a tenant administrator.",
             new { field = "principalId" });
     }
+
+    /// <summary>画面の種別。ユーザーと API キー以外は system。</summary>
+    private static string ToMemberKind(PrincipalType principalType) => principalType switch
+    {
+        PrincipalType.User => "user",
+        PrincipalType.ServiceAccount => "apiKey",
+        PrincipalType.System => "system",
+        _ => throw new ArgumentOutOfRangeException(nameof(principalType), principalType, null)
+    };
 
     private static ProjectAccessRole ParseStorageRole(string role)
     {
