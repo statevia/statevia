@@ -200,6 +200,58 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal("Completed", items[0].Execution.Status);
     }
 
+    /// <summary>projectId は所属するその Project の実行だけを返し、別 Project は 0 件。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_FiltersByProjectId()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var tenantId = TestTenantIds.T1TenantId;
+        var definitionId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var otherProjectId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            EnsureTenant(ctx, tenantId);
+            ProjectTestData.AddDefaultProject(ctx, tenantId, "t", projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, tenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, tenantId, definitionId, "def", projectId);
+            ctx.Executions.Add(CreateExecution(Guid.NewGuid(), tenantId, definitionId, DateTime.UtcNow));
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var matched = await repo.ListWithDisplayIdsPageAsync(
+            uow, tenantId, principalId,
+            new ExecutionListPageQuery(
+                Page: new PageQuery(0, 10),
+                Sort: new SortQuery(null, null),
+                StatusFilter: null,
+                DefinitionIdFilter: null,
+                NameContains: null,
+                ProjectId: projectId),
+            default);
+        var other = await repo.ListWithDisplayIdsPageAsync(
+            uow, tenantId, principalId,
+            new ExecutionListPageQuery(
+                Page: new PageQuery(0, 10),
+                Sort: new SortQuery(null, null),
+                StatusFilter: null,
+                DefinitionIdFilter: null,
+                NameContains: null,
+                ProjectId: otherProjectId),
+            default);
+
+        // Assert
+        Assert.Equal(1, matched.TotalCount);
+        Assert.Equal(0, other.TotalCount);
+    }
+
     /// <summary>definitionId で 1 件に絞り込む。</summary>
     [Fact]
     public async Task ListWithDisplayIdsPageAsync_FiltersByDefinitionId()

@@ -43,6 +43,14 @@ internal sealed class ExecutionRepository : IExecutionRepository
         if (query.DefinitionIdFilter is not null)
             joinQuery = joinQuery.Where(x => x.Execution.DefinitionId == query.DefinitionIdFilter.Value);
 
+        if (query.ProjectId is Guid projectId)
+        {
+            var projectDefinitionIds = db.Definitions.AsNoTracking()
+                .Where(definition => definition.ProjectId == projectId)
+                .Select(definition => definition.DefinitionId);
+            joinQuery = joinQuery.Where(x => projectDefinitionIds.Contains(x.Execution.DefinitionId));
+        }
+
         if (!string.IsNullOrWhiteSpace(query.NameContains))
         {
             var needle = query.NameContains.Trim();

@@ -27,6 +27,10 @@ public sealed class ExecutionListQuery
     [FromQuery(Name = "definitionId")]
     public string? DefinitionId { get; init; }
 
+    /// <summary>指定時はその Project の実行だけ。未所属は 0 件。</summary>
+    [FromQuery(Name = "projectId")]
+    public Guid? ProjectId { get; init; }
+
     /// <summary>表示 ID 部分一致または execution UUID 完全一致。</summary>
     [FromQuery(Name = "name")]
     public string? Name { get; init; }
