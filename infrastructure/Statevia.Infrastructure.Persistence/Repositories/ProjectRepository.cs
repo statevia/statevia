@@ -14,6 +14,7 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
         ICoreUnitOfWork uow,
         Guid tenantId,
         string tenantKey,
+        Guid creatorPrincipalId,
         CancellationToken ct)
     {
         var existing = await uow.GetDb().Projects
@@ -36,6 +37,8 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
             CreatedAt = now
         };
         uow.GetDb().Projects.Add(project);
+        await GrantAccessAsync(uow, project.ProjectId, creatorPrincipalId, ProjectAccessRole.Admin, ct)
+            .ConfigureAwait(false);
         return project;
     }
 
@@ -271,5 +274,47 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
 
         uow.GetDb().ProjectAccesses.Remove(existing);
         return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> BackfillDefaultProjectAdminsAsync(ICoreUnitOfWork uow, CancellationToken ct)
+    {
+        var db = uow.GetDb();
+        var now = DateTime.UtcNow;
+        // 未保存の追加は SQL の NOT EXISTS に出ない。同じ作業単位での再実行で PK が衝突しないようにする。
+        var alreadyTracked = db.ProjectAccesses.Local
+            .Select(access => (access.ProjectId, access.PrincipalId))
+            .ToHashSet();
+        var missing = await (
+                from project in db.Projects
+                join principal in db.Principals on project.TenantId equals principal.TenantId
+                where project.Slug == DefaultProjectSlug
+                    && principal.DeletedAt == null
+                    && (principal.PrincipalType == PrincipalType.User
+                        || db.ApiKeys.Any(key => key.PrincipalId == principal.PrincipalId))
+                    && !db.ProjectAccesses.Any(access =>
+                        access.ProjectId == project.ProjectId
+                        && access.PrincipalId == principal.PrincipalId)
+                select new { project.ProjectId, principal.PrincipalId })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var inserted = 0;
+        foreach (var row in missing)
+        {
+            if (!alreadyTracked.Add((row.ProjectId, row.PrincipalId)))
+                continue;
+
+            db.ProjectAccesses.Add(new ProjectAccessRow
+            {
+                ProjectId = row.ProjectId,
+                PrincipalId = row.PrincipalId,
+                Role = ProjectAccessRole.Admin,
+                CreatedAt = now
+            });
+            inserted++;
+        }
+
+        return inserted;
     }
 }

@@ -5,10 +5,21 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// <summary>projects / project_accesses 永続化。</summary>
 public interface IProjectRepository
 {
+    /// <summary>
+    /// テナントの <c>slug=default</c> を返す。無いときだけ作り、そのときだけ作成者を <c>admin</c> にする。
+    /// 既存行には呼び出し元を足さない。
+    /// </summary>
+    /// <param name="uow">作業単位。</param>
+    /// <param name="tenantId">所属テナント。</param>
+    /// <param name="tenantKey">表示名に使うテナントキー。</param>
+    /// <param name="creatorPrincipalId">新規作成時の初期 admin。同一テナントの Principal。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="ApiValidationException">作成者 Principal が同一テナントに無いとき。</exception>
     Task<ProjectRow> EnsureDefaultProjectAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
         string tenantKey,
+        Guid creatorPrincipalId,
         CancellationToken ct);
 
     /// <summary>当該 Principal のメンバー行だけを実効ロールにする。所属テナントが違う、またはメンバー行が無いときは null。</summary>
@@ -108,4 +119,14 @@ public interface IProjectRepository
         Guid projectId,
         Guid principalId,
         CancellationToken ct);
+
+    /// <summary>
+    /// 既存 <c>default</c> に、削除されていないユーザー Principal と API キー Principal を <c>admin</c> で足す。
+    /// 既にあるメンバー行は上書きしない。再実行で増えない。System と API キーでないサービスアカウントは対象外。
+    /// </summary>
+    /// <param name="uow">作業単位。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>挿入した行数。</returns>
+    /// <remarks>本番の一度きり適用はマイグレーション <c>BackfillDefaultProjectAdmins</c> の SQL。述語はそちらと揃える。</remarks>
+    Task<int> BackfillDefaultProjectAdminsAsync(ICoreUnitOfWork uow, CancellationToken ct);
 }
