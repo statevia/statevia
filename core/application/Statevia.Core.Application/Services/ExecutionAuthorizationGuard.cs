@@ -6,7 +6,7 @@ namespace Statevia.Core.Application.Services;
 /// <remarks>
 /// <para>各ドメインサービスの入口から呼び、認可呼び出し箇所を一覧可能にする。</para>
 /// <para>定義受理時のプロジェクト実行権と、Runtime / mutation snapshot ベースの read/write を担う。</para>
-/// <para>User / ServiceAccount の Start では、プロジェクト実行権のあとにリソース許可を評価する。System は対象外。</para>
+/// <para>User / ServiceAccount の閲覧・開始・再開・取消では、プロジェクト権限のあとにリソース許可を評価する。System は対象外。</para>
 /// </remarks>
 /// <param name="runtimeAuth">Runtime 権限。</param>
 /// <param name="mutationAuth">実行ミューテーション認可。</param>
@@ -75,6 +75,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="definitionId">定義 ID。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
     public async Task EnsureCanReadOnDefinitionAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -90,6 +91,7 @@ internal sealed class ExecutionAuthorizationGuard(
         await projectAuth
             .EnsureCanReadAsync(uow, tenantId, projectId.Value, ct)
             .ConfigureAwait(false);
+        await resourceGrantAuth.EnsureAsync(projectId.Value, definitionId, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -128,6 +130,32 @@ internal sealed class ExecutionAuthorizationGuard(
         await resourceGrantAuth
             .EnsureForPrincipalAsync(principalId, projectId, definitionId, ct)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>既存 execution の Resume / Cancel に、生存中の許可集合を要求する。</summary>
+    /// <remarks>削除済み定義でも所属 project を解決する。セキュリティ snapshot は見ない。</remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">論理定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義行が無いとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    public async Task EnsureResourceGrantForExistingExecutionAsync(
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct)
+    {
+        var projectId = await executor.ExecuteReadOnlyAsync(
+                (uow, innerCt) => definitions.ResolveProjectIdIncludingDeletedAsync(
+                    uow,
+                    tenantId,
+                    definitionId,
+                    innerCt),
+                ct)
+            .ConfigureAwait(false);
+        if (projectId is null)
+            throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
+
+        await resourceGrantAuth.EnsureAsync(projectId.Value, definitionId, ct).ConfigureAwait(false);
     }
 
     /// <summary>定義の所属 project を解決する。無ければ 404。</summary>

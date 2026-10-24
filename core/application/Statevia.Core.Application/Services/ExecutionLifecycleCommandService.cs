@@ -659,6 +659,8 @@ internal sealed class ExecutionLifecycleCommandService(
             throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
 
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureResourceGrantForExistingExecutionAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
 
         // HTTP 受理経路: キューがある場合は Engine を回さず Cancel work item を投入する。
         if (workQueue is not null

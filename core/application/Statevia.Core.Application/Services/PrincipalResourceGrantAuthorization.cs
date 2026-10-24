@@ -1,8 +1,8 @@
 namespace Statevia.Core.Application.Services;
 
-/// <summary>User / ServiceAccount の Start に対する Principal リソース許可を評価する。</summary>
+/// <summary>User / ServiceAccount の閲覧・開始・再開・取消に対する Principal リソース許可を評価する。</summary>
 /// <remarks>
-/// <para><see cref="ExecutionAuthorizationGuard"/> から呼ぶ。継承子 Start かどうかの判断は呼び出し側が行う。</para>
+/// <para>定義取得、<see cref="ExecutionAuthorizationGuard"/>、Resume、Cancel から呼ぶ。継承子 Start かどうかの判断は呼び出し側が行う。</para>
 /// <para>種別の行が無いとその種別は追加制限なし。両方あるときは AND。</para>
 /// </remarks>
 /// <param name="resourceGrants">Principal の実行リソース許可。</param>

@@ -36,6 +36,17 @@ internal sealed class ExecutionRepository : IExecutionRepository
     {
         var db = uow.GetDb();
         var joinQuery = QueryExecutionsWithDisplayIds(db, tenantId, principalId);
+        var grantScope = await ResourceGrantListScope.LoadAsync(db, principalId, ct).ConfigureAwait(false);
+        if (grantScope.ProjectIds is { } grantedProjectIds)
+        {
+            var grantedDefinitionIds = db.Definitions.AsNoTracking()
+                .Where(definition => grantedProjectIds.Contains(definition.ProjectId))
+                .Select(definition => definition.DefinitionId);
+            joinQuery = joinQuery.Where(x => grantedDefinitionIds.Contains(x.Execution.DefinitionId));
+        }
+
+        if (grantScope.DefinitionIds is { } grantedDefinitionIdList)
+            joinQuery = joinQuery.Where(x => grantedDefinitionIdList.Contains(x.Execution.DefinitionId));
 
         if (!string.IsNullOrWhiteSpace(query.StatusFilter))
             joinQuery = joinQuery.Where(x => x.Execution.Status == query.StatusFilter);

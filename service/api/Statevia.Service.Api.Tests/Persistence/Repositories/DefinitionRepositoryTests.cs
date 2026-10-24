@@ -327,6 +327,148 @@ public sealed class DefinitionRepositoryTests
         Assert.Empty(otherItems);
     }
 
+    /// <summary>definition 許可の外は一覧件数から外す。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_DefinitionGrant_OmitsOtherDefinitions()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var allowedId = Guid.NewGuid();
+        var deniedId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, allowedId, "allowed", projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, deniedId, "denied", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = allowedId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: projectId);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(1, total);
+        Assert.Equal(allowedId, Assert.Single(items).Detail.Definition.DefinitionId);
+    }
+
+    /// <summary>project 許可と definition 許可の両方があるときは、片方だけでは一覧に出さない。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_BothGrantKinds_RequiresBoth()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, definitionId, "def", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Project,
+                ResourceId = projectId,
+                CreatedAt = DateTime.UtcNow
+            });
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: projectId);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(0, total);
+        Assert.Empty(items);
+    }
+
+    /// <summary>System の許可行は一覧を狭めない。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_SystemPrincipal_IgnoresGrants()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            ctx.Set<PrincipalRow>().Local.Single(row => row.PrincipalId == principalId).PrincipalType = PrincipalType.System;
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, definitionId, "def", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(1, total);
+        Assert.Equal(definitionId, Assert.Single(items).Detail.Definition.DefinitionId);
+    }
+
     /// <summary>
     /// 削除済み定義は ForApi では取得できないが ForExecution では版を取得できる。
     /// </summary>

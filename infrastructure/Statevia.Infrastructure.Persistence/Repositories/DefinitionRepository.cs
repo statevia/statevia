@@ -170,7 +170,13 @@ internal sealed class DefinitionRepository : IDefinitionRepository
         CancellationToken ct)
     {
         _ = tenantId;
-        var joinQuery = QueryDefinitionsWithDisplayIds(uow.GetDb(), principalId, ProjectAccessRole.Reader);
+        var db = uow.GetDb();
+        var joinQuery = QueryDefinitionsWithDisplayIds(db, principalId, ProjectAccessRole.Reader);
+        var grantScope = await ResourceGrantListScope.LoadAsync(db, principalId, ct).ConfigureAwait(false);
+        if (grantScope.ProjectIds is { } projectIds)
+            joinQuery = joinQuery.Where(x => projectIds.Contains(x.Definition.ProjectId));
+        if (grantScope.DefinitionIds is { } definitionIds)
+            joinQuery = joinQuery.Where(x => definitionIds.Contains(x.Definition.DefinitionId));
         if (!query.IncludeDeleted)
             joinQuery = joinQuery.Where(x => x.Definition.DeletedAt == null);
 

@@ -252,6 +252,54 @@ public sealed class ExecutionRepositoryTests
         Assert.Equal(0, other.TotalCount);
     }
 
+    /// <summary>project 許可の外の実行は一覧件数から外す。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_ProjectGrant_OmitsOtherProject()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionRepository();
+        var tenantId = TestTenantIds.T1TenantId;
+        var definitionId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            EnsureTenant(ctx, tenantId);
+            ProjectTestData.AddDefaultProject(ctx, tenantId, "t", projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, tenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, tenantId, definitionId, "def", projectId);
+            ctx.Executions.Add(CreateExecution(Guid.NewGuid(), tenantId, definitionId, DateTime.UtcNow));
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = tenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Project,
+                ResourceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var page = await repo.ListWithDisplayIdsPageAsync(
+            uow, tenantId, principalId,
+            new ExecutionListPageQuery(
+                Page: new PageQuery(0, 10),
+                Sort: new SortQuery(null, null),
+                StatusFilter: null,
+                DefinitionIdFilter: null,
+                NameContains: null),
+            default);
+
+        // Assert
+        Assert.Equal(0, page.TotalCount);
+        Assert.Empty(page.Items);
+    }
+
     /// <summary>definitionId で 1 件に絞り込む。</summary>
     [Fact]
     public async Task ListWithDisplayIdsPageAsync_FiltersByDefinitionId()

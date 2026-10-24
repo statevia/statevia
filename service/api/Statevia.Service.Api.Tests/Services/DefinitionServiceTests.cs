@@ -33,7 +33,12 @@ public sealed class DefinitionServiceTests
                 TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
             overrides?.RuntimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             idGen,
-            executor);
+            executor,
+            overrides?.ResourceGrants ?? new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                overrides?.TenantAccessor ?? new FixedTenantContextAccessor(
+                    TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
+                new MissingPrincipalDataAccess()));
     }
 
     /// <summary>定義サービスのテストで差し替える認可。</summary>
@@ -47,6 +52,9 @@ public sealed class DefinitionServiceTests
 
         /// <summary>実行権限。未指定時は常に許可する。</summary>
         public IRuntimePermissionAuthorization? RuntimeAuth { get; init; }
+
+        /// <summary>実行リソース許可。未指定時は追加制限なし。</summary>
+        public PrincipalResourceGrantAuthorization? ResourceGrants { get; init; }
     }
 
     private static async Task<Guid> SeedDefaultTenantAndProjectAsync(DbContextOptions<CoreDbContext> options)
@@ -523,6 +531,54 @@ public sealed class DefinitionServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(guid.ToString(), CancellationToken.None));
+    }
+
+    /// <summary>許可集合の外の定義 GET は RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task GetAsync_WhenDefinitionOutsideGrant_ThrowsForbidden()
+    {
+        // Arrange
+        using var inDb = new InMemoryTestDatabase();
+        var projectId = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var guid = Guid.NewGuid();
+        await using (var ctx = new CoreDbContext(inDb.Options))
+        {
+            DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.DefaultTenantId, guid, "def", projectId);
+            await ctx.SaveChangesAsync();
+        }
+
+        var display = new StubDisplayIdService();
+        display.ResolveMap["definition|" + guid] = guid;
+        var tenant = new FixedTenantContextAccessor(
+            TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId });
+        var sut = CreateDefinitionService(
+            inDb,
+            display,
+            new StubCompiler("{}"),
+            TestRepositoryFactory.CreateDefinitionRepository(),
+            new FixedIdGenerator(Guid.NewGuid()),
+            new DefinitionServiceTestOverrides
+            {
+                TenantAccessor = tenant,
+                ResourceGrants = new PrincipalResourceGrantAuthorization(
+                    new StaticGrantStore(
+                    [
+                        new PrincipalResourceGrantRow
+                        {
+                            ResourceKind = PrincipalResourceGrantKinds.Definition,
+                            ResourceId = Guid.NewGuid()
+                        }
+                    ]),
+                    tenant,
+                    new UserPrincipalDataAccess())
+            });
+
+        // Act
+        var act = () => sut.GetAsync(guid.ToString(), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
     }
 
     /// <summary>
@@ -1018,6 +1074,86 @@ public sealed class DefinitionServiceTests
         // Assert
         Assert.Equal("PERMISSION_DENIED", ex.Code);
         Assert.Equal(0, compiler.CallCount);
+    }
+
+    /// <summary>指定した許可行だけを返す。</summary>
+    private sealed class StaticGrantStore(IReadOnlyList<PrincipalResourceGrantRow> rows) : IPrincipalResourceGrantStore
+    {
+        /// <inheritdoc />
+        public Task<IReadOnlyList<PrincipalResourceGrantRow>> ListAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult(rows);
+        }
+
+        /// <inheritdoc />
+        public Task ReplaceAsync(
+            Guid principalId,
+            IReadOnlyCollection<Guid> projectIds,
+            IReadOnlyCollection<Guid> definitionIds,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = projectIds;
+            _ = definitionIds;
+            _ = cancellationToken;
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>どの Principal も有効な User として返す。</summary>
+    private sealed class UserPrincipalDataAccess : IPrincipalDataAccess
+    {
+        /// <inheritdoc />
+        public Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            return Task.FromResult<PrincipalInfo?>(new PrincipalInfo(
+                principalId,
+                TestTenantIds.DefaultTenantId,
+                PrincipalType.User,
+                true,
+                null,
+                null));
+        }
+
+        /// <inheritdoc />
+        public Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            return Task.FromResult<TenantInfo?>(new TenantInfo(tenantId, "default", TenantLifecycle.Active));
+        }
+
+        /// <inheritdoc />
+        public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult(false);
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult<IReadOnlyList<GroupSnapshot>>([]);
+        }
     }
 
     private sealed class DenyingRuntimePermissionAuthorization : IRuntimePermissionAuthorization

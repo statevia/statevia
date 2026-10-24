@@ -197,6 +197,28 @@ public sealed class ExecutionAuthorizationGuardTests
         Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
     }
 
+    /// <summary>閲覧は許可集合の外なら RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureCanReadOnDefinitionAsync_WhenDefinitionOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureCanReadOnDefinitionAsync(
+            StubUnitOfWork.Instance,
+            sut.TenantId,
+            sut.DefinitionId,
+            CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
     /// <summary>両方の許可があるときは、片方だけでは通らない。</summary>
     [Fact]
     public async Task EnsureResourceGrantAsync_WhenBothKindsAndOneMisses_Denies()

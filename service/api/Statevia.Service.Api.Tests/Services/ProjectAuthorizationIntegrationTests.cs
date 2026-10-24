@@ -51,7 +51,11 @@ public sealed class ProjectAuthorizationIntegrationTests
             tenant,
             new AllowAllRuntimePermissionAuthorization(),
             new DefaultIdGenerator(),
-            executor);
+            executor,
+            new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                tenant,
+                new MissingPrincipalDataAccess()));
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(defId.ToString(), CancellationToken.None));
