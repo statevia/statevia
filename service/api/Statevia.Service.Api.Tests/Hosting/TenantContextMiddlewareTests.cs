@@ -128,6 +128,34 @@ public sealed class TenantContextMiddlewareTests
         Assert.Equal("UNAUTHORIZED", ex.Code);
     }
 
+    /// <summary>Project API はヘッダのみでは 401 にする。</summary>
+    [Fact]
+    public async Task InvokeAsync_HeaderOnlyOnProjectsPath_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var jwt = new JwtTokenService(Options.Create(new JwtAuthOptions()));
+        var platform = new PlatformDataAccess(database.Factory, new DefaultIdGenerator());
+        var accessor = new SettableTenantContextAccessor();
+        var nextInvoked = false;
+
+        var middleware = new TenantContextMiddleware(_ =>
+        {
+            nextInvoked = true;
+            return Task.CompletedTask;
+        }, jwt);
+
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/v1/projects";
+        context.Request.Headers[TenantRequestHeaders.HeaderName] = "default";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            middleware.InvokeAsync(context, accessor, platform));
+        Assert.False(nextInvoked);
+        Assert.Equal("UNAUTHORIZED", ex.Code);
+    }
+
     /// <summary>ログインエンドポイントはテナント解決をスキップする。</summary>
     [Fact]
     public async Task InvokeAsync_LoginPath_SkipsTenantResolution()

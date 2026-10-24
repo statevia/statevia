@@ -331,6 +331,10 @@ internal sealed class ExecutionQueryService(
                 if (execution is null)
                     throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
 
+                await authorization
+                    .EnsureCanReadOnDefinitionAsync(uow, tenantId, execution.DefinitionId, innerCt)
+                    .ConfigureAwait(false);
+
                 var snapshot = await executions.GetSnapshotByExecutionIdAsync(uow, uuid, innerCt).ConfigureAwait(false);
                 if (snapshot is null)
                     throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);

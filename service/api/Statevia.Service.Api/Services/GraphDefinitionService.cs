@@ -3,6 +3,7 @@ using System.Text.Json;
 namespace Statevia.Service.Api.Services;
 
 /// <summary>定義の compiled_json から契約の Graph Definition（nodes / edges）を組み立てる。</summary>
+/// <remarks>定義取得と同じく、Project 所属のあと実行リソース許可を見る。許可の外は 403。</remarks>
 internal sealed class GraphDefinitionService : IGraphDefinitionService
 {
     private static readonly JsonSerializerOptions CaseInsensitiveJsonSerializerOptions = new()
@@ -16,14 +17,24 @@ internal sealed class GraphDefinitionService : IGraphDefinitionService
     private readonly ITenantContextAccessor _tenantContext;
     private readonly IRuntimePermissionAuthorization _runtimeAuth;
     private readonly IProjectAuthorizationService _projectAuth;
+    private readonly PrincipalResourceGrantAuthorization _resourceGrants;
 
+    /// <summary>定義グラフサービスを生成する。</summary>
+    /// <param name="executor">読み取りトランザクション。</param>
+    /// <param name="displayIds">表示 ID 解決。</param>
+    /// <param name="definitions">定義永続化。</param>
+    /// <param name="tenantContext">テナント文脈。</param>
+    /// <param name="runtimeAuth">definitions.read。</param>
+    /// <param name="projectAuth">Project 所属。</param>
+    /// <param name="resourceGrants">実行リソース許可。所属のあと定義取得と同じ判定を行う。</param>
     public GraphDefinitionService(
         ICoreTransactionExecutor executor,
         IDisplayIdService displayIds,
         IDefinitionRepository definitions,
         ITenantContextAccessor tenantContext,
         IRuntimePermissionAuthorization runtimeAuth,
-        IProjectAuthorizationService projectAuth)
+        IProjectAuthorizationService projectAuth,
+        PrincipalResourceGrantAuthorization resourceGrants)
     {
         _executor = executor;
         _displayIds = displayIds;
@@ -31,6 +42,7 @@ internal sealed class GraphDefinitionService : IGraphDefinitionService
         _tenantContext = tenantContext;
         _runtimeAuth = runtimeAuth;
         _projectAuth = projectAuth;
+        _resourceGrants = resourceGrants;
     }
 
     public async Task<GraphDefinitionResponse> GetByGraphIdAsync(string graphId, CancellationToken ct = default)
@@ -54,6 +66,9 @@ internal sealed class GraphDefinitionService : IGraphDefinitionService
 
                 await _projectAuth
                     .EnsureCanReadAsync(uow, tenantId, detail.Definition.ProjectId, innerCt)
+                    .ConfigureAwait(false);
+                await _resourceGrants
+                    .EnsureAsync(detail.Definition.ProjectId, detail.Definition.DefinitionId, innerCt)
                     .ConfigureAwait(false);
 
                 return BuildFromCompiledJson(graphId, detail.Definition.Name, detail.Version.CompiledJson);

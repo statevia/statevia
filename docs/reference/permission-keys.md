@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.5 |
-| 更新日 | 2026-09-29 |
+| Version | 1.6 |
+| 更新日 | 2026-10-25 |
 
 ---
 
@@ -23,6 +23,7 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 | `tenant.admin` | Tenant administration | `permissions.tenantAdmin` |
 | `modules.reload` | Reload action modules | `permissions.modulesReload` |
 | `modules.read` | Read action modules | `permissions.modulesRead` |
+| `projects.create` | Create projects | `permissions.projectsCreate` |
 
 `schedules.read` / `schedules.write` はカタログに無い。定期実行は `executions.read` / `executions.write` を使う。
 
@@ -36,6 +37,7 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 | --- | --- |
 | GET `/v1/definitions*`、`/v1/graphs/*`、`/v1/definitions/schema/nodes`、`/v1/actions/schema*` | `definitions.read` |
 | POST / PUT `/v1/definitions`、`POST /v1/definitions/validate` | `definitions.write` |
+| POST `/v1/projects` | `projects.create` |
 | GET `/v1/executions*`（一覧・詳細・graph・state・events・stream）、GET `/v1/schedules*` | `executions.read` |
 | POST start / cancel / publish event / resume、**`POST /v1/events`**、スケジュールの作成・更新・削除・手動実行 | `executions.write` |
 | POST `/internal/modules/reload` | `modules.reload`（または `is_tenant_admin`） |
@@ -52,33 +54,35 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 
 ### プロジェクト認可（併用）
 
-定義取得・publish・Start は **global permission** に加え `project_accesses` を評価する。
+定義と実行の閲覧、publish、Start、Project の更新とメンバー操作は、**global permission** に加え呼び出し元 Principal の `project_accesses` を評価する。`tenant.admin` は所属が無い定義を読めない。メンバー操作だけは `project.admin` または `tenant.admin`。
 
 | 状況 | HTTP | `error.code` |
 | --- | --- | --- |
 | プロジェクト未登録・Reader 未満 | 404 | `NOT_FOUND`（存在秘匿） |
-| Reader のみで Start | 403 | `PROJECT_ACCESS_DENIED` |
+| Reader のみで Start、または Publisher 未満で定義作成 | 403 | `PROJECT_ACCESS_DENIED` |
 
-### 実行リソース許可（Start のみ）
+ロールは reader、executor、publisher、admin の順に強い。PATCH は admin のみ。Project の DELETE は無い。
 
-専用の permission key は増やさない。`executions.write` と project の executor のあと、User と ServiceAccount の Start だけが `principal_resource_grants` を見る。
+### 実行リソース許可
+
+専用の permission key は増やさない。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る。対象は定義と実行の閲覧、Start、Resume、Cancel。publish、Project 設定、メンバー、Group は見ない。
 
 | 順 | 状況 | HTTP | `error.code` |
 | --- | --- | --- | --- |
-| 1 | `executions.write` 不足 | 403 | `PERMISSION_DENIED` |
+| 1 | 必要な catalog key が不足 | 403 | `PERMISSION_DENIED` |
 | 2 | project 未登録、または Reader 未満 | 404 | `NOT_FOUND` |
-| 3 | Reader のみ | 403 | `PROJECT_ACCESS_DENIED` |
+| 3 | 操作に必要なロールが不足 | 403 | `PROJECT_ACCESS_DENIED` |
 | 4 | その種別の許可行があり、対象が外れる | 403 | `RESOURCE_GRANT_DENIED` |
 | 4 | その種別の許可行が無い | 追加制限なし | — |
 
-project の行と definition の行は独立する。両方にあるときは両方を満たす定義だけが通る。System と、親から始まる継承子 Start は 4 を見ない。定義の取得、Resume、Cancel も見ない。
+project の行と definition の行は独立する。両方にあるときは両方を満たすものだけが通る。一覧の件数も同じ条件で絞る。System と、親から始まる継承子 Start は 4 を見ない。Resume と Cancel の Owner も 4 は Live の名簿を見る。許可は Snapshot に焼かない。
 
-詳細: [security-runtime.md](../specifications/platform/security-runtime.md)、[api-http.md](../specifications/api-http.md) §3.12 / §4.1.3。
+詳細: [security-runtime.md](../specifications/platform/security-runtime.md)、[api-http.md](../specifications/api-http.md) §2.7 / §3.12 / §4.1.3。
 
 ### Execution Security Snapshot（Resume / Cancel）
 
-- **Owner**（Start 発行者）: Snapshot 上の `effectivePermissionKeys` で評価可（権限剥奪後も — Principal が有効なら）。定期実行では Owner は run-as の ServiceAccount。作成者や後から Resume する人間は Operator。
-- **Operator**: 常に Live の `executions.write` を要求。
+- **Owner**（Start 発行者）: Snapshot 上の `effectivePermissionKeys` で評価可（権限剥奪後も — Principal が有効なら）。実行リソース許可は Live。定期実行では Owner は run-as の ServiceAccount。作成者や後から Resume する人間は Operator。
+- **Operator**: 常に Live の `executions.write` と Live の実行リソース許可を要求。
 
 詳細: [security-runtime.md](../specifications/platform/security-runtime.md) Execution Security Snapshot、[execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md)。
 

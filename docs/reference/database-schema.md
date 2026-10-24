@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.24
+Version: 1.25
 Project: 実行型ステートマシン
+
+**Version 1.25（2026-10-25）**: `projects.tenant_id` と `project_accesses.principal_id`。`visibility` とオーナー一括 Admin は現行スキーマに無い。`principal_resource_grants` は閲覧・開始・再開・取消に使う。
 
 **Version 1.24（2026-09-29）**: `schedules.job_key` と `schedule_runs.summary_json` を追加。点検行は定義と run-as を持たない。`schedule_runs.outcome` に `completed` を追加。
 
@@ -70,8 +72,8 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | テーブル | 空間 | 役割 |
 | --- | --- | --- |
 | display_ids | 横断 | 表示用 ID（10 桁）⇔ UUID の対応（definition / execution 共通） |
-| projects | KnowledgeSpace | 定義を束ねる project（オーナーテナント・discoverability ヒント） |
-| project_accesses | KnowledgeSpace | **project 共有の認可 truth**（付与先テナントと role） |
+| projects | KnowledgeSpace | テナント内で定義を束ねる project |
+| project_accesses | KnowledgeSpace | **Principal 所属の認可 truth**（`reader` / `executor` / `publisher` / `admin`） |
 | definitions | KnowledgeSpace | 論理定義メタ（slug・最新版番号の投影） |
 | definition_versions | KnowledgeSpace | **immutable 定義版の truth**（YAML + compiled JSON） |
 | workflow_definitions | （レガシー） | 旧 mutable 定義（移行前データ。参照専用） |
@@ -109,8 +111,7 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | --- | --- |
 | `definition_versions` + `UNIQUE(definition_id, version)` | 定義版の **truth** |
 | `definitions.latest_version` | **投影**（非権威） |
-| `project_accesses` + オーナーテナント | project 認可の **truth**（`reader` / `executor` / `publisher` / `admin`） |
-| `projects.visibility` | **discoverability ヒント**（認可には使わない） |
+| `project_accesses` | project 認可の **truth**（呼び出し元 Principal の `reader` / `executor` / `publisher` / `admin`） |
 | `executions.definition_version_id` | 開始時に固定した版（execution correctness） |
 | `event_store` / `execution_graph_snapshots` | 実行履歴・グラフの durable 正（既存方針） |
 | `execution_cursors` | **operational projection**（分散スケジューラ向け現在位置。GET 正本ではない） |
@@ -122,7 +123,7 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 | --- | --- |
 | `tenants` | テナントの **truth**（`lifecycle` は `LifecycleTransitionPolicy` で遷移制御） |
 | `principals` | Actor 行の **truth**（論理削除は `deleted_at` / `is_active`） |
-| `principal_resource_grants` | Start のオプトイン許可。種別が空ならその種別の追加制限なし。resource への物理 FK は無い |
+| `principal_resource_grants` | 閲覧・開始・再開・取消のオプトイン許可。種別が空ならその種別の追加制限なし。resource への物理 FK は無い |
 | 実行系 `tenant_id` uuid | **`tenants.tenant_id` FK**（HasQueryFilter は内部 UUID で fail-closed） |
 | セキュリティ系 `tenant_id` uuid | **`tenants.tenant_id` 参照**（HasQueryFilter は内部 UUID で一致） |
 | `IgnoreQueryFilters()` | **`IPlatformDataAccess`（Platform 専用層）のみ**許容 |
@@ -145,41 +146,40 @@ Service API（C#）の EF Core マイグレーションで管理する PostgreSQ
 
 ### 2.2 projects
 
-定義の所属単位。オーナーは `owner_tenant_id`（内部 UUID）。初回定義作成時は slug=`default` の project を自動作成する。
+定義の所属単位。現在テナントの中だけ。定義作成は `projectId` 必須で、省略時に `default` へは落とさない。
 
 | カラム | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
 | project_id | uuid | PK, NOT NULL | project の一意識別子 |
-| owner_tenant_id | uuid | FK → tenants, NOT NULL | オーナーテナント（内部 UUID） |
-| slug | varchar(128) | NOT NULL | オーナーテナント内 slug |
+| tenant_id | uuid | FK → tenants, NOT NULL | 所属テナント（内部 UUID） |
+| slug | varchar(128) | NOT NULL | テナント内 slug |
 | display_name | varchar(256) | NOT NULL | 表示名 |
-| visibility | varchar(32) | NOT NULL | discoverability ヒント（`Private` / `Tenant` / `Public`。認可非使用） |
 | description | text | NULL | 説明（任意） |
 | created_at | timestamptz | NOT NULL | 作成日時 |
 
-**インデックス:** `UNIQUE(owner_tenant_id, slug)`
+**インデックス:** `UNIQUE(tenant_id, slug)`
 
 ### 2.3 project_accesses
 
-project の **認可 truth**。付与先はテナント単位（Principal 単位ではない）。オーナーテナントは行なしでも **暗黙的に Admin** 相当。
+project の **認可 truth**。付与先は同一テナントの Principal。行が無い Principal は未所属。オーナー一括の Admin は無い。
 
 | カラム | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
 | project_id | uuid | PK, FK → projects, NOT NULL | 対象 project |
-| tenant_id | uuid | PK, FK → tenants, NOT NULL | 付与先テナント（内部 UUID） |
+| principal_id | uuid | PK, FK → principals, NOT NULL | 付与先 Principal |
 | role | varchar(32) | NOT NULL | `reader` / `executor` / `publisher` / `admin` |
 | created_at | timestamptz | NOT NULL | 付与日時 |
 
-**インデックス:** `PRIMARY KEY (project_id, tenant_id)`、`INDEX (tenant_id)`
+**インデックス:** `PRIMARY KEY (project_id, principal_id)`
 
 **role の意味（昇順 = 権限強度）:**
 
 | role | 許可操作（概要） |
 | --- | --- |
-| reader | 定義取得・一覧・グラフ参照 |
+| reader | 定義と実行の取得・一覧 |
 | executor | reader + 実行 Start |
-| publisher | executor + 定義 publish（版追加） |
-| admin | project 管理（将来 API 用） |
+| publisher | executor + 定義の作成と publish |
+| admin | publisher + Project の PATCH とメンバー管理 |
 
 ### 2.4 definitions
 
@@ -197,7 +197,7 @@ project の **認可 truth**。付与先はテナント単位（Principal 単位
 
 **インデックス:** `UNIQUE(project_id, slug) WHERE deleted_at IS NULL`（restore 時 slug 競合の最終防衛）
 
-**認可:** 取得・publish は `project_accesses`（+ オーナー）で評価。`definitions` は `TenantInternalId` で HasQueryFilter。
+**認可:** 取得・publish は呼び出し元 Principal の `project_accesses` で評価する。`definitions` は現在テナントの HasQueryFilter。
 
 ### 2.5 definition_versions
 
@@ -629,7 +629,7 @@ API キー。**平文キーは保存しない**。lookup 用に `key_prefix` と
 
 ### 2.25 principal_resource_grants
 
-User と ServiceAccount の Start を絞るオプトイン。行が無い種別は、その種別の追加制限が無い。project の行と definition の行が両方あるときは両方を満たす定義だけが通る。System には付けない。resource への物理 FK は置かない（削除済み定義の行が残っても Start は 404）。置換は種別をまたいで行を作り直す。`created_at` は置換時刻。
+User と ServiceAccount の閲覧・開始・再開・取消を絞るオプトイン。行が無い種別は、その種別の追加制限が無い。project の行と definition の行が両方あるときは両方を満たす定義だけが通る。System には付けない。resource への物理 FK は置かない（削除済み定義の行が残っても Start は 404。Resume と Cancel は所属 project を解決して評価する）。置換は種別をまたいで行を作り直す。`created_at` は置換時刻。Snapshot には焼かない。
 
 | カラム | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
@@ -661,10 +661,9 @@ erDiagram
 
   projects {
     uuid project_id PK
-    uuid owner_tenant_id FK
+    uuid tenant_id FK
     string slug
     string display_name
-    string visibility
     text description
     timestamptz created_at
   }
@@ -866,7 +865,7 @@ erDiagram
 
 - **tenants.tenant_key** は外部向け不変キー。実行系 FK は `tenants.tenant_id`。ログイン失敗ロックは JWT 前のため `tenant_key` で点取得する（`tenants` への DB FK は置かない）。
 - **principals** は User / ServiceAccount / System の共通親行。**論理削除**は `deleted_at` / `is_active` で表現する。
-- **principal_resource_grants** は User / ServiceAccount の Start 用オプトイン。resource への物理 FK は無い。
+- **principal_resource_grants** は User / ServiceAccount の閲覧・開始・再開・取消のオプトイン。resource への物理 FK は無い。
 - **user_principals** は User 型 Principal との 1:1 対応。
 - **group_permissions.permission_key** → **permission_definitions.permission_key**（グローバル権限辞書）。
 - **api_keys** は平文を保存せず **key_prefix + key_hash** のみ保持する。
@@ -875,8 +874,8 @@ erDiagram
 
 ```mermaid
 erDiagram
-  tenants ||--o{ projects : "owner_tenant_id"
-  tenants ||--o{ project_accesses : "tenant_id"
+  tenants ||--o{ projects : "tenant_id"
+  principals ||--o{ project_accesses : "principal_id"
   projects ||--o{ project_accesses : "project_id"
   projects ||--o{ definitions : "project_id"
   definitions ||--o{ definition_versions : "definition_id"
@@ -890,17 +889,16 @@ erDiagram
 
   projects {
     uuid project_id PK
-    uuid owner_tenant_id FK
+    uuid tenant_id FK
     string slug
     string display_name
-    string visibility
     text description
     timestamptz created_at
   }
 
   project_accesses {
     uuid project_id PK
-    uuid tenant_id PK
+    uuid principal_id PK
     string role
     timestamptz created_at
   }
@@ -927,10 +925,9 @@ erDiagram
   }
 ```
 
-- **projects.owner_tenant_id** → **tenants.tenant_id**（オーナーテナント。行なしでも暗黙 Admin 相当）。
-- **project_accesses** は **認可 truth**（`reader` / `executor` / `publisher` / `admin`）。付与先はテナント単位。複合 PK `(project_id, tenant_id)` はいずれも FK（図上のリレーション参照）。
-- **projects.visibility** は discoverability ヒントのみ（認可非使用）。
-- **definitions** の slug 一意性は **project 内**（`UNIQUE(project_id, slug) WHERE deleted_at IS NULL`）。`tenant_id` varchar は移行期のオーナー表現。
+- **projects.tenant_id** → **tenants.tenant_id**。所属行が無い Principal は未所属。
+- **project_accesses** は **認可 truth**（`reader` / `executor` / `publisher` / `admin`）。付与先は同一テナントの Principal。複合 PK は `(project_id, principal_id)`。
+- **definitions** の slug 一意性は **project 内**（`UNIQUE(project_id, slug) WHERE deleted_at IS NULL`）。`definitions.tenant_id` は内部 UUID。
 
 ### 3.3 ExecutionSpace（operational / durable）
 
@@ -1059,9 +1056,8 @@ erDiagram
 | テーブル | インデックス | 種別 |
 | --- | --- | --- |
 | display_ids | display_id | UNIQUE |
-| projects | (owner_tenant_id, slug) | UNIQUE |
-| project_accesses | (project_id, tenant_id) | PRIMARY KEY |
-| project_accesses | tenant_id | INDEX |
+| projects | (tenant_id, slug) | UNIQUE |
+| project_accesses | (project_id, principal_id) | PRIMARY KEY |
 | principal_resource_grants | (principal_id, resource_kind, resource_id) | PRIMARY KEY |
 | principal_resource_grants | tenant_id | INDEX |
 | definitions | (project_id, slug) WHERE deleted_at IS NULL | UNIQUE |
@@ -1106,6 +1102,8 @@ erDiagram
 | `20260918172216_AddExecutionSchedules` | `schedules` / `schedule_runs` を追加 |
 | `20260927160709_AddPrincipalResourceGrants` | `principal_resource_grants` を追加 |
 | `20260929071454_AddSystemScheduleJobKey` | `schedules.job_key`、定義と run-as の NULL 許可、点検用チェックと部分一意、`schedule_runs.summary_json` |
+| `20261020131054_ProjectPrincipalAccesses` | `projects.owner_tenant_id` を `tenant_id` に改名。`visibility` を削除。`project_accesses` の付与先を `principal_id` にし、PK を `(project_id, principal_id)` にする |
+| `20261022121947_BackfillDefaultProjectAdmins` | 既存 `slug=default` のユーザーと API キーを admin で一度だけ載せる。再実行では既存メンバーを上書きしない |
 
 適用: `cd service/api && dotnet ef database update --project Statevia.Service.Api`
 
