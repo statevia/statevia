@@ -54,6 +54,8 @@ export type DefinitionsFeatureUiText = {
     title: string;
     urlPrefix: string;
     errorFetchFailed: string;
+    notMember: string;
+    roleDenied: string;
     ariaMeta: string;
     meta: {
       name: string;
@@ -83,6 +85,8 @@ export type DefinitionsFeatureUiText = {
   definitionRunPage: {
     title: string;
     unspecifiedDefinitionId: string;
+    notMember: string;
+    roleDenied: string;
     definitionIdLine: (definitionIdLabel: string, definitionId: string) => string;
     inputLabelWithHint: (inputLabel: string) => string;
     inputJsonPlaceholder: string;

@@ -4,6 +4,7 @@ import { adminUiTextEn } from "@/features/admin/i18n";
 import { dashboardUiTextEn } from "@/features/dashboard/i18n";
 import { definitionEditorUiTextEn } from "@/features/definition-editor/i18n";
 import { executionsUiTextEn } from "@/features/executions/i18n";
+import { projectsUiTextEn } from "@/features/projects/i18n";
 import type { UiText } from "./uiText";
 import { actionCatalogUiTextEnOverrides, actionCatalogUiTextJa } from "./actionCatalogUiText";
 import { uiTextJa } from "./uiText";
@@ -19,6 +20,7 @@ export const uiTextEn: UiText = {
   ...dashboardUiTextEn,
   ...definitionEditorUiTextEn,
   ...executionsUiTextEn,
+  ...projectsUiTextEn,
   actionCatalog: {
     ...actionCatalogUiTextJa,
     ...actionCatalogUiTextEnOverrides,
@@ -39,6 +41,7 @@ export const uiTextEn: UiText = {
     adminApiKeys: "API keys",
     adminActionBindings: "Action bindings",
     adminNotificationSmtp: "Notification SMTP",
+    adminProjects: "Projects",
     account: "Account",
     logout: "Sign out",
 

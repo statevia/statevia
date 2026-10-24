@@ -14,6 +14,8 @@ export type DefinitionsListQuery = {
   pagination: PaginationQuery;
   sort: SortQuery;
   name?: string;
+  /** 指定時はその Project の定義だけ。未指定は所属の和。 */
+  projectId?: string;
   /** `true` のとき削除済み定義を含む（クエリ `includeDeleted=true`）。 */
   includeDeleted?: boolean;
 };
@@ -32,6 +34,7 @@ export function buildDefinitionsListPath(params: DefinitionsListQuery): string {
   if (params.sort.sortBy?.trim()) query.set("sortBy", params.sort.sortBy.trim());
   if (params.sort.sortOrder) query.set("sortOrder", params.sort.sortOrder);
   if (params.includeDeleted === true) query.set("includeDeleted", "true");
+  if (params.projectId) query.set("projectId", params.projectId);
   return `/definitions?${query.toString()}`;
 }
 

@@ -8,6 +8,8 @@ export type DefinitionDTO = {
   displayId: string;
   resourceId: string;
   name: string;
+  /** 所属 Project。 */
+  projectId?: string;
   createdAt: string;
   updatedAt: string;
   yaml?: string;

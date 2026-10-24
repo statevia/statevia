@@ -1,8 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { startExecutionFromDefinition } from "@/features/definitions/api";
+import { useEffect, useMemo, useState } from "react";
+import { getDefinition, startExecutionFromDefinition } from "@/features/definitions/api";
+import { isApiNotFound } from "@/features/projects/httpStatus";
+import { useProject } from "@/features/projects/projectContext";
+import { canExecute } from "@/features/projects/roles";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength } from "@/shared/lib/validation/primitives";
@@ -28,6 +31,27 @@ export function DefinitionRunStartPage() {
   const [inputJson, setInputJson] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
   const [starting, setStarting] = useState(false);
+  const [access, setAccess] = useState<"loading" | "missing" | "denied" | "ready">("loading");
+  const { roleOf, loaded: projectsLoaded } = useProject();
+
+  useEffect(() => {
+    const id = definitionId.trim();
+    if (!id || !projectsLoaded) {
+      return;
+    }
+    let cancelled = false;
+    void getDefinition(id)
+      .then((row) => {
+        if (cancelled) return;
+        setAccess(canExecute(roleOf(row.projectId)) ? "ready" : "denied");
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setAccess(isApiNotFound(error) ? "missing" : "denied");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [definitionId, projectsLoaded, roleOf]);
 
   const handleStart = async () => {
     const id = definitionId.trim();
@@ -95,6 +119,13 @@ export function DefinitionRunStartPage() {
 
       <Toast toast={toast} onClose={() => setToast(null)} />
 
+      {access === "missing" && (
+        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.notMember}</p>
+      )}
+      {access === "denied" && (
+        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.roleDenied}</p>
+      )}
+      {access === "ready" && (
       <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
         <label className="block text-sm">
           <span className="text-md-on-surface-variant">
@@ -123,6 +154,7 @@ export function DefinitionRunStartPage() {
           {uiText.definitionRunPage.help.redirectAfterStart("/executions/[executionId]/run")}
         </p>
       </section>
+      )}
 
       <nav className="flex flex-wrap gap-3 text-sm">
         <button

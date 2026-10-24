@@ -2,6 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Script from "next/script";
+import { ProjectProvider } from "@/features/projects/projectContext";
+import { ProjectSwitcher } from "@/features/projects/ui/ProjectSwitcher";
 import { AppHeader } from "@/shared/ui/AppHeader";
 import { resolveLocale } from "@/shared/i18n/i18n";
 import { DEFAULT_THEME, resolveTheme } from "@/shared/lib/theme";
@@ -32,8 +34,10 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-md-surface-container-high text-md-on-surface">
         <UiTextProvider locale={locale}>
-          <AppHeader theme={theme} locale={locale} />
-          <div className="mx-auto max-w-[min(1400px,calc(100%-2rem))] px-4 py-6">{children}</div>
+          <ProjectProvider>
+            <AppHeader theme={theme} locale={locale} leadingNav={<ProjectSwitcher />} />
+            <div className="mx-auto max-w-[min(1400px,calc(100%-2rem))] px-4 py-6">{children}</div>
+          </ProjectProvider>
         </UiTextProvider>
       </body>
     </html>

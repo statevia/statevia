@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { DefinitionRunStartPage } from "../../features/definitions/ui/DefinitionRunStartPage";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText, testProjectId } from "../testUtils";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ definitionId: "def-1" }),
@@ -10,13 +10,21 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/shared/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/api")>();
-  return { ...actual, apiPost: vi.fn() };
+  return { ...actual, apiGet: vi.fn(), apiPost: vi.fn() };
 });
 
-import { apiPost } from "@/shared/api";
+import { apiGet, apiPost } from "@/shared/api";
 
 describe("DefinitionRunStartPage", () => {
   beforeEach(() => {
+    vi.mocked(apiGet).mockResolvedValue({
+      displayId: "def-1",
+      resourceId: "res-1",
+      name: "Demo",
+      projectId: testProjectId,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+    });
     vi.mocked(apiPost).mockResolvedValue({
       displayId: "ex-new",
       resourceId: "res-new",
@@ -31,7 +39,7 @@ describe("DefinitionRunStartPage", () => {
   it("実行開始ボタンで API を呼ぶ", async () => {
     renderWithUiText(<DefinitionRunStartPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "実行開始" }));
+    fireEvent.click(await screen.findByRole("button", { name: "実行開始" }));
 
     await waitFor(() => {
       expect(apiPost).toHaveBeenCalledWith("/executions", { definitionId: "def-1" });

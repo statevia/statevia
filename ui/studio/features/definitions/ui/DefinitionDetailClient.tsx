@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useDefinitionDetail } from "@/features/definitions/hooks/useDefinitionDetail";
+import { useProject } from "@/features/projects/projectContext";
+import { canExecute, canPublish } from "@/features/projects/roles";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
@@ -21,6 +23,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
   const dateTimeLocale = getDateTimeLocale(locale);
   const {
     row,
+    notFound,
     loading,
     showLoading,
     toast,
@@ -32,6 +35,10 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
   } = useDefinitionDetail(definitionId, {
     deletedMessage: uiText.definitionDetail.toasts.deleted,
   });
+  const { roleOf, loaded: projectsLoaded } = useProject();
+  const role = row ? roleOf(row.projectId) : null;
+  const showEdit = projectsLoaded && canPublish(role);
+  const showRun = projectsLoaded && canExecute(role);
 
   /** 削除ボタン用。Promise はここで吸収し、表示は hook 内トーストに任せる。 */
   const onDeleteClick = () => {
@@ -57,7 +64,13 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
         </output>
       )}
 
-      {!loading && !row && toast && (
+      {!loading && notFound && (
+        <p className="text-sm text-md-on-surface-variant">
+          {uiText.definitionDetail.notMember}
+        </p>
+      )}
+
+      {!loading && !row && toast && !notFound && (
         <p className="text-sm text-md-on-surface-variant">
           {uiText.definitionDetail.errorFetchFailed}
         </p>
@@ -85,40 +98,50 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
         </section>
       )}
 
-      <section className="rounded-lg border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-950">
-        <h2 className="font-medium text-amber-950">{uiText.definitionDetail.relatedExecutions.title}</h2>
-        <p className="mt-1 text-amber-900/90">{uiText.definitionDetail.relatedExecutions.description}</p>
-        <p className="mt-2">
-          <button
-            type="button"
-            className={NAVIGATION_BUTTON_CLASS}
-            onClick={() =>
-              router.push(`/executions?definitionId=${encodeURIComponent(definitionId)}`)
-            }
-          >
-            {uiText.definitionDetail.relatedExecutions.openList}
-          </button>
-        </p>
-      </section>
+      {row && (
+        <section className="rounded-lg border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-950">
+          <h2 className="font-medium text-amber-950">{uiText.definitionDetail.relatedExecutions.title}</h2>
+          <p className="mt-1 text-amber-900/90">{uiText.definitionDetail.relatedExecutions.description}</p>
+          <p className="mt-2">
+            <button
+              type="button"
+              className={NAVIGATION_BUTTON_CLASS}
+              onClick={() =>
+                router.push(`/executions?definitionId=${encodeURIComponent(definitionId)}`)
+              }
+            >
+              {uiText.definitionDetail.relatedExecutions.openList}
+            </button>
+          </p>
+        </section>
+      )}
 
+      {row && (
       <section className="space-y-2 text-sm text-md-on-surface">
+        {projectsLoaded && !showEdit && !showRun && (
+          <p className="text-md-on-surface-variant">{uiText.definitionDetail.roleDenied}</p>
+        )}
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className={NAVIGATION_BUTTON_CLASS}
-            onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/edit`)}
-            disabled={deleting}
-          >
-            {uiText.definitionDetail.actions.edit}
-          </button>
-          <button
-            type="button"
-            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
-            onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/run`)}
-            disabled={deleting}
-          >
-            {uiText.definitionDetail.actions.run}
-          </button>
+          {showEdit && (
+            <button
+              type="button"
+              className={NAVIGATION_BUTTON_CLASS}
+              onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/edit`)}
+              disabled={deleting}
+            >
+              {uiText.definitionDetail.actions.edit}
+            </button>
+          )}
+          {showRun && (
+            <button
+              type="button"
+              className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
+              onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}/run`)}
+              disabled={deleting}
+            >
+              {uiText.definitionDetail.actions.run}
+            </button>
+          )}
           {row && !confirmDelete && (
             <button
               type="button"
@@ -153,6 +176,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }

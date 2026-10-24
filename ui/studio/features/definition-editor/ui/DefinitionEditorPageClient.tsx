@@ -10,6 +10,8 @@ import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { useDefinitionEditorPage } from "../hooks/useDefinitionEditorPage";
+import { useProject } from "@/features/projects/projectContext";
+import { canPublish } from "@/features/projects/roles";
 
 type DefinitionEditorPageClientProps = {
   /** 編集対象。無いときは新規作成。 */
@@ -23,10 +25,25 @@ type DefinitionEditorPageClientProps = {
  */
 export function DefinitionEditorPageClient({ definitionId }: Readonly<DefinitionEditorPageClientProps>) {
   const uiText = useUiText();
-  const editor = useDefinitionEditorPage({ definitionId });
+  const { selectedProject, roleOf, loaded: projectsLoaded } = useProject();
+  const editor = useDefinitionEditorPage({
+    definitionId,
+    projectId: selectedProject?.projectId,
+  });
   const yamlFileInputRef = useRef<HTMLInputElement>(null);
   const modeButtonClass = (selected: boolean) =>
     `rounded-sm border px-3 py-1 text-xs ${selected ? "border-brand-cta-border bg-brand-cta-bg text-brand-cta-fg" : "border-md-outline-variant bg-md-surface-container text-md-on-surface"}`;
+
+  const createBlocked = editor.isCreateMode && projectsLoaded && !canPublish(selectedProject?.role);
+  const editBlocked = !editor.isCreateMode
+    && editor.loadedProjectId !== null
+    && projectsLoaded
+    && !canPublish(roleOf(editor.loadedProjectId));
+  const blockedMessage = (() => {
+    if (editor.accessDenied) return uiText.definitionEditor.notMember;
+    if (createBlocked || editBlocked) return uiText.definitionEditor.roleDenied;
+    return null;
+  })();
 
   return (
     <PageShell
@@ -45,6 +62,11 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
         <PageState state="loading" message={uiText.definitionEditor.loadingMeta} />
       )}
 
+      {blockedMessage && (
+        <p className="text-sm text-md-on-surface-variant">{blockedMessage}</p>
+      )}
+
+      {!blockedMessage && (
       <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
         <label className="block text-sm">
           <span className="text-md-on-surface-variant">{uiText.definitionEditor.labels.name}</span>
@@ -182,6 +204,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
           </button>
         </div>
       </section>
+      )}
 
       {editor.savedDefinition && (
         <section className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">

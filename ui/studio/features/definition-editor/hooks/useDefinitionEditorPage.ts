@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/shared/api";
+import { isApiNotFound } from "@/features/projects/httpStatus";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength, matchesPattern } from "@/shared/lib/validation/primitives";
@@ -29,6 +30,8 @@ export type DefinitionEditorMode = "yaml" | "graph";
 export type UseDefinitionEditorPageOptions = {
   /** 編集対象。無いときは新規作成。 */
   definitionId?: string;
+  /** 新規作成時に送る所属 Project。 */
+  projectId?: string;
 };
 
 type ApiErrorLike = {
@@ -51,6 +54,10 @@ export type DefinitionEditorPageModel = {
   definitionId: string | undefined;
   /** 既存定義の読み込み中か。新規作成では false。 */
   loadingMeta: boolean;
+  /** 未所属で定義を読めなかったか。 */
+  accessDenied: boolean;
+  /** 読み込んだ定義の Project。新規作成では null。 */
+  loadedProjectId: string | null;
   /** 定義名。 */
   definitionName: string;
   /**
@@ -268,7 +275,8 @@ function messagesForField(details: readonly ValidationDetailItem[], field: strin
  * @returns 描画用の状態とコマンド。
  */
 export function useDefinitionEditorPage({
-  definitionId
+  definitionId,
+  projectId,
 }: UseDefinitionEditorPageOptions): DefinitionEditorPageModel {
   const uiText = useUiText();
   const router = useRouter();
@@ -321,6 +329,8 @@ export function useDefinitionEditorPage({
   );
   const isCreateMode = !definitionId;
   const [loadingMeta, setLoadingMeta] = useState(!isCreateMode);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null);
   const [definitionName, setDefinitionName] = useState("");
   const [yaml, setYaml] = useState(defaultDefinitionYaml);
   const [editorMode, setEditorMode] = useState<DefinitionEditorMode>("yaml");
@@ -404,6 +414,8 @@ export function useDefinitionEditorPage({
     setLoadingMeta(true);
     try {
       const row = await apiGet<DefinitionDTO>(`/definitions/${encodeURIComponent(definitionId)}`);
+      setAccessDenied(false);
+      setLoadedProjectId(row.projectId ?? null);
       setDefinitionName((current) => (current.trim() ? current : row.name));
       const sourceYaml = typeof row.yaml === "string" && row.yaml.trim().length > 0 ? row.yaml : defaultDefinitionYaml;
       const parsed = parseDefinitionYaml(sourceYaml, parseYamlMessageOptionsRef.current);
@@ -423,6 +435,8 @@ export function useDefinitionEditorPage({
         setYamlParseMessages(parsed.diagnostics);
       }
     } catch (error) {
+      setAccessDenied(isApiNotFound(error));
+      setLoadedProjectId(null);
       setToast(toToastError(error));
     } finally {
       setLoadingMeta(false);
@@ -585,6 +599,13 @@ export function useDefinitionEditorPage({
       });
       return;
     }
+    if (!definitionId && !projectId) {
+      setToast({
+        tone: "error",
+        message: uiText.definitionEditor.validation.projectRequired
+      });
+      return;
+    }
 
     setSaving(true);
     setToast(null);
@@ -596,7 +617,7 @@ export function useDefinitionEditorPage({
       setYaml(yamlForSave);
       const saved = definitionId
         ? await apiPut<DefinitionDTO>(`/definitions/${encodeURIComponent(definitionId)}`, { name, yaml: yamlForSave })
-        : await apiPost<DefinitionDTO>("/definitions", { name, yaml: yamlForSave });
+        : await apiPost<DefinitionDTO>("/definitions", { name, yaml: yamlForSave, projectId });
       setSavedDefinition(saved);
       setToast({
         tone: "success",
@@ -615,12 +636,14 @@ export function useDefinitionEditorPage({
     editorMode,
     hasYamlError,
     parseYamlMessageOptions,
+    projectId,
     uiText.definitionEditor.toasts,
     uiText.definitionEditor.validation.nameInvalidFormat,
     uiText.definitionEditor.validation.nameRequired,
     uiText.definitionEditor.validation.yamlLintInvalid,
     uiText.definitionEditor.validation.yamlRequired,
     uiText.definitionEditor.validation.yamlTooLarge,
+    uiText.definitionEditor.validation.projectRequired,
     uiText.labels.displayId
   ]);
 
@@ -712,6 +735,8 @@ export function useDefinitionEditorPage({
     isCreateMode,
     definitionId,
     loadingMeta,
+    accessDenied,
+    loadedProjectId,
     definitionName,
     setDefinitionName,
     apiNameMessages,

@@ -7,6 +7,8 @@ export type DefinitionDTO = {
   displayId: string;
   resourceId: string;
   name: string;
+  /** 所属 Project。API が返す。 */
+  projectId?: string;
   createdAt: string;
   updatedAt: string;
   yaml?: string;

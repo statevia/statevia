@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { DefinitionsPageClient } from "../../features/definitions/ui/DefinitionsPageClient";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText, testProjectId } from "../testUtils";
 
 const replaceMock = vi.fn();
 const pushMock = vi.fn();
@@ -53,7 +53,7 @@ describe("DefinitionsPageClient", () => {
       expect(apiGet).toHaveBeenCalled();
     });
     expect(apiGet).toHaveBeenCalledWith(
-      "/definitions?limit=20&offset=0&sortBy=createdAt&sortOrder=desc"
+      `/definitions?limit=20&offset=0&sortBy=createdAt&sortOrder=desc&projectId=${testProjectId}`
     );
   });
 

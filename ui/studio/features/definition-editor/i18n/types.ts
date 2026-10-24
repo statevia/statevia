@@ -8,12 +8,15 @@ export type DefinitionEditorFeatureUiText = {
     descriptionCreating: string;
     descriptionEditingTarget: (definitionId: string) => string;
     loadingMeta: string;
+    notMember: string;
+    roleDenied: string;
     validation: {
       nameRequired: string;
       yamlRequired: string;
       yamlLintInvalid: string;
       nameInvalidFormat: string;
       yamlTooLarge: string;
+      projectRequired: string;
     };
     labels: {
       name: string;
