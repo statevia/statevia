@@ -219,6 +219,44 @@ public sealed class ExecutionAuthorizationGuardTests
         Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
     }
 
+    /// <summary>既存 execution の許可は、定義行が無いとき 404。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantForExistingExecutionAsync_WhenDefinitionMissing_ThrowsNotFound()
+    {
+        // Arrange
+        var sut = CreateSut(definitions: new StubDefinitionRepository(null));
+
+        // Act
+        var act = () => sut.EnsureResourceGrantForExistingExecutionAsync(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(act);
+    }
+
+    /// <summary>既存 execution の許可は、名簿の外なら RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantForExistingExecutionAsync_WhenDefinitionOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantForExistingExecutionAsync(
+            sut.TenantId,
+            sut.DefinitionId,
+            CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
     /// <summary>両方の許可があるときは、片方だけでは通らない。</summary>
     [Fact]
     public async Task EnsureResourceGrantAsync_WhenBothKindsAndOneMisses_Denies()
