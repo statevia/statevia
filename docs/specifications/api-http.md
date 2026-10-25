@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.32 |
-| 更新日 | 2026-10-25 |
+| Version | 1.33 |
+| 更新日 | 2026-10-26 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.33（2026-10-26）**: `GET /v1/auth/me` に `permissions`（グループから展開した semantic permission key）を足す。Studio の表示制御用で、認可の評価は変えない。
 
 **Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。許可の置換は付与先 Principal が executor 以上で所属していない project を 422 で拒む。既存実行の Cancel・Resume・イベント送信は、定義の Project に executor 以上の所属を Live で要求する。Project の DELETE は無い。
 
@@ -598,7 +600,9 @@ Request:
 **GET /v1/auth/me**
 
 - **Authorization** 必須。
-- Response: 200 OK、`{ "tenantId", "tenantKey", "principalId", "username", "email", "isTenantAdmin" }`（`email` は任意連絡先で null 可）
+- Response: 200 OK、`{ "tenantId", "tenantKey", "principalId", "username", "email", "isTenantAdmin", "permissions" }`（`email` は任意連絡先で null 可）
+- `permissions` は所属グループから展開した semantic permission key の昇順配列（§4.1.2.1 と同じ Live 展開）。`isTenantAdmin` が true なら catalog の全キー。Project ロールは含まない（`GET /v1/projects` の `role`）。
+- `permissions` は画面の表示制御用。各 API は呼び出し時に改めて評価するため、これを根拠に許可しない。
 
 **PUT /v1/auth/me/password**
 

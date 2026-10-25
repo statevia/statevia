@@ -6,4 +6,6 @@ export type AuthMeResponse = {
   username: string;
   email: string | null;
   isTenantAdmin: boolean;
+  /** グループから展開した権限キー（例: `executions.write`）。表示制御専用で、認可は Service API が行う。 */
+  permissions: string[];
 };

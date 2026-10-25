@@ -188,6 +188,27 @@ public sealed class AuthServiceTests
         Assert.True(response.IsTenantAdmin);
     }
 
+    /// <summary>GetMeAsync はグループ権限を昇順の permissions として返す。</summary>
+    [Fact]
+    public async Task GetMeAsync_GroupMember_ReturnsSortedGroupPermissions()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var principalId = await SecurityTestSeed.SeedUserWithGroupPermissionsAsync(
+            database,
+            "member@example.com",
+            "password123",
+            ["executions.read", "definitions.read"]);
+        var auth = CreateAuthService(database);
+
+        // Act
+        var response = await auth.GetMeAsync(TestTenantIds.DefaultTenantId, principalId, CancellationToken.None);
+
+        // Assert
+        Assert.False(response.IsTenantAdmin);
+        Assert.Equal(["definitions.read", "executions.read"], response.Permissions);
+    }
+
     /// <summary>存在しない Principal は 401。</summary>
     [Fact]
     public async Task GetMeAsync_UnknownPrincipal_ThrowsUnauthorized()

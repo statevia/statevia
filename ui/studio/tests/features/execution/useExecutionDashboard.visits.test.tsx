@@ -3,6 +3,13 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useExecutionDashboard } from "../../../features/executions/hooks/useExecutionDashboard";
 import type { ExecutionDTO, ExecutionGraphDTO } from "@/features/executions/types";
 import * as api from "@/shared/api";
+import type { ReactNode } from "react";
+import { PermissionsProvider } from "@/shared/auth/permissionsContext";
+
+/** executions.write を持つ利用者として描画する。 */
+function withExecutionsWrite({ children }: Readonly<{ children: ReactNode }>) {
+  return <PermissionsProvider initialPermissions={["executions.read", "executions.write"]}>{children}</PermissionsProvider>;
+}
 
 /**
  * jsdom に EventSource がないため、ストリーム購読を空にする。
@@ -101,7 +108,7 @@ describe("useExecutionDashboard の訪問選択", () => {
 
   it("一覧で選んだ訪問から最新と最初へ移動できる", async () => {
     // Arrange
-    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }));
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
     await loadUntilLatest(result);
 
     // Act
@@ -128,7 +135,7 @@ describe("useExecutionDashboard の訪問選択", () => {
 
   it("実行が無いときは渡した選択キーをそのまま保持する", () => {
     // Arrange
-    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }));
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
 
     // Act
     act(() => {
@@ -141,7 +148,7 @@ describe("useExecutionDashboard の訪問選択", () => {
 
   it("キャンバスの状態名は最新訪問になり、解除すると未選択になる", async () => {
     // Arrange
-    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }));
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
     await loadUntilLatest(result);
 
     // Act
@@ -159,7 +166,7 @@ describe("useExecutionDashboard の訪問選択", () => {
 
   it("Resume は選択中の訪問を送り、残っていない ID は送らない", async () => {
     // Arrange
-    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }));
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
     act(() => {
       result.current.onResumeNode("latest", "Again");
       result.current.onResumeSelectedNode("Again");
@@ -184,7 +191,7 @@ describe("useExecutionDashboard の訪問選択", () => {
 
   it("消えた訪問は同じ状態の最新へ移す", async () => {
     // Arrange
-    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }));
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
     await loadUntilLatest(result);
     act(() => {
       result.current.onSelectListedNode("old");

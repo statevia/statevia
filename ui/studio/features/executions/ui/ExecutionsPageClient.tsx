@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { ListPagination } from "@/shared/ui/ListPagination";
 import { OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { Toast } from "@/shared/ui/Toast";
@@ -19,6 +20,8 @@ function ExecutionsPageClientInner() {
   const { uiText } = useI18n();
   const page = useExecutionsPage();
   const [ingressOpen, setIngressOpen] = useState(false);
+  // POST /v1/events は executions.write を要求する。
+  const canSendEvents = usePermissions().has(EXECUTIONS_WRITE_PERMISSION);
   const paginationLabels = uiText.executionsPage.pagination;
   const paginationProps = {
     ariaLabel: paginationLabels.ariaLabel,
@@ -35,17 +38,19 @@ function ExecutionsPageClientInner() {
     <PageShell
       title={uiText.lists.executions}
       primaryActions={
-        <button
-          type="button"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-          onClick={() => setIngressOpen(true)}
-        >
-          {uiText.executionsPage.ingress.open}
-        </button>
+        canSendEvents && (
+          <button
+            type="button"
+            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+            onClick={() => setIngressOpen(true)}
+          >
+            {uiText.executionsPage.ingress.open}
+          </button>
+        )
       }
     >
       <SubscribeIngressDialog
-        open={ingressOpen}
+        open={canSendEvents && ingressOpen}
         onClose={() => setIngressOpen(false)}
         onAccepted={() => {
           void page.reload().then((loaded) => {

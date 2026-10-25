@@ -71,4 +71,23 @@ describe("ExecutionRunPage", () => {
       expect(screen.getByText("ex-1")).toBeInTheDocument();
     });
   });
+
+  it("executions.write があれば取消ボタンを出す", async () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionRunPage />);
+
+    // Assert
+    expect(await screen.findByRole("button", { name: "キャンセル" })).toBeInTheDocument();
+  });
+
+  it("executions.write が無ければ取消ボタンを出さず理由を示す", async () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionRunPage />, { permissions: ["executions.read"] });
+
+    // Assert
+    expect(
+      await screen.findByText("取消・Resume・イベント送信には、所属グループに executions.write 権限が必要です。テナント管理者に依頼してください。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "キャンセル" })).not.toBeInTheDocument();
+  });
 });

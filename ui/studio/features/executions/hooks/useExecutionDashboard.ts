@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGet } from "@/shared/api";
+import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { buildExecutionView } from "../lib/executionView";
@@ -100,8 +101,10 @@ export type ExecutionDashboardModel = {
   onCompareModeChange: (compareMode: boolean) => void;
   /** 比較 UI を出すか。 */
   comparisonEnabled: boolean;
-  /** 実行操作を出すか。 */
+  /** 実行操作を出すか。画面が操作を許し、かつ executions.write を持つときだけ true。 */
   operationsEnabled: boolean;
+  /** 操作画面なのに executions.write が無いため、操作を出していないか。 */
+  operationsPermissionDenied: boolean;
   /** 実行のストリームを受けるか。 */
   streamEnabled: boolean;
   /**
@@ -235,6 +238,13 @@ export function useExecutionDashboard({
   lockViewMode = false
 }: UseExecutionDashboardOptions): ExecutionDashboardModel {
   const { uiText, locale } = useI18n();
+  const permissions = usePermissions();
+  // 取消・Resume・イベント送信は、API が executions.write を要求する。Project ロールは実行応答に無いため API に任せる。
+  const canWriteExecutions = permissions.has(EXECUTIONS_WRITE_PERMISSION);
+  const commandsAllowed = operationsEnabled && canWriteExecutions;
+  const permissionResumeReason = operationsEnabled && !canWriteExecutions
+    ? uiText.nodeCommands.resumeDisabledReason.permissionDenied
+    : null;
   const effectiveHeaderTitle = headerTitle ?? uiText.executionDashboard.header.titleDefault;
   const [executionId, setExecutionId] = useState(initialExecutionId);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -340,7 +350,7 @@ export function useExecutionDashboard({
   const graphData = useGraphData(displayExecution, graphDefinition);
 
   const { resumeNode, loading: nodeLoading } = useNodeCommands(execution, {
-    commandsEnabled: operationsEnabled,
+    commandsEnabled: commandsAllowed,
     onSuccess: () => {
       setToast({ tone: "success", message: uiText.executionDashboard.toasts.resumeAccepted });
       void loadExecution();
@@ -445,7 +455,7 @@ export function useExecutionDashboard({
 
   const selectedResumeDisabledReason = isReplaying
     ? uiText.executionDashboard.replayDisabledReason
-    : getResumeDisabledReason(execution, selectedNode, operationsEnabled, locale);
+    : permissionResumeReason ?? getResumeDisabledReason(execution, selectedNode, operationsEnabled, locale);
 
   const resumeEventName = useMemo(() => {
     if (!selectedNodeId || !graphData?.edges) return null;
@@ -501,7 +511,7 @@ export function useExecutionDashboard({
       const node = targetId ? getNodeWithFallback(displayExecution, graphData, targetId) : null;
       return isReplaying
         ? uiText.executionDashboard.replayDisabledReason
-        : getResumeDisabledReason(execution, node, operationsEnabled, locale);
+        : permissionResumeReason ?? getResumeDisabledReason(execution, node, operationsEnabled, locale);
     },
     [
       displayExecution,
@@ -510,6 +520,7 @@ export function useExecutionDashboard({
       isReplaying,
       execution,
       operationsEnabled,
+      permissionResumeReason,
       locale,
       uiText.executionDashboard.replayDisabledReason
     ]
@@ -602,7 +613,8 @@ export function useExecutionDashboard({
     compareMode,
     onCompareModeChange: setCompareMode,
     comparisonEnabled,
-    operationsEnabled,
+    operationsEnabled: commandsAllowed,
+    operationsPermissionDenied: operationsEnabled && permissions.loaded && !canWriteExecutions,
     streamEnabled,
     onStreamEnabledChange: handleStreamEnabledChange,
     showExecutionPanels,

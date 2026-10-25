@@ -8,6 +8,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   ...executionsUiTextJa,
   executionDashboard: {
     ...executionsUiTextJa.executionDashboard,
+    operationsPermissionDenied: "Cancel, Resume, and sending events require the executions.write permission on one of your groups. Ask a tenant administrator.",
     header: {
       titleDefault: "Execution detail",
     },
@@ -282,6 +283,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   nodeCommands: {
     resumeDisabledReason: {
       runOnly: "Resume is available only on the Run screen.",
+      permissionDenied: "Resume requires the executions.write permission on one of your groups.",
       executionNotLoaded: "Execution is not loaded.",
       nodeNotSelected: "Please select a node.",
       executionTerminal: "Execution is already finished.",

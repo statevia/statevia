@@ -12,6 +12,7 @@ import { useUiText } from "@/shared/i18n/uiTextContext";
 import { useDefinitionEditorPage } from "../hooks/useDefinitionEditorPage";
 import { useProject } from "@/features/projects/projectContext";
 import { canPublish } from "@/features/projects/roles";
+import { DEFINITIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 
 type DefinitionEditorPageClientProps = {
   /** 編集対象。無いときは新規作成。 */
@@ -26,6 +27,7 @@ type DefinitionEditorPageClientProps = {
 export function DefinitionEditorPageClient({ definitionId }: Readonly<DefinitionEditorPageClientProps>) {
   const uiText = useUiText();
   const { selectedProject, roleOf, loaded: projectsLoaded } = useProject();
+  const permissions = usePermissions();
   const editor = useDefinitionEditorPage({
     definitionId,
     projectId: selectedProject?.projectId,
@@ -39,9 +41,12 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
     && editor.loadedProjectId !== null
     && projectsLoaded
     && !canPublish(roleOf(editor.loadedProjectId));
+  // 保存 API はロールに加えてグループ権限 definitions.write を要求する。
+  const permissionBlocked = permissions.loaded && !permissions.has(DEFINITIONS_WRITE_PERMISSION);
   const blockedMessage = (() => {
     if (editor.accessDenied) return uiText.definitionEditor.notMember;
     if (createBlocked || editBlocked) return uiText.definitionEditor.roleDenied;
+    if (permissionBlocked) return uiText.definitionEditor.permissionDenied;
     return null;
   })();
 

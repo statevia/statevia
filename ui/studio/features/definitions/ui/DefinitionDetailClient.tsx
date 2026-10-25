@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { useDefinitionDetail } from "@/features/definitions/hooks/useDefinitionDetail";
 import { useProject } from "@/features/projects/projectContext";
 import { canExecute, canPublish } from "@/features/projects/roles";
+import {
+  DEFINITIONS_WRITE_PERMISSION,
+  EXECUTIONS_WRITE_PERMISSION,
+  usePermissions,
+} from "@/shared/auth/permissionsContext";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
@@ -36,9 +41,12 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
     deletedMessage: uiText.definitionDetail.toasts.deleted,
   });
   const { roleOf, loaded: projectsLoaded } = useProject();
+  const permissions = usePermissions();
   const role = row ? roleOf(row.projectId) : null;
-  const showEdit = projectsLoaded && canPublish(role);
-  const showRun = projectsLoaded && canExecute(role);
+  // 編集・論理削除・実行開始は、Project ロールとグループ権限の両方を API が要求する。
+  // 編集と論理削除は同じ条件（公開以上 + definitions.write）。
+  const showEdit = projectsLoaded && canPublish(role) && permissions.has(DEFINITIONS_WRITE_PERMISSION);
+  const showRun = projectsLoaded && canExecute(role) && permissions.has(EXECUTIONS_WRITE_PERMISSION);
 
   /** 削除ボタン用。Promise はここで吸収し、表示は hook 内トーストに任せる。 */
   const onDeleteClick = () => {
@@ -118,7 +126,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
 
       {row && (
       <section className="space-y-2 text-sm text-md-on-surface">
-        {projectsLoaded && !showEdit && !showRun && (
+        {projectsLoaded && permissions.loaded && !showEdit && !showRun && (
           <p className="text-md-on-surface-variant">{uiText.definitionDetail.roleDenied}</p>
         )}
         <div className="flex flex-wrap items-center gap-3">
@@ -142,7 +150,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
               {uiText.definitionDetail.actions.run}
             </button>
           )}
-          {row && !confirmDelete && (
+          {row && showEdit && !confirmDelete && (
             <button
               type="button"
               className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
@@ -152,7 +160,7 @@ export function DefinitionDetailClient({ definitionId }: Readonly<DefinitionDeta
               {uiText.definitionDetail.actions.delete}
             </button>
           )}
-          {row && confirmDelete && (
+          {row && showEdit && confirmDelete && (
             <>
               <button
                 type="button"

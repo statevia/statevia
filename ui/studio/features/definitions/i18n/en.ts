@@ -60,7 +60,7 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     urlPrefix: "URL:",
     errorFetchFailed: "Failed to fetch definition.",
     notMember: "You cannot open this definition because you are not a member of its project.",
-    roleDenied: "This role cannot edit the definition or start an execution.",
+    roleDenied: "Your role or group permissions do not allow editing the definition or starting an execution.",
     ariaMeta: "Definition metadata",
     meta: {
       name: "Name",
@@ -93,6 +93,7 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     unspecifiedDefinitionId: "(not specified)",
     notMember: "You cannot start an execution because you are not a member of this definition's project.",
     roleDenied: "Executor role or higher is required to start an execution.",
+    permissionDenied: "Starting an execution requires the executions.write permission on one of your groups. Ask a tenant administrator.",
     inputLabelWithHint: (inputLabel: string) => `${inputLabel} (optional, JSON)`,
     inputJsonPlaceholder: 'Example: {"orderId":"123"}',
     nav: {

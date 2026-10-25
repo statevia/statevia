@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.10 |
-| 更新日 | 2026-10-25 |
+| Version | 1.11 |
+| 更新日 | 2026-10-26 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.11（2026-10-26）**: 定義の作成・編集・削除・復元には所属グループの `definitions.write`、実行の開始・取消・Resume・イベント送信には `executions.write` が、Project ロールに加えて要る。無いときはボタンを出さない。
 
 **Version 1.10（2026-10-25）**: ヘッダーで所属 Project を選ぶ。定義の作成は Project 必須。メンバーは名前で付与する。未所属の定義詳細は開かない。
 
@@ -80,6 +82,18 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §4.1.1 / �
 | 全 Project | `/admin/projects` | tenant.admin。未所属でもメンバーは付けられる。定義の編集画面へは進まない |
 
 ロールは閲覧、実行、公開、管理の順に強い。定義の作成には公開以上が必要です。Project 自体を削除する操作は無い。
+
+Project ロールに加えて、所属グループの権限も要ります。
+
+| 操作 | Project ロール | グループ権限 |
+| --- | --- | --- |
+| 定義の作成・編集・削除・復元 | 公開以上 | `definitions.write` |
+| 実行の開始 | 実行以上 | `executions.write` |
+| 実行の取消・Resume・イベント送信 | 実行以上 | `executions.write` |
+
+足りない操作のボタンは出ません。エディタ、実行開始画面、Run 画面は理由を表示します。グループ権限はテナント管理者が管理画面の「グループ」で付けます。
+
+実行の取消・Resume・イベント送信では、Studio はグループ権限だけを見ます。実行の応答に Project が含まれないため、Project ロールは Service API が判定し、足りなければ 403 になります。
 
 HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.7。
 

@@ -87,6 +87,8 @@ export type DefinitionsFeatureUiText = {
     unspecifiedDefinitionId: string;
     notMember: string;
     roleDenied: string;
+    /** Project ロールは足りるが、グループ権限 `executions.write` が無いとき。 */
+    permissionDenied: string;
     definitionIdLine: (definitionIdLabel: string, definitionId: string) => string;
     inputLabelWithHint: (inputLabel: string) => string;
     inputJsonPlaceholder: string;

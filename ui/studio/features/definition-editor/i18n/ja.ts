@@ -11,6 +11,7 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
     loadingMeta: "定義メタ情報を読み込み中...",
     notMember: "この定義のプロジェクトに所属していないため、エディタを開けません。",
     roleDenied: "定義の作成と編集には公開以上のロールが必要です。",
+    permissionDenied: "定義の作成と編集には、所属グループに definitions.write 権限が必要です。テナント管理者に依頼してください。",
     validation: {
       nameRequired: "定義名を入力してください。",
       yamlRequired: "YAML を入力してください。",

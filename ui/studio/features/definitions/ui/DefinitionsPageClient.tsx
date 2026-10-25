@@ -9,6 +9,7 @@ import { useDefinitionsListQuery } from "@/features/definitions/hooks/useDefinit
 import { isDeletedDefinition } from "@/features/definitions/types";
 import { useProject } from "@/features/projects/projectContext";
 import { canPublish } from "@/features/projects/roles";
+import { DEFINITIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
@@ -37,6 +38,10 @@ export function DefinitionsPageClient() {
     goTo,
   } = useDefinitionsListQuery();
   const { selectedProject } = useProject();
+  const permissions = usePermissions();
+  // 作成・削除・復元は、選択中 Project の公開以上とグループ権限 definitions.write の両方を API が要求する。
+  const canManageCatalog =
+    canPublish(selectedProject?.role) && permissions.has(DEFINITIONS_WRITE_PERMISSION);
   const scopedQuery = useMemo(
     () => ({ ...listQuery, projectId: selectedProject?.projectId }),
     [listQuery, selectedProject],
@@ -212,7 +217,7 @@ export function DefinitionsPageClient() {
           />
           <span>{uiText.definitionsPage.includeDeleted.label}</span>
         </label>
-        {canPublish(selectedProject?.role) && (
+        {canManageCatalog && (
           <button
             type="button"
             className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
@@ -287,7 +292,7 @@ export function DefinitionsPageClient() {
                         >
                           {uiText.definitionsPage.actions.openDetail}
                         </button>
-                        {isDeletePending ? (
+                        {canManageCatalog && (isDeletePending ? (
                           <>
                             <button
                               type="button"
@@ -317,10 +322,10 @@ export function DefinitionsPageClient() {
                           >
                             {uiText.definitionsPage.actions.delete}
                           </button>
-                        )}
+                        ))}
                       </>
                     )}
-                    {deleted && (
+                    {deleted && canManageCatalog && (
                       <>
                         {isRestorePending ? (
                           <>

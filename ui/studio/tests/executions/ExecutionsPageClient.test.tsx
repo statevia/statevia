@@ -166,4 +166,15 @@ describe("ExecutionsPageClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "詳細" }));
     expect(push).toHaveBeenCalledWith("/executions/ex-1");
   });
+
+  it("executions.write が無ければイベント送信ボタンを出さない", async () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionsPageClient />, { permissions: ["executions.read"] });
+
+    // Assert
+    await waitFor(() => {
+      expect(apiGet).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole("button", { name: "イベントを送信" })).not.toBeInTheDocument();
+  });
 });
