@@ -35,6 +35,6 @@ internal sealed class ResolvedModulePathProvider : IResolvedModulePathProvider
 
 internal static partial class ResolvedModulePathProviderLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Modules root resolved to {ModulesRoot}")]
+    [LoggerMessage(EventId = 61001, Level = LogLevel.Information, Message = "Modules root resolved to {ModulesRoot}")]
     public static partial void ModulesRootResolved(ILogger logger, string modulesRoot);
 }

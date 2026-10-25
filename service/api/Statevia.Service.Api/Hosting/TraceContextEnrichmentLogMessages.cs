@@ -6,7 +6,7 @@ namespace Statevia.Service.Api.Hosting;
 internal static partial class TraceContextEnrichmentLogMessages
 {
     [LoggerMessage(
-        EventId = 4020,
+        EventId = 10201,
         Level = LogLevel.Information,
         Message = "HTTP trace enrich TraceId={traceId} ExecutionId={executionId} DefinitionId={definitionId} GraphDefinitionId={graphDefinitionId}")]
     public static partial void HttpTraceEnrich(

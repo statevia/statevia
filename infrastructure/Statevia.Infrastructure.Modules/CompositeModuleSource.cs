@@ -90,7 +90,7 @@ internal sealed class CompositeModuleSource : IModuleSource
 internal static partial class CompositeModuleSourceLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60801,
         Level = LogLevel.Warning,
         Message = "Dropping duplicate module '{ModuleDirectoryName}' from source '{DroppedSource}'; kept higher-priority source '{KeptSource}'")]
     public static partial void DuplicateModuleDropped(

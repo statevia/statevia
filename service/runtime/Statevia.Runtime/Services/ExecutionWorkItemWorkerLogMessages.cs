@@ -13,13 +13,13 @@ namespace Statevia.Runtime.Services;
 internal static partial class ExecutionWorkItemWorkerLogMessages
 {
     [LoggerMessage(
-        EventId = 3301,
+        EventId = 70001,
         Level = LogLevel.Error,
         Message = "Execution work item worker iteration failed.")]
     public static partial void WorkerIterationFailed(this ILogger logger, Exception exception);
 
     [LoggerMessage(
-        EventId = 3302,
+        EventId = 70002,
         Level = LogLevel.Error,
         Message = "Execution work item {WorkItemId} failed. TenantId={tenantId}")]
     public static partial void WorkItemFailed(
@@ -29,13 +29,13 @@ internal static partial class ExecutionWorkItemWorkerLogMessages
         Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3303,
+        EventId = 70003,
         Level = LogLevel.Warning,
         Message = "Execution work item {WorkItemId} lost lease during processing; another worker may reclaim it. TenantId={tenantId}")]
     public static partial void WorkItemLeaseLost(this ILogger logger, Guid workItemId, Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3304,
+        EventId = 70004,
         Level = LogLevel.Warning,
         Message = "Execution work item {WorkItemId} heartbeat failed. TenantId={tenantId}")]
     public static partial void WorkItemHeartbeatFailed(
@@ -45,7 +45,7 @@ internal static partial class ExecutionWorkItemWorkerLogMessages
         Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3305,
+        EventId = 70005,
         Level = LogLevel.Warning,
         Message = "Execution work item {WorkItemId} could not acquire checkpoint ownership for execution {ExecutionId}. TenantId={tenantId}")]
     public static partial void WorkItemOwnershipAcquireFailed(
@@ -55,7 +55,7 @@ internal static partial class ExecutionWorkItemWorkerLogMessages
         Guid tenantId);
 
     [LoggerMessage(
-        EventId = 3306,
+        EventId = 70006,
         Level = LogLevel.Warning,
         Message = "Execution work item {WorkItemId} failed to end owned session. TenantId={tenantId}")]
     public static partial void WorkItemSessionEndFailed(
@@ -65,19 +65,19 @@ internal static partial class ExecutionWorkItemWorkerLogMessages
         Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3308,
+        EventId = 70007,
         Level = LogLevel.Information,
         Message = "Worker interrupted locally owned execution for Cancel. ExecutionId={executionId} TenantId={tenantId}")]
     public static partial void WorkerLocalCancelInterrupt(this ILogger logger, Guid executionId, Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3310,
+        EventId = 70008,
         Level = LogLevel.Information,
         Message = "Worker applied Engine cancel before local IRQ. ExecutionId={executionId} TenantId={tenantId}")]
     public static partial void WorkerLocalCancelApplied(this ILogger logger, Guid executionId, Guid? tenantId);
 
     [LoggerMessage(
-        EventId = 3309,
+        EventId = 70009,
         Level = LogLevel.Information,
         Message = "Worker lifecycle slots changed. ActiveLifecycleSlots={activeLifecycleSlots} MaxConcurrency={maxConcurrency}")]
     public static partial void WorkerLifecycleSlotsChanged(
@@ -86,7 +86,7 @@ internal static partial class ExecutionWorkItemWorkerLogMessages
         int maxConcurrency);
 
     [LoggerMessage(
-        EventId = 3311,
+        EventId = 70010,
         Level = LogLevel.Error,
         Message = "Work item permanent failure. ExecutionId={executionId} WorkItemId={workItemId} WorkItemKind={workItemKind} FailureReason={failureReason} TenantId={tenantId}")]
     [SuppressMessage(

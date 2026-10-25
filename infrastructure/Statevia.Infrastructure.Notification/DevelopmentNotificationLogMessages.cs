@@ -4,7 +4,7 @@ namespace Statevia.Infrastructure.Notification;
 internal static partial class DevelopmentNotificationLogMessages
 {
     [LoggerMessage(
-        EventId = 4101,
+        EventId = 12001,
         Level = LogLevel.Warning,
         Message = "notification action skipped in Development (channel=email toLength={ToLength} subjectLength={SubjectLength})")]
     public static partial void NotificationSkippedInDevelopment(

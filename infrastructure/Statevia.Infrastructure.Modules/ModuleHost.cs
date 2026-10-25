@@ -454,42 +454,42 @@ internal sealed class ModuleHost
 
 internal static partial class ModuleHostLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = "Module discovery failed")]
+    [LoggerMessage(EventId = 60001, Level = LogLevel.Error, Message = "Module discovery failed")]
     public static partial void ModuleDiscoveryFailed(ILogger logger, Exception exception);
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Module {ModuleId} loaded with status {Status}: {Message}")]
+    [LoggerMessage(EventId = 60002, Level = LogLevel.Warning, Message = "Module {ModuleId} loaded with status {Status}: {Message}")]
     public static partial void ModuleLoadedWithStatus(ILogger logger, string moduleId, ModuleLoadStatus status, string message);
 
-    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Loaded module {ModuleId} v{Version} from {EntryAssemblyPath} (SHA256={Sha256})")]
+    [LoggerMessage(EventId = 60003, Level = LogLevel.Information, Message = "Loaded module {ModuleId} v{Version} from {EntryAssemblyPath} (SHA256={Sha256})")]
     public static partial void ModuleLoaded(ILogger logger, string moduleId, string version, string entryAssemblyPath, string sha256);
 
-    [LoggerMessage(EventId = 4, Level = LogLevel.Error, Message = "Failed to load module from {EntryAssemblyPath}")]
+    [LoggerMessage(EventId = 60004, Level = LogLevel.Error, Message = "Failed to load module from {EntryAssemblyPath}")]
     public static partial void ModuleLoadFailed(ILogger logger, Exception exception, string entryAssemblyPath);
 
-    [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "Skipping action from module {ModuleId}: ActionId is required")]
+    [LoggerMessage(EventId = 60005, Level = LogLevel.Warning, Message = "Skipping action from module {ModuleId}: ActionId is required")]
     public static partial void ActionIdRequired(ILogger logger, string moduleId);
 
-    [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: namespace convention violation")]
+    [LoggerMessage(EventId = 60006, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: namespace convention violation")]
     public static partial void NamespaceConventionViolation(ILogger logger, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 7, Level = LogLevel.Warning, Message = "Skipping duplicate action '{ActionId}' from module {ModuleId}")]
+    [LoggerMessage(EventId = 60007, Level = LogLevel.Warning, Message = "Skipping duplicate action '{ActionId}' from module {ModuleId}")]
     public static partial void DuplicateActionSkipped(ILogger logger, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 8, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: ExecutorFactory is required")]
+    [LoggerMessage(EventId = 60008, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: ExecutorFactory is required")]
     public static partial void ExecutorFactoryRequired(ILogger logger, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 9, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: invalid descriptor")]
+    [LoggerMessage(EventId = 60009, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: invalid descriptor")]
     public static partial void InvalidDescriptorSkipped(ILogger logger, Exception exception, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 10, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: invalid publication")]
+    [LoggerMessage(EventId = 60010, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: invalid publication")]
     public static partial void InvalidPublicationSkipped(ILogger logger, Exception exception, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 11, Level = LogLevel.Warning, Message = "Registered action '{ActionId}' from module {ModuleId} without ActionPublication; compile will require schema")]
+    [LoggerMessage(EventId = 60011, Level = LogLevel.Warning, Message = "Registered action '{ActionId}' from module {ModuleId} without ActionPublication; compile will require schema")]
     public static partial void PublicationMissing(ILogger logger, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 12, Level = LogLevel.Warning, Message = "Skipping unsigned module '{ModuleDirectory}': signature required")]
+    [LoggerMessage(EventId = 60012, Level = LogLevel.Warning, Message = "Skipping unsigned module '{ModuleDirectory}': signature required")]
     public static partial void ModuleSkippedUnsigned(ILogger logger, string moduleDirectory);
 
-    [LoggerMessage(EventId = 13, Level = LogLevel.Information, Message = "Module {ModuleId} signature resolved: TrustLevel={TrustLevel} ({ReasonCategory})")]
+    [LoggerMessage(EventId = 60013, Level = LogLevel.Information, Message = "Module {ModuleId} signature resolved: TrustLevel={TrustLevel} ({ReasonCategory})")]
     public static partial void ModuleSignatureResolved(ILogger logger, string moduleId, ActionTrustLevel trustLevel, string reasonCategory);
 }

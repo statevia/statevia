@@ -7,11 +7,11 @@ namespace Statevia.Runtime.Services;
 /// </summary>
 internal static partial class ExecutionScheduleDispatcherLogMessages
 {
-    [LoggerMessage(EventId = 3401, Level = LogLevel.Error, Message = "Schedule dispatch iteration failed.")]
+    [LoggerMessage(EventId = 70301, Level = LogLevel.Error, Message = "Schedule dispatch iteration failed.")]
     public static partial void DispatchIterationFailed(this ILogger logger, Exception exception);
 
     [LoggerMessage(
-        EventId = 3402,
+        EventId = 70302,
         Level = LogLevel.Information,
         Message = "Dispatched {Count} due execution schedules.")]
     public static partial void DueSchedulesDispatched(this ILogger logger, int count);

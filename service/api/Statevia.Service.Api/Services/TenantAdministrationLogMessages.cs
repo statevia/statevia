@@ -7,7 +7,7 @@ internal static partial class TenantAdministrationLogMessages
 {
     /// <summary>テナント管理者が対象ユーザーのパスワードを上書きした。</summary>
     [LoggerMessage(
-        EventId = 4040,
+        EventId = 31001,
         Level = LogLevel.Information,
         Message = "Admin updated user password. ActorPrincipalId={actorPrincipalId} TargetUserId={targetUserId}")]
     public static partial void UserPasswordUpdatedByAdmin(
@@ -20,7 +20,7 @@ internal static partial class TenantAdministrationLogMessages
     /// <param name="actorPrincipalId">呼び出し主体。</param>
     /// <param name="passwordConfigured">保護パスワードを保存したか。</param>
     [LoggerMessage(
-        EventId = 4041,
+        EventId = 31002,
         Level = LogLevel.Information,
         Message = "Admin replaced tenant notification SMTP. ActorPrincipalId={actorPrincipalId} PasswordConfigured={passwordConfigured}")]
     public static partial void NotificationSmtpReplaced(
@@ -34,7 +34,7 @@ internal static partial class TenantAdministrationLogMessages
     /// <param name="kind"><c>variable</c> または <c>secret</c>。</param>
     /// <param name="secretValueReplaced">シークレットの暗号文を置換したか。</param>
     [LoggerMessage(
-        EventId = 4042,
+        EventId = 31003,
         Level = LogLevel.Information,
         Message = "Admin saved tenant action binding. ActorPrincipalId={actorPrincipalId} Kind={kind} SecretValueReplaced={secretValueReplaced}")]
     public static partial void ActionBindingSaved(

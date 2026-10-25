@@ -309,23 +309,23 @@ internal sealed class ModuleLoadHostedServiceDependencies
 
 internal static partial class ModuleLoadHostedServiceLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Module change detected at {Path}. Restart required for updates or removals.")]
+    [LoggerMessage(EventId = 64001, Level = LogLevel.Warning, Message = "Module change detected at {Path}. Restart required for updates or removals.")]
     public static partial void ModuleChangeRequiresRestart(ILogger logger, string path);
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Module rename detected from {OldPath} to {NewPath}. Restart required.")]
+    [LoggerMessage(EventId = 64002, Level = LogLevel.Warning, Message = "Module rename detected from {OldPath} to {NewPath}. Restart required.")]
     public static partial void ModuleRenameRequiresRestart(ILogger logger, string oldPath, string newPath);
 
-    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Failed to load newly discovered modules")]
+    [LoggerMessage(EventId = 64003, Level = LogLevel.Error, Message = "Failed to load newly discovered modules")]
     public static partial void ModuleReloadFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 64004,
         Level = LogLevel.Warning,
         Message = "Skipping module reload for unknown tenant directory '{TenantKey}' at {Path}")]
     public static partial void UnknownTenantDirectory(ILogger logger, string tenantKey, string path);
 
     [LoggerMessage(
-        EventId = 5,
+        EventId = 64005,
         Level = LogLevel.Warning,
         Message = "Ignoring module path outside tenant layout at {Path}; expected {{modulesRoot}}/{{tenantKey}}/{{module}}/")]
     public static partial void UnscopedModulePathIgnored(ILogger logger, string path);

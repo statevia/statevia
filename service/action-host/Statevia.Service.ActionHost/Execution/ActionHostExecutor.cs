@@ -268,10 +268,10 @@ internal sealed class ActionHostExecutor
 
 internal static partial class ActionHostExecutorLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Action execution failed for {ActionId} (ExecutionId={ExecutionId})")]
+    [LoggerMessage(EventId = 62201, Level = LogLevel.Warning, Message = "Action execution failed for {ActionId} (ExecutionId={ExecutionId})")]
     public static partial void ExecutionFailed(ILogger logger, Exception exception, string actionId, string executionId);
 
     /// <summary>プロセス環境の復元失敗を記録する。値と例外メッセージは出さない。</summary>
-    [LoggerMessage(EventId = 2, Level = LogLevel.Critical, Message = "Process environment restore failed ({ExceptionType}). Stopping Action Host.")]
+    [LoggerMessage(EventId = 62202, Level = LogLevel.Critical, Message = "Process environment restore failed ({ExceptionType}). Stopping Action Host.")]
     public static partial void EnvironmentRestoreFailed(ILogger logger, string exceptionType);
 }

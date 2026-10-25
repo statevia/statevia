@@ -49,7 +49,7 @@ internal static partial class LoginFailureLockPurgeHostedServiceLogMessages
 {
     /// <summary>定期削除の 1 回が失敗した。次周期で再試行する。</summary>
     [LoggerMessage(
-        EventId = 4052,
+        EventId = 11003,
         Level = LogLevel.Error,
         Message = "Failed to purge expired login failure rows.")]
     public static partial void PurgeFailed(this ILogger logger, Exception exception);

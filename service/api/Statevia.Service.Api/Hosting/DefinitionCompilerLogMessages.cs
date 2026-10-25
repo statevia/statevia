@@ -4,7 +4,7 @@ namespace Statevia.Service.Api.Hosting;
 internal static partial class DefinitionCompilerLogMessages
 {
     [LoggerMessage(
-        EventId = 5101,
+        EventId = 30401,
         Level = LogLevel.Warning,
         Message = "Action input schema is not registered for state {State} action {ActionId}. Compile continues in warning mode.")]
     public static partial void ActionInputSchemaMissing(

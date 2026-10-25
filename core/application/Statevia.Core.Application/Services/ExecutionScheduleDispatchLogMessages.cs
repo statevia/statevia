@@ -8,7 +8,7 @@ namespace Statevia.Core.Application.Services;
 internal static partial class ExecutionScheduleDispatchLogMessages
 {
     [LoggerMessage(
-        EventId = 3030,
+        EventId = 30101,
         Level = LogLevel.Information,
         Message = "Schedule fire started. ScheduleId={scheduleId} TenantId={tenantId} ExecutionId={executionId}")]
     public static partial void ScheduleFireStarted(
@@ -18,19 +18,19 @@ internal static partial class ExecutionScheduleDispatchLogMessages
         Guid executionId);
 
     [LoggerMessage(
-        EventId = 3031,
+        EventId = 30102,
         Level = LogLevel.Information,
         Message = "Schedule fire skipped overlap. ScheduleId={scheduleId} TenantId={tenantId}")]
     public static partial void ScheduleFireSkippedOverlap(this ILogger logger, Guid scheduleId, Guid tenantId);
 
     [LoggerMessage(
-        EventId = 3032,
+        EventId = 30103,
         Level = LogLevel.Information,
         Message = "Schedule fire missed slot. ScheduleId={scheduleId} TenantId={tenantId}")]
     public static partial void ScheduleFireMissedSlot(this ILogger logger, Guid scheduleId, Guid tenantId);
 
     [LoggerMessage(
-        EventId = 3033,
+        EventId = 30104,
         Level = LogLevel.Warning,
         Message = "Schedule fire failed. ScheduleId={scheduleId} TenantId={tenantId} ErrorCode={errorCode}")]
     public static partial void ScheduleFireFailed(
@@ -40,7 +40,7 @@ internal static partial class ExecutionScheduleDispatchLogMessages
         string? errorCode);
 
     [LoggerMessage(
-        EventId = 3035,
+        EventId = 30105,
         Level = LogLevel.Information,
         Message = "Schedule manual run started. ScheduleId={scheduleId} TenantId={tenantId} ExecutionId={executionId}")]
     public static partial void ScheduleManualRunStarted(
@@ -51,7 +51,7 @@ internal static partial class ExecutionScheduleDispatchLogMessages
 
     /// <summary>システム点検が件数を残した。ログはテナント ID と件数だけ。</summary>
     [LoggerMessage(
-        EventId = 3036,
+        EventId = 30106,
         Level = LogLevel.Information,
         Message = "Stuck execution report completed. TenantId={tenantId} StuckExecutionCount={stuckExecutionCount} FailedScheduleRunCount={failedScheduleRunCount}")]
     public static partial void StuckExecutionReportCompleted(
@@ -61,7 +61,7 @@ internal static partial class ExecutionScheduleDispatchLogMessages
         int failedScheduleRunCount);
 
     [LoggerMessage(
-        EventId = 3034,
+        EventId = 30107,
         Level = LogLevel.Warning,
         Message = "Schedule fire Start failed. ScheduleId={scheduleId} TenantId={tenantId}")]
     public static partial void ScheduleFireStartException(

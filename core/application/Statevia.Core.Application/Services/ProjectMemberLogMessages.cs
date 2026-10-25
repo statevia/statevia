@@ -7,7 +7,7 @@ internal static partial class ProjectMemberLogMessages
 {
     /// <summary>付与またはロール変更。</summary>
     [LoggerMessage(
-        EventId = 3301,
+        EventId = 31101,
         Level = LogLevel.Information,
         Message = "Project member upserted. ActorPrincipalId={actorPrincipalId} ProjectId={projectId} TargetPrincipalId={targetPrincipalId} Role={role}")]
     public static partial void ProjectMemberUpserted(
@@ -19,7 +19,7 @@ internal static partial class ProjectMemberLogMessages
 
     /// <summary>メンバー剥奪。</summary>
     [LoggerMessage(
-        EventId = 3302,
+        EventId = 31102,
         Level = LogLevel.Information,
         Message = "Project member removed. ActorPrincipalId={actorPrincipalId} ProjectId={projectId} TargetPrincipalId={targetPrincipalId}")]
     public static partial void ProjectMemberRemoved(
