@@ -23,6 +23,9 @@ public sealed partial class LoggerMessageEventIdTests
     private static readonly string LoggingPropertyKeysDocPath =
         Path.Combine("docs", "reference", "logging-property-keys.md");
 
+    /// <summary>相対パスをディレクトリ単位に分ける区切り文字（OS 既定と代替の両方）。</summary>
+    private static readonly char[] PathSeparators = [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar];
+
     private static readonly Lazy<IReadOnlyList<LoggerMessageEventId>> EventIds = new(ScanEventIds);
 
     /// <summary>リポジトリ全体で EventId の整数が重複しない。</summary>
@@ -145,7 +148,7 @@ public sealed partial class LoggerMessageEventIdTests
     /// <param name="relativePath">リポジトリルートからの相対パス。</param>
     private static bool IsExcludedDirectory(string relativePath) =>
         relativePath
-            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Split(PathSeparators)
             .Any(segment => segment is "bin" or "obj" or "node_modules" or ".git" or "artifacts");
 
     /// <summary><c>LoggerMessage</c> 属性の引数部を捕捉する（複数行の属性も対象）。</summary>
