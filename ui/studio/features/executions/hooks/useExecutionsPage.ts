@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useProject } from "@/features/projects/projectContext";
 import { apiGet } from "@/shared/api";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { useI18n } from "@/shared/i18n/uiTextContext";
@@ -177,6 +178,7 @@ function toSortOrder(value: string): SortOrder {
  */
 export function useExecutionsPage(): ExecutionsPageModel {
   const { uiText } = useI18n();
+  const { selectedProject } = useProject();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [items, setItems] = useState<ExecutionDTO[] | null>(null);
@@ -217,7 +219,8 @@ export function useExecutionsPage(): ExecutionsPageModel {
         sort: listQuery.sort,
         status: listQuery.status,
         name: listQuery.name,
-        definitionId: listQuery.definitionId
+        definitionId: listQuery.definitionId,
+        projectId: selectedProject?.projectId,
       });
       const page = await apiGet<PagedExecutions>(path);
       setItems(page.items);
@@ -231,7 +234,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     } finally {
       setLoading(false);
     }
-  }, [listQuery]);
+  }, [listQuery, selectedProject?.projectId]);
 
   useEffect(() => {
     void reload();

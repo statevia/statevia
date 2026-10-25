@@ -3,15 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.31 |
-| 更新日 | 2026-10-18 |
+| Version | 1.32 |
+| 更新日 | 2026-10-25 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
 
 ## Normative 要約
 
-- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/schedules` / `/v1/events` / `/v1/event-subscriptions` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
+- **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/projects` / `/v1/schedules` / `/v1/events` / `/v1/event-subscriptions` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
 - **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。成功は **204**（一致 0 件でも）。
 - **MUST**: `GET /v1/event-subscriptions` は `executions.read` 必須。成功は **200**。候補は現在テナントの一意な topic / key（最大 500）。
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{id}` は新版 INSERT のみ（既存版の上書き禁止）。
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。許可の置換は付与先 Principal が executor 以上で所属していない project を 422 で拒む。既存実行の Cancel・Resume・イベント送信は、定義の Project に executor 以上の所属を Live で要求する。Project の DELETE は無い。
 
 **Version 1.31（2026-10-18）**: Studio は `/admin/notification-smtp` で通知 SMTP を全体置換・削除する。パスワードは再表示しない。疎通確認は無い。HTTP の成否は変えない。
 
@@ -109,9 +111,9 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 - publish トランザクションで **`latest_version` のみ先行コミット** しない（同一 ReadCommitted tx 内で version INSERT → latest 更新）。
 - Start 時に **mutable な定義行**や **latest だけ**から `compiled_json` を取得しない（必ず解決した **version 行**の `compiled_json` を使用）。
 
-**`definitions.project_id` は NOT NULL。** 認可 truth は `project_accesses`（`reader` / `executor` / `publisher` / `admin`）。`projects.visibility` は discoverability ヒントであり、認可には使わない。`UNIQUE(project_id, slug)`。
+**`definitions.project_id` は NOT NULL。** 認可 truth は呼び出し元 Principal の `project_accesses`（`reader` / `executor` / `publisher` / `admin`）。所属が無い Principal は未登録と同じ 404。`tenant.admin` でも所属行が無ければ定義と実行は読めない。Project は現在テナントの中だけ。他テナントへの付与はしない。`UNIQUE(tenant_id, slug)`。
 
-定義取得・publish・Start は `ITenantContext.TenantInternalId` と `project_accesses` で評価する。Reader 未満は 404（存在秘匿）、Reader のみが Start した場合は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount の Start は、そのあとに Principal の実行リソース許可を見る（[security-runtime.md](platform/security-runtime.md)）。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。
+定義の取得・一覧、実行の取得・一覧、publish、Start は現在テナントの所属で評価する。Reader 未満は 404（存在秘匿）。Reader のみの Start は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る（[security-runtime.md](platform/security-runtime.md)）。対象は定義と実行の閲覧、Start、Resume、Cancel。publish、Project 設定、メンバー、Group は見ない。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。project 行と definition 行の両方があるときは両方を満たすものだけ通る。一覧の件数も同じ条件で絞る。System と継承子 Start は見ない。許可は Snapshot に焼かない。
 
 **publish トランザクション:** `ICoreTransactionExecutor.ExecuteReadCommittedAsync` の 1 コールバック内で `definition_versions` INSERT → `definitions.latest_version` 更新。
 
@@ -128,6 +130,15 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 | *        | /v1/admin/*               | テナント管理者 API（§4.1.3）  |
 | GET      | /v1/admin/modules         | Module load catalog           |
 | POST     | /internal/modules/reload  | Module 再 scan                |
+| GET      | /v1/projects              | 所属 Project 一覧             |
+| POST     | /v1/projects              | Project 作成（作成者を admin） |
+| GET      | /v1/projects/{projectId}  | 所属 Project の取得           |
+| PATCH    | /v1/projects/{projectId}  | 表示名・説明・slug            |
+| GET      | /v1/projects/{projectId}/members | メンバー一覧           |
+| GET      | /v1/projects/{projectId}/member-candidates | 付与候補 |
+| PUT      | /v1/projects/{projectId}/members/{principalId} | 付与またはロール変更 |
+| DELETE   | /v1/projects/{projectId}/members/{principalId} | メンバー剥奪 |
+| GET      | /v1/admin/projects        | テナント内の全 Project        |
 | POST     | /v1/definitions           | 定義登録                      |
 | POST     | /v1/definitions/validate  | 定義検証（永続化しない）      |
 | PUT      | /v1/definitions/{id}      | 定義更新（displayId または UUID） |
@@ -168,7 +179,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
 **POST /v1/definitions** — リクエスト / 応答スキーマは OpenAPI の `CreateDefinitionRequest` / `DefinitionResponse`（`201 Created`）を参照。
 
-- `name` / `yaml` 必須。`name` は ASCII 識別子（1〜100。先頭英字）。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
+- `name` / `yaml` / `projectId` 必須。`projectId` の省略と空 GUID は **422**（`field=projectId`）。`default` へは落とさない。未所属または当該テナントに無い Project は **404**。Publisher 未満は **403**（`PROJECT_ACCESS_DENIED`）。`name` は ASCII 識別子（1〜100。先頭英字）。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
 
 ### 2.1.0 定義検証（dry-run）
 
@@ -220,7 +231,8 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
 **GET /v1/definitions**
 
-- **`?limit=&offset=&name=&sortBy=&sortOrder=&includeDeleted=`**（`limit` 必須）: 200 OK、`PagedResult<DefinitionResponse>`（`items`, `totalCount`, `offset`, `limit`, `hasMore`）。
+- **`?limit=&offset=&name=&projectId=&sortBy=&sortOrder=&includeDeleted=`**（`limit` 必須）: 200 OK、`PagedResult<DefinitionResponse>`（`items`, `totalCount`, `offset`, `limit`, `hasMore`）。
+  - 対象は呼び出し元が Reader 以上の Project。`projectId` を付けるとその Project だけ。未所属は 0 件。実行リソース許可の外も件数から外す
   - `name`: 名前の部分一致
   - `sortBy`: `createdAt` / `name`（未指定時は `createdAt`）
   - `sortOrder`: `asc` / `desc`（未指定時は `desc`）
@@ -235,7 +247,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 **GET /v1/definitions/{id}**
 
 - `id`: displayId または UUID
-- Response: 200 OK で 1 件（`displayId`, `resourceId`, `name`, `latestVersion`, `createdAt`, `updatedAt`, **`yaml`**（**最新版**の保存済みソース））。catalog 上削除済み・存在しない・他テナントは **404**（operational invisibility）。
+- Response: 200 OK で 1 件（`displayId`, `resourceId`, `name`, `latestVersion`, `createdAt`, `updatedAt`, **`yaml`**（**最新版**の保存済みソース））。catalog 上削除済み・存在しない・他テナント・Project 未所属は **404**（operational invisibility）。所属でも実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 
 ### 2.4 Graph Definition（構造）
 
@@ -244,7 +256,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 - `graphId`: 定義の **displayId** または UUID（実装コメント上は display_id 解決）。
 - **X-Tenant-Id**: 任意。省略時 `"default"`。
 - Response: 200 OK、`GraphDefinitionResponse`（`graphId`, `nodes[]`, `edges[]` 等。詳細は実装の `GraphDefinitionResponse`）。
-- 404: 定義が存在しない、catalog 上削除済み、または当該テナントに無い（operational invisibility）。
+- 404: 定義が存在しない、catalog 上削除済み、他テナント、または Project 未所属（operational invisibility）。所属でも実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 
 ### 2.5 nodes スキーマ取得
 
@@ -283,6 +295,31 @@ Builtin / Module action の **input/output JSON Schema** と **UI metadata** を
 **Compiler 連携**: 定義 publish 時、action 状態の `input` map は publication の `inputSchema` に対し検証される（422 `details` に `state`, `actionId`, `jsonPath` — 機微値は含めない）。ルートフラットに加え、ネスト `type: object` を再帰検証する（フェーズ F2）。`ship.address` ドットキーと `ship: { address: ... }` ネスト map は同等。正規化衝突は 422。
 
 ---
+
+### 2.7 Project
+
+Project は現在テナントの中だけで、定義を束ねる。他テナントの Principal へは付与しない。Project 本体の DELETE は無い。
+
+| メソッド | パス | 認可 | 成功 |
+| --- | --- | --- | --- |
+| GET | `/v1/projects` | 呼び出し元の所属だけ | 200。`role` は storage 文字列 |
+| POST | `/v1/projects` | `projects.create` | 201。作成者を同一トランザクションで `admin` にする |
+| GET | `/v1/projects/{projectId}` | 所属 | 200。未所属は 404 |
+| PATCH | `/v1/projects/{projectId}` | `project.admin` | 200。`displayName` / `description` / `slug` の指定項目だけ |
+| GET | `/v1/projects/{projectId}/members` | `project.admin` または `tenant.admin` | 200 |
+| GET | `/v1/projects/{projectId}/member-candidates` | 同上 | 200。同一テナントのユーザーと API キー |
+| PUT | `/v1/projects/{projectId}/members/{principalId}` | 同上 | 204。自己昇格を含む |
+| DELETE | `/v1/projects/{projectId}/members/{principalId}` | 同上 | 204。未所属の対象は 404 |
+| GET | `/v1/admin/projects` | `tenant.admin` | 200。未所属を含む。未所属の `role` は null |
+
+- 作成本文は `slug`（1〜128）と `displayName`（1〜256）。`description` は任意。テナント内の slug 重複は **422**（`field=slug`）。
+- PATCH は `project.admin` だけ。`tenant.admin` でも未所属なら **404**。所属して admin でなければ **403**（`PROJECT_ACCESS_DENIED`）。
+- ロールは `reader` / `executor` / `publisher` / `admin`。それ以外は **422**（`field=role`）。
+- 他テナントの Principal、または存在しない Principal は **422**（`field=principalId`）。
+- 最後の `admin` を外す、または `admin` 以外へ下げる操作は `tenant.admin` だけ。それ以外は **422**（`field=principalId`）。
+- メンバー応答は `principalId`、`displayName`、`kind`（`user` / `apiKey` / `system`）、`role`、`createdAt`。候補は `system` を含まない。`principalId` は付与 API の識別子。
+- `tenant.admin` は未所属でもメンバーを付けられる。定義と実行の閲覧は所属が無いと **404** のまま。
+- 新規ユーザーと新規 API キーは、既存 Project のメンバーにはならない。
 
 ### 3.1 実行開始
 
@@ -327,7 +364,8 @@ Request:
 
 **GET /v1/executions**
 
-- **`?limit=&offset=&status=&name=&definitionId=&sortBy=&sortOrder=`**（`limit` 必須）: 200 OK、`PagedResult<ExecutionResponse>`。
+- **`?limit=&offset=&status=&name=&definitionId=&projectId=&sortBy=&sortOrder=`**（`limit` 必須）: 200 OK、`PagedResult<ExecutionResponse>`。
+  - 対象は呼び出し元が Reader 以上の Project に属する定義の実行。`projectId` を付けるとその Project だけ。未所属は 0 件。実行リソース許可の外も件数から外す
   - `status`: `executions.status` 列と**完全一致**
   - `name`: `display_id` の部分一致（`Guid` 形式入力時は `execution_id` 完全一致も許容）
   - `definitionId`: Definition の displayId または UUID
@@ -342,13 +380,13 @@ Request:
 
 **GET /v1/executions/{id}**
 
-- Response: 200 OK、**一覧と同一形の `ExecutionResponse`**（UI の ExecutionDTO と整合）。404 は未存在。
+- Response: 200 OK、**一覧と同一形の `ExecutionResponse`**（UI の ExecutionDTO と整合）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 
 ### 3.4 実行グラフ取得
 
 **GET /v1/executions/{id}/graph**
 
-Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` に保存された **ExecutionGraph と同形の JSON** を返す。404 は未存在。
+Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` に保存された **ExecutionGraph と同形の JSON** を返す。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。`execution_graph_snapshots` 行が無いときも 404。
 
 - JSON キー命名は **camelCase**。
 - トップレベルは **`nodes`**, **`edges`**（ExecutionGraph のシリアライズ形）。**HTTP** では `execution_graph_snapshots` の行が無い場合は **404**。エンジン API がメモリにインスタンスを持たないときは **`{}`** 文字列を返し得るが、それは in-process 観測用であり、Read API の正本ではない。
@@ -368,7 +406,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 **GET /v1/executions/{id}/waits**
 
 - Response: 200 OK、`ExecutionWaitsResponse`（`{ "waits": [ … ] }`）。Wait が無いときは空配列。
-- 404 は実行未存在、または `GET …/graph` と同じく graph スナップショットが無いとき。
+- 404 は実行未存在、Project 未所属、または `GET …/graph` と同じく graph スナップショットが無いとき。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。グラフ取得と同じ判定を通る。
 - 各要素は `nodeId`（実行グラフの opaque ID）、`nodeName`（定義上の状態名）、`allowedEvents`（文字列配列。null は出さない。0 件は `[]`）。
 - 対象はスナップショット上の **WAITING かつ nodeType=Wait** のみ。完了済みや Task/Start は含めない。順序は graph `nodes` 配列順。
 - Hosted 物理 Fork の親 ID では `GET …/graph` と同じ合成後グラフから射影する。子実行の Wait は子の `{id}` で取る。
@@ -382,7 +420,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 **GET /v1/executions/{id}/state?atSeq={seq}**
 
 - **atSeq**: 必須（long）。`event_store` のシーケンスに基づく状態ビュー（`ExecutionViewDto`）。リプレイ用途。
-- Response: 200 OK。404 は未存在。
+- Response: 200 OK。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 - 現行実装は **スナップショット近似**であり、`atSeq` 時点の厳密な過去状態の完全再構成を保証するものではない（運用上の注意は UI 文言・将来の強化チケットに委ねる）。
 - **`ExecutionViewDto`** は UI の `ExecutionView` に近い camelCase。`displayId`, `resourceId`, `graphId`, `status`, `startedAt`, `updatedAt`, `cancelRequested`, `restartLost`, **`nodes`**。
 - **`restartLost`**: 開始済み Resume の未分類試行上限など、復旧可能な中断の観測印。このとき投影 `status` は `Failed` にしない。checkpoint は残す。
@@ -402,7 +440,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 **GET /v1/executions/{id}/events**
 
 - クエリ: **`afterSeq`**（既定 0）、**`limit`**（既定 500、上限は実装に従う）。
-- Response: 200 OK、`ExecutionEventsResponseDto`（タイムライン行の列挙）。404 は未存在。
+- Response: 200 OK、`ExecutionEventsResponseDto`（タイムライン行の列挙）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。グラフ取得と同じ判定を通る。
 
 ### 3.7 SSE（グラフ変化の Push）
 
@@ -412,7 +450,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 - **必須**: Principal（JWT または `X-Api-Key`）と `X-Tenant-Id`。未認証は **401**。SSE も `/v1/executions` 配下のため Middleware の Principal 必須と同一。
 - テナントは **`X-Tenant-Id`**（UI から `EventSource` でヘッダが付けられない場合は [ui-auth-tenant-config.md](../guides/ui-auth-tenant-config.md) のクエリ経由とプロキシ Cookie）。
 - 詳細ペイロードは [data-integration.md](data-integration.md) §5.1 を正とする。
-- 404: 実行未存在。
+- 404: 実行未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。接続開始時に一度だけ判定する。
 
 ### 3.8 キャンセル
 
@@ -420,6 +458,8 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 - **X-Idempotency-Key**: 任意だが推奨。同一キー＋同一リクエストの再送は `command_dedup` により初回と同じ結果（通常 204）を返す。キーは `event_delivery_dedup` の `client_event_id` 導出にも使われる（[data-integration.md](data-integration.md) §3.3）。
 - Response: 204 No Content。エンジンで Cancel を適用し、projection を更新。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
+- User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。Snapshot の許可キーでは決めない。
 - Engine に当該実行が無い（例: API 再起動直後）場合は **422**（`ArgumentException`。データ連携契約のセクション7）。
 
 ### 3.9 イベント発行（Write・互換シム）
@@ -438,6 +478,7 @@ Request:
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
 - Engine に当該実行が無い場合は **422**（キャンセルと同様）。
 
 ### 3.10 ノード再開（Wait 正本）
@@ -455,6 +496,8 @@ Request（JSON）:
 - **`resumeKey`**: 必須。Wait の **許可イベント名**（`allowedEvents` / `WaitEventRouteTable` のキー）。ASCII 識別子（1〜64）。空白のみ・非 ASCII は 422。
 - **`nodeId`**: パス上の実行グラフノード ID（待機中 Wait）。
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
+- User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。終端より先に判定する。Snapshot の許可キーでは決めない。
 - 投影 status がすでに終端（`Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
 - 非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（従来どおり）。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。
@@ -591,6 +634,7 @@ Request:
 | POST | `/service-accounts` | 資格のない ServiceAccount 作成（`name` は ASCII ラベル最大 128、`groupIds` は 1 件以上）。API キーは発行しない。201 |
 | GET | `/service-accounts/{serviceAccountId}` | ServiceAccount 詳細 |
 | PATCH | `/service-accounts/{serviceAccountId}` | `isActive?` / `displayName?` / `groupIds?`（指定時は 1 件以上の置換）。無効化すると Principal が inactive。紐づくスケジュールは自動では止めない |
+| GET | `/projects` | テナント内の全 Project。未所属の `role` は null。定義の閲覧は開かない |
 | GET | `/users/{userId}/resource-grants` | User の実行リソース許可（`projectIds` / `definitionIds`） |
 | PUT | `/users/{userId}/resource-grants` | User の実行リソース許可を置換 |
 | GET | `/service-accounts/{serviceAccountId}/resource-grants` | ServiceAccount の実行リソース許可 |
@@ -607,7 +651,7 @@ Studio の `/admin/notification-smtp` は、通知 SMTP の GET / PUT / DELETE �
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 
-**実行リソース許可の置換:** 本文は `{ "projectIds": [], "definitionIds": [] }`。両方必須。省略は **422**（`VALIDATION_ERROR`）。空配列はその種別の行を消す。重複 ID は 1 件に畳む。空 GUID は **422**。他テナントの主体・project・定義、および未知 ID は **404**。テナントが実行できない project や定義は **422** で、既存の許可は残る。1 Principal あたり project 32 件、definition 128 件まで。Start が許可集合を毎回メモリで評価するため。超過は **422**。評価の意味は [security-runtime.md](platform/security-runtime.md)。
+**実行リソース許可の置換:** 本文は `{ "projectIds": [], "definitionIds": [] }`。両方必須。省略は **422**（`VALIDATION_ERROR`）。空配列はその種別の行を消す。重複 ID は 1 件に畳む。空 GUID は **422**。他テナントの主体・project・定義、および未知 ID は **404**。付与先の Principal が executor 以上で所属していない project や、その project に属する定義は **422** で、既存の許可は残る。操作する管理者自身の所属は問わない。1 Principal あたり project 32 件、definition 128 件まで。超過は **422**。評価の意味は [security-runtime.md](platform/security-runtime.md)。閲覧・開始・再開・取消がこの集合を見る。
 
 JWT クレーム: `tenant_id`（内部 UUID）、`tenant_key`、`principal_id` / `sub`。詳細は `docs/specifications/platform/security-runtime.md`。
 
@@ -623,7 +667,7 @@ Response（`GET /v1/admin/modules` の 1 件）: `moduleId`, `name`, `version`, 
 
 ### 4.1.2 Runtime API の認証要件
 
-- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/schedules`、`/v1/events`、`/v1/event-subscriptions`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
+- **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/projects`、`/v1/schedules`、`/v1/events`、`/v1/event-subscriptions`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
 - **必須**: Principal が解決済みであること（JWT または `X-Api-Key`）。
 - **拒否**: `X-Tenant-Id` のみ（Bearer / API キーなし）は **401**（`UNAUTHORIZED`）。
 - **除外パス**: `/v1/auth/login`、`/v1/health`、`/swagger/*`、`/scalar/*`。
@@ -637,6 +681,7 @@ Principal 解決後、サービス層で **semantic permission key** を評価�
 | --- | --- |
 | GET `/v1/definitions*`、`/v1/graphs/*`、`/v1/definitions/schema/nodes`、`/v1/actions/schema*` | `definitions.read` |
 | POST/PUT `/v1/definitions`、`POST /v1/definitions/validate` | `definitions.write` |
+| POST `/v1/projects` | `projects.create` |
 | GET `/v1/executions*`（一覧・詳細・graph・waits・state・events・stream）、GET `/v1/schedules*`、GET `/v1/event-subscriptions` | `executions.read` |
 | POST start / cancel / publish / resume、**`POST /v1/events`**、スケジュールの作成・更新・削除・手動実行 | `executions.write` |
 

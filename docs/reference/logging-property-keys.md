@@ -42,8 +42,10 @@ Service API / Worker / Application / Engine の構造化ログで、同じ概念
 | work item 種別 | `WorkItemKind` | Worker | Start / Resume / Cancel |
 | 恒久失敗理由 | `FailureReason` | Worker | `restore_invalid` / `definition_version_missing` / `max_attempts`。YAML 全文は出さない |
 | 例外型 | `ExceptionType` / `ErrorType` | API / Engine | - |
-| 操作主体 Principal | `ActorPrincipalId` | 管理者パスワード更新 | 監査。平文・ハッシュは出さない |
+| 操作主体 Principal | `ActorPrincipalId` | 管理者パスワード更新、Project メンバー変更 | 監査。平文・ハッシュは出さない |
 | 操作対象ユーザー | `TargetUserId` | 管理者パスワード更新 | `users.user_id` |
+| 操作対象 Principal | `TargetPrincipalId` | Project メンバー変更 | `principals.principal_id`。シークレットは出さない |
+| Project | `ProjectId` | Project メンバー変更 | `projects.project_id` |
 | テナントキー | `TenantKey` | ログイン失敗ロック | JWT 前の外部キー。パスワードは出さない |
 | ユーザー名 | `Username` | ログイン失敗ロック | ロック主体。パスワード・ハッシュは出さない |
 | 停滞実行件数 | `StuckExecutionCount` | スケジュール点検 | Running かつ待機なしで、実効 Action タイムアウト以上更新が無い件数 |

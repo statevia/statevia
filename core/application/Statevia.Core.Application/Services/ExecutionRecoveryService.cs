@@ -58,6 +58,8 @@ internal sealed class ExecutionRecoveryService(
             throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
 
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
 
         if (ExecutionLifecycleCommandService.IsTerminalExecutionProjectionStatus(execution.Status))
             return;

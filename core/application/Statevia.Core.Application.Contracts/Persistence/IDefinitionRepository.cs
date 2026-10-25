@@ -54,6 +54,13 @@ public interface IDefinitionRepository
         Guid definitionId,
         CancellationToken ct);
 
+    /// <summary>catalog（論理削除含む）の project_id を返す。無ければ null。実行読取認可用。</summary>
+    Task<Guid?> ResolveProjectIdIncludingDeletedAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct);
+
     Task AddWithInitialVersionAsync(
         ICoreUnitOfWork uow,
         DefinitionRow definition,
@@ -65,9 +72,11 @@ public interface IDefinitionRepository
         DefinitionVersionPublishCommand command,
         CancellationToken ct);
 
+    /// <summary>呼び出し元 Principal が Reader 以上の Project に属する定義だけをページングする。</summary>
     Task<(int TotalCount, List<(DefinitionDetail Detail, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         DefinitionListPageQuery query,
         CancellationToken ct);
 

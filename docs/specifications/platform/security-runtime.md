@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.4 |
-| 更新日 | 2026-09-29 |
+| Version | 1.2.5 |
+| 更新日 | 2026-10-25 |
 | 関連 | [decisions/action-module-signing.md](../../decisions/action-module-signing.md), [actions/platform.md](../actions/platform.md) |
 
 ---
@@ -122,8 +122,8 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 | 操作 | Identity | Authorization |
 | --- | --- | --- |
 | Start | Live | Live（`executions.write`、project executor、実行リソース許可）。成功時 Snapshot 作成 |
-| Resume / Cancel | Live | **Owner**: `evaluationMode`（既定 **Snapshot**） / **Operator**: 常に Live |
-| Read | Live | Live（`executions.read`） |
+| Resume / Cancel | Live | **Owner**: 許可キーは `evaluationMode`（既定 **Snapshot**）。実行リソース許可は Live / **Operator**: 常に Live の `executions.write` と Live の実行リソース許可 |
+| Read | Live | Live（`executions.read` と、User / ServiceAccount の実行リソース許可） |
 
 - **Owner** = `startedByPrincipalId`（Start 発行者）。Snapshot 上の `effectivePermissionKeys` で Owner 経路を評価できる（権限剥奪後も Resume / Cancel 可 — Principal が有効な場合）。定期実行の Start では Owner は run-as の ServiceAccount であり、スケジュール作成者ではない。
 - **Operator** = Owner 以外。常に Live の `executions.write` を要求。人間が定期実行の Resume / Cancel をするときは Operator。
@@ -132,23 +132,23 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 
 ## Principal の実行リソース許可
 
-User と ServiceAccount の Start は、`executions.write` と project の executor のあとに `principal_resource_grants` を評価する。対象は `POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行。Group には付けない。
+User と ServiceAccount は、所属のあとに `principal_resource_grants` を評価する。対象は定義と実行の閲覧、`POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行、Resume、Cancel。publish、Project 設定、メンバー、Group には付けない。
 
-| project の行 | definition の行 | 追加で許される Start |
+| project の行 | definition の行 | 追加で許される対象 |
 | --- | --- | --- |
-| なし | なし | テナントが executor の定義すべて |
-| あり | なし | 許可した project 内の定義 |
-| なし | あり | 許可した定義（各定義の project は executor 以上） |
+| なし | なし | 所属の範囲すべて |
+| あり | なし | 許可した project 内 |
+| なし | あり | 許可した定義 |
 | あり | あり | 両方を満たす定義だけ |
 
-不一致は **403**（`RESOURCE_GRANT_DENIED`）。定義が当該テナントに無いときは従来どおり **404**。論理定義 ID を見る。版は見ない。
+不一致は **403**（`RESOURCE_GRANT_DENIED`）。定義が当該テナントに無いとき、または Project 未所属のときは **404**。論理定義 ID を見る。版は見ない。一覧は外れた行を件数ごと落とす。
 
 - System と、親から始まる継承子 Start はこの表を見ない。
-- 定義の取得、Resume、Cancel はこの表を見ない。許可は Snapshot に焼き込まない。Resume / Cancel は上の Snapshot / Operator のまま。
+- 許可は Snapshot に焼き込まない。Resume と Cancel の Owner も Live の名簿を見る。許可キーの Snapshot / Operator 判定はそのまま。
 - 変更はテナント管理者 API だけ。一般の Runtime API では自分の許可を書き換えられない。他テナントの Principal・project・定義は **404**。
-- 定義を論理削除しても許可行は残ってよい。Start は **404**。
-- テナントが executor 未満の project と、実行できない定義は **422**（`VALIDATION_ERROR`）で保存しない。
-- 1 Principal あたり project 32 件、definition 128 件。Start が許可集合を毎回メモリで評価するため。超過は **422**（`VALIDATION_ERROR`）。重複 ID は 1 件に畳んでから数える。空の配列はその種別の行を消し、その種別の追加制限を無くす。
+- 定義を論理削除しても許可行は残ってよい。Start は **404**。削除済み定義の実行でも Resume と Cancel は所属 project を解決してこの表を見る。
+- 付与先の Principal が executor 以上で所属していない project と、その project に属する定義は **422**（`VALIDATION_ERROR`）で保存しない。実行は所属と許可の両方を要求するため、所属の外へ付けた許可は何も通さないからである。操作するテナント管理者自身の所属は問わない。
+- 1 Principal あたり project 32 件、definition 128 件。超過は **422**（`VALIDATION_ERROR`）。重複 ID は 1 件に畳んでから数える。空の配列はその種別の行を消し、その種別の追加制限を無くす。
 
 HTTP のパスと本文は [api-http.md](../api-http.md) §3.12 / §4.1.3。表は [database-schema.md](../../reference/database-schema.md)。
 

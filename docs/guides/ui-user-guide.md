@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.9 |
-| 更新日 | 2026-10-05 |
+| Version | 1.10 |
+| 更新日 | 2026-10-25 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.10（2026-10-25）**: ヘッダーで所属 Project を選ぶ。定義の作成は Project 必須。メンバーは名前で付与する。未所属の定義詳細は開かない。
 
 **Version 1.9（2026-10-05）**: 実行詳細で、同じ状態の訪問を辿れる。グラフのマスは 1 つのまま。ノード一覧は状態ごとにまとめ、21 件以上は 20 件ずつページを切る。
 
@@ -52,8 +54,10 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 | --- | --- |
 | アカウント (`/account`) | 現行パスワード確認付きで自分のパスワードを更新 |
 | ユーザー管理 | テナント管理者向け。作成・有効化/無効化・パスワード上書き |
-| 定義一覧 / エディタ | ワークフロー定義の閲覧・編集（nodes 形式） |
-| 実行一覧 | テナント内の実行インスタンス |
+| 定義一覧 / エディタ | 選択中 Project のワークフロー定義の閲覧・編集（nodes 形式） |
+| 実行一覧 | 選択中 Project の実行インスタンス |
+| プロジェクトメンバー (`/projects/members`) | 選択中 Project のメンバー付与。project.admin |
+| 管理プロジェクト (`/admin/projects`) | テナント内の全 Project とメンバー。tenant.admin。定義エディタは開かない |
 | 実行詳細 / グラフ | 状態・エッジ・進行の可視化 |
 
 ### パスワード更新
@@ -64,6 +68,20 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 | 管理者更新 | ユーザー管理の各行 | ダイアログで新規と確認。現行パスワードは不要。新規は 8〜128 文字・空白なし（記号可） |
 
 HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §4.1.1 / §4.1.3。
+
+### 所属 Project
+
+ログイン後のヘッダーで、自分が所属する Project を選びます。定義一覧、定義の作成、実行一覧は、その Project に従います。所属が無い定義の詳細は開きません。
+
+| 操作 | 画面 | 備考 |
+| --- | --- | --- |
+| 切替 | ヘッダーのプロジェクト | 所属だけが出る。選択はブラウザのセッションに残る |
+| メンバー | ヘッダー「メンバー」、または `/projects/members` | project.admin。ユーザー名と API キー名で付与する。UUID は入力しない |
+| 全 Project | `/admin/projects` | tenant.admin。未所属でもメンバーは付けられる。定義の編集画面へは進まない |
+
+ロールは閲覧、実行、公開、管理の順に強い。定義の作成には公開以上が必要です。Project 自体を削除する操作は無い。
+
+HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.7。
 
 ### 定義 catalog の論理削除・復元
 

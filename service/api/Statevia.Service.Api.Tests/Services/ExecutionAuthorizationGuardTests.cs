@@ -139,11 +139,87 @@ public sealed class ExecutionAuthorizationGuardTests
             new PrincipalResourceGrantAuthorization(
                 new EmptyPrincipalResourceGrantStore(),
                 db.TenantAccessor,
-                new MissingPrincipalDataAccess()));
+                new MissingPrincipalDataAccess()),
+            db.TenantAccessor);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sut.EnsureCanExecuteOnDefinitionAsync(tenantId, definitionId, CancellationToken.None));
+        Assert.Empty(projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>既存 execution のミューテーションは、削除済みを含めて定義の project で executor 判定を呼ぶ。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenPrincipalPresent_CallsProjectExecute()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(
+            projectAuth: projectAuth,
+            definitions: new StubDefinitionRepository(projectId),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        await sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Equal([(tenantId, projectId)], projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>未所属やロール不足の例外は、そのまま呼び出し元へ返す。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenProjectDenies_Propagates()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sut = CreateSut(
+            projectAuth: new RecordingProjectAuthorizationService(
+                new ForbiddenException("Insufficient project role.", "PROJECT_ACCESS_DENIED")),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        var act = () => sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("PROJECT_ACCESS_DENIED", error.Code);
+    }
+
+    /// <summary>定義行が無ければ execution として 404。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenDefinitionMissing_ThrowsNotFound()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(
+            projectAuth: projectAuth,
+            definitions: new StubDefinitionRepository(null),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        var act = () => sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<NotFoundException>(act);
+        Assert.Equal(ExecutionValidationMessages.ExecutionNotFound, error.Message);
+        Assert.Empty(projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>Principal の無い Worker 経路は受理時に判定済みのため、所属を見ない。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenWorkerContext_SkipsProjectAuth()
+    {
+        // Arrange
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(projectAuth: projectAuth);
+
+        // Act
+        await sut.EnsureCanMutateOnExecutionProjectAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
         Assert.Empty(projectAuth.ExecuteCalls);
     }
 
@@ -158,7 +234,7 @@ public sealed class ExecutionAuthorizationGuardTests
         var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
 
         // Assert
-        await act();
+        Assert.Null(await Record.ExceptionAsync(act));
     }
 
     /// <summary>project 許可の外は RESOURCE_GRANT_DENIED。</summary>
@@ -191,6 +267,66 @@ public sealed class ExecutionAuthorizationGuardTests
 
         // Act
         var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>閲覧は許可集合の外なら RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureCanReadOnDefinitionAsync_WhenDefinitionOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureCanReadOnDefinitionAsync(
+            StubUnitOfWork.Instance,
+            sut.TenantId,
+            sut.DefinitionId,
+            CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>既存 execution の許可は、定義行が無いとき 404。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantForExistingExecutionAsync_WhenDefinitionMissing_ThrowsNotFound()
+    {
+        // Arrange
+        var sut = CreateSut(definitions: new StubDefinitionRepository(null));
+
+        // Act
+        var act = () => sut.EnsureResourceGrantForExistingExecutionAsync(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(act);
+    }
+
+    /// <summary>既存 execution の許可は、名簿の外なら RESOURCE_GRANT_DENIED。</summary>
+    [Fact]
+    public async Task EnsureResourceGrantForExistingExecutionAsync_WhenDefinitionOutsideGrant_Denies()
+    {
+        // Arrange
+        var sut = CreateGrantSut(grants:
+        [
+            Grant(PrincipalResourceGrantKinds.Definition, Guid.NewGuid())
+        ]);
+
+        // Act
+        var act = () => sut.Guard.EnsureResourceGrantForExistingExecutionAsync(
+            sut.TenantId,
+            sut.DefinitionId,
+            CancellationToken.None);
 
         // Assert
         var error = await Assert.ThrowsAsync<ForbiddenException>(act);
@@ -231,7 +367,7 @@ public sealed class ExecutionAuthorizationGuardTests
         var act = () => sut.Guard.EnsureResourceGrantAsync(sut.TenantId, sut.DefinitionId, CancellationToken.None);
 
         // Assert
-        await act();
+        Assert.Null(await Record.ExceptionAsync(act));
     }
 
     /// <summary>System Principal は許可行があっても評価しない。</summary>
@@ -296,8 +432,10 @@ public sealed class ExecutionAuthorizationGuardTests
         IDefinitionRepository? definitions = null,
         IPrincipalResourceGrantStore? resourceGrants = null,
         ITenantContextAccessor? tenantContext = null,
-        IPrincipalDataAccess? principals = null) =>
-        new(
+        IPrincipalDataAccess? principals = null)
+    {
+        var accessor = tenantContext ?? new SettableTenantContextAccessor();
+        return new(
             runtimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             mutationAuth ?? new AllowAllExecutionMutationAuthorization(),
             projectAuth ?? new AllowAllProjectAuthorizationService(),
@@ -305,8 +443,20 @@ public sealed class ExecutionAuthorizationGuardTests
             new ImmediateReadOnlyExecutor(),
             new PrincipalResourceGrantAuthorization(
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
-                tenantContext ?? new SettableTenantContextAccessor(),
-                principals ?? new MissingPrincipalDataAccess()));
+                accessor,
+                principals ?? new MissingPrincipalDataAccess()),
+            accessor);
+    }
+
+    /// <summary>Principal 付きのテナント文脈を作る。</summary>
+    /// <param name="tenantId">テナント。</param>
+    /// <returns>HTTP 経路を模した文脈。</returns>
+    private static SettableTenantContextAccessor PrincipalContext(Guid tenantId)
+    {
+        var accessor = new SettableTenantContextAccessor();
+        accessor.Set(new TenantContextState(tenantId, "tenant", Guid.NewGuid(), TenantLifecycle.Active));
+        return accessor;
+    }
 
     private sealed class RecordingGrantStore(IReadOnlyList<PrincipalResourceGrantRow> rows) : IPrincipalResourceGrantStore
     {
@@ -362,33 +512,35 @@ public sealed class ExecutionAuthorizationGuardTests
 
     private sealed class FixedPrincipalDataAccess(Guid principalId, Guid tenantId, PrincipalType principalType) : IPrincipalDataAccess
     {
+        private readonly Guid _principalId = principalId;
+
         /// <inheritdoc />
-        public Task<PrincipalInfo?> FindPrincipalAsync(Guid id, CancellationToken cancellationToken)
+        public Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            PrincipalInfo? info = id == principalId
-                ? new PrincipalInfo(principalId, tenantId, principalType, true, null, null)
+            PrincipalInfo? info = principalId == _principalId
+                ? new PrincipalInfo(_principalId, tenantId, principalType, true, null, null)
                 : null;
             return Task.FromResult(info);
         }
 
         /// <inheritdoc />
-        public Task<TenantInfo?> FindTenantAsync(Guid id, CancellationToken cancellationToken) =>
+        public Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
-        public Task<bool> IsTenantAdminAsync(Guid id, CancellationToken cancellationToken) =>
+        public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
         public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
-            Guid id,
+            Guid principalId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
         public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
-            Guid id,
+            Guid principalId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
@@ -418,7 +570,8 @@ public sealed class ExecutionAuthorizationGuardTests
         }
     }
 
-    private sealed class RecordingProjectAuthorizationService : IProjectAuthorizationService
+    /// <summary>executor 判定の呼び出しを記録する。<paramref name="executeFailure"/> を渡すとその例外で拒否する。</summary>
+    private sealed class RecordingProjectAuthorizationService(Exception? executeFailure = null) : IProjectAuthorizationService
     {
         public List<(Guid TenantId, Guid ProjectId)> ExecuteCalls { get; } = [];
 
@@ -436,10 +589,24 @@ public sealed class ExecutionAuthorizationGuardTests
             CancellationToken ct)
         {
             ExecuteCalls.Add((tenantId, projectId));
-            return Task.CompletedTask;
+            return executeFailure is null ? Task.CompletedTask : Task.FromException(executeFailure);
         }
 
         public Task EnsureCanPublishAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid projectId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
+
+        public Task EnsureCanManageMembersAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid projectId,
+            CancellationToken ct) =>
+            throw new NotImplementedException();
+
+        public Task EnsureCanAdminAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
             Guid projectId,
@@ -450,6 +617,13 @@ public sealed class ExecutionAuthorizationGuardTests
     private sealed class StubDefinitionRepository(Guid? projectId) : IDefinitionRepository
     {
         public Task<Guid?> ResolveProjectIdAsync(
+            ICoreUnitOfWork uow,
+            Guid tenantId,
+            Guid definitionId,
+            CancellationToken ct) =>
+            Task.FromResult(projectId);
+
+        public Task<Guid?> ResolveProjectIdIncludingDeletedAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
             Guid definitionId,
@@ -493,6 +667,7 @@ public sealed class ExecutionAuthorizationGuardTests
         public Task<(int TotalCount, List<(DefinitionDetail Detail, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             DefinitionListPageQuery query,
             CancellationToken ct) =>
             throw new NotImplementedException();

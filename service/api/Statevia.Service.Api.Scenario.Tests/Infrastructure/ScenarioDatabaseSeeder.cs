@@ -17,7 +17,7 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     private readonly NpgsqlScenarioDbContextFactory _factory = CreateFactory(connectionString);
 
     /// <summary>
-    /// テスト用ユーザーを既定テナントに投入し、ユーザー名を返す。
+    /// テスト用ユーザーを既定テナントに投入する。所属 Project は付けない。
     /// </summary>
     /// <param name="username">ユーザー名（テナント内一意）。</param>
     /// <param name="password">平文パスワード。</param>
@@ -25,8 +25,8 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     /// <param name="permissionKeys">
     /// 付与する permission key。省略時は <c>definitions.write</c> と <c>executions.write</c> を付与する。
     /// </param>
-    /// <returns>作成したユーザー名。</returns>
-    public async Task<string> SeedUserAsync(
+    /// <returns>作成した Principal UUID。</returns>
+    public async Task<Guid> SeedUserAsync(
         string username,
         string password,
         bool isTenantAdmin = true,
@@ -91,7 +91,7 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
 
         await db.SaveChangesAsync();
 
-        return username;
+        return principalId;
     }
 
     /// <summary>
@@ -196,8 +196,8 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
     /// <param name="permissionKeys">
     /// 付与する permission key。省略時は <c>definitions.write</c> と <c>executions.write</c> を付与する。
     /// </param>
-    /// <returns>作成したユーザー名。</returns>
-    public async Task<string> SeedUserInTenantAsync(
+    /// <returns>作成した Principal UUID。</returns>
+    public async Task<Guid> SeedUserInTenantAsync(
         Guid tenantId,
         string username,
         string password,
@@ -262,19 +262,36 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
 
         await db.SaveChangesAsync();
 
-        return username;
+        return principalId;
+    }
+
+    /// <summary>既存 Project に同一テナント Principal のロールを足す。越境 Principal は渡さない。</summary>
+    /// <param name="projectId">付与先 Project。</param>
+    /// <param name="principalId">付与先 Principal。</param>
+    /// <param name="role">付与するロール。</param>
+    public async Task GrantProjectRoleAsync(Guid projectId, Guid principalId, ProjectAccessRole role)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        db.ProjectAccesses.Add(new ProjectAccessRow
+        {
+            ProjectId = projectId,
+            PrincipalId = principalId,
+            Role = role,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
-    /// プロジェクトを作成し、オプションで別テナントへのアクセス権を付与する。
+    /// プロジェクトを用意し、同一テナントの Principal にロールを付与する。
     /// </summary>
-    /// <param name="ownerTenantId">オーナーテナント内部 UUID。</param>
-    /// <param name="consumerTenantId">アクセス付与先テナント UUID（null の場合は付与しない）。</param>
+    /// <param name="ownerTenantId">Project 所属テナント内部 UUID。</param>
+    /// <param name="principalId">付与先 Principal（null の場合は付与しない）。</param>
     /// <param name="role">付与するロール。</param>
-    /// <returns>作成したプロジェクト ID。</returns>
+    /// <returns>作成または既存のプロジェクト ID。</returns>
     public async Task<Guid> SeedProjectWithAccessAsync(
         Guid ownerTenantId,
-        Guid? consumerTenantId,
+        Guid? principalId,
         ProjectAccessRole? role)
     {
         var projectId = Guid.NewGuid();
@@ -283,17 +300,16 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
         await using var db = await _factory.CreateDbContextAsync();
         var existing = await db.Projects
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.OwnerTenantId == ownerTenantId && p.Slug == "default");
+            .FirstOrDefaultAsync(p => p.TenantId == ownerTenantId && p.Slug == "default");
 
         if (existing is null)
         {
             db.Projects.Add(new ProjectRow
             {
                 ProjectId = projectId,
-                OwnerTenantId = ownerTenantId,
+                TenantId = ownerTenantId,
                 Slug = "default",
                 DisplayName = "Scenario Project",
-                Visibility = ProjectVisibility.Private,
                 CreatedAt = now
             });
         }
@@ -302,13 +318,13 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
             projectId = existing.ProjectId;
         }
 
-        if (consumerTenantId.HasValue && role.HasValue)
+        if (principalId is { } grantedPrincipalId && role is { } grantedRole)
         {
             db.ProjectAccesses.Add(new ProjectAccessRow
             {
                 ProjectId = projectId,
-                TenantId = consumerTenantId.Value,
-                Role = role.Value,
+                PrincipalId = grantedPrincipalId,
+                Role = grantedRole,
                 CreatedAt = now
             });
         }

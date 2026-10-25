@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SortOrder } from "@/features/definitions/api";
 import { useDefinitionCatalogActions } from "@/features/definitions/hooks/useDefinitionCatalogActions";
 import { useDefinitionsList } from "@/features/definitions/hooks/useDefinitionsList";
 import { useDefinitionsListQuery } from "@/features/definitions/hooks/useDefinitionsListQuery";
 import { isDeletedDefinition } from "@/features/definitions/types";
+import { useProject } from "@/features/projects/projectContext";
+import { canPublish } from "@/features/projects/roles";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
@@ -34,6 +36,11 @@ export function DefinitionsPageClient() {
     includeDeleted,
     goTo,
   } = useDefinitionsListQuery();
+  const { selectedProject } = useProject();
+  const scopedQuery = useMemo(
+    () => ({ ...listQuery, projectId: selectedProject?.projectId }),
+    [listQuery, selectedProject],
+  );
   const {
     items,
     totalCount,
@@ -44,7 +51,7 @@ export function DefinitionsPageClient() {
     hasPrev,
     hasNext,
     empty,
-  } = useDefinitionsList(listQuery);
+  } = useDefinitionsList(scopedQuery);
   const {
     pendingConfirm,
     setPendingConfirm,
@@ -205,13 +212,15 @@ export function DefinitionsPageClient() {
           />
           <span>{uiText.definitionsPage.includeDeleted.label}</span>
         </label>
-        <button
-          type="button"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-          onClick={() => router.push("/definitions/new")}
-        >
-          {uiText.definitionsPage.actions.createNew}
-        </button>
+        {canPublish(selectedProject?.role) && (
+          <button
+            type="button"
+            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+            onClick={() => router.push("/definitions/new")}
+          >
+            {uiText.definitionsPage.actions.createNew}
+          </button>
+        )}
       </form>
 
       {loading && <PageState state="loading" message={uiText.definitionsPage.loading} />}

@@ -41,6 +41,9 @@ export function AdminNavLinks() {
       <Link href="/admin/notification-smtp" className="hover:text-brand-header-fg hover:underline">
         {uiText.navigation.adminNotificationSmtp}
       </Link>
+      <Link href="/admin/projects" className="hover:text-brand-header-fg hover:underline">
+        {uiText.navigation.adminProjects}
+      </Link>
     </>
   );
 }

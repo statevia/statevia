@@ -21,6 +21,8 @@ export type ExecutionsListQuery = {
   status?: string;
   name?: string;
   definitionId?: string;
+  /** 指定時はその Project の実行だけ。未指定は所属の和。 */
+  projectId?: string;
 };
 
 /**
@@ -36,6 +38,7 @@ export function buildExecutionsListPath(params: ExecutionsListQuery): string {
   if (params.status?.trim()) query.set("status", params.status.trim());
   if (params.name?.trim()) query.set("name", params.name.trim());
   if (params.definitionId?.trim()) query.set("definitionId", params.definitionId.trim());
+  if (params.projectId) query.set("projectId", params.projectId);
   if (params.sort.sortBy?.trim()) query.set("sortBy", params.sort.sortBy.trim());
   if (params.sort.sortOrder) query.set("sortOrder", params.sort.sortOrder);
   return `/executions?${query.toString()}`;

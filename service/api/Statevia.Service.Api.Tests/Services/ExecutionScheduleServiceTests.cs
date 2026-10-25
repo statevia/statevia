@@ -422,7 +422,8 @@ public sealed class ExecutionScheduleServiceTests
             new PrincipalResourceGrantAuthorization(
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
                 accessor,
-                principalAccess));
+                principalAccess),
+            accessor);
 
         var transactionExecutor = new TestCoreTransactionExecutor(uowFactory);
         return new ExecutionScheduleService(

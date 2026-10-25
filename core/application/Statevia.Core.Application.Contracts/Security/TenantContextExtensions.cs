@@ -26,4 +26,16 @@ public static class TenantContextExtensions
         return context.TenantKey
             ?? throw new InvalidOperationException("Tenant context is not resolved.");
     }
+
+    /// <summary>
+    /// 解決済み Principal UUID を返す。未認証時は <see cref="UnauthorizedException"/>。
+    /// </summary>
+    /// <param name="context">テナント文脈。</param>
+    /// <returns>Principal UUID。</returns>
+    public static Guid GetRequiredPrincipalId(this ITenantContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return context.PrincipalId
+            ?? throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+    }
 }

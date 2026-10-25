@@ -22,7 +22,7 @@ public class DefinitionsController : ControllerBase
         _definitions = definitions;
     }
 
-    /// <summary>POST /v1/definitions — 定義を登録。name + yaml を受け取り、検証・コンパイルして保存。</summary>
+    /// <summary>POST /v1/definitions — 定義を登録。name + yaml + projectId を受け取り、検証・コンパイルして保存。</summary>
     [HttpPost]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<DefinitionResponse>> Create(
@@ -58,7 +58,7 @@ public class DefinitionsController : ControllerBase
 
     /// <summary>
     /// GET /v1/definitions — ページング一覧。<c>limit</c> は必須。
-    /// <c>?limit=&amp;offset=&amp;name=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>（name は部分一致）。
+    /// <c>?limit=&amp;offset=&amp;name=&amp;projectId=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>（name は部分一致。projectId は任意）。
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<DefinitionResponse>), StatusCodes.Status200OK)]
@@ -73,7 +73,8 @@ public class DefinitionsController : ControllerBase
             Page: new PageQuery(offset, query.Limit!.Value),
             Sort: new SortQuery(query.SortBy, query.SortOrder),
             NameContains: query.Name,
-            IncludeDeleted: query.IncludeDeleted ?? false);
+            IncludeDeleted: query.IncludeDeleted ?? false,
+            ProjectId: query.ProjectId);
 
         var paged = await _definitions.ListPagedAsync(pageQuery, ct).ConfigureAwait(false);
         return Ok(paged);

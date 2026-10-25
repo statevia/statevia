@@ -478,6 +478,9 @@ public sealed class ExecutionServiceTests
         public List<(Guid ExecutionId, string Status, bool? CancelRequested, string GraphJson)> Updates { get; } = [];
         public (int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items) ListWithDisplayIdsPageResult { get; set; } = (0, []);
 
+        /// <summary><see cref="IExecutionRepository.ListWithDisplayIdsPageAsync"/> の呼び出し回数。</summary>
+        public int ListWithDisplayIdsPageCalls { get; private set; }
+
         public async Task<ExecutionRow?> GetByIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid executionId, CancellationToken ct)
         {
             _ = uow;
@@ -491,14 +494,20 @@ public sealed class ExecutionServiceTests
         public Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
             GetByIdAsync(uow, Guid.Empty, executionId, ct);
 
-        public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
+        /// <inheritdoc cref="IExecutionRepository.ListWithDisplayIdsPageAsync" />
+        async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> IExecutionRepository.ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             ExecutionListPageQuery query,
             CancellationToken ct)
         {
             _ = uow;
+            _ = tenantId;
+            _ = principalId;
+            _ = query;
             await Task.Yield(); // async boundary for coverage
+            ListWithDisplayIdsPageCalls++;
             return ListWithDisplayIdsPageResult;
         }
 
@@ -1735,7 +1744,7 @@ public sealed class ExecutionServiceTests
         var display = new FakeDisplayIdService
         {
             ResolveResultExecution = executionId,
-            ResolveResultDefinition = executionRepo.ByIdResult!.DefinitionId,
+            ResolveResultDefinition = executionRepo.ByIdResult.DefinitionId,
             GetDisplayIdResult = null
         };
 
@@ -4074,6 +4083,7 @@ public sealed class ExecutionServiceTests
         var page = await sut.ListPagedAsync(new ExecutionListPageQuery(new PageQuery(0, 10), new SortQuery(null, null), null, null, null), CancellationToken.None);
 
         // Assert
+        Assert.Equal(1, executionRepo.ListWithDisplayIdsPageCalls);
         Assert.Equal(2, page.Items.Count);
         Assert.Equal(w1.ExecutionId.ToString("D"), page.Items[0].DisplayId);
         Assert.Equal(w1.ExecutionId, page.Items[0].ResourceId);
@@ -5351,7 +5361,11 @@ public sealed class ExecutionServiceTests
 
         if (sqlite.TenantAccessor.TenantId == TestTenantIds.DefaultTenantId)
         {
-            sqlite.TenantAccessor.Set(TestTenantIds.T1Context);
+            // 一覧・読取の Project メンバー判定用に Principal を載せる（System 経路は呼び出し側で null に戻す）。
+            sqlite.TenantAccessor.Set(TestTenantIds.T1Context with
+            {
+                PrincipalId = Guid.Parse("11111111-1111-4111-8111-111111111111")
+            });
         }
 
         var runtimeAuth = new AllowAllRuntimePermissionAuthorization();
@@ -5366,7 +5380,8 @@ public sealed class ExecutionServiceTests
             new PrincipalResourceGrantAuthorization(
                 new EmptyPrincipalResourceGrantStore(),
                 sqlite.TenantAccessor,
-                new MissingPrincipalDataAccess()));
+                new MissingPrincipalDataAccess()),
+            sqlite.TenantAccessor);
         var checkpointStoreResolved = checkpointStore ?? new FakeExecutionCheckpointStore();
         var engineSession = new ExecutionEngineSession(
             engine,
@@ -5523,7 +5538,10 @@ public sealed class ExecutionServiceTests
                 Dedup = new FakeCommandDedupRepository(),
                 EventStore = new FakeEventStoreRepository(),
                 EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
-                ProjectAuthorization = new ProjectAuthorizationService(new ProjectRepository(new DefaultIdGenerator())),
+                ProjectAuthorization = new ProjectAuthorizationService(
+                    new ProjectRepository(new DefaultIdGenerator()),
+                    sqlite.TenantAccessor,
+                    new DenyTenantAdminAuthorization()),
             });
 
         // Act & Assert
@@ -5558,7 +5576,10 @@ public sealed class ExecutionServiceTests
                 Dedup = new FakeCommandDedupRepository(),
                 EventStore = new FakeEventStoreRepository(),
                 EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
-                ProjectAuthorization = new ProjectAuthorizationService(new ProjectRepository(new DefaultIdGenerator())),
+                ProjectAuthorization = new ProjectAuthorizationService(
+                    new ProjectRepository(new DefaultIdGenerator()),
+                    sqlite.TenantAccessor,
+                    new DenyTenantAdminAuthorization()),
             });
 
         // Act
@@ -6570,7 +6591,7 @@ public sealed class ExecutionServiceTests
         Assert.Single(executionRepo.Updates);
         Assert.True(executionRepo.Updates[0].CancelRequested);
         Assert.Equal(ExecutionProjectionStatuses.Running, executionRepo.Updates[0].Status);
-        Assert.True(executionRepo.ByIdResult!.CancelRequested);
+        Assert.True(executionRepo.ByIdResult.CancelRequested);
     }
 
     /// <summary>HTTP Cancel で work queue があるとき Cancel work item を enqueue する。</summary>
@@ -8063,43 +8084,35 @@ public sealed class ExecutionServiceTests
         ProjectAccessRole grantRole)
     {
         var sqlite = new SqliteTestDatabase();
-        var ownerTenantId = Guid.NewGuid();
-        var granteeTenantId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var principalId = Guid.NewGuid();
         var defId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
         var now = DateTime.UtcNow;
-        var granteeKey = grantRole == ProjectAccessRole.Reader ? "reader" : "executor";
+        var tenantKey = grantRole == ProjectAccessRole.Reader ? "reader" : "executor";
 
         await using (var seed = sqlite.Factory.CreateDbContext())
         {
             seed.Tenants.Add(new TenantRow
             {
-                TenantId = ownerTenantId,
-                TenantKey = "owner",
-                DisplayName = "Owner",
+                TenantId = tenantId,
+                TenantKey = tenantKey,
+                DisplayName = "Tenant",
                 Lifecycle = TenantLifecycle.Active,
                 CreatedAt = now,
                 UpdatedAt = now
             });
-            seed.Tenants.Add(new TenantRow
-            {
-                TenantId = granteeTenantId,
-                TenantKey = granteeKey,
-                DisplayName = "Grantee",
-                Lifecycle = TenantLifecycle.Active,
-                CreatedAt = now,
-                UpdatedAt = now
-            });
-            ProjectTestData.AddDefaultProject(seed, ownerTenantId, "owner", projectId);
-            DefinitionTestData.AddDefinitionWithVersion(seed, ownerTenantId, defId, "shared-def", projectId, compiledJson: "{}");
-            ProjectTestData.GrantAccess(seed, projectId, granteeTenantId, grantRole);
+            ProjectTestData.AddDefaultProject(seed, tenantId, tenantKey, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(seed, tenantId, defId, "shared-def", projectId, compiledJson: "{}");
+            ProjectTestData.AddPrincipal(seed, tenantId, principalId);
+            ProjectTestData.GrantAccess(seed, projectId, principalId, grantRole);
             await seed.SaveChangesAsync();
         }
 
         sqlite.TenantAccessor.Set(new TenantContextState(
-            granteeTenantId,
-            granteeKey,
-            Guid.NewGuid(),
+            tenantId,
+            tenantKey,
+            principalId,
             TenantLifecycle.Active));
 
         return (sqlite, defId);

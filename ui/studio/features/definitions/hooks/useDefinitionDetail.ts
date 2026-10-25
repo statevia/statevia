@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useDelayedVisibility } from "@/shared/lib/useDelayedVisibility";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getDefinition, softDeleteDefinition } from "../api";
+import { isApiNotFound } from "@/features/projects/httpStatus";
 import type { DefinitionDTO } from "../types";
 
 /** useDefinitionDetail のオプション。 */
@@ -18,6 +19,8 @@ export type UseDefinitionDetailOptions = {
 /** useDefinitionDetail の戻り値。 */
 export type UseDefinitionDetailResult = {
   row: DefinitionDTO | null;
+  /** 未所属などで 404 のとき true。 */
+  notFound: boolean;
   loading: boolean;
   showLoading: boolean;
   toast: ToastState | null;
@@ -41,6 +44,7 @@ export function useDefinitionDetail(
   const { deletedMessage, afterDeleteHref = "/definitions" } = options;
   const router = useRouter();
   const [row, setRow] = useState<DefinitionDTO | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const showLoading = useDelayedVisibility(loading);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -52,8 +56,10 @@ export function useDefinitionDetail(
     setToast(null);
     try {
       const definition = await getDefinition(definitionId);
+      setNotFound(false);
       setRow(definition);
     } catch (error) {
+      setNotFound(isApiNotFound(error));
       setToast(toToastError(error));
       setRow(null);
     } finally {
@@ -88,6 +94,7 @@ export function useDefinitionDetail(
 
   return {
     row,
+    notFound,
     loading,
     showLoading,
     toast,

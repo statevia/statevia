@@ -16,4 +16,7 @@ internal static class RuntimePermissionRequirements
 
     /// <summary>POST /v1/executions、cancel、publish/resume。</summary>
     public const string ExecutionsWrite = WellKnownPermissionKeys.ExecutionsWrite;
+
+    /// <summary>POST /v1/projects。</summary>
+    public const string ProjectsCreate = WellKnownPermissionKeys.ProjectsCreate;
 }

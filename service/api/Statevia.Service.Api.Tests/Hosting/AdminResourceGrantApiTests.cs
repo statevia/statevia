@@ -67,7 +67,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    /// <summary>管理者はユーザーへ project と definition の許可を付けられる。</summary>
+    /// <summary>対象ユーザーが executor で所属していれば、管理者自身が未所属でも project と definition の許可を付けられる。</summary>
     [Fact]
     public async Task ReplaceUserResourceGrants_ExecutableResources_ReturnsThem()
     {
@@ -75,7 +75,8 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-set@example.com", "password", isTenantAdmin: true);
         using var client = CreateClient(principalId);
         var userId = await CreateUserIdAsync(client);
-        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId, accessForDefault: null);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, await FindPrincipalIdAsync(userId), ProjectAccessRole.Executor);
         var definitionId = await SeedDefinitionAsync(projectId, TestTenantIds.DefaultTenantId);
 
         // Act
@@ -89,7 +90,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<PrincipalResourceGrantsDto>();
         Assert.NotNull(body);
-        Assert.Equal([projectId], body!.ProjectIds);
+        Assert.Equal([projectId], body.ProjectIds);
         Assert.Equal([definitionId], body.DefinitionIds);
     }
 
@@ -101,7 +102,8 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-clear@example.com", "password", isTenantAdmin: true);
         using var client = CreateClient(principalId);
         var userId = await CreateUserIdAsync(client);
-        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId, accessForDefault: null);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, await FindPrincipalIdAsync(userId), ProjectAccessRole.Executor);
         var put = await PutGrantsAsync(client, $"/v1/admin/users/{userId}/resource-grants", [projectId], []);
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
 
@@ -113,11 +115,11 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var body = await client.GetFromJsonAsync<PrincipalResourceGrantsDto>(
             new Uri($"/v1/admin/users/{userId}/resource-grants", UriKind.Relative));
         Assert.NotNull(body);
-        Assert.Empty(body!.ProjectIds);
+        Assert.Empty(body.ProjectIds);
         Assert.Empty(body.DefinitionIds);
     }
 
-    /// <summary>executor 未満の project は保存せず 422。</summary>
+    /// <summary>対象ユーザーが reader の project は、管理者が executor でも保存せず 422。</summary>
     [Fact]
     public async Task ReplaceUserResourceGrants_ReaderProject_ReturnsUnprocessableEntity()
     {
@@ -125,7 +127,9 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-reader@example.com", "password", isTenantAdmin: true);
         using var client = CreateClient(principalId);
         var userId = await CreateUserIdAsync(client);
-        var projectId = await SeedProjectAsync(TestTenantIds.T1TenantId, ProjectAccessRole.Reader);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, principalId, ProjectAccessRole.Executor);
+        await SeedMembershipAsync(projectId, await FindPrincipalIdAsync(userId), ProjectAccessRole.Reader);
 
         // Act
         var response = await PutGrantsAsync(
@@ -139,10 +143,10 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var body = await client.GetFromJsonAsync<PrincipalResourceGrantsDto>(
             new Uri($"/v1/admin/users/{userId}/resource-grants", UriKind.Relative));
         Assert.NotNull(body);
-        Assert.Empty(body!.ProjectIds);
+        Assert.Empty(body.ProjectIds);
     }
 
-    /// <summary>実行できない project の定義は保存せず 422。</summary>
+    /// <summary>対象ユーザーが実行できない project の定義は保存せず 422。</summary>
     [Fact]
     public async Task ReplaceUserResourceGrants_DefinitionOnReaderProject_ReturnsUnprocessableEntity()
     {
@@ -150,7 +154,8 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-def@example.com", "password", isTenantAdmin: true);
         using var client = CreateClient(principalId);
         var userId = await CreateUserIdAsync(client);
-        var projectId = await SeedProjectAsync(TestTenantIds.T1TenantId, ProjectAccessRole.Reader);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, await FindPrincipalIdAsync(userId), ProjectAccessRole.Reader);
         var definitionId = await SeedDefinitionAsync(projectId, TestTenantIds.DefaultTenantId);
 
         // Act
@@ -162,6 +167,53 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
 
         // Assert
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    /// <summary>対象ユーザーが未所属の project は、管理者が admin でも保存せず 422。</summary>
+    [Fact]
+    public async Task ReplaceUserResourceGrants_TargetNotMember_ReturnsUnprocessableEntity()
+    {
+        // Arrange
+        var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-nomember@example.com", "password", isTenantAdmin: true);
+        using var client = CreateClient(principalId);
+        var userId = await CreateUserIdAsync(client);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, principalId, ProjectAccessRole.Admin);
+
+        // Act
+        var response = await PutGrantsAsync(
+            client,
+            $"/v1/admin/users/{userId}/resource-grants",
+            [projectId],
+            []);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = await client.GetFromJsonAsync<PrincipalResourceGrantsDto>(
+            new Uri($"/v1/admin/users/{userId}/resource-grants", UriKind.Relative));
+        Assert.NotNull(body);
+        Assert.Empty(body.ProjectIds);
+    }
+
+    /// <summary>他テナントの project は所属の有無を見せずに 404。</summary>
+    [Fact]
+    public async Task ReplaceUserResourceGrants_OtherTenantProject_ReturnsNotFound()
+    {
+        // Arrange
+        var principalId = await _factory.SeedUserPrincipalAsync("grant-admin-cross@example.com", "password", isTenantAdmin: true);
+        using var client = CreateClient(principalId);
+        var userId = await CreateUserIdAsync(client);
+        var projectId = await SeedProjectAsync(TestTenantIds.T1TenantId);
+
+        // Act
+        var response = await PutGrantsAsync(
+            client,
+            $"/v1/admin/users/{userId}/resource-grants",
+            [projectId],
+            []);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     /// <summary>配列を省略した PUT は 422。</summary>
@@ -203,7 +255,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
 
-    /// <summary>管理者は ServiceAccount へも許可を付けられる。</summary>
+    /// <summary>executor で所属する ServiceAccount へも許可を付けられる。</summary>
     [Fact]
     public async Task ReplaceServiceAccountResourceGrants_ExecutableProject_ReturnsIt()
     {
@@ -220,17 +272,18 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
             new CreateAdminServiceAccountRequest
             {
                 Name = $"r{Guid.NewGuid():N}"[..16],
-                GroupIds = [group!.GroupId]
+                GroupIds = [group.GroupId]
             });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<AdminServiceAccountListItemDto>();
         Assert.NotNull(created);
-        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId, accessForDefault: null);
+        var projectId = await SeedProjectAsync(TestTenantIds.DefaultTenantId);
+        await SeedMembershipAsync(projectId, created.PrincipalId, ProjectAccessRole.Executor);
 
         // Act
         var response = await PutGrantsAsync(
             client,
-            $"/v1/admin/service-accounts/{created!.ServiceAccountId}/resource-grants",
+            $"/v1/admin/service-accounts/{created.ServiceAccountId}/resource-grants",
             [projectId],
             []);
 
@@ -238,7 +291,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<PrincipalResourceGrantsDto>();
         Assert.NotNull(body);
-        Assert.Equal([projectId], body!.ProjectIds);
+        Assert.Equal([projectId], body.ProjectIds);
         Assert.Empty(body.DefinitionIds);
     }
 
@@ -261,7 +314,7 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await response.Content.ReadFromJsonAsync<AdminUserListItemDto>();
         Assert.NotNull(created);
-        return created!.UserId;
+        return created.UserId;
     }
 
     private static Task<HttpResponseMessage> PutGrantsAsync(
@@ -320,7 +373,22 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         return link.UserId;
     }
 
-    private async Task<Guid> SeedProjectAsync(Guid ownerTenantId, ProjectAccessRole? accessForDefault)
+    /// <summary>ユーザー ID から Principal ID を引く。許可付与の所属判定は Principal 単位のため。</summary>
+    /// <param name="userId">管理 API が返したユーザー ID。</param>
+    /// <returns>ユーザーの Principal ID。</returns>
+    private async Task<Guid> FindPrincipalIdAsync(Guid userId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<CoreDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var link = await db.UserPrincipals.AsNoTracking().FirstAsync(row => row.UserId == userId);
+        return link.PrincipalId;
+    }
+
+    /// <summary>メンバーの居ない Project を作る。</summary>
+    /// <param name="tenantId">Project の所属テナント。</param>
+    /// <returns>作成した Project ID。</returns>
+    private async Task<Guid> SeedProjectAsync(Guid tenantId)
     {
         var projectId = Guid.NewGuid();
         await using var scope = _factory.Services.CreateAsyncScope();
@@ -329,16 +397,29 @@ public sealed class AdminResourceGrantApiTests : IClassFixture<SecurityIntegrati
         db.Projects.Add(new ProjectRow
         {
             ProjectId = projectId,
-            OwnerTenantId = ownerTenantId,
+            TenantId = tenantId,
             Slug = $"p{projectId:N}"[..16],
             DisplayName = "grant",
-            Visibility = ProjectVisibility.Private,
             CreatedAt = DateTime.UtcNow
         });
-        if (accessForDefault is { } role)
-            ProjectTestData.GrantAccess(db, projectId, TestTenantIds.DefaultTenantId, role);
         await db.SaveChangesAsync();
         return projectId;
+    }
+
+    /// <summary>
+    /// Principal を Project に所属させる。
+    /// 許可の置き換えは付与先 Principal の所属ロールで 200 と 422 を分けるため、付与先と操作者の所属をテストごとに作り分ける。
+    /// </summary>
+    /// <param name="projectId">所属先。</param>
+    /// <param name="principalId">所属させる Principal。</param>
+    /// <param name="role">所属ロール。</param>
+    private async Task SeedMembershipAsync(Guid projectId, Guid principalId, ProjectAccessRole role)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<CoreDbContext>>();
+        await using var db = await dbFactory.CreateDbContextAsync();
+        ProjectTestData.GrantAccess(db, projectId, principalId, role);
+        await db.SaveChangesAsync();
     }
 
     private async Task<Guid> SeedDefinitionAsync(Guid projectId, Guid tenantId)

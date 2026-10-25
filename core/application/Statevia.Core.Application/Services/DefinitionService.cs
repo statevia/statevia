@@ -6,8 +6,8 @@ namespace Statevia.Core.Application.Services;
 
 /// <summary>ワークフロー定義の登録・更新・一覧・取得・検証。</summary>
 /// <remarks>
-/// <para>Runtime 権限に加え、project ロールは <see cref="IProjectAuthorizationService"/> で明示する。</para>
-/// <para>一覧の project 可視性は Repository の DB フィルタ（Reader）に委譲する。</para>
+/// <para>作成は <c>projectId</c> 必須。<c>default</c> へは落とさない。Publisher 以上を <see cref="IProjectAuthorizationService"/> で要求する。</para>
+/// <para>一覧の project 可視性は Repository の DB フィルタ（Reader）に委譲する。任意の <c>projectId</c> はその中でさらに絞る。取得と一覧は、所属のあと実行リソース許可でさらに絞る。空の許可は所属の範囲を狭めない。</para>
 /// <para><see cref="ValidateAsync"/> は catalog へ保存せず、create / publish と同じコンパイル写像だけを使う。</para>
 /// </remarks>
 internal sealed class DefinitionService : IDefinitionService
@@ -22,6 +22,7 @@ internal sealed class DefinitionService : IDefinitionService
     private readonly IRuntimePermissionAuthorization _runtimeAuth;
     private readonly IIdGenerator _idGenerator;
     private readonly ICoreTransactionExecutor _executor;
+    private readonly PrincipalResourceGrantAuthorization _resourceGrants;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
@@ -36,7 +37,8 @@ internal sealed class DefinitionService : IDefinitionService
         ITenantContextAccessor tenantContext,
         IRuntimePermissionAuthorization runtimeAuth,
         IIdGenerator idGenerator,
-        ICoreTransactionExecutor executor)
+        ICoreTransactionExecutor executor,
+        PrincipalResourceGrantAuthorization resourceGrants)
     {
         _displayIds = displayIds;
         _displayIdWrites = displayIds as IDisplayIdWriteService
@@ -49,6 +51,7 @@ internal sealed class DefinitionService : IDefinitionService
         _runtimeAuth = runtimeAuth;
         _idGenerator = idGenerator;
         _executor = executor;
+        _resourceGrants = resourceGrants;
     }
 
     public async Task<DefinitionResponse> CreateAsync(CreateDefinitionRequest request, CancellationToken ct)
@@ -56,6 +59,7 @@ internal sealed class DefinitionService : IDefinitionService
         await EnsureDefinitionsWriteAsync(ct).ConfigureAwait(false);
         ArgumentNullException.ThrowIfNull(request);
 
+        var projectId = request.ProjectId!.Value;
         var tenantId = _tenantContext.GetRequiredTenantId();
         var compiledJson = CompileOrThrow(request.Name, request.Yaml, tenantId).CompiledJson;
         var id = _idGenerator.NewSequentialGuid();
@@ -65,7 +69,13 @@ internal sealed class DefinitionService : IDefinitionService
             async (uow, innerCt) =>
             {
                 var project = await _projects
-                    .EnsureDefaultProjectAsync(uow, tenantId, _tenantContext.GetRequiredTenantKey(), innerCt)
+                    .GetInTenantAsync(uow, tenantId, projectId, innerCt)
+                    .ConfigureAwait(false);
+                if (project is null)
+                    throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
+
+                await _projectAuth
+                    .EnsureCanPublishAsync(uow, tenantId, project.ProjectId, innerCt)
                     .ConfigureAwait(false);
 
                 var displayId = await _displayIdWrites
@@ -100,6 +110,7 @@ internal sealed class DefinitionService : IDefinitionService
                     DisplayId = displayId,
                     ResourceId = id,
                     Name = request.Name,
+                    ProjectId = project.ProjectId,
                     LatestVersion = 1,
                     CreatedAt = now,
                     UpdatedAt = now
@@ -144,12 +155,13 @@ internal sealed class DefinitionService : IDefinitionService
         ArgumentNullException.ThrowIfNull(query);
 
         var tenantId = _tenantContext.GetRequiredTenantId();
+        var principalId = _tenantContext.GetRequiredPrincipalId();
 
         return await _executor.ExecuteReadOnlyAsync(
             async (uow, innerCt) =>
             {
                 var (total, pairs) = await _definitions
-                    .ListWithDisplayIdsPageAsync(uow, tenantId, query, innerCt)
+                    .ListWithDisplayIdsPageAsync(uow, tenantId, principalId, query, innerCt)
                     .ConfigureAwait(false);
                 var items = pairs.Select(p => ToResponse(
                     p.Detail,
@@ -169,6 +181,12 @@ internal sealed class DefinitionService : IDefinitionService
             ct).ConfigureAwait(false);
     }
 
+    /// <summary>定義を取得する。所属のあと、実行リソース許可を評価する。</summary>
+    /// <param name="idOrUuid">表示 ID または定義 UUID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>YAML を含む定義。</returns>
+    /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
     public async Task<DefinitionResponse> GetAsync(string idOrUuid, CancellationToken ct)
     {
         await EnsureDefinitionsReadAsync(ct).ConfigureAwait(false);
@@ -189,6 +207,9 @@ internal sealed class DefinitionService : IDefinitionService
 
                 await _projectAuth
                     .EnsureCanReadAsync(uow, tenantId, detail.Definition.ProjectId, innerCt)
+                    .ConfigureAwait(false);
+                await _resourceGrants
+                    .EnsureAsync(detail.Definition.ProjectId, detail.Definition.DefinitionId, innerCt)
                     .ConfigureAwait(false);
 
                 var displayId = await _displayIds.GetDisplayIdAsync(DisplayIdResourceTypes.Definition, idOrUuid, innerCt)
@@ -460,6 +481,7 @@ internal sealed class DefinitionService : IDefinitionService
             DisplayId = displayId ?? detail.Definition.DefinitionId.ToString(),
             ResourceId = detail.Definition.DefinitionId,
             Name = detail.Definition.Name,
+            ProjectId = detail.Definition.ProjectId,
             LatestVersion = detail.Definition.LatestVersion,
             CreatedAt = detail.Definition.CreatedAt,
             UpdatedAt = detail.Definition.UpdatedAt,

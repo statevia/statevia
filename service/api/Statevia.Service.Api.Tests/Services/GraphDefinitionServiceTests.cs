@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Statevia.Core.Application.Services;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Service.Api.Services;
 using Statevia.Service.Api.Tests.Infrastructure;
@@ -7,14 +8,26 @@ namespace Statevia.Service.Api.Tests.Services;
 
 public sealed class GraphDefinitionServiceTests
 {
-    private static GraphDefinitionService CreateSut(InMemoryTestDatabase db, StubDisplayIdService display) =>
-        new(
+    private static GraphDefinitionService CreateSut(
+        InMemoryTestDatabase db,
+        StubDisplayIdService display,
+        ITenantContextAccessor? tenant = null,
+        PrincipalResourceGrantAuthorization? resourceGrants = null)
+    {
+        var tenantContext = tenant ?? new FixedTenantContextAccessor(TestTenantIds.DefaultContext);
+        var grants = resourceGrants ?? new PrincipalResourceGrantAuthorization(
+            new EmptyPrincipalResourceGrantStore(),
+            tenantContext,
+            new MissingPrincipalDataAccess());
+        return new GraphDefinitionService(
             new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(db.Factory)),
             display,
             TestRepositoryFactory.CreateDefinitionRepository(),
-            new FixedTenantContextAccessor(TestTenantIds.DefaultContext),
+            tenantContext,
             new AllowAllRuntimePermissionAuthorization(),
-            new AllowAllProjectAuthorizationService());
+            new AllowAllProjectAuthorizationService(),
+            grants);
+    }
 
     private static async Task<Guid> SeedDefaultTenantAndProjectAsync(DbContextOptions<CoreDbContext> options)
     {
@@ -436,6 +449,132 @@ public sealed class GraphDefinitionServiceTests
         // Assert
         Assert.Empty(res.Nodes);
         Assert.Empty(res.Edges);
+    }
+
+    /// <summary>実行リソース許可の外の定義グラフは 403 になる。</summary>
+    [Fact]
+    public async Task GetByGraphIdAsync_WhenDefinitionOutsideGrant_ThrowsForbidden()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uuid = Guid.NewGuid();
+        var projectId = await SeedDefaultTenantAndProjectAsync(db.Options);
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            DefinitionTestData.AddDefinitionWithVersion(
+                ctx,
+                TestTenantIds.DefaultTenantId,
+                uuid,
+                "def",
+                projectId,
+                compiledJson: "null",
+                createdAt: DateTime.UtcNow);
+            await ctx.SaveChangesAsync();
+        }
+
+        var principalId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+        var tenant = new FixedTenantContextAccessor(
+            TestTenantIds.DefaultContext with { PrincipalId = principalId });
+        var grants = new PrincipalResourceGrantAuthorization(
+            new DefinitionGrantStore(Guid.NewGuid()),
+            tenant,
+            new UserPrincipalDataAccess());
+        var sut = CreateSut(db, new StubDisplayIdService(uuid), tenant, grants);
+
+        // Act
+        var act = () => sut.GetByGraphIdAsync("graph-denied", CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
+    }
+
+    /// <summary>指定した定義 ID の許可行だけを返す。</summary>
+    private sealed class DefinitionGrantStore(Guid definitionId) : IPrincipalResourceGrantStore
+    {
+        /// <inheritdoc />
+        public Task<IReadOnlyList<PrincipalResourceGrantRow>> ListAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            IReadOnlyList<PrincipalResourceGrantRow> rows =
+            [
+                new()
+                {
+                    ResourceKind = PrincipalResourceGrantKinds.Definition,
+                    ResourceId = definitionId
+                }
+            ];
+            return Task.FromResult(rows);
+        }
+
+        /// <inheritdoc />
+        public Task ReplaceAsync(
+            Guid principalId,
+            IReadOnlyCollection<Guid> projectIds,
+            IReadOnlyCollection<Guid> definitionIds,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = projectIds;
+            _ = definitionIds;
+            _ = cancellationToken;
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>どの Principal も有効な User として返す。</summary>
+    private sealed class UserPrincipalDataAccess : IPrincipalDataAccess
+    {
+        /// <inheritdoc />
+        public Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            return Task.FromResult<PrincipalInfo?>(new PrincipalInfo(
+                principalId,
+                TestTenantIds.DefaultTenantId,
+                PrincipalType.User,
+                true,
+                null,
+                null));
+        }
+
+        /// <inheritdoc />
+        public Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            return Task.FromResult<TenantInfo?>(new TenantInfo(tenantId, "default", TenantLifecycle.Active));
+        }
+
+        /// <inheritdoc />
+        public Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult(false);
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
+            Guid principalId,
+            CancellationToken cancellationToken)
+        {
+            _ = principalId;
+            _ = cancellationToken;
+            return Task.FromResult<IReadOnlyList<GroupSnapshot>>([]);
+        }
     }
 }
 

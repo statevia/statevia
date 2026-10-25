@@ -79,7 +79,7 @@ public sealed class DefinitionRepositoryTests
         await using var readUow = await uowFactory.CreateAsync();
         var res = await repo.GetLatestForApiAsync(readUow, OwnerTenantId, defId, default);
         Assert.NotNull(res);
-        Assert.Equal(defId, res!.Definition.DefinitionId);
+        Assert.Equal(defId, res.Definition.DefinitionId);
         Assert.Equal("def-1", res.Definition.Name);
         Assert.Equal(versionId, res.Version.DefinitionVersionId);
     }
@@ -116,7 +116,7 @@ public sealed class DefinitionRepositoryTests
 
         // Assert
         Assert.NotNull(published);
-        Assert.Equal(2, published!.Definition.LatestVersion);
+        Assert.Equal(2, published.Definition.LatestVersion);
         Assert.Equal("def-2", published.Definition.Name);
         Assert.Equal(2, published.Version.Version);
         Assert.Equal("{\"new\":true}", published.Version.CompiledJson);
@@ -124,14 +124,14 @@ public sealed class DefinitionRepositoryTests
         await using var verify = await uowFactory.CreateAsync();
         var v1 = await repo.GetVersionForExecutionAsync(verify, OwnerTenantId, defId, 1, default);
         Assert.NotNull(v1);
-        Assert.Equal("{}", v1!.CompiledJson);
+        Assert.Equal("{}", v1.CompiledJson);
     }
 
     /// <summary>
-    /// 他テナントで呼んでも永続化は版行を返す（認可は Repository の責務ではない）。
+    /// 他テナントの版 ID はテナント境界で返さない。
     /// </summary>
     [Fact]
-    public async Task GetVersionForExecutionByIdAsync_ReturnsVersion_ForOtherTenantCaller()
+    public async Task GetVersionForExecutionByIdAsync_ReturnsNull_ForOtherTenantCaller()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -174,8 +174,7 @@ public sealed class DefinitionRepositoryTests
         var version = await repo.GetVersionForExecutionByIdAsync(uow, otherTenantId, versionId, default);
 
         // Assert
-        Assert.NotNull(version);
-        Assert.Equal(defId, version!.DefinitionId);
+        Assert.Null(version);
     }
 
     /// <summary>
@@ -194,9 +193,11 @@ public sealed class DefinitionRepositoryTests
         var created2 = new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var ctx = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId1, "A", projectId, createdAt: created1);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId2, "B", projectId, createdAt: created2);
             ctx.DisplayIds.Add(new DisplayIdRow
@@ -214,6 +215,7 @@ public sealed class DefinitionRepositoryTests
         var (_, items) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery("createdAt", "asc"),
@@ -244,9 +246,11 @@ public sealed class DefinitionRepositoryTests
         var created3 = new DateTime(2020, 1, 3, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var ctx = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId1, "order-flow", projectId, createdAt: created1);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId2, "payment-flow", projectId, createdAt: created2);
             DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, defId3, "order-detail", projectId, createdAt: created3);
@@ -258,6 +262,7 @@ public sealed class DefinitionRepositoryTests
         var (total, items) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 1),
                 Sort: new SortQuery(null, null),
@@ -268,6 +273,200 @@ public sealed class DefinitionRepositoryTests
         Assert.Equal(2, total);
         Assert.Single(items);
         Assert.Equal(defId1, items[0].Detail.Definition.DefinitionId);
+    }
+
+    /// <summary>projectId 指定は所属 Project の中だけを返す。未所属 Project は空。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_ProjectId_KeepsOnlyMemberProject()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var memberProjectId = Guid.NewGuid();
+        var otherProjectId = Guid.NewGuid();
+        var memberDefinitionId = Guid.NewGuid();
+        var otherDefinitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, memberProjectId);
+            ctx.Projects.Add(new ProjectRow
+            {
+                ProjectId = otherProjectId,
+                TenantId = OwnerTenantId,
+                Slug = "other",
+                DisplayName = "other",
+                CreatedAt = DateTime.UtcNow
+            });
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, memberProjectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, memberDefinitionId, "member", memberProjectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, otherDefinitionId, "other", otherProjectId);
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var memberQuery = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: memberProjectId);
+        var otherQuery = memberQuery with { ProjectId = otherProjectId };
+
+        // Act
+        var (memberTotal, memberItems) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, memberQuery, default);
+        var (otherTotal, otherItems) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, otherQuery, default);
+
+        // Assert
+        Assert.Equal(1, memberTotal);
+        Assert.Equal(memberDefinitionId, Assert.Single(memberItems).Detail.Definition.DefinitionId);
+        Assert.Equal(0, otherTotal);
+        Assert.Empty(otherItems);
+    }
+
+    /// <summary>definition 許可の外は一覧件数から外す。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_DefinitionGrant_OmitsOtherDefinitions()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var allowedId = Guid.NewGuid();
+        var deniedId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, allowedId, "allowed", projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, deniedId, "denied", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = allowedId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: projectId);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(1, total);
+        Assert.Equal(allowedId, Assert.Single(items).Detail.Definition.DefinitionId);
+    }
+
+    /// <summary>project 許可と definition 許可の両方があるときは、片方だけでは一覧に出さない。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_BothGrantKinds_RequiresBoth()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, definitionId, "def", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Project,
+                ResourceId = projectId,
+                CreatedAt = DateTime.UtcNow
+            });
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null,
+            ProjectId: projectId);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(0, total);
+        Assert.Empty(items);
+    }
+
+    /// <summary>System の許可行は一覧を狭めない。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_SystemPrincipal_IgnoresGrants()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            ctx.Set<PrincipalRow>().Local.Single(row => row.PrincipalId == principalId).PrincipalType = PrincipalType.System;
+            DefinitionTestData.AddDefinitionWithVersion(ctx, OwnerTenantId, definitionId, "def", projectId);
+            ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+            {
+                TenantId = OwnerTenantId,
+                PrincipalId = principalId,
+                ResourceKind = PrincipalResourceGrantKinds.Definition,
+                ResourceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            });
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var uow = await uowFactory.CreateAsync();
+        var query = new DefinitionListPageQuery(
+            Page: new PageQuery(0, 10),
+            Sort: new SortQuery(null, null),
+            NameContains: null);
+
+        // Act
+        var (total, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow, OwnerTenantId, principalId, query, default);
+
+        // Assert
+        Assert.Equal(1, total);
+        Assert.Equal(definitionId, Assert.Single(items).Detail.Definition.DefinitionId);
     }
 
     /// <summary>
@@ -303,7 +502,7 @@ public sealed class DefinitionRepositoryTests
         // Assert
         Assert.Null(apiDetail);
         Assert.NotNull(executionVersion);
-        Assert.Equal(1, executionVersion!.Version);
+        Assert.Equal(1, executionVersion.Version);
     }
 
     /// <summary>
@@ -381,9 +580,11 @@ public sealed class DefinitionRepositoryTests
         var created = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var projectId = Guid.NewGuid();
 
+        Guid principalId;
         await using (var seed = db.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(seed, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(seed, OwnerTenantId, projectId);
             DefinitionTestData.AddDefinitionWithVersion(seed, OwnerTenantId, defId, "def-1", projectId, createdAt: created);
             var definition = await seed.Definitions.FindAsync(defId);
             definition!.DeletedAt = created.AddDays(1);
@@ -395,6 +596,7 @@ public sealed class DefinitionRepositoryTests
         var (defaultTotal, _) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -403,6 +605,7 @@ public sealed class DefinitionRepositoryTests
         var (includedTotal, includedItems) = await repo.ListWithDisplayIdsPageAsync(
             uow,
             OwnerTenantId,
+            principalId,
             new DefinitionListPageQuery(
                 Page: new PageQuery(0, 10),
                 Sort: new SortQuery(null, null),
@@ -448,7 +651,7 @@ public sealed class DefinitionRepositoryTests
 
         // Assert — restore は追跡行から詳細を返す。AsNoTracking+activeOnly はまだ DB 上 deleted。
         Assert.NotNull(restored);
-        Assert.Null(restored!.Definition.DeletedAt);
+        Assert.Null(restored.Definition.DeletedAt);
         Assert.Equal(defId, restored.Definition.DefinitionId);
         Assert.NotNull(restored.Version);
         Assert.Null(apiBeforeSave);

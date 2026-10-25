@@ -56,6 +56,8 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
     title: "定義 詳細",
     urlPrefix: "URL:",
     errorFetchFailed: "定義を取得できませんでした。",
+    notMember: "この定義のプロジェクトに所属していないため、詳細を開けません。",
+    roleDenied: "このロールでは編集と実行開始はできません。",
     ariaMeta: "定義メタ情報",
     meta: {
       name: "名前",
@@ -85,6 +87,8 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
   definitionRunPage: {
     title: "定義を実行",
     unspecifiedDefinitionId: "（未指定）",
+    notMember: "この定義のプロジェクトに所属していないため、実行を開始できません。",
+    roleDenied: "実行開始には実行以上のロールが必要です。",
     definitionIdLine: (definitionIdLabel: string, definitionId: string) => `${definitionIdLabel}: ${definitionId}`,
     inputLabelWithHint: (inputLabel: string) => `${inputLabel}（任意・JSON）`,
     inputJsonPlaceholder: '例: {"orderId":"123"}',

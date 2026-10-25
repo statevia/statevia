@@ -22,6 +22,10 @@ import {
   executionsUiTextJa,
   type ExecutionsFeatureUiText,
 } from "@/features/executions/i18n";
+import {
+  projectsUiTextJa,
+  type ProjectsFeatureUiText,
+} from "@/features/projects/i18n";
 import { actionCatalogUiTextJa, type ActionCatalogUiText } from "./actionCatalogUiText";
 
 export type UiText = DefinitionsFeatureUiText &
@@ -29,7 +33,8 @@ export type UiText = DefinitionsFeatureUiText &
   AdminFeatureUiText &
   DashboardFeatureUiText &
   DefinitionEditorFeatureUiText &
-  ExecutionsFeatureUiText & {
+  ExecutionsFeatureUiText &
+  ProjectsFeatureUiText & {
   actionCatalog: ActionCatalogUiText;
   actionLinks: {
     aria: {
@@ -47,6 +52,7 @@ export type UiText = DefinitionsFeatureUiText &
     adminApiKeys: string;
     adminActionBindings: string;
     adminNotificationSmtp: string;
+    adminProjects: string;
     account: string;
     logout: string;
 
@@ -136,6 +142,7 @@ export const uiText: UiText = {
   ...dashboardUiTextJa,
   ...definitionEditorUiTextJa,
   ...executionsUiTextJa,
+  ...projectsUiTextJa,
   actionCatalog: actionCatalogUiTextJa,
   actionLinks: {
     aria: {
@@ -153,6 +160,7 @@ export const uiText: UiText = {
     adminApiKeys: "API キー",
     adminActionBindings: "Action バインディング",
     adminNotificationSmtp: "通知 SMTP",
+    adminProjects: "プロジェクト",
     account: "アカウント",
     logout: "ログアウト",
 

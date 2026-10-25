@@ -12,12 +12,15 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
     descriptionCreating: "Create a new definition.",
     descriptionEditingTarget: (definitionId: string) => `Editing target: ${definitionId}`,
     loadingMeta: "Loading definition metadata...",
+    notMember: "You cannot open the editor because you are not a member of this definition's project.",
+    roleDenied: "Publisher role or higher is required to create or edit a definition.",
     validation: {
       nameRequired: "Please enter a definition name.",
       yamlRequired: "Please enter YAML.",
       yamlLintInvalid: "Please fix YAML syntax errors.",
       nameInvalidFormat: "Definition name must start with an ASCII letter and use only ASCII alphanumerics plus . - _ within 100 characters.",
       yamlTooLarge: "YAML must be within 256KB (262144 bytes).",
+      projectRequired: "Select a project before creating a definition.",
     },
     labels: {
       name: "Definition name (name)",

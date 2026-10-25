@@ -37,20 +37,25 @@ public sealed class ProjectAuthorizationIntegrationTests
         var display = new ResolvingDisplayIdService(defId);
         var executor = new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(db.Factory));
         var projectRepo = new ProjectRepository(new DefaultIdGenerator());
+        var tenant = new FixedTenantContextAccessor(new TenantContextState(
+            TestTenantIds.OtherTenantId,
+            "other",
+            Guid.NewGuid(),
+            TenantLifecycle.Active));
         var sut = new DefinitionService(
             display,
             new NoopCompiler(),
             TestRepositoryFactory.CreateDefinitionRepository(),
             projectRepo,
-            new ProjectAuthorizationService(projectRepo),
-            new FixedTenantContextAccessor(new TenantContextState(
-                TestTenantIds.OtherTenantId,
-                "other",
-                null,
-                TenantLifecycle.Active)),
+            new ProjectAuthorizationService(projectRepo, tenant, new DenyTenantAdminAuthorization()),
+            tenant,
             new AllowAllRuntimePermissionAuthorization(),
             new DefaultIdGenerator(),
-            executor);
+            executor,
+            new PrincipalResourceGrantAuthorization(
+                new EmptyPrincipalResourceGrantStore(),
+                tenant,
+                new MissingPrincipalDataAccess()));
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(defId.ToString(), CancellationToken.None));

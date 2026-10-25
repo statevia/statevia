@@ -28,7 +28,7 @@ public sealed class TenantAdministrationServiceTests
             new PrincipalResourceGrantAdminService(
                 database.Factory,
                 new PrincipalResourceGrantStore(database.Factory, tenantContext),
-                new AllowAllProjectAuthorizationService(),
+                new ProjectRepository(new DefaultIdGenerator()),
                 new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(database.Factory))));
     }
 

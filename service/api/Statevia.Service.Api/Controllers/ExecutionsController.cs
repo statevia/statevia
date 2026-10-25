@@ -78,7 +78,7 @@ public class ExecutionsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(query.DefinitionId))
         {
             definitionIdFilter = await _displayIds.ResolveAsync(
-                Statevia.Core.Application.Services.DisplayIdResourceTypes.Definition, query.DefinitionId, ct).ConfigureAwait(false);
+                DisplayIdResourceTypes.Definition, query.DefinitionId, ct).ConfigureAwait(false);
             if (definitionIdFilter is null)
                 return Ok(new PagedResult<ExecutionResponse> { Items = [], TotalCount = 0, Offset = offset, Limit = query.Limit!.Value, HasMore = false });
         }
@@ -88,7 +88,8 @@ public class ExecutionsController : ControllerBase
             Sort: new SortQuery(query.SortBy, query.SortOrder),
             StatusFilter: query.Status,
             DefinitionIdFilter: definitionIdFilter,
-            NameContains: string.IsNullOrWhiteSpace(query.Name) ? null : query.Name.Trim());
+            NameContains: string.IsNullOrWhiteSpace(query.Name) ? null : query.Name.Trim(),
+            ProjectId: query.ProjectId is Guid projectId && projectId != Guid.Empty ? projectId : null);
 
         var paged = await _executions.ListPagedAsync(pageQuery, ct).ConfigureAwait(false);
         return Ok(paged);

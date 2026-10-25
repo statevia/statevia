@@ -9,12 +9,15 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
     descriptionCreating: "新しい定義を作成します。",
     descriptionEditingTarget: (definitionId: string) => `編集対象: ${definitionId}`,
     loadingMeta: "定義メタ情報を読み込み中...",
+    notMember: "この定義のプロジェクトに所属していないため、エディタを開けません。",
+    roleDenied: "定義の作成と編集には公開以上のロールが必要です。",
     validation: {
       nameRequired: "定義名を入力してください。",
       yamlRequired: "YAML を入力してください。",
       yamlLintInvalid: "YAML の構文エラーを修正してください。",
       nameInvalidFormat: "定義名は半角英字で開始し、半角英数字と . - _ のみ100文字以内で入力してください。",
       yamlTooLarge: "YAMLは256KB（262144バイト）以内で入力してください。",
+      projectRequired: "作成先のプロジェクトを選んでください。",
     },
     labels: {
       name: "定義名（name）",

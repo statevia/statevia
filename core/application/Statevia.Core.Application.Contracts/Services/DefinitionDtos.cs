@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace Statevia.Core.Application.Contracts.Services;
 
 /// <summary>定義の作成リクエスト。</summary>
-public sealed class CreateDefinitionRequest
+public sealed class CreateDefinitionRequest : IValidatableObject
 {
     /// <summary>定義名。</summary>
     [Required(ErrorMessage = "Definition name is required.")]
@@ -18,6 +18,17 @@ public sealed class CreateDefinitionRequest
     [Required(ErrorMessage = "Definition YAML is required.")]
     [NotWhitespace(ErrorMessage = "Definition YAML is required.")]
     public string Yaml { get; set; } = "";
+
+    /// <summary>所属先 Project。省略と空 GUID は検証失敗。未所属は 404。</summary>
+    [Required(ErrorMessage = "projectId is required")]
+    public Guid? ProjectId { get; set; }
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ProjectId == Guid.Empty)
+            yield return new ValidationResult("projectId is required", [nameof(ProjectId)]);
+    }
 }
 
 /// <summary>永続化しない定義検証リクエスト。</summary>
@@ -86,6 +97,10 @@ public sealed class DefinitionResponse
     /// <summary>定義名。</summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+
+    /// <summary>所属 Project。</summary>
+    [JsonPropertyName("projectId")]
+    public Guid ProjectId { get; set; }
 
     /// <summary>作成日時（UTC）。</summary>
     [JsonPropertyName("createdAt")]

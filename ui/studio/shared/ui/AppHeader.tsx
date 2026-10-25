@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import type { Locale } from "@/shared/i18n/i18n";
 import type { Theme } from "@/shared/lib/theme";
 import { clearSessionAndRedirectToLogin } from "@/shared/auth/authRedirect";
@@ -14,12 +15,14 @@ import { ThemeToggle } from "./ThemeToggle";
 type AppHeaderProps = Readonly<{
   theme: Theme;
   locale: Locale;
+  /** ログイン以外のナビ先頭。所属 Project の切替を app から渡す。 */
+  leadingNav?: ReactNode;
 }>;
 
 /**
  * 共通ヘッダー。ログイン画面ではアプリ内ナビとログアウトを表示しない。
  */
-export function AppHeader({ theme, locale }: AppHeaderProps) {
+export function AppHeader({ theme, locale, leadingNav }: AppHeaderProps) {
   const pathname = usePathname();
   const uiText = useUiText();
   const isLoginPage = pathname === "/login";
@@ -45,6 +48,7 @@ export function AppHeader({ theme, locale }: AppHeaderProps) {
         <div className="flex items-center gap-3">
           {isLoginPage ? null : (
             <nav className="flex flex-wrap items-center gap-3 text-sm text-brand-header-fg-muted">
+              {leadingNav}
               <Link href="/dashboard" className="hover:text-brand-header-fg hover:underline">
                 {uiText.navigation.dashboard}
               </Link>

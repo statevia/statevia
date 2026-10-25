@@ -12,19 +12,6 @@ public enum ProjectAccessRole
     /// <summary>定義 publish（版追加）。</summary>
     Publisher = 2,
 
-    /// <summary>プロジェクト管理（将来 API 用）。</summary>
+    /// <summary>プロジェクトの設定とメンバー管理。</summary>
     Admin = 3
-}
-
-/// <summary>projects.visibility — discoverability のヒント（認可 truth ではない）。</summary>
-public enum ProjectVisibility
-{
-    /// <summary>オーナーテナントのみ discoverability 対象。</summary>
-    Private = 0,
-
-    /// <summary>同一テナント内 discoverability。</summary>
-    Tenant = 1,
-
-    /// <summary>プラットフォーム全体 discoverability（認可 truth ではない）。</summary>
-    Public = 2
 }

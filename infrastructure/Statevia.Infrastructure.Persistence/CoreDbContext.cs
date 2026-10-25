@@ -83,8 +83,6 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         public const string PermissionDefinitionId = "permission_definition_id";
         public const string ServiceAccountId = "service_account_id";
         public const string ApiKeyId = "api_key_id";
-        public const string OwnerTenantId = "owner_tenant_id";
-        public const string Visibility = "visibility";
         public const string Description = "description";
         public const string Role = "role";
         public const string CurrentNodeId = "current_node_id";
@@ -741,7 +739,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
 
-        modelBuilder.Entity<ProjectAccessRow>().HasQueryFilter(e =>
+        modelBuilder.Entity<ProjectRow>().HasQueryFilter(e =>
             !_queryFilterOptions.IsEnabled ||
             (_tenantAccessor.IsResolved && e.TenantId == _tenantAccessor.TenantId));
 
@@ -915,34 +913,33 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             e.ToTable("projects");
             e.HasKey(x => x.ProjectId);
             e.Property(x => x.ProjectId).HasColumnName(Columns.ProjectId);
-            e.Property(x => x.OwnerTenantId).HasColumnName(Columns.OwnerTenantId);
+            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
             e.Property(x => x.Slug).HasMaxLength(128).HasColumnName(Columns.Slug);
             e.Property(x => x.DisplayName).HasMaxLength(256).HasColumnName(Columns.DisplayName);
-            e.Property(x => x.Visibility).HasConversion<string>().HasMaxLength(32).HasColumnName(Columns.Visibility);
             e.Property(x => x.Description).HasColumnName(Columns.Description);
             e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
-            e.HasIndex(x => new { x.OwnerTenantId, x.Slug }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
             e.HasOne<TenantRow>()
                 .WithMany()
-                .HasForeignKey(x => x.OwnerTenantId)
+                .HasForeignKey(x => x.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ProjectAccessRow>(e =>
         {
             e.ToTable("project_accesses");
-            e.HasKey(x => new { x.ProjectId, x.TenantId });
+            e.HasKey(x => new { x.ProjectId, x.PrincipalId });
             e.Property(x => x.ProjectId).HasColumnName(Columns.ProjectId);
-            e.Property(x => x.TenantId).HasColumnName(Columns.TenantId);
+            e.Property(x => x.PrincipalId).HasColumnName(Columns.PrincipalId);
             e.Property(x => x.Role).HasConversion<string>().HasMaxLength(32).HasColumnName(Columns.Role);
             e.Property(x => x.CreatedAt).HasColumnName(Columns.CreatedAt);
             e.HasOne<ProjectRow>()
                 .WithMany()
                 .HasForeignKey(x => x.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne<TenantRow>()
+            e.HasOne<PrincipalRow>()
                 .WithMany()
-                .HasForeignKey(x => x.TenantId)
+                .HasForeignKey(x => x.PrincipalId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

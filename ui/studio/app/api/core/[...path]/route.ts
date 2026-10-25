@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_ACCESS, AUTH_COOKIE_TENANT_KEY, hasServerDevAuthBypass } from "@/shared/auth/authSession";
+import { pathForBackend } from "@/shared/api/backendPath";
 
 function base() {
   const b = process.env.SERVICE_API_INTERNAL_BASE;
@@ -10,19 +11,6 @@ function base() {
 function joinUrl(parts: string[]) {
   const p = parts.map(encodeURIComponent).join("/");
   return `${base()}/${p}`;
-}
-
-/** v2: UI は `/executions` のみ。Service API の `/v1/executions` に転送する。 */
-function pathForBackend(pathParts: string[]): string[] {
-  if (pathParts[0] === "executions") return ["v1", "executions", ...pathParts.slice(1)];
-  if (pathParts[0] === "definitions") return ["v1", "definitions", ...pathParts.slice(1)];
-  if (pathParts[0] === "actions") return ["v1", "actions", ...pathParts.slice(1)];
-  if (pathParts[0] === "graphs") return ["v1", "graphs", ...pathParts.slice(1)];
-  if (pathParts[0] === "admin") return ["v1", "admin", ...pathParts.slice(1)];
-  if (pathParts[0] === "auth") return ["v1", "auth", ...pathParts.slice(1)];
-  if (pathParts[0] === "events") return ["v1", "events", ...pathParts.slice(1)];
-  if (pathParts[0] === "event-subscriptions") return ["v1", "event-subscriptions", ...pathParts.slice(1)];
-  return pathParts;
 }
 
 function authAndTenantHeaders(req: NextRequest, pathParts: string[]): Record<string, string> {

@@ -34,4 +34,8 @@ public sealed class DefinitionListQuery
     /// <summary>削除済み定義を一覧に含める（省略時は false）。</summary>
     [FromQuery(Name = "includeDeleted")]
     public bool? IncludeDeleted { get; init; }
+
+    /// <summary>所属 Project で絞る。省略時は所属の和。</summary>
+    [FromQuery(Name = "projectId")]
+    public Guid? ProjectId { get; init; }
 }

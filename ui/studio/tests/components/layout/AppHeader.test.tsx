@@ -27,6 +27,10 @@ vi.mock("@/shared/ui/LanguageToggle", () => ({
   LanguageToggle: () => <span data-testid="language-toggle">lang</span>
 }));
 
+vi.mock("@/features/projects/ui/ProjectSwitcher", () => ({
+  ProjectSwitcher: () => <span data-testid="project-switcher">project</span>
+}));
+
 vi.mock("@/shared/auth/authRedirect", () => ({
   clearSessionAndRedirectToLogin: vi.fn()
 }));

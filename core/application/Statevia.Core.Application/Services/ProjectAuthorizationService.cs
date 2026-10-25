@@ -1,12 +1,25 @@
 namespace Statevia.Core.Application.Services;
 
-/// <summary><see cref="IProjectAuthorizationService"/> — project_accesses + オーナーを truth とする。</summary>
+/// <summary><see cref="IProjectAuthorizationService"/> — Principal のメンバー行だけを truth とする。</summary>
 internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
 {
     private readonly IProjectRepository _projects;
+    private readonly ITenantContextAccessor _tenantContext;
+    private readonly ITenantAdminAuthorization _tenantAdmin;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
-    public ProjectAuthorizationService(IProjectRepository projects) => _projects = projects;
+    /// <param name="projects">Project 永続化。</param>
+    /// <param name="tenantContext">呼び出し元の Principal。</param>
+    /// <param name="tenantAdmin">テナント管理者判定。</param>
+    public ProjectAuthorizationService(
+        IProjectRepository projects,
+        ITenantContextAccessor tenantContext,
+        ITenantAdminAuthorization tenantAdmin)
+    {
+        _projects = projects;
+        _tenantContext = tenantContext;
+        _tenantAdmin = tenantAdmin;
+    }
 
     /// <inheritdoc />
     public async Task EnsureCanReadAsync(
@@ -50,6 +63,49 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
             forbiddenWhenBelowMinimum: true,
             ct);
 
+    /// <inheritdoc />
+    public async Task EnsureCanManageMembersAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct)
+    {
+        if (_tenantContext.PrincipalId is not { } principalId)
+            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+
+        if (!await _projects.ExistsInTenantAsync(uow, tenantId, projectId, ct).ConfigureAwait(false))
+            throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
+
+        if (await _tenantAdmin.IsTenantAdminAsync(principalId, ct).ConfigureAwait(false))
+            return;
+
+        var effectiveRole = await _projects
+            .ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId, ct)
+            .ConfigureAwait(false);
+
+        if (effectiveRole is ProjectAccessRole.Admin)
+            return;
+
+        if (effectiveRole is not null && effectiveRole.Value >= ProjectAccessRole.Reader)
+            throw new ForbiddenException(ProjectAuthorizationMessages.InsufficientProjectRole, "PROJECT_ACCESS_DENIED");
+
+        throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
+    }
+
+    /// <inheritdoc />
+    public Task EnsureCanAdminAsync(
+        ICoreUnitOfWork uow,
+        Guid tenantId,
+        Guid projectId,
+        CancellationToken ct) =>
+        EnsureMinimumRoleAsync(
+            uow,
+            tenantId,
+            projectId,
+            ProjectAccessRole.Admin,
+            forbiddenWhenBelowMinimum: true,
+            ct);
+
     private async Task EnsureMinimumRoleAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -58,8 +114,11 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
         bool forbiddenWhenBelowMinimum,
         CancellationToken ct)
     {
+        if (_tenantContext.PrincipalId is not { } principalId)
+            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+
         var effectiveRole = await _projects
-            .ResolveEffectiveRoleAsync(uow, tenantId, projectId, ct)
+            .ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId, ct)
             .ConfigureAwait(false);
 
         if (effectiveRole is null)

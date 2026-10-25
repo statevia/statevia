@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DefinitionEditorPageClient } from "@/features/definition-editor/ui/DefinitionEditorPageClient";
 import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultDefinitionYaml";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
-import { renderWithUiText } from "../testUtils";
+import { ProjectProvider } from "@/features/projects/projectContext";
+import { defaultTestProjects, renderWithUiText } from "../testUtils";
 
 const push = vi.fn();
 
@@ -84,7 +85,9 @@ describe("DefinitionEditorPageClient", () => {
   it("ロケール変更では編集モードの定義を再取得しない", async () => {
     const { rerender } = render(
       <UiTextProvider locale="ja">
-        <DefinitionEditorPageClient definitionId="def-1" />
+        <ProjectProvider initialProjects={defaultTestProjects}>
+          <DefinitionEditorPageClient definitionId="def-1" />
+        </ProjectProvider>
       </UiTextProvider>
     );
 
@@ -97,7 +100,9 @@ describe("DefinitionEditorPageClient", () => {
 
     rerender(
       <UiTextProvider locale="en">
-        <DefinitionEditorPageClient definitionId="def-1" />
+        <ProjectProvider initialProjects={defaultTestProjects}>
+          <DefinitionEditorPageClient definitionId="def-1" />
+        </ProjectProvider>
       </UiTextProvider>
     );
 

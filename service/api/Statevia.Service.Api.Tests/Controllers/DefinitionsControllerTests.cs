@@ -14,8 +14,10 @@ public sealed class DefinitionsControllerTests
         public DefinitionResponse CreateResult { get; set; } = new DefinitionResponse();
         public ValidateDefinitionResponse ValidateResult { get; set; } = new() { Valid = true, Name = "n" };
         public PagedResult<DefinitionResponse> ListPagedResult { get; set; } = new() { Items = [], TotalCount = 0, Offset = 0, Limit = 0, HasMore = false };
+        public DefinitionListPageQuery? LastListQuery { get; private set; }
         public DefinitionResponse GetResult { get; set; } = new DefinitionResponse();
         public DefinitionResponse UpdateResult { get; set; } = new DefinitionResponse();
+        public DefinitionResponse RestoreResult { get; set; } = new DefinitionResponse();
 
         public async Task<DefinitionResponse> CreateAsync(CreateDefinitionRequest request, CancellationToken ct)
         {
@@ -35,6 +37,7 @@ public sealed class DefinitionsControllerTests
         {
             await Task.Yield();
             if (ExceptionToThrow is { } ex) throw ex;
+            LastListQuery = query;
             return ListPagedResult;
         }
 
@@ -62,7 +65,7 @@ public sealed class DefinitionsControllerTests
         {
             await Task.Yield();
             if (ExceptionToThrow is { } ex) throw ex;
-            return GetResult;
+            return RestoreResult;
         }
     }
 
@@ -207,7 +210,7 @@ public sealed class DefinitionsControllerTests
 
         var controller = new DefinitionsController(fake)
         {
-            ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = http }
+            ControllerContext = new ControllerContext { HttpContext = http }
         };
 
         // Assert
@@ -215,6 +218,27 @@ public sealed class DefinitionsControllerTests
         var ok = Assert.IsType<OkObjectResult>(res);
         var paged = Assert.IsType<PagedResult<DefinitionResponse>>(ok.Value);
         Assert.False(paged.HasMore);
+    }
+
+    /// <summary>一覧の projectId をページクエリへ渡す。</summary>
+    [Fact]
+    public async Task List_WhenProjectIdSet_ForwardsProjectFilter()
+    {
+        // Arrange
+        var projectId = Guid.NewGuid();
+        var fake = new FakeDefinitionService();
+        var controller = new DefinitionsController(fake)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+
+        // Act
+        await controller.List(
+            new DefinitionListQuery { Limit = 10, Offset = 0, ProjectId = projectId },
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(projectId, fake.LastListQuery?.ProjectId);
     }
 
     /// <summary>

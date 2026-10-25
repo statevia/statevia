@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.4 |
-| 更新日 | 2026-09-27 |
+| Version | 1.2.5 |
+| 更新日 | 2026-10-25 |
 | ステータス | 実装済み（`executions.security_snapshot_json`） |
 | 関連 | [security-runtime.md](security-runtime.md) |
 
@@ -13,7 +13,8 @@
 ## Normative 要約
 
 - **MUST**: 実行開始時に Principal と許可集合を `ExecutionSecuritySnapshot` として固定する。
-- **MUST**: Wait / Resume / Cancel の Owner 経路認可は Snapshot と `SecurityEvaluationMode` に従う。
+- **MUST**: Wait / Resume / Cancel の Owner 経路の許可キーは Snapshot と `SecurityEvaluationMode` に従う。
+- **MUST**: `principal_resource_grants` は Snapshot に含めない。閲覧・開始・再開・取消のたびに Live の名簿を評価する。
 - **SHOULD**: 長時間実行では HTTP リクエスト時点の Principal のみに依存しない。
 
 ---
@@ -93,6 +94,8 @@ Start 成功時（同一 ReadCommitted tx 内で executions 行と一緒に確�
 | `projectRole` | Start 時点の project 有効ロール。**正規化内部値**（小文字 enum 文字列）。監査 UI では表示ラベルに変換 |
 | `groupSnapshots` | Start 時点の所属グループ。**ID と名称**を対で保存（グループ削除後も監査可能） |
 | `isTenantAdmin` | Start 時点の `is_tenant_admin` |
+
+`principal_resource_grants` はこのオブジェクトに無い。Resume と Cancel は Live の名簿を別途見る。
 
 #### projectRole の正規化
 
