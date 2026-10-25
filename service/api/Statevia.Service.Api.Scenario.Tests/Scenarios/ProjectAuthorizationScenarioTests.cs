@@ -17,6 +17,7 @@ namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
 ///   <item>Reader の Start は 403 <c>PROJECT_ACCESS_DENIED</c></item>
 ///   <item>Executor の Start は 201</item>
 ///   <item><c>tenant.admin</c> 未所属の定義 GET は 404。自己昇格後は 200</item>
+///   <item>未所属の Cancel は 404、Reader の Cancel は 403 <c>PROJECT_ACCESS_DENIED</c></item>
 /// </list>
 /// </remarks>
 [Trait("Category", "Scenario")]
@@ -158,6 +159,64 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         Assert.Equal(HttpStatusCode.NotFound, before.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, grant.StatusCode);
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+    }
+
+    /// <summary>
+    /// <c>executions.write</c> があっても、実行の定義の Project に未所属なら Cancel は 404 になる。
+    /// 実行 ID を知っていても他 Project の実行を止められないことを固定する。
+    /// </summary>
+    [SkippableFact]
+    public async Task CancelExecution_SameTenantNonMember_Returns404()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var (_, executionId) = await StartOwnedExecutionAsync(suffix);
+        var username = $"nomember-cancel-{suffix}";
+        await _seeder.SeedUserInTenantAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            username,
+            "Password1!",
+            isTenantAdmin: false,
+            permissionKeys: [WellKnownPermissionKeys.ExecutionsWrite]);
+        var login = await _http.LoginAsync("default", username, "Password1!");
+        using var client = _http.CreateAuthenticatedClient(login.AccessToken, "default");
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/v1/executions/{executionId}/cancel", new { });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>Reader は Start と同じく Cancel も 403 <c>PROJECT_ACCESS_DENIED</c> になる。</summary>
+    [SkippableFact]
+    public async Task CancelExecution_WithReaderAccess_Returns403ProjectAccessDenied()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var (projectId, executionId) = await StartOwnedExecutionAsync(suffix);
+        using var client = await CreateMemberClientAsync(suffix, projectId, ProjectAccessRole.Reader);
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/v1/executions/{executionId}/cancel", new { });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        await ScenarioHttpClient.AssertErrorCodeAsync(response, "PROJECT_ACCESS_DENIED");
+    }
+
+    /// <summary>オーナー（Project admin）が定義を作って Start し、Project と実行の表示 ID を返す。</summary>
+    private async Task<(Guid ProjectId, string ExecutionDisplayId)> StartOwnedExecutionAsync(string suffix)
+    {
+        var (projectId, definitionId) = await CreateOwnedDefinitionAsync(suffix);
+        var ownerLogin = await _http.LoginAsync("default", $"owner-{suffix}", "Password1!");
+        using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
+        var startResponse = await ownerClient.PostAsJsonAsync("/v1/executions", new { definitionId });
+        Assert.Equal(HttpStatusCode.Created, startResponse.StatusCode);
+        var execution = await startResponse.Content.ReadFromJsonAsync<JsonElement>();
+        return (projectId, execution.GetProperty("displayId").GetString()!);
     }
 
     private async Task<(Guid ProjectId, string DefinitionDisplayId)> CreateOwnedDefinitionAsync(string suffix)

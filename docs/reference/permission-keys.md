@@ -54,12 +54,12 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 
 ### プロジェクト認可（併用）
 
-定義と実行の閲覧、publish、Start、Project の更新とメンバー操作は、**global permission** に加え呼び出し元 Principal の `project_accesses` を評価する。`tenant.admin` は所属が無い定義を読めない。メンバー操作だけは `project.admin` または `tenant.admin`。
+定義と実行の閲覧、publish、Start、既存実行の Cancel・Resume・イベント送信、Project の更新とメンバー操作は、**global permission** に加え呼び出し元 Principal の `project_accesses` を評価する。既存実行の操作は Owner でも開始時ではなく現在の所属を見る。Principal の無い Worker 経路は受理時の判定に任せる。`tenant.admin` は所属が無い定義を読めない。メンバー操作だけは `project.admin` または `tenant.admin`。
 
 | 状況 | HTTP | `error.code` |
 | --- | --- | --- |
 | プロジェクト未登録・Reader 未満 | 404 | `NOT_FOUND`（存在秘匿） |
-| Reader のみで Start、または Publisher 未満で定義作成 | 403 | `PROJECT_ACCESS_DENIED` |
+| Reader のみで Start・Cancel・Resume・イベント送信、または Publisher 未満で定義作成 | 403 | `PROJECT_ACCESS_DENIED` |
 
 ロールは reader、executor、publisher、admin の順に強い。PATCH は admin のみ。Project の DELETE は無い。
 

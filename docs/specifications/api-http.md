@@ -27,7 +27,7 @@
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
-**Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。許可の置換は付与先 Principal が executor 以上で所属していない project を 422 で拒む。Project の DELETE は無い。
+**Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。許可の置換は付与先 Principal が executor 以上で所属していない project を 422 で拒む。既存実行の Cancel・Resume・イベント送信は、定義の Project に executor 以上の所属を Live で要求する。Project の DELETE は無い。
 
 **Version 1.31（2026-10-18）**: Studio は `/admin/notification-smtp` で通知 SMTP を全体置換・削除する。パスワードは再表示しない。疎通確認は無い。HTTP の成否は変えない。
 
@@ -458,7 +458,8 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 - **X-Idempotency-Key**: 任意だが推奨。同一キー＋同一リクエストの再送は `command_dedup` により初回と同じ結果（通常 204）を返す。キーは `event_delivery_dedup` の `client_event_id` 導出にも使われる（[data-integration.md](data-integration.md) §3.3）。
 - Response: 204 No Content。エンジンで Cancel を適用し、projection を更新。
-- User と ServiceAccount は、mutation 認可のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。Snapshot の許可キーでは決めない。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
+- User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。Snapshot の許可キーでは決めない。
 - Engine に当該実行が無い（例: API 再起動直後）場合は **422**（`ArgumentException`。データ連携契約のセクション7）。
 
 ### 3.9 イベント発行（Write・互換シム）
@@ -477,6 +478,7 @@ Request:
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
 - Engine に当該実行が無い場合は **422**（キャンセルと同様）。
 
 ### 3.10 ノード再開（Wait 正本）
@@ -494,7 +496,8 @@ Request（JSON）:
 - **`resumeKey`**: 必須。Wait の **許可イベント名**（`allowedEvents` / `WaitEventRouteTable` のキー）。ASCII 識別子（1〜64）。空白のみ・非 ASCII は 422。
 - **`nodeId`**: パス上の実行グラフノード ID（待機中 Wait）。
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
-- User と ServiceAccount は、mutation 認可のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。終端より先に判定する。Snapshot の許可キーでは決めない。
+- mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
+- User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。終端より先に判定する。Snapshot の許可キーでは決めない。
 - 投影 status がすでに終端（`Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
 - 非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（従来どおり）。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。

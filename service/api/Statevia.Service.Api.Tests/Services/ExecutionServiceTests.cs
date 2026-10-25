@@ -5380,7 +5380,8 @@ public sealed class ExecutionServiceTests
             new PrincipalResourceGrantAuthorization(
                 new EmptyPrincipalResourceGrantStore(),
                 sqlite.TenantAccessor,
-                new MissingPrincipalDataAccess()));
+                new MissingPrincipalDataAccess()),
+            sqlite.TenantAccessor);
         var checkpointStoreResolved = checkpointStore ?? new FakeExecutionCheckpointStore();
         var engineSession = new ExecutionEngineSession(
             engine,

@@ -117,6 +117,8 @@ internal sealed class ExecutionWaitEventService(
         }
 
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
 
         await projection.DrainAsync(uuid.Value, ct).ConfigureAwait(false);
 
@@ -339,6 +341,8 @@ internal sealed class ExecutionWaitEventService(
         }
 
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
         await authorization.EnsureResourceGrantForExistingExecutionAsync(tenantId, execution.DefinitionId, ct)
             .ConfigureAwait(false);
 

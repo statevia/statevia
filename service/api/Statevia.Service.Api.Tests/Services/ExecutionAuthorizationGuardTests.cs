@@ -139,11 +139,87 @@ public sealed class ExecutionAuthorizationGuardTests
             new PrincipalResourceGrantAuthorization(
                 new EmptyPrincipalResourceGrantStore(),
                 db.TenantAccessor,
-                new MissingPrincipalDataAccess()));
+                new MissingPrincipalDataAccess()),
+            db.TenantAccessor);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sut.EnsureCanExecuteOnDefinitionAsync(tenantId, definitionId, CancellationToken.None));
+        Assert.Empty(projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>既存 execution のミューテーションは、削除済みを含めて定義の project で executor 判定を呼ぶ。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenPrincipalPresent_CallsProjectExecute()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(
+            projectAuth: projectAuth,
+            definitions: new StubDefinitionRepository(projectId),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        await sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        Assert.Equal([(tenantId, projectId)], projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>未所属やロール不足の例外は、そのまま呼び出し元へ返す。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenProjectDenies_Propagates()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var sut = CreateSut(
+            projectAuth: new RecordingProjectAuthorizationService(
+                new ForbiddenException("Insufficient project role.", "PROJECT_ACCESS_DENIED")),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        var act = () => sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
+        Assert.Equal("PROJECT_ACCESS_DENIED", error.Code);
+    }
+
+    /// <summary>定義行が無ければ execution として 404。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenDefinitionMissing_ThrowsNotFound()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(
+            projectAuth: projectAuth,
+            definitions: new StubDefinitionRepository(null),
+            tenantContext: PrincipalContext(tenantId));
+
+        // Act
+        var act = () => sut.EnsureCanMutateOnExecutionProjectAsync(tenantId, Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<NotFoundException>(act);
+        Assert.Equal(ExecutionValidationMessages.ExecutionNotFound, error.Message);
+        Assert.Empty(projectAuth.ExecuteCalls);
+    }
+
+    /// <summary>Principal の無い Worker 経路は受理時に判定済みのため、所属を見ない。</summary>
+    [Fact]
+    public async Task EnsureCanMutateOnExecutionProjectAsync_WhenWorkerContext_SkipsProjectAuth()
+    {
+        // Arrange
+        var projectAuth = new RecordingProjectAuthorizationService();
+        var sut = CreateSut(projectAuth: projectAuth);
+
+        // Act
+        await sut.EnsureCanMutateOnExecutionProjectAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
         Assert.Empty(projectAuth.ExecuteCalls);
     }
 
@@ -356,8 +432,10 @@ public sealed class ExecutionAuthorizationGuardTests
         IDefinitionRepository? definitions = null,
         IPrincipalResourceGrantStore? resourceGrants = null,
         ITenantContextAccessor? tenantContext = null,
-        IPrincipalDataAccess? principals = null) =>
-        new(
+        IPrincipalDataAccess? principals = null)
+    {
+        var accessor = tenantContext ?? new SettableTenantContextAccessor();
+        return new(
             runtimeAuth ?? new AllowAllRuntimePermissionAuthorization(),
             mutationAuth ?? new AllowAllExecutionMutationAuthorization(),
             projectAuth ?? new AllowAllProjectAuthorizationService(),
@@ -365,8 +443,20 @@ public sealed class ExecutionAuthorizationGuardTests
             new ImmediateReadOnlyExecutor(),
             new PrincipalResourceGrantAuthorization(
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
-                tenantContext ?? new SettableTenantContextAccessor(),
-                principals ?? new MissingPrincipalDataAccess()));
+                accessor,
+                principals ?? new MissingPrincipalDataAccess()),
+            accessor);
+    }
+
+    /// <summary>Principal 付きのテナント文脈を作る。</summary>
+    /// <param name="tenantId">テナント。</param>
+    /// <returns>HTTP 経路を模した文脈。</returns>
+    private static SettableTenantContextAccessor PrincipalContext(Guid tenantId)
+    {
+        var accessor = new SettableTenantContextAccessor();
+        accessor.Set(new TenantContextState(tenantId, "tenant", Guid.NewGuid(), TenantLifecycle.Active));
+        return accessor;
+    }
 
     private sealed class RecordingGrantStore(IReadOnlyList<PrincipalResourceGrantRow> rows) : IPrincipalResourceGrantStore
     {
@@ -480,7 +570,8 @@ public sealed class ExecutionAuthorizationGuardTests
         }
     }
 
-    private sealed class RecordingProjectAuthorizationService : IProjectAuthorizationService
+    /// <summary>executor 判定の呼び出しを記録する。<paramref name="executeFailure"/> を渡すとその例外で拒否する。</summary>
+    private sealed class RecordingProjectAuthorizationService(Exception? executeFailure = null) : IProjectAuthorizationService
     {
         public List<(Guid TenantId, Guid ProjectId)> ExecuteCalls { get; } = [];
 
@@ -498,7 +589,7 @@ public sealed class ExecutionAuthorizationGuardTests
             CancellationToken ct)
         {
             ExecuteCalls.Add((tenantId, projectId));
-            return Task.CompletedTask;
+            return executeFailure is null ? Task.CompletedTask : Task.FromException(executeFailure);
         }
 
         public Task EnsureCanPublishAsync(
