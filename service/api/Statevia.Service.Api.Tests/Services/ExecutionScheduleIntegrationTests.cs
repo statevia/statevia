@@ -197,15 +197,16 @@ public sealed class ExecutionScheduleIntegrationTests
             var compiler = scope.ServiceProvider.GetRequiredService<IDefinitionCompilerService>();
             var compiled = compiler.ValidateAndCompile("W", NoopWorkflowYaml);
             var definitionId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
             await using (var seed = database.Factory.CreateDbContext())
             {
-                var project = ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default");
+                ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default", projectId);
                 DefinitionTestData.AddDefinitionWithVersion(
                     seed,
                     TestTenantIds.DefaultTenantId,
                     definitionId,
                     "W",
-                    project.ProjectId,
+                    projectId,
                     sourceYaml: NoopWorkflowYaml,
                     compiledJson: compiled.CompiledJson);
                 await seed.SaveChangesAsync();
@@ -216,6 +217,14 @@ public sealed class ExecutionScheduleIntegrationTests
                 database,
                 plainKey: $"statevia-test-key-{Guid.NewGuid():N}",
                 permissionKeys: [WellKnownPermissionKeys.ExecutionsWrite]);
+
+            // 作成者と実行主体の両方が定義の Project に executor で所属していないと、作成も発火も Project not found になる。
+            await using (var membership = database.Factory.CreateDbContext())
+            {
+                ProjectTestData.GrantAccess(membership, projectId, creatorPrincipalId, ProjectAccessRole.Executor);
+                ProjectTestData.GrantAccess(membership, projectId, runAs.PrincipalId, ProjectAccessRole.Executor);
+                await membership.SaveChangesAsync();
+            }
 
             return new ScheduleIntegrationContext(
                 database,

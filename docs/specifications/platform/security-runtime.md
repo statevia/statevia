@@ -147,7 +147,7 @@ User と ServiceAccount は、所属のあとに `principal_resource_grants` を
 - 許可は Snapshot に焼き込まない。Resume と Cancel の Owner も Live の名簿を見る。許可キーの Snapshot / Operator 判定はそのまま。
 - 変更はテナント管理者 API だけ。一般の Runtime API では自分の許可を書き換えられない。他テナントの Principal・project・定義は **404**。
 - 定義を論理削除しても許可行は残ってよい。Start は **404**。削除済み定義の実行でも Resume と Cancel は所属 project を解決してこの表を見る。
-- テナントが executor 未満の project と、実行できない定義は **422**（`VALIDATION_ERROR`）で保存しない。
+- 付与先の Principal が executor 以上で所属していない project と、その project に属する定義は **422**（`VALIDATION_ERROR`）で保存しない。実行は所属と許可の両方を要求するため、所属の外へ付けた許可は何も通さないからである。操作するテナント管理者自身の所属は問わない。
 - 1 Principal あたり project 32 件、definition 128 件。超過は **422**（`VALIDATION_ERROR`）。重複 ID は 1 件に畳んでから数える。空の配列はその種別の行を消し、その種別の追加制限を無くす。
 
 HTTP のパスと本文は [api-http.md](../api-http.md) §3.12 / §4.1.3。表は [database-schema.md](../../reference/database-schema.md)。

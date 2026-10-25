@@ -79,21 +79,28 @@ public sealed class SchedulerHostStartAcceptanceTests
             """;
         var compiled = compiler.ValidateAndCompile("W", yaml);
         var definitionId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
         await using (var seed = database.Factory.CreateDbContext())
         {
-            var project = ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default");
+            ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default", projectId);
             DefinitionTestData.AddDefinitionWithVersion(
                 seed,
                 TestTenantIds.DefaultTenantId,
                 definitionId,
                 "W",
-                project.ProjectId,
+                projectId,
                 sourceYaml: yaml,
                 compiledJson: compiled.CompiledJson);
             await seed.SaveChangesAsync();
         }
 
         var principalId = await SecurityTestSeed.SeedUserAsync(database, "scheduler-start", "password");
+        // Start は定義の Project に executor 以上で所属している Principal だけに許す。
+        await using (var membership = database.Factory.CreateDbContext())
+        {
+            ProjectTestData.GrantAccess(membership, projectId, principalId, ProjectAccessRole.Executor);
+            await membership.SaveChangesAsync();
+        }
         var accessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
         using var tenantScope = accessor.SetContext(TestTenantIds.DefaultContext with
         {

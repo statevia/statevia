@@ -27,7 +27,7 @@
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
-**Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。Project の DELETE は無い。
+**Version 1.32（2026-10-25）**: Project はテナント内の Principal 所属だけ。作成は `projects.create`、PATCH は `project.admin`、メンバーは `project.admin` または `tenant.admin`。定義の `projectId` は必須。実行リソース許可は閲覧・開始・再開・取消に効く。許可の置換は付与先 Principal が executor 以上で所属していない project を 422 で拒む。Project の DELETE は無い。
 
 **Version 1.31（2026-10-18）**: Studio は `/admin/notification-smtp` で通知 SMTP を全体置換・削除する。パスワードは再表示しない。疎通確認は無い。HTTP の成否は変えない。
 
@@ -648,7 +648,7 @@ Studio の `/admin/notification-smtp` は、通知 SMTP の GET / PUT / DELETE �
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 
-**実行リソース許可の置換:** 本文は `{ "projectIds": [], "definitionIds": [] }`。両方必須。省略は **422**（`VALIDATION_ERROR`）。空配列はその種別の行を消す。重複 ID は 1 件に畳む。空 GUID は **422**。他テナントの主体・project・定義、および未知 ID は **404**。テナントが実行できない project や定義は **422** で、既存の許可は残る。1 Principal あたり project 32 件、definition 128 件まで。超過は **422**。評価の意味は [security-runtime.md](platform/security-runtime.md)。閲覧・開始・再開・取消がこの集合を見る。
+**実行リソース許可の置換:** 本文は `{ "projectIds": [], "definitionIds": [] }`。両方必須。省略は **422**（`VALIDATION_ERROR`）。空配列はその種別の行を消す。重複 ID は 1 件に畳む。空 GUID は **422**。他テナントの主体・project・定義、および未知 ID は **404**。付与先の Principal が executor 以上で所属していない project や、その project に属する定義は **422** で、既存の許可は残る。操作する管理者自身の所属は問わない。1 Principal あたり project 32 件、definition 128 件まで。超過は **422**。評価の意味は [security-runtime.md](platform/security-runtime.md)。閲覧・開始・再開・取消がこの集合を見る。
 
 JWT クレーム: `tenant_id`（内部 UUID）、`tenant_key`、`principal_id` / `sub`。詳細は `docs/specifications/platform/security-runtime.md`。
 

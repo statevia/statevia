@@ -55,6 +55,7 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
 
         var authorizationContext = await ResolveAuthorizationContextAsync(
                 tenantId,
+                principalId,
                 definitionId,
                 groupSnapshots,
                 isTenantAdmin,
@@ -90,8 +91,10 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
         }
 
         var parentContext = parentSnapshot.AuthorizationContext;
+        // Worker 文脈では Live Principal が無いため、子の Project ロールは親を開始した Principal の所属で引く。
         var authorizationContext = await ResolveAuthorizationContextAsync(
                 tenantId,
+                parentSnapshot.StartedByPrincipalId,
                 childDefinitionId,
                 parentContext.GroupSnapshots,
                 parentContext.IsTenantAdmin,
@@ -115,8 +118,21 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
         };
     }
 
+    /// <summary>定義の Project と、その Project での Principal の実効ロールを固定する。</summary>
+    /// <param name="tenantId">テナント。</param>
+    /// <param name="principalId">
+    /// ロールを引く Principal。Start では要求元、子ワークフローでは親の開始者を渡す。
+    /// Worker 文脈でも解決できるよう、テナント文脈の Live Principal には依存しない。
+    /// </param>
+    /// <param name="definitionId">開始する定義。</param>
+    /// <param name="groupSnapshots">固定するグループ。</param>
+    /// <param name="isTenantAdmin">テナント管理者か。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>認可文脈のスナップショット。</returns>
+    /// <exception cref="NotFoundException">定義が無い、または Principal が定義の Project に所属していないとき。</exception>
     private async Task<AuthorizationContextSnapshot> ResolveAuthorizationContextAsync(
         Guid tenantId,
+        Guid principalId,
         Guid definitionId,
         IReadOnlyList<GroupSnapshot> groupSnapshots,
         bool isTenantAdmin,
@@ -129,9 +145,6 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
                     .ConfigureAwait(false);
                 if (projectId is null)
                     throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
-
-                if (_tenantContext.PrincipalId is not { } principalId)
-                    throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
 
                 var projectRole = await _projects
                     .ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId.Value, innerCt)

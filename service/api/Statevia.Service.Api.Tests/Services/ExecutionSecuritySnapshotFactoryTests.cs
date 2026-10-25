@@ -25,6 +25,7 @@ public sealed class ExecutionSecuritySnapshotFactoryTests
         await using (var seed = database.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default", projectId);
+            ProjectTestData.GrantAccess(seed, projectId, principalId, ProjectAccessRole.Executor);
             DefinitionTestData.AddDefinitionWithVersion(
                 seed,
                 TestTenantIds.DefaultTenantId,
@@ -52,7 +53,7 @@ public sealed class ExecutionSecuritySnapshotFactoryTests
         Assert.Contains(WellKnownPermissionKeys.ExecutionsWrite, snapshot.EffectivePermissionKeys);
         Assert.Equal(capturedAt, snapshot.CapturedAt);
         Assert.Equal(projectId, snapshot.AuthorizationContext.ProjectId);
-        Assert.Equal("admin", snapshot.AuthorizationContext.ProjectRole);
+        Assert.Equal("executor", snapshot.AuthorizationContext.ProjectRole);
         Assert.NotEmpty(snapshot.PermissionSetHash);
     }
 
@@ -68,6 +69,7 @@ public sealed class ExecutionSecuritySnapshotFactoryTests
         await using (var seed = database.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default", projectId);
+            ProjectTestData.GrantAccess(seed, projectId, principalId, ProjectAccessRole.Executor);
             DefinitionTestData.AddDefinitionWithVersion(
                 seed,
                 TestTenantIds.DefaultTenantId,
@@ -141,6 +143,7 @@ public sealed class ExecutionSecuritySnapshotFactoryTests
         await using (var seed = database.Factory.CreateDbContext())
         {
             ProjectTestData.AddDefaultProject(seed, TestTenantIds.DefaultTenantId, "default", projectId);
+            ProjectTestData.GrantAccess(seed, projectId, ownerPrincipalId, ProjectAccessRole.Executor);
             DefinitionTestData.AddDefinitionWithVersion(
                 seed,
                 TestTenantIds.DefaultTenantId,
