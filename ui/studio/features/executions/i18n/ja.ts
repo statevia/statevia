@@ -5,6 +5,7 @@ import type { ExecutionsFeatureUiText } from "./types";
  */
 export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDashboard: {
+    operationsPermissionDenied: "取消・Resume・イベント送信には、所属グループに executions.write 権限が必要です。テナント管理者に依頼してください。",
     header: {
       titleDefault: "実行の詳細",
     },
@@ -267,6 +268,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   nodeCommands: {
     resumeDisabledReason: {
       runOnly: "Run 画面でのみ Resume できます",
+      permissionDenied: "Resume には、所属グループに executions.write 権限が必要です",
       executionNotLoaded: "Execution が未読込です",
       nodeNotSelected: "Node を選択してください",
       executionTerminal: "Executionは終了しています",

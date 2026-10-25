@@ -10,6 +10,8 @@ export type DefinitionEditorFeatureUiText = {
     loadingMeta: string;
     notMember: string;
     roleDenied: string;
+    /** Project ロールは足りるが、グループ権限 `definitions.write` が無いとき。 */
+    permissionDenied: string;
     validation: {
       nameRequired: string;
       yamlRequired: string;

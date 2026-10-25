@@ -23,7 +23,8 @@ describe("AdminNavLinks", () => {
       principalId: "principal",
       username: "admin",
       email: "admin@example.com",
-      isTenantAdmin: true
+      isTenantAdmin: true,
+      permissions: []
     });
   });
 
@@ -48,7 +49,8 @@ describe("AdminNavLinks", () => {
       principalId: "principal",
       username: "member",
       email: "member@example.com",
-      isTenantAdmin: false
+      isTenantAdmin: false,
+      permissions: []
     });
 
     renderWithUiText(<AdminNavLinks />);

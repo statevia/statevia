@@ -34,7 +34,8 @@ describe("AdminLayout", () => {
       principalId: "principal",
       username: "user",
       email: "user@example.com",
-      isTenantAdmin: false
+      isTenantAdmin: false,
+      permissions: []
     });
 
     await expect(AdminLayout({ children: <div>content</div> })).rejects.toThrow("REDIRECT:/dashboard");
@@ -48,7 +49,8 @@ describe("AdminLayout", () => {
       principalId: "principal",
       username: "admin",
       email: "admin@example.com",
-      isTenantAdmin: true
+      isTenantAdmin: true,
+      permissions: []
     });
 
     const result = await AdminLayout({ children: <div data-testid="admin-child">content</div> });

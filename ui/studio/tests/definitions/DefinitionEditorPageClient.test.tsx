@@ -4,7 +4,8 @@ import { DefinitionEditorPageClient } from "@/features/definition-editor/ui/Defi
 import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultDefinitionYaml";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 import { ProjectProvider } from "@/features/projects/projectContext";
-import { defaultTestProjects, renderWithUiText } from "../testUtils";
+import { PermissionsProvider } from "@/shared/auth/permissionsContext";
+import { defaultTestPermissions, defaultTestProjects, renderWithUiText } from "../testUtils";
 
 const push = vi.fn();
 
@@ -86,7 +87,9 @@ describe("DefinitionEditorPageClient", () => {
     const { rerender } = render(
       <UiTextProvider locale="ja">
         <ProjectProvider initialProjects={defaultTestProjects}>
-          <DefinitionEditorPageClient definitionId="def-1" />
+          <PermissionsProvider initialPermissions={defaultTestPermissions}>
+            <DefinitionEditorPageClient definitionId="def-1" />
+          </PermissionsProvider>
         </ProjectProvider>
       </UiTextProvider>
     );
@@ -101,7 +104,9 @@ describe("DefinitionEditorPageClient", () => {
     rerender(
       <UiTextProvider locale="en">
         <ProjectProvider initialProjects={defaultTestProjects}>
-          <DefinitionEditorPageClient definitionId="def-1" />
+          <PermissionsProvider initialPermissions={defaultTestPermissions}>
+            <DefinitionEditorPageClient definitionId="def-1" />
+          </PermissionsProvider>
         </ProjectProvider>
       </UiTextProvider>
     );
@@ -319,5 +324,16 @@ describe("DefinitionEditorPageClient", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:yaml");
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();
+  });
+
+  it("definitions.write が無いときはエディタを出さず理由を示す", async () => {
+    // Arrange / Act
+    renderWithUiText(<DefinitionEditorPageClient definitionId="def-1" />, { permissions: ["definitions.read"] });
+
+    // Assert
+    expect(
+      await screen.findByText("定義の作成と編集には、所属グループに definitions.write 権限が必要です。テナント管理者に依頼してください。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "保存" })).not.toBeInTheDocument();
   });
 });

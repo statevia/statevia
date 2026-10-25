@@ -63,6 +63,15 @@ public sealed class AuthMeResponse
 
     /// <summary>テナント管理者か。</summary>
     public bool IsTenantAdmin { get; set; }
+
+    /// <summary>
+    /// 所属グループから展開した semantic permission key（昇順）。テナント管理者は catalog の全キー。
+    /// </summary>
+    /// <remarks>
+    /// Studio がボタンの表示を決めるための値。認可の正本は各 API の評価であり、ここを根拠に許可しない。
+    /// Project ロールは含まない（<c>GET /v1/projects</c> の <c>role</c>）。
+    /// </remarks>
+    public IReadOnlyList<string> Permissions { get; set; } = [];
 }
 
 /// <summary>本人によるパスワード更新要求。</summary>

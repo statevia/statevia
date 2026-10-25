@@ -66,6 +66,7 @@ function ExecutionDashboardView({
   onCompareModeChange,
   comparisonEnabled,
   operationsEnabled,
+  operationsPermissionDenied,
   streamEnabled,
   onStreamEnabledChange,
   showExecutionPanels,
@@ -161,6 +162,10 @@ function ExecutionDashboardView({
           />
 
           <Toast toast={toast} onClose={onCloseToast} />
+
+          {operationsPermissionDenied && (
+            <p className="text-sm text-md-on-surface-variant">{uiText.executionDashboard.operationsPermissionDenied}</p>
+          )}
 
           {operationsEnabled && showExecutionPanels && isPublishEventAvailable(execution) && (
             <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">

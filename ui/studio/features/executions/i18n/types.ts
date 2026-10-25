@@ -4,6 +4,8 @@
  */
 export type ExecutionsFeatureUiText = {
   executionDashboard: {
+    /** 操作画面だが executions.write が無いため、取消などを出していないときの案内。 */
+    operationsPermissionDenied: string;
     header: {
       titleDefault: string;
     };
@@ -271,6 +273,8 @@ export type ExecutionsFeatureUiText = {
   nodeCommands: {
     resumeDisabledReason: {
       runOnly: string;
+      /** 操作画面だが executions.write が無いとき。 */
+      permissionDenied: string;
       executionNotLoaded: string;
       nodeNotSelected: string;
       executionTerminal: string;

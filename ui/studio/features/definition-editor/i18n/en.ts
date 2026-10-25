@@ -14,6 +14,7 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
     loadingMeta: "Loading definition metadata...",
     notMember: "You cannot open the editor because you are not a member of this definition's project.",
     roleDenied: "Publisher role or higher is required to create or edit a definition.",
+    permissionDenied: "Creating or editing a definition requires the definitions.write permission on one of your groups. Ask a tenant administrator.",
     validation: {
       nameRequired: "Please enter a definition name.",
       yamlRequired: "Please enter YAML.",

@@ -103,6 +103,10 @@ internal sealed class AuthService : IAuthService
 
         EnsureTenantActive(lookup.Tenant.Lifecycle);
 
+        var permissionKeys = await _platformDataAccess
+            .ExpandPrincipalPermissionKeysAsync(principalId, cancellationToken)
+            .ConfigureAwait(false);
+
         return new AuthMeResponse
         {
             TenantId = lookup.Tenant.TenantId,
@@ -110,7 +114,8 @@ internal sealed class AuthService : IAuthService
             PrincipalId = principalId,
             Username = lookup.User.Username,
             Email = lookup.User.Email,
-            IsTenantAdmin = lookup.User.IsTenantAdmin
+            IsTenantAdmin = lookup.User.IsTenantAdmin,
+            Permissions = [.. permissionKeys.Order(StringComparer.Ordinal)]
         };
     }
 

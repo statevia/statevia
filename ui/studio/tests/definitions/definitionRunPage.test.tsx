@@ -45,4 +45,15 @@ describe("DefinitionRunStartPage", () => {
       expect(apiPost).toHaveBeenCalledWith("/executions", { definitionId: "def-1" });
     });
   });
+
+  it("executions.write が無いときは開始フォームを出さず理由を示す", async () => {
+    // Arrange / Act
+    renderWithUiText(<DefinitionRunStartPage />, { permissions: ["executions.read"] });
+
+    // Assert
+    expect(
+      await screen.findByText("実行開始には、所属グループに executions.write 権限が必要です。テナント管理者に依頼してください。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "実行開始" })).not.toBeInTheDocument();
+  });
 });

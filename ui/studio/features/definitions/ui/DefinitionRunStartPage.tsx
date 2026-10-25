@@ -6,6 +6,7 @@ import { getDefinition, startExecutionFromDefinition } from "@/features/definiti
 import { isApiNotFound } from "@/features/projects/httpStatus";
 import { useProject } from "@/features/projects/projectContext";
 import { canExecute } from "@/features/projects/roles";
+import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength } from "@/shared/lib/validation/primitives";
@@ -33,6 +34,8 @@ export function DefinitionRunStartPage() {
   const [starting, setStarting] = useState(false);
   const [access, setAccess] = useState<"loading" | "missing" | "denied" | "ready">("loading");
   const { roleOf, loaded: projectsLoaded } = useProject();
+  const { has: hasPermission, loaded: permissionsLoaded } = usePermissions();
+  const canWriteExecutions = hasPermission(EXECUTIONS_WRITE_PERMISSION);
 
   useEffect(() => {
     const id = definitionId.trim();
@@ -125,7 +128,10 @@ export function DefinitionRunStartPage() {
       {access === "denied" && (
         <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.roleDenied}</p>
       )}
-      {access === "ready" && (
+      {access === "ready" && permissionsLoaded && !canWriteExecutions && (
+        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.permissionDenied}</p>
+      )}
+      {access === "ready" && canWriteExecutions && (
       <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
         <label className="block text-sm">
           <span className="text-md-on-surface-variant">

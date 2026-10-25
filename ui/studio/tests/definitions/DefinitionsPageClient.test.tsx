@@ -137,4 +137,71 @@ describe("DefinitionsPageClient", () => {
       expect(apiPost).toHaveBeenCalledWith("/definitions/def-1/restore", {});
     });
   });
+
+  it("definitions.write があれば新規作成ボタンを出す", async () => {
+    // Arrange / Act
+    renderWithUiText(<DefinitionsPageClient />);
+
+    // Assert
+    expect(await screen.findByRole("button", { name: "新しい定義を作成" })).toBeInTheDocument();
+  });
+
+  it("Project ロールが足りても definitions.write が無ければ新規作成ボタンを出さない", async () => {
+    // Arrange / Act
+    renderWithUiText(<DefinitionsPageClient />, { permissions: ["definitions.read"] });
+
+    // Assert
+    await waitFor(() => {
+      expect(apiGet).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole("button", { name: "新しい定義を作成" })).not.toBeInTheDocument();
+  });
+
+  it("definitions.write が無ければ active 行に削除ボタンを出さない", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [
+        {
+          displayId: "def-1",
+          resourceId: "res-1",
+          name: "Demo",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z"
+        }
+      ],
+      totalCount: 1
+    });
+
+    // Act
+    renderWithUiText(<DefinitionsPageClient />, { permissions: ["definitions.read"] });
+
+    // Assert
+    expect(await screen.findByText("Demo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "削除" })).not.toBeInTheDocument();
+  });
+
+  it("definitions.write が無ければ削除済み行に復元ボタンを出さない", async () => {
+    // Arrange
+    searchParams = new URLSearchParams("limit=20&offset=0&includeDeleted=true");
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [
+        {
+          displayId: "def-1",
+          resourceId: "res-1",
+          name: "Demo",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          deletedAt: "2026-07-01T00:00:00Z"
+        }
+      ],
+      totalCount: 1
+    });
+
+    // Act
+    renderWithUiText(<DefinitionsPageClient />, { permissions: ["definitions.read"] });
+
+    // Assert
+    expect(await screen.findByText("Demo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "復元" })).not.toBeInTheDocument();
+  });
 });
