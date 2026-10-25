@@ -26,12 +26,11 @@
         "@codemirror/view": "^6.41.1",
         "codemirror": "^6.0.2",
         "dagre": "^0.8.5",
-        "next": "^16.1.6",
+        "next": "^16.4.3",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "reactflow": "^11.11.4",
-        "yaml": "^2.8.3",
-        "zod": "^3.23.8"
+        "yaml": "^2.8.3"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
