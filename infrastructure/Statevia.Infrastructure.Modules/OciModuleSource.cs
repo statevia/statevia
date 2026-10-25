@@ -218,25 +218,25 @@ internal sealed class OciModuleSource(
 internal static partial class OciModuleSourceLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60201,
         Level = LogLevel.Warning,
         Message = "Skipping OCI artifact with incomplete configuration: registry='{Registry}', repository='{Repository}', reference='{Reference}'")]
     public static partial void InvalidArtifactConfig(ILogger logger, string registry, string repository, string reference);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60202,
         Level = LogLevel.Warning,
         Message = "Skipping OCI module '{Reference}': entry assembly unresolved ({Reason})")]
     public static partial void EntryUnresolved(ILogger logger, string reference, string reason);
 
     [LoggerMessage(
-        EventId = 3,
+        EventId = 60203,
         Level = LogLevel.Error,
         Message = "Failed to materialize OCI module '{Reference}'")]
     public static partial void MaterializeFailed(ILogger logger, Exception exception, string reference);
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 60204,
         Level = LogLevel.Information,
         Message = "Reusing cached OCI module '{Reference}' (manifest digest {Digest}); skipping layer blob fetch")]
     public static partial void CacheHit(ILogger logger, string reference, string digest);

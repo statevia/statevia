@@ -118,13 +118,13 @@ internal sealed class AwsS3ArtifactFetcher(ILogger<AwsS3ArtifactFetcher> logger)
 internal static partial class AwsS3ArtifactFetcherLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60701,
         Level = LogLevel.Information,
         Message = "Fetched S3 module '{Reference}' (content identity {Identity})")]
     public static partial void ModuleFetched(ILogger logger, string reference, string identity);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60702,
         Level = LogLevel.Debug,
         Message = "Resolved S3 content identity for '{Reference}' ({Identity})")]
     public static partial void IdentityResolved(ILogger logger, string reference, string identity);

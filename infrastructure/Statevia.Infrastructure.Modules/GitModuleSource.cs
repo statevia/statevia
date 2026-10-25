@@ -442,7 +442,7 @@ internal static class GitArchiveMaterializer
 internal static partial class GitModuleSourceLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60401,
         Level = LogLevel.Warning,
         Message = "Skipping Git artifact with incomplete configuration: host='{Host}', owner='{Owner}', repository='{Repository}', ref='{Ref}', modulePath='{ModulePath}'")]
     public static partial void InvalidArtifactConfig(
@@ -454,25 +454,25 @@ internal static partial class GitModuleSourceLog
         string modulePath);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60402,
         Level = LogLevel.Warning,
         Message = "Skipping Git artifact with unsupported provider '{Provider}': {Reason}")]
     public static partial void InvalidProvider(ILogger logger, string provider, string reason);
 
     [LoggerMessage(
-        EventId = 3,
+        EventId = 60403,
         Level = LogLevel.Warning,
         Message = "Skipping Git module '{Reference}': entry assembly unresolved ({Reason})")]
     public static partial void EntryUnresolved(ILogger logger, string reference, string reason);
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 60404,
         Level = LogLevel.Error,
         Message = "Failed to materialize Git module '{Reference}'")]
     public static partial void MaterializeFailed(ILogger logger, Exception exception, string reference);
 
     [LoggerMessage(
-        EventId = 5,
+        EventId = 60405,
         Level = LogLevel.Information,
         Message = "Reusing cached Git module '{Reference}' (content identity {Identity}); skipping archive fetch")]
     public static partial void CacheHit(ILogger logger, string reference, string identity);

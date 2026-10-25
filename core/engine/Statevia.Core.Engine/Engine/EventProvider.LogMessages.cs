@@ -8,7 +8,7 @@ public sealed partial class EventProvider
     private static partial class EventProviderLog
     {
         [LoggerMessage(
-            EventId = 5101,
+            EventId = 50101,
             Level = LogLevel.Information,
             Message = "Domain event dispatched ExecutionId={ExecutionId} topic={Topic} payloadSummaryType={PayloadSummaryType}")]
         public static partial void DomainEventDispatched(

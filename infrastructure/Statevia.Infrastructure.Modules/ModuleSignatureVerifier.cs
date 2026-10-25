@@ -196,6 +196,6 @@ internal sealed class ModuleSignatureVerifier : IModuleSignatureVerifier
 
 internal static partial class ModuleSignatureVerifierLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Module signature verification error ({ReasonCategory})")]
+    [LoggerMessage(EventId = 60901, Level = LogLevel.Warning, Message = "Module signature verification error ({ReasonCategory})")]
     public static partial void VerificationError(ILogger logger, Exception exception, string reasonCategory);
 }

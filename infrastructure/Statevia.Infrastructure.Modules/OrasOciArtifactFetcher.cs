@@ -173,13 +173,13 @@ internal sealed class OrasOciArtifactFetcher(
 internal static partial class OrasOciArtifactFetcherLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60601,
         Level = LogLevel.Information,
         Message = "Fetched OCI module '{Reference}' (manifest digest {Digest})")]
     public static partial void ModuleFetched(ILogger logger, string reference, string digest);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60602,
         Level = LogLevel.Debug,
         Message = "Resolved OCI manifest for '{Reference}' (digest {Digest})")]
     public static partial void ManifestResolved(ILogger logger, string reference, string digest);

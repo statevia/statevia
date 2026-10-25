@@ -196,13 +196,13 @@ internal sealed class HttpGitArtifactFetcher(IHttpClientFactory httpClientFactor
 internal static partial class HttpGitArtifactFetcherLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60501,
         Level = LogLevel.Debug,
         Message = "Resolved Git commit for '{Reference}' ({Sha})")]
     public static partial void CommitResolved(ILogger logger, string reference, string sha);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60502,
         Level = LogLevel.Information,
         Message = "Fetched Git archive for '{Reference}' (commit {Sha})")]
     public static partial void ArchiveFetched(ILogger logger, string reference, string sha);

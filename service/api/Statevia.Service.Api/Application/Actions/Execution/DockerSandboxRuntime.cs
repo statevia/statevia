@@ -287,25 +287,25 @@ internal sealed class DockerSandboxRuntime(
 internal static partial class DockerSandboxRuntimeLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 63001,
         Level = LogLevel.Information,
         Message = "Started Docker sandbox container {ContainerId}")]
     public static partial void ContainerStarted(ILogger logger, string containerId);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 63002,
         Level = LogLevel.Information,
         Message = "Removed Docker sandbox container {ContainerId}")]
     public static partial void ContainerRemoved(ILogger logger, string containerId);
 
     [LoggerMessage(
-        EventId = 3,
+        EventId = 63003,
         Level = LogLevel.Error,
         Message = "Docker sandbox execution failed")]
     public static partial void ContainerFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 63004,
         Level = LogLevel.Warning,
         Message = "Failed to clean up Docker sandbox container {ContainerId}")]
     public static partial void ContainerCleanupFailed(ILogger logger, Exception exception, string containerId);
@@ -315,14 +315,14 @@ internal static partial class DockerSandboxRuntimeLog
     /// 設定値そのものは出力しない（キー名のみ）。範囲外の数値は分類 A のためここでは扱わない。
     /// </summary>
     [LoggerMessage(
-        EventId = 5,
+        EventId = 63005,
         Level = LogLevel.Warning,
         Message = "Docker sandbox option {OptionKey} was empty; using configured default")]
     public static partial void OptionsFallbackApplied(ILogger logger, string optionKey);
 
     /// <summary>テナントディレクトリを解決できなかった。パスと秘密は出さない。</summary>
     [LoggerMessage(
-        EventId = 6,
+        EventId = 63006,
         Level = LogLevel.Warning,
         Message = "Docker sandbox tenant modules mount was rejected")]
     public static partial void TenantModulesMountRejected(ILogger logger);

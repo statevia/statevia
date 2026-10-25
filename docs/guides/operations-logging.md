@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0.3 |
-| 更新日 | 2026-09-21 |
+| Version | 1.0.4 |
+| 更新日 | 2026-10-25 |
 | 関連 | [logging-operations.md](../specifications/platform/logging-operations.md), [operations-docker.md](operations-docker.md), [logging-property-keys.md](../reference/logging-property-keys.md) |
 
 ---
 
 任意の compose overlay で、コンテナ stdout の JSON を Fluent Bit → Loki → Grafana まで辿る例。製品は特定ベンダーを必須にしない。契約の正本は [logging-operations.md](../specifications/platform/logging-operations.md)。想定外例外のエラー監視 SDK はこの overlay の対象外である（DSN 未設定なら送信しない）。
+
+**Version 1.0.4（2026-10-25）**: JSON 例の `EventId` を5桁採番（`10001`）に合わせる。
 
 **Version 1.0.3（2026-09-21）**: エラー監視 SDK はこの overlay の対象外であると明記する。
 
@@ -66,7 +68,7 @@ Microsoft JsonConsole（overlay の `Logging__Console__FormatterName=json`）。
 ```json
 {
   "Timestamp": "2026-09-16T00:00:00.0000000Z",
-  "EventId": 4010,
+  "EventId": 10001,
   "LogLevel": "Information",
   "Category": "Statevia.Service.Api.Hosting.RequestLoggingMiddleware",
   "Message": "HTTP request start TraceId=... Method=GET Path=/v1/executions ... TenantId=00000000-0000-4000-8000-000000000001 ...",

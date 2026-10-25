@@ -179,16 +179,16 @@ internal sealed class ActionHostModuleLoader
 
 internal static partial class ActionHostModuleLoaderLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Skipping module '{ModuleDirectory}': {Reason}")]
+    [LoggerMessage(EventId = 62001, Level = LogLevel.Warning, Message = "Skipping module '{ModuleDirectory}': {Reason}")]
     public static partial void ModuleSkipped(ILogger logger, string moduleDirectory, string reason);
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: {Reason}")]
+    [LoggerMessage(EventId = 62002, Level = LogLevel.Warning, Message = "Skipping action '{ActionId}' from module {ModuleId}: {Reason}")]
     public static partial void ActionSkipped(ILogger logger, string actionId, string moduleId, string reason);
 
-    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Skipping duplicate action '{ActionId}' from module {ModuleId}")]
+    [LoggerMessage(EventId = 62003, Level = LogLevel.Warning, Message = "Skipping duplicate action '{ActionId}' from module {ModuleId}")]
     public static partial void DuplicateActionSkipped(ILogger logger, string actionId, string moduleId);
 
-    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Loaded module {ModuleId} v{Version} from {EntryAssemblyPath} ({RegisteredCount} action(s))")]
+    [LoggerMessage(EventId = 62004, Level = LogLevel.Information, Message = "Loaded module {ModuleId} v{Version} from {EntryAssemblyPath} ({RegisteredCount} action(s))")]
     public static partial void ModuleLoaded(
         ILogger logger,
         string moduleId,
@@ -196,6 +196,6 @@ internal static partial class ActionHostModuleLoaderLog
         string entryAssemblyPath,
         int registeredCount);
 
-    [LoggerMessage(EventId = 5, Level = LogLevel.Error, Message = "Failed to load module from {EntryAssemblyPath}")]
+    [LoggerMessage(EventId = 62005, Level = LogLevel.Error, Message = "Failed to load module from {EntryAssemblyPath}")]
     public static partial void ModuleLoadFailed(ILogger logger, Exception exception, string entryAssemblyPath);
 }

@@ -143,14 +143,14 @@ internal sealed class FilesystemModuleSource : IModuleSource
 
 internal static partial class FilesystemModuleSourceLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]
+    [LoggerMessage(EventId = 60101, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]
     public static partial void ModulesRootMissing(ILogger logger, string modulesRoot);
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Skipping module directory '{ModuleDirectory}': {Reason}")]
+    [LoggerMessage(EventId = 60102, Level = LogLevel.Warning, Message = "Skipping module directory '{ModuleDirectory}': {Reason}")]
     public static partial void ModuleDirectorySkipped(ILogger logger, string moduleDirectory, string reason);
 
     [LoggerMessage(
-        EventId = 3,
+        EventId = 60103,
         Level = LogLevel.Warning,
         Message = "Filesystem module discover skipped: ModuleDiscoveryContext.TenantKey is required")]
     public static partial void TenantKeyRequired(ILogger logger);

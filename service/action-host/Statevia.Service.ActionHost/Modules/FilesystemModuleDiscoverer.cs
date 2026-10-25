@@ -140,9 +140,9 @@ internal sealed class FilesystemModuleDiscoverer
 
 internal static partial class FilesystemModuleDiscovererLog
 {
-    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]
+    [LoggerMessage(EventId = 62101, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]
     public static partial void ModulesRootMissing(ILogger logger, string modulesRoot);
 
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Skipping module directory '{ModuleDirectory}': {Reason}")]
+    [LoggerMessage(EventId = 62102, Level = LogLevel.Warning, Message = "Skipping module directory '{ModuleDirectory}': {Reason}")]
     public static partial void ModuleDirectorySkipped(ILogger logger, string moduleDirectory, string reason);
 }

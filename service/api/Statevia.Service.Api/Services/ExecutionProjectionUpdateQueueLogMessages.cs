@@ -6,25 +6,25 @@ namespace Statevia.Service.Api.Services;
 internal static partial class ExecutionProjectionUpdateQueueLogMessages
 {
     [LoggerMessage(
-        EventId = 3101,
+        EventId = 70401,
         Level = LogLevel.Warning,
         Message = "Skip enqueue because execution is dead-lettered ExecutionId={executionId}")]
     public static partial void SkipEnqueueDeadLettered(this ILogger logger, Guid executionId);
 
     [LoggerMessage(
-        EventId = 3102,
+        EventId = 70402,
         Level = LogLevel.Warning,
         Message = "Projection queue drain on shutdown timed out RemainingExecutions={remainingExecutions}")]
     public static partial void DrainShutdownTimeout(this ILogger logger, int remainingExecutions);
 
     [LoggerMessage(
-        EventId = 3103,
+        EventId = 70403,
         Level = LogLevel.Error,
         Message = "Projection queue moved execution to dead-letter ExecutionId={executionId} RetryCount={retryCount}")]
     public static partial void MovedToDeadLetter(this ILogger logger, Exception ex, Guid executionId, int retryCount);
 
     [LoggerMessage(
-        EventId = 3104,
+        EventId = 70404,
         Level = LogLevel.Warning,
         Message = "Projection queue processing failed. Retry scheduled ExecutionId={executionId} Attempt={attempt}/{maxAttempts} DelayMs={delayMs}")]
     public static partial void ProcessingFailedRetryScheduled(
@@ -36,19 +36,19 @@ internal static partial class ExecutionProjectionUpdateQueueLogMessages
         int delayMs);
 
     [LoggerMessage(
-        EventId = 3105,
+        EventId = 70405,
         Level = LogLevel.Warning,
         Message = "Skip projection update because execution tenant was not found ExecutionId={executionId}")]
     public static partial void ExecutionTenantNotFound(this ILogger logger, Guid executionId);
 
     [LoggerMessage(
-        EventId = 3106,
+        EventId = 70406,
         Level = LogLevel.Warning,
         Message = "Skip suspend checkpoint because execution id '{ExecutionId}' is not a Guid.")]
     public static partial void SkipSuspendCheckpointInvalidExecutionId(this ILogger logger, string executionId);
 
     [LoggerMessage(
-        EventId = 3107,
+        EventId = 70407,
         Level = LogLevel.Warning,
         Message = "Skip suspend checkpoint because tenant was not found for execution {ExecutionId}.")]
     public static partial void SkipSuspendCheckpointTenantNotFound(this ILogger logger, Guid executionId);

@@ -200,25 +200,25 @@ internal sealed class S3ModuleSource(
 internal static partial class S3ModuleSourceLog
 {
     [LoggerMessage(
-        EventId = 1,
+        EventId = 60301,
         Level = LogLevel.Warning,
         Message = "Skipping S3 artifact with incomplete configuration: bucket='{Bucket}', key='{Key}'")]
     public static partial void InvalidArtifactConfig(ILogger logger, string bucket, string key);
 
     [LoggerMessage(
-        EventId = 2,
+        EventId = 60302,
         Level = LogLevel.Warning,
         Message = "Skipping S3 module '{Reference}': entry assembly unresolved ({Reason})")]
     public static partial void EntryUnresolved(ILogger logger, string reference, string reason);
 
     [LoggerMessage(
-        EventId = 3,
+        EventId = 60303,
         Level = LogLevel.Error,
         Message = "Failed to materialize S3 module '{Reference}'")]
     public static partial void MaterializeFailed(ILogger logger, Exception exception, string reference);
 
     [LoggerMessage(
-        EventId = 4,
+        EventId = 60304,
         Level = LogLevel.Information,
         Message = "Reusing cached S3 module '{Reference}' (content identity {Identity}); skipping blob fetch")]
     public static partial void CacheHit(ILogger logger, string reference, string identity);

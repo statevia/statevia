@@ -7,7 +7,7 @@ internal static partial class ApiExceptionFilterLogMessages
 {
     /// <summary>契約外の未処理例外を Error で記録する。</summary>
     [LoggerMessage(
-        EventId = 1101,
+        EventId = 10101,
         Level = LogLevel.Error,
         Message = "Unhandled API exception")]
     public static partial void UnhandledApiException(this ILogger logger, Exception exception);

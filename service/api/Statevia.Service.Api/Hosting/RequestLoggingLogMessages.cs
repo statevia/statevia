@@ -22,7 +22,7 @@ internal static partial class RequestLoggingLogMessages
             details.RequestBody);
 
     [LoggerMessage(
-        EventId = 4010,
+        EventId = 10001,
         Level = LogLevel.Information,
         Message = "HTTP request start TraceId={traceId} Method={method} Path={path} Query={queryForLog} TenantId={tenantId} UserAgent={userAgent} RequestBody={requestBody}")]
     [SuppressMessage(
@@ -40,7 +40,7 @@ internal static partial class RequestLoggingLogMessages
         string? requestBody);
 
     [LoggerMessage(
-        EventId = 4011,
+        EventId = 10002,
         Level = LogLevel.Error,
         Message = "HTTP request unhandled exception TraceId={traceId} ExceptionType={exceptionType} Message={message}")]
     public static partial void HttpRequestUnhandledException(
@@ -51,7 +51,7 @@ internal static partial class RequestLoggingLogMessages
         string message);
 
     [LoggerMessage(
-        EventId = 4012,
+        EventId = 10003,
         Level = LogLevel.Information,
         Message = "HTTP request complete TraceId={traceId} StatusCode={statusCode} ElapsedMs={elapsedMs} ResponseSize={responseSize} ResponseBody={responseBody} TenantId={tenantId}")]
     public static partial void HttpRequestComplete(
