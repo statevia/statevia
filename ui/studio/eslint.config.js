@@ -9,6 +9,7 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import jsdoc from "eslint-plugin-jsdoc";
+import sonarjs from "eslint-plugin-sonarjs";
 import globals from "globals";
 
 const tsconfigRootDir = path.dirname(fileURLToPath(
@@ -77,6 +78,8 @@ export default defineConfig({
         ...jsxA11y.configs.recommended.rules,
         "react/react-in-jsx-scope": "off",
         "react/prop-types": "off",
+        // Sonar S6819 相当（role="dialog" より <dialog> など）。jsx-a11y の recommended には含まれない
+        "jsx-a11y/prefer-tag-over-role": "error",
         "no-nested-ternary": "error",
         "@typescript-eslint/consistent-type-assertions": [
             "error",
@@ -105,6 +108,24 @@ export default defineConfig({
                 caughtErrorsIgnorePattern: "^_",
             },
         ],
+    },
+}, {
+    // SonarQube Cloud（statevia_statevia_ui）の指摘を編集時・npm run lint で拾う。
+    // 範囲は sonar-project.properties の sonar.sources と同じ（tests/ は Sonar のスキャン対象外のため含めない）。
+    files: ["app/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}", "middleware.ts"],
+    extends: [sonarjs.configs.recommended],
+    rules: {
+        // サーバー描画向けの実行時ガード（globalThis.sessionStorage === undefined など）を
+        // 型上は常に定義済みとみなして誤検知するため off
+        "sonarjs/different-types-comparison": "off",
+        // 意図的に複数の型を返す関数（判別共用体の生成・パース結果など）まで指摘するため off
+        "sonarjs/function-return-type": "off",
+    },
+}, {
+    files: ["**/i18n/**"],
+    rules: {
+        // 「パスワード」等のラベル文言を資格情報と誤検知するため off（SonarCloud でも S2068 を同範囲で除外済み）
+        "sonarjs/no-hardcoded-passwords": "off",
     },
 }, {
     files: ["app/**/*.tsx"],

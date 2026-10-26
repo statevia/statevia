@@ -120,7 +120,12 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   npx markdownlint-cli2 "path/to/edited.md"
   ```
 
-- **UI（TypeScript）**: **`npm run lint`**（エラーも警告も失敗。`--max-warnings 0`）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`）。
+- **UI（TypeScript）**: **`npm run lint`**（エラーも警告も失敗。`--max-warnings 0`）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`、`sonarjs`）。
+  - **sonarjs**: SonarQube Cloud（`statevia_statevia_ui`）相当の指摘を編集時と `npm run lint` で検出するため、`eslint-plugin-sonarjs` の `recommended` を `app/**`・`features/**`・`shared/**`・`middleware.ts` に適用する（`sonar.sources` と同じ範囲。`tests/` は対象外）。次のルールは off にしている。
+    - `sonarjs/different-types-comparison`: サーバー描画向けの実行時ガード（`globalThis.sessionStorage === undefined` など）を誤検知するため。
+    - `sonarjs/function-return-type`: 意図的に複数の型を返す関数まで指摘するため。
+    - `sonarjs/no-hardcoded-passwords`（`**/i18n/**` のみ）: i18n 辞書の「パスワード」ラベルを誤検知するため。SonarCloud 側でも `typescript:S2068` を同範囲で除外済み。
+  - **jsx-a11y/prefer-tag-over-role**: Sonar の S6819（`role="dialog"` ではなく `<dialog>` を使う等）に相当。jsx-a11y の推奨設定に含まれないため個別に error にしている。
 - **SonarQube（Service API）**: プロジェクトキー **`statevia_statevia_api`**。Quality Gate は SonarQube Cloud の組み込み **Sonar way**（新規コードのみ。信頼性・セキュリティ・保守性は A、Security Hotspot はすべてレビュー、カバレッジ 80% 以上、重複行 3% 以下）。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[sonar/README.md](../sonar/README.md)）。
 - **SonarQube（UI Studio）**: プロジェクトキー **`statevia_statevia_ui`**。Quality Gate は API と同じ **Sonar way**（新規コードのみ）。手順は **§5.2**。C# と同様、`tests/` はスキャン対象外（`sonar.exclusions`）。カバレッジは lcov のプロダクションパスだけを見る。
 
@@ -277,6 +282,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-10-26 | §4.3 に UI ESLint の `sonarjs` 導入・off にしたルールと理由、`jsx-a11y/prefer-tag-over-role` を追記 |
 | 2026-10-04 | §4.2 に画面フックと UI の境界を追記 |
 | 2026-10-03 | §4.4 / §5 の Sonar 送信先を SonarQube Cloud（組織 `statevia`、Sonar way）へ更新 |
 | 2026-09-01 | §4.3 / §5.2 に UI `tests/` のスキャン除外（`sonar.exclusions`。C# テストプロジェクト除外と同趣旨）を追記 |
