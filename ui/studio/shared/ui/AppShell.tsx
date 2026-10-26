@@ -22,6 +22,8 @@ type AppShellProps = Readonly<{
   isTenantAdmin: boolean;
   /** 選択中 Project で `admin` か。 */
   isProjectAdmin: boolean;
+  /** `projects.create` を持つか。所属 0 件でも作成リンクを出すために使う。 */
+  canCreateProject: boolean;
   /** cookie `ui-sidenav` から解決した初期の畳み状態。 */
   initialCollapsed: boolean;
   /** サイドメニュー先頭の Project 切替。`shared` から `features` を参照しないよう slot で受け取る。 */
@@ -34,7 +36,16 @@ type AppShellProps = Readonly<{
  * `lg` 以上は固定列（展開 / レール）、`lg` 未満はヘッダーのボタンで開くドロワーにする。
  * ログイン画面ではサイドメニューを出さない。表示制御は見た目だけで、認可は各ルートと Service API が担う。
  */
-export function AppShell({ theme, locale, isTenantAdmin, isProjectAdmin, initialCollapsed, projectSlot, children }: AppShellProps) {
+export function AppShell({
+  theme,
+  locale,
+  isTenantAdmin,
+  isProjectAdmin,
+  canCreateProject,
+  initialCollapsed,
+  projectSlot,
+  children,
+}: AppShellProps) {
   const pathname = usePathname();
   const uiText = useUiText();
   const showNavigation = pathname !== "/login";
@@ -43,7 +54,10 @@ export function AppShell({ theme, locale, isTenantAdmin, isProjectAdmin, initial
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDialogElement>(null);
 
-  const groups = useMemo(() => selectVisibleGroups(NAV_GROUPS, { isTenantAdmin, isProjectAdmin }), [isTenantAdmin, isProjectAdmin]);
+  const groups = useMemo(
+    () => selectVisibleGroups(NAV_GROUPS, { isTenantAdmin, isProjectAdmin, canCreateProject }),
+    [isTenantAdmin, isProjectAdmin, canCreateProject],
+  );
   const activeItemId = resolveActiveItemId(groups, pathname);
 
   const closeDrawer = () => {

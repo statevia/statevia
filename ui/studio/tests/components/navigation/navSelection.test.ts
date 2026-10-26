@@ -6,7 +6,7 @@ import { resolveActiveItemId, selectVisibleGroups } from "@/shared/ui/navigation
 describe("selectVisibleGroups", () => {
   it("一般利用者にはワークフローグループだけを返す", () => {
     // Arrange
-    const context = { isTenantAdmin: false, isProjectAdmin: false };
+    const context = { isTenantAdmin: false, isProjectAdmin: false, canCreateProject: false };
 
     // Act
     const groups = selectVisibleGroups(NAV_GROUPS, context);
@@ -17,7 +17,7 @@ describe("selectVisibleGroups", () => {
 
   it("Project 管理者にはプロジェクトグループのメンバーも返す", () => {
     // Arrange
-    const context = { isTenantAdmin: false, isProjectAdmin: true };
+    const context = { isTenantAdmin: false, isProjectAdmin: true, canCreateProject: false };
 
     // Act
     const groups = selectVisibleGroups(NAV_GROUPS, context);
@@ -29,7 +29,7 @@ describe("selectVisibleGroups", () => {
 
   it("テナント管理者には管理系 2 グループを定義順で返す", () => {
     // Arrange
-    const context = { isTenantAdmin: true, isProjectAdmin: false };
+    const context = { isTenantAdmin: true, isProjectAdmin: false, canCreateProject: false };
 
     // Act
     const groups = selectVisibleGroups(NAV_GROUPS, context);
@@ -37,10 +37,33 @@ describe("selectVisibleGroups", () => {
     // Assert
     expect(groups.map((group) => group.id)).toEqual(["workflow", "tenantAccess", "tenantSettings"]);
   });
+
+  it("projects.create を持てば所属 0 件でもプロジェクトグループに作成だけを返す", () => {
+    // Arrange
+    const context = { isTenantAdmin: false, isProjectAdmin: false, canCreateProject: true };
+
+    // Act
+    const groups = selectVisibleGroups(NAV_GROUPS, context);
+
+    // Assert
+    expect(groups.map((group) => group.id)).toEqual(["workflow", "project"]);
+    expect(groups[1]?.items.map((item) => item.id)).toEqual(["projectCreate"]);
+  });
 });
 
 describe("resolveActiveItemId", () => {
-  const allGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: true, isProjectAdmin: true });
+  const allGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: true, isProjectAdmin: true, canCreateProject: true });
+
+  it("作成画面ではメンバーではなく作成の項目を選択する", () => {
+    // Arrange
+    const pathname = "/projects/new";
+
+    // Act
+    const activeItemId = resolveActiveItemId(allGroups, pathname);
+
+    // Assert
+    expect(activeItemId).toBe("projectCreate");
+  });
 
   it("配下の深い URL では親の項目を選択する", () => {
     // Arrange

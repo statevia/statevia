@@ -6,12 +6,14 @@ vi.mock("@/shared/api", async (importOriginal) => {
     ...actual,
     apiDelete: vi.fn(),
     apiGet: vi.fn(),
+    apiPost: vi.fn(),
     apiPut: vi.fn(),
   };
 });
 
-import { apiDelete, apiGet, apiPut } from "@/shared/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/api";
 import {
+  createProject,
   listAdminProjects,
   listGrantCandidates,
   listMembershipProjects,
@@ -42,6 +44,16 @@ describe("project api", () => {
     vi.mocked(apiGet).mockReset();
     vi.mocked(apiPut).mockReset();
     vi.mocked(apiDelete).mockReset();
+    vi.mocked(apiPost).mockReset();
+  });
+
+  it("作成は本文をそのまま POST し、応答の role を既知の値へ狭める", async () => {
+    vi.mocked(apiPost).mockResolvedValue(project("admin"));
+
+    const created = await createProject({ slug: "default", displayName: "Default" });
+
+    expect(apiPost).toHaveBeenCalledWith("/projects", { slug: "default", displayName: "Default" });
+    expect(created.role).toBe("admin");
   });
 
   it("所属一覧は未知の role を null にする", async () => {

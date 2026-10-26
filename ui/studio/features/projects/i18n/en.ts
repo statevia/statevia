@@ -47,6 +47,26 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
       empty: "No projects.",
       definitionClosed: "Definition detail and the editor stay closed for projects you do not belong to.",
       select: "Project",
+      create: "Create project",
+    },
+    create: {
+      title: "Create project",
+      description: "You become the admin of the project you create. Projects cannot be deleted.",
+      noPermission: "Creating a project requires the projects.create permission.",
+      slugLabel: "Project key",
+      slugHint: "A name unique within the tenant. Use it to refer to this project from the API or CLI. Screens show the display name.",
+      displayNameLabel: "Display name",
+      descriptionLabel: "Description (optional)",
+      submit: "Create",
+      submitting: "Creating...",
+      errors: {
+        required: "This field is required.",
+        tooLong: (maxLength) => `Use ${maxLength} characters or fewer.`,
+        duplicate: "This project key is already in use.",
+      },
+      created: (displayName) => `Created and selected project "${displayName}".`,
+      createdReloadRequired: (displayName) =>
+        `Created project "${displayName}". Reload the page because the project list could not be refreshed.`,
     },
   },
 };

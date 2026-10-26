@@ -6,11 +6,14 @@ export type NavVisibilityContext = Readonly<{
   isTenantAdmin: boolean;
   /** 選択中 Project で `admin` か。Project 一覧の未ロード時は false。 */
   isProjectAdmin: boolean;
+  /** `projects.create` を持つか。グループ権限の未ロード時は false。 */
+  canCreateProject: boolean;
 }>;
 
 const visibilityRules: Record<NavVisibility, (context: NavVisibilityContext) => boolean> = {
   all: () => true,
   projectAdmin: (context) => context.isProjectAdmin,
+  projectCreate: (context) => context.canCreateProject,
   tenantAdmin: (context) => context.isTenantAdmin,
 };
 

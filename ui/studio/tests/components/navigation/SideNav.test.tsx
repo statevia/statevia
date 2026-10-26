@@ -15,8 +15,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const adminGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: true, isProjectAdmin: true });
-const memberGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: false, isProjectAdmin: false });
+const adminGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: true, isProjectAdmin: true, canCreateProject: true });
+const memberGroups = selectVisibleGroups(NAV_GROUPS, { isTenantAdmin: false, isProjectAdmin: false, canCreateProject: false });
 
 type RenderOptions = {
   mode?: SideNavMode;

@@ -47,6 +47,7 @@ export type UiText = DefinitionsFeatureUiText &
     definitions: string;
     executions: string;
     projectMembers: string;
+    projectCreate: string;
     adminUsers: string;
     adminGroups: string;
     adminApiKeys: string;
@@ -169,6 +170,7 @@ export const uiText: UiText = {
     definitions: "定義",
     executions: "実行",
     projectMembers: "メンバー",
+    projectCreate: "プロジェクトを作成",
     adminUsers: "ユーザー管理",
     adminGroups: "グループ管理",
     adminApiKeys: "API キー",

@@ -36,6 +36,7 @@ export const uiTextEn: UiText = {
     definitions: "Definitions",
     executions: "Executions",
     projectMembers: "Members",
+    projectCreate: "Create project",
     adminUsers: "Users",
     adminGroups: "Groups",
     adminApiKeys: "API keys",

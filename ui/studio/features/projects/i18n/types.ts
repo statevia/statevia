@@ -42,6 +42,27 @@ export type ProjectsFeatureUiText = {
       empty: string;
       definitionClosed: string;
       select: string;
+      /** 作成画面（`/projects/new`）へのボタン。 */
+      create: string;
+    };
+    create: {
+      title: string;
+      description: string;
+      noPermission: string;
+      slugLabel: string;
+      slugHint: string;
+      displayNameLabel: string;
+      descriptionLabel: string;
+      submit: string;
+      submitting: string;
+      /** 欄ごとの項目エラー。キーは `ProjectCreateFieldErrorKind`。 */
+      errors: {
+        required: string;
+        tooLong: (maxLength: number) => string;
+        duplicate: string;
+      };
+      created: (displayName: string) => string;
+      createdReloadRequired: (displayName: string) => string;
     };
   };
 };
