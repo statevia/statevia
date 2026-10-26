@@ -7,7 +7,6 @@ export const projectsUiTextJa: ProjectsFeatureUiText = {
   projects: {
     switcher: {
       label: "プロジェクト",
-      members: "メンバー",
       option: (displayName, roleLabel) => `${displayName}（${roleLabel}）`,
     },
     roles: {

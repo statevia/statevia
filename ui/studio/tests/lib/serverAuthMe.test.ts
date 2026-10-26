@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { AUTH_COOKIE_ACCESS, AUTH_COOKIE_TENANT_KEY } from "@/shared/auth/authSession";
-import { fetchAuthMeServer } from "@/shared/auth/serverAuthMe";
+import { fetchAuthMeServer, fetchIsTenantAdminServer } from "@/shared/auth/serverAuthMe";
 import { testJwt } from "../helpers/testJwt";
 
 const cookiesMock = vi.fn();
@@ -83,5 +83,67 @@ describe("fetchAuthMeServer", () => {
     );
 
     await expect(fetchAuthMeServer()).resolves.toBeNull();
+  });
+});
+
+describe("fetchIsTenantAdminServer", () => {
+  const originalBase = process.env.SERVICE_API_INTERNAL_BASE;
+
+  beforeEach(() => {
+    process.env.SERVICE_API_INTERNAL_BASE = "http://core-api.test/";
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    process.env.SERVICE_API_INTERNAL_BASE = originalBase;
+    vi.unstubAllGlobals();
+    cookiesMock.mockReset();
+  });
+
+  it("テナント管理者の Principal なら true を返す", async () => {
+    // Arrange
+    mockCookieStore("jwt-token", "default");
+    vi.mocked(fetch).mockResolvedValue(Response.json({ isTenantAdmin: true }));
+
+    // Act
+    const isTenantAdmin = await fetchIsTenantAdminServer();
+
+    // Assert
+    expect(isTenantAdmin).toBe(true);
+  });
+
+  it("未ログインなら false を返す", async () => {
+    // Arrange
+    mockCookieStore();
+
+    // Act
+    const isTenantAdmin = await fetchIsTenantAdminServer();
+
+    // Assert
+    expect(isTenantAdmin).toBe(false);
+  });
+
+  it("Service API への接続が失敗しても例外を投げず false を返す", async () => {
+    // Arrange
+    mockCookieStore("jwt-token", "default");
+    vi.mocked(fetch).mockRejectedValue(new TypeError("fetch failed"));
+
+    // Act
+    const isTenantAdmin = await fetchIsTenantAdminServer();
+
+    // Assert
+    expect(isTenantAdmin).toBe(false);
+  });
+
+  it("接続先の環境変数が無くても例外を投げず false を返す", async () => {
+    // Arrange
+    mockCookieStore("jwt-token", "default");
+    delete process.env.SERVICE_API_INTERNAL_BASE;
+
+    // Act
+    const isTenantAdmin = await fetchIsTenantAdminServer();
+
+    // Assert
+    expect(isTenantAdmin).toBe(false);
   });
 });

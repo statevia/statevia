@@ -24,7 +24,7 @@ import { ReplayBanner } from "./ReplayBanner";
 
 /** 実行ダッシュボードの props。 */
 export type ExecutionDashboardProps = UseExecutionDashboardOptions & {
-  /** ヘッダ右側のナビ。未指定時は dashboard / executions / health。 */
+  /** ヘッダ右側のナビ。未指定時は dashboard / executions。 */
   headerNav?: ReactNode;
 };
 
@@ -120,8 +120,7 @@ function ExecutionDashboardView({
     <ActionLinkGroup
       links={[
         { label: uiText.navigation.dashboard, href: "/dashboard", priority: "primary" },
-        { label: uiText.lists.executions, href: "/executions" },
-        { label: uiText.navigation.health, href: "/health" }
+        { label: uiText.lists.executions, href: "/executions" }
       ]}
     />
   );

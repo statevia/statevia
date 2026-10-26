@@ -46,7 +46,7 @@ export type UiText = DefinitionsFeatureUiText &
     dashboard: string;
     definitions: string;
     executions: string;
-    health: string;
+    projectMembers: string;
     adminUsers: string;
     adminGroups: string;
     adminApiKeys: string;
@@ -55,6 +55,20 @@ export type UiText = DefinitionsFeatureUiText &
     adminProjects: string;
     account: string;
     logout: string;
+    /** サイドメニューのグループ見出し。キーは `NavGroupId` と一致させる。 */
+    groups: {
+      workflow: string;
+      project: string;
+      tenantAccess: string;
+      tenantSettings: string;
+    };
+    /** サイドメニュー `<nav>` の aria-label。 */
+    ariaSideNav: string;
+    openMenu: string;
+    closeMenu: string;
+    collapse: string;
+    expand: string;
+    userMenu: string;
 
   },
   entities: {
@@ -154,7 +168,7 @@ export const uiText: UiText = {
     dashboard: "ダッシュボード",
     definitions: "定義",
     executions: "実行",
-    health: "ヘルスチェック",
+    projectMembers: "メンバー",
     adminUsers: "ユーザー管理",
     adminGroups: "グループ管理",
     adminApiKeys: "API キー",
@@ -163,6 +177,18 @@ export const uiText: UiText = {
     adminProjects: "プロジェクト",
     account: "アカウント",
     logout: "ログアウト",
+    groups: {
+      workflow: "ワークフロー",
+      project: "プロジェクト",
+      tenantAccess: "テナント管理：アクセス",
+      tenantSettings: "テナント管理：連携・設定",
+    },
+    ariaSideNav: "メインメニュー",
+    openMenu: "メニューを開く",
+    closeMenu: "メニューを閉じる",
+    collapse: "メニューを畳む",
+    expand: "メニューを広げる",
+    userMenu: "ユーザーメニュー",
 
   },
   entities: {
@@ -285,6 +311,5 @@ export const confirmedMappingTable: MappingEntry[] = [
   { source: "List / Graph", target: `${uiText.actions.viewList} / ${uiText.actions.viewGraph}`, note: "表示切替文言を日本語化" },
   { source: "input", target: uiText.labels.input, note: "Start API の input 欄ラベルを日本語化" },
   { source: "Definition Editor", target: uiText.labels.definitionEditor, note: "画面タイトルを日本語化" },
-  { source: "health", target: uiText.navigation.health, note: "ナビゲーション文言を日本語化" },
   { source: "再読み込み", target: uiText.actions.reload, note: "再取得操作の表記を統一" },
 ];

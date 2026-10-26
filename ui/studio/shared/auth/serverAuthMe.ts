@@ -33,3 +33,18 @@ export async function fetchAuthMeServer(): Promise<AuthMeResponse | null> {
   if (typeof json !== "object" || json === null || !("isTenantAdmin" in json)) return null;
   return json as AuthMeResponse;
 }
+
+/**
+ * サイドメニューの管理項目を出すかを決めるため、テナント管理者かをサーバー側で判定する。
+ * `auth/me` の失敗（未ログイン・401・Service API 停止・環境変数欠落）は管理者でないとみなし、例外を投げない。
+ * 表示制御専用であり、認可には使わない（管理画面の認可は `app/admin/layout.tsx` と Service API が判定する）。
+ * @returns テナント管理者なら true。判定できなければ false。
+ */
+export async function fetchIsTenantAdminServer(): Promise<boolean> {
+  try {
+    const me = await fetchAuthMeServer();
+    return me?.isTenantAdmin === true;
+  } catch {
+    return false;
+  }
+}
