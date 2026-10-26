@@ -1041,14 +1041,16 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             AwaitLocalLoadGate = gate
         };
         await using var provider = BuildProvider(queue, executions, new StubPlatformDataAccess());
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        // 処理中の item は停止トークンで Complete まで取り消される。停止トークンは 2 つの待機の合計より長くし、
+        // 遅い CI で待機中に失効して 2 件目の Complete が落ちないようにする。待機は条件成立で即座に抜ける。
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var sut = CreateSut(provider, new WorkerRuntimeOptions { MaxConcurrency = 2 });
 
         // Act
         await sut.StartAsync(cts.Token);
-        await WaitUntilAsync(() => executions.ConcurrentAwaitLocalLoadPeak >= 2, TimeSpan.FromSeconds(2));
+        await WaitUntilAsync(() => executions.ConcurrentAwaitLocalLoadPeak >= 2, TimeSpan.FromSeconds(5));
         gate.TrySetResult();
-        await WaitUntilAsync(() => queue.CompleteCallCount >= 2, TimeSpan.FromSeconds(1.5));
+        await WaitUntilAsync(() => queue.CompleteCallCount >= 2, TimeSpan.FromSeconds(5));
         await sut.StopAsync(CancellationToken.None);
 
         // Assert
