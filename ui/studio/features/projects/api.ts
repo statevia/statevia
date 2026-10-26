@@ -1,4 +1,5 @@
-import { apiDelete, apiGet, apiPut } from "@/shared/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/api";
+import type { CreateProjectBody } from "./projectCreate";
 import {
   PROJECT_MEMBER_KINDS,
   PROJECT_ROLES,
@@ -97,6 +98,17 @@ function normalizeProject(row: ProjectSummary): ProjectSummary {
 export async function listMembershipProjects(): Promise<ProjectSummary[]> {
   const rows = await apiGet<ProjectSummary[]>("/projects");
   return rows.map(normalizeProject);
+}
+
+/**
+ * Project を作成する。作成者はその Project の `admin` になる（Service API の同一トランザクション）。
+ * @param body 検証済みの本文。説明が無いときは項目ごと送らない。
+ * @returns 作成した Project。
+ * @throws ApiError 権限なし（403）や slug 重複（422、`details.field` が `slug`）。
+ */
+export async function createProject(body: CreateProjectBody): Promise<ProjectSummary> {
+  const row = await apiPost<ProjectSummary>("/projects", body);
+  return normalizeProject(row);
 }
 
 /**

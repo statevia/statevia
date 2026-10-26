@@ -26,8 +26,11 @@ export type ProjectContextValue = {
    * @returns 未所属または未知なら null。
    */
   roleOf: (projectId: string | null | undefined) => ProjectRole | null;
-  /** 所属一覧を取り直す。 */
-  reload: () => Promise<void>;
+  /**
+   * 所属一覧を取り直す。
+   * @returns 取得できたら true。失敗時は一覧を空にして false。
+   */
+  reload: () => Promise<boolean>;
 };
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -74,7 +77,7 @@ function useProjectValue(
   selectedProjectId: string | null,
   loaded: boolean,
   selectProject: (projectId: string) => void,
-  reload: () => Promise<void>,
+  reload: () => Promise<boolean>,
 ): ProjectContextValue {
   const selectedProject = useMemo(
     () => projects.find((project) => project.projectId === selectedProjectId) ?? null,
@@ -127,9 +130,11 @@ function LiveProjectProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
         return rows[0]?.projectId ?? null;
       });
+      return true;
     } catch {
       setProjects([]);
       setSelectedProjectId(null);
+      return false;
     } finally {
       setLoaded(true);
     }
@@ -163,7 +168,7 @@ function StaticProjectProvider({
   }, []);
   const reload = useCallback(() => {
     setProjects(initialProjects);
-    return Promise.resolve();
+    return Promise.resolve(true);
   }, [initialProjects]);
   const value = useProjectValue(projects, selectedProjectId, true, selectProject, reload);
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

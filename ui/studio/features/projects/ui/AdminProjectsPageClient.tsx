@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PROJECTS_CREATE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { PageShell } from "@/shared/ui/PageShell";
@@ -11,6 +13,7 @@ import { ProjectMembersPanel } from "./ProjectMembersPanel";
 
 /**
  * tenant.admin 向けの全 Project とメンバー。定義エディタへは進まない。
+ * `projects.create` があるときは `/projects/new` への作成ボタンを出す。フォームは作成画面の 1 か所に置き、ここには置かない。
  * @returns 管理画面。
  */
 export function AdminProjectsPageClient() {
@@ -19,6 +22,7 @@ export function AdminProjectsPageClient() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const permissions = usePermissions();
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +46,20 @@ export function AdminProjectsPageClient() {
   const forbidden = toast?.tone === "error";
 
   return (
-    <PageShell title={text.title} description={text.description}>
+    <PageShell
+      title={text.title}
+      description={text.description}
+      primaryActions={
+        permissions.has(PROJECTS_CREATE_PERMISSION) && (
+          <Link
+            href="/projects/new"
+            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
+          >
+            {text.create}
+          </Link>
+        )
+      }
+    >
       <Toast toast={toast} onClose={() => setToast(null)} />
       <p className="text-sm text-md-on-surface-variant">{text.definitionClosed}</p>
       {projects === null && <p className="text-sm text-md-on-surface-variant">{uiText.actions.loading}</p>}

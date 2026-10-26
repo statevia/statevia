@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.12 |
+| Version | 1.13 |
 | 更新日 | 2026-10-26 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.13（2026-10-26）**: `projects.create` を持つ利用者は、サイドメニュー「プロジェクト」→「プロジェクトを作成」（`/projects/new`）から Project を作れる。`/admin/projects` にはこの画面へのボタンを置く。所属が無くても作れる。作成者は管理ロールになり、作った Project が選ばれる。
 
 **Version 1.12（2026-10-26）**: 画面移動を左のサイドメニューへ移し、グループに分けた。アカウントとログアウトはヘッダー右端のユーザーメニューに移した。実行画面のヘルスチェックへのリンクを外した。
 
@@ -61,6 +63,7 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 | （先頭） | プロジェクト切替 | 所属 Project がある利用者 |
 | ワークフロー | ダッシュボード、定義、実行 | 全員 |
 | プロジェクト | メンバー | 選択中 Project の project.admin |
+| プロジェクト | プロジェクトを作成 | グループ権限 `projects.create` を持つ利用者（所属が無くても出る） |
 | テナント管理：アクセス | ユーザー管理、グループ管理、API キー | tenant.admin |
 | テナント管理：連携・設定 | プロジェクト、Action バインディング、通知 SMTP | tenant.admin |
 
@@ -82,7 +85,8 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 | 定義一覧 / エディタ | 選択中 Project のワークフロー定義の閲覧・編集（nodes 形式） |
 | 実行一覧 | 選択中 Project の実行インスタンス |
 | プロジェクトメンバー (`/projects/members`) | 選択中 Project のメンバー付与。project.admin |
-| 管理プロジェクト (`/admin/projects`) | テナント内の全 Project とメンバー。tenant.admin。定義エディタは開かない |
+| プロジェクト作成 (`/projects/new`) | Project の作成。`projects.create` |
+| 管理プロジェクト (`/admin/projects`) | テナント内の全 Project とメンバー。tenant.admin。`projects.create` があれば作成画面へのボタンが出る。定義エディタは開かない |
 | 実行詳細 / グラフ | 状態・エッジ・進行の可視化 |
 
 ### パスワード更新
@@ -102,9 +106,20 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §4.1.1 / �
 | --- | --- | --- |
 | 切替 | サイドメニュー先頭のプロジェクト | 所属だけが出る。選択はブラウザのセッションに残る |
 | メンバー | サイドメニュー「プロジェクト」→「メンバー」、または `/projects/members` | project.admin。ユーザー名と API キー名で付与する。UUID は入力しない |
+| 作成 | サイドメニュー「プロジェクト」→「プロジェクトを作成」（`/projects/new`）。`/admin/projects` の「プロジェクトを作成」ボタンからも同じ画面へ進む | グループ権限 `projects.create`（tenant.admin は常に持つ）。所属が無くても作れる。権限が無いときはフォームを出さない |
 | 全 Project | `/admin/projects` | tenant.admin。未所属でもメンバーは付けられる。定義の編集画面へは進まない |
 
-ロールは閲覧、実行、公開、管理の順に強い。定義の作成には公開以上が必要です。Project 自体を削除する操作は無い。
+作成の項目は次のとおりです。前後の空白は除きます。
+
+| 項目 | 必須 | 制約 |
+| --- | --- | --- |
+| プロジェクトキー | 必須 | 1〜128 文字。テナント内で一意。既にあればプロジェクトキー欄にエラーを出す。API・CLI から Project を指す名前（HTTP の項目名は `slug`）。画面には表示名が出る |
+| 表示名 | 必須 | 1〜256 文字 |
+| 説明 | 任意 | 空白だけなら送らない |
+
+作成した人はその Project の管理ロールになり、作成後はその Project が選ばれます。作成のあと所属の取得に失敗したときは、作成済みである旨を出すので、ページを再読み込みしてください。同じ内容で作り直すとプロジェクトキーの重複になります。
+
+ロールは閲覧、実行、公開、管理の順に強い。定義の作成には公開以上が必要です。Project 自体を削除する操作と、作成後に名前やプロジェクトキーを変える画面は無い。
 
 Project ロールに加えて、所属グループの権限も要ります。
 

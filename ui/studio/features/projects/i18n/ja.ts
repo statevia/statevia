@@ -47,6 +47,26 @@ export const projectsUiTextJa: ProjectsFeatureUiText = {
       empty: "プロジェクトはありません。",
       definitionClosed: "未所属のプロジェクトでは定義の詳細とエディタを開きません。",
       select: "プロジェクト",
+      create: "プロジェクトを作成",
+    },
+    create: {
+      title: "プロジェクトを作成",
+      description: "作成したプロジェクトでは、あなたが管理ロールになります。プロジェクトは削除できません。",
+      noPermission: "プロジェクトの作成には projects.create 権限が必要です。",
+      slugLabel: "プロジェクトキー",
+      slugHint: "テナント内で重複しない名前です。API や CLI からこのプロジェクトを指すときに使います。画面には表示名が出ます。",
+      displayNameLabel: "表示名",
+      descriptionLabel: "説明（任意）",
+      submit: "作成",
+      submitting: "作成中...",
+      errors: {
+        required: "入力してください。",
+        tooLong: (maxLength) => `${maxLength} 文字以内で入力してください。`,
+        duplicate: "このプロジェクトキーは既に使われています。",
+      },
+      created: (displayName) => `プロジェクト「${displayName}」を作成し、選択しました。`,
+      createdReloadRequired: (displayName) =>
+        `プロジェクト「${displayName}」を作成しました。一覧の取得に失敗したため、ページを再読み込みしてください。`,
     },
   },
 };

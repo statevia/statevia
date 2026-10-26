@@ -1,6 +1,7 @@
 import {
   FileCode,
   FolderKanban,
+  FolderPlus,
   KeyRound,
   LayoutDashboard,
   Mail,
@@ -16,11 +17,12 @@ import {
  * ナビ項目の表示条件。
  * - `all`: ログイン済みの全員
  * - `projectAdmin`: 選択中 Project で `admin`
+ * - `projectCreate`: `projects.create` を持つ（所属 0 件でも出す）
  * - `tenantAdmin`: テナント管理者
  *
  * 表示制御は見た目だけであり、認可の正本は `app/admin/layout.tsx` と Service API。
  */
-export type NavVisibility = "all" | "projectAdmin" | "tenantAdmin";
+export type NavVisibility = "all" | "projectAdmin" | "projectCreate" | "tenantAdmin";
 
 /** グループ ID。i18n `navigation.groups.<id>` と一致させる。 */
 export type NavGroupId = "workflow" | "project" | "tenantAccess" | "tenantSettings";
@@ -31,6 +33,7 @@ export type NavItemId =
   | "definitions"
   | "executions"
   | "projectMembers"
+  | "projectCreate"
   | "adminUsers"
   | "adminGroups"
   | "adminApiKeys"
@@ -62,7 +65,7 @@ export type NavGroup = Readonly<{
 
 /**
  * サイドメニューの唯一の定義。画面を追加するときはここへ追記する。
- * 既存 3 種の `NavVisibility` で表せない表示条件は、種類を追加して `navSelection.ts` の判定表を更新する。
+ * 既存の `NavVisibility` で表せない表示条件は、種類を追加して `navSelection.ts` の判定表を更新する。
  */
 export const NAV_GROUPS: readonly NavGroup[] = [
   {
@@ -82,6 +85,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         matchPrefixes: ["/projects/members"],
         visibility: "projectAdmin",
         icon: Users,
+      },
+      {
+        id: "projectCreate",
+        href: "/projects/new",
+        matchPrefixes: ["/projects/new"],
+        visibility: "projectCreate",
+        icon: FolderPlus,
       },
     ],
   },

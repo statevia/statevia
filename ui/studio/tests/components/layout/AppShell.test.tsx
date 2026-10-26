@@ -56,7 +56,7 @@ function renderShell(options: RenderOptions = {}) {
   usePathname.mockReturnValue(pathname);
   return render(
     <UiTextProvider locale="ja">
-      <AppShell theme="light" locale="ja" isTenantAdmin={isTenantAdmin} isProjectAdmin={false} initialCollapsed={initialCollapsed}>
+      <AppShell theme="light" locale="ja" isTenantAdmin={isTenantAdmin} isProjectAdmin={false} canCreateProject={false} initialCollapsed={initialCollapsed}>
         <p>content</p>
       </AppShell>
     </UiTextProvider>

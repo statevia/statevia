@@ -10,6 +10,9 @@ export const EXECUTIONS_WRITE_PERMISSION = "executions.write";
 /** 定義の作成・更新に要るグループ権限。Service API の `definitions.write`。 */
 export const DEFINITIONS_WRITE_PERMISSION = "definitions.write";
 
+/** Project の作成に要るグループ権限。Service API の `projects.create`。`tenant.admin` は catalog 展開で持つ。 */
+export const PROJECTS_CREATE_PERMISSION = "projects.create";
+
 /**
  * 呼び出し元のグループ権限（semantic permission key）。
  * @remarks ボタンの表示を決めるためだけに使う。認可の正本は Service API で、ここを根拠に操作を許可しない。

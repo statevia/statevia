@@ -36,7 +36,7 @@ function projectContext(selectedProject: ProjectSummary | null, loaded = true): 
     loaded,
     selectProject: vi.fn(),
     roleOf: () => null,
-    reload: () => Promise.resolve(),
+    reload: () => Promise.resolve(true),
   };
 }
 

@@ -39,6 +39,31 @@ describe("AdminProjectsPageClient", () => {
     vi.mocked(listAdminProjects).mockReset();
   });
 
+  it("projects.create が無ければ作成ボタンを出さない", async () => {
+    // Arrange
+    vi.mocked(listAdminProjects).mockResolvedValue([project("alpha", "Alpha")]);
+
+    // Act
+    renderWithUiText(<AdminProjectsPageClient />);
+
+    // Assert
+    expect(await screen.findByText("members-panel:alpha")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "プロジェクトを作成" })).not.toBeInTheDocument();
+  });
+
+  it("projects.create があれば作成画面へのボタンを出し、フォームは置かない", async () => {
+    // Arrange
+    vi.mocked(listAdminProjects).mockResolvedValue([project("alpha", "Alpha")]);
+
+    // Act
+    renderWithUiText(<AdminProjectsPageClient />, { permissions: ["projects.create"] });
+
+    // Assert
+    expect(await screen.findByText("members-panel:alpha")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "プロジェクトを作成" })).toHaveAttribute("href", "/projects/new");
+    expect(screen.queryByLabelText("プロジェクトキー")).not.toBeInTheDocument();
+  });
+
   it("取得前は読み込み中を出し、定義を開かない旨を常に示す", () => {
     // Arrange
     vi.mocked(listAdminProjects).mockReturnValue(new Promise<ProjectSummary[]>(() => undefined));
