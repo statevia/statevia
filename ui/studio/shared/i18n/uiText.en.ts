@@ -35,7 +35,7 @@ export const uiTextEn: UiText = {
     dashboard: "Dashboard",
     definitions: "Definitions",
     executions: "Executions",
-    health: "Health",
+    projectMembers: "Members",
     adminUsers: "Users",
     adminGroups: "Groups",
     adminApiKeys: "API keys",
@@ -44,6 +44,18 @@ export const uiTextEn: UiText = {
     adminProjects: "Projects",
     account: "Account",
     logout: "Sign out",
+    groups: {
+      workflow: "Workflow",
+      project: "Project",
+      tenantAccess: "Tenant: Access",
+      tenantSettings: "Tenant: Integrations & settings",
+    },
+    ariaSideNav: "Main menu",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+    collapse: "Collapse menu",
+    expand: "Expand menu",
+    userMenu: "User menu",
 
   },
   entities: {

@@ -8,7 +8,6 @@ export type ProjectsFeatureUiText = {
   projects: {
     switcher: {
       label: string;
-      members: string;
       option: (displayName: string, roleLabel: string) => string;
     };
     roles: Record<ProjectRole, string>;

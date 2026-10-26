@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Script from "next/script";
 import { ProjectProvider } from "@/features/projects/projectContext";
-import { ProjectSwitcher } from "@/features/projects/ui/ProjectSwitcher";
+import { ProjectAwareAppShell } from "@/features/projects/ui/ProjectAwareAppShell";
 import { PermissionsProvider } from "@/shared/auth/permissionsContext";
-import { AppHeader } from "@/shared/ui/AppHeader";
+import { fetchIsTenantAdminServer } from "@/shared/auth/serverAuthMe";
 import { resolveLocale } from "@/shared/i18n/i18n";
 import { DEFAULT_THEME, resolveTheme } from "@/shared/lib/theme";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
+import { resolveSideNavCollapsed, SIDE_NAV_COOKIE_KEY } from "@/shared/ui/navigation/sideNavState";
 
 /** Next.js のルートメタデータ（ファビコン等）。 */
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * アプリ全体のルートレイアウト。テーマ・ロケール・共通ヘッダを子ページへ提供する。
+ * アプリ全体のルートレイアウト。テーマ・ロケール・アプリシェル（ヘッダーとサイドメニュー）を子ページへ提供する。
  */
 export default async function RootLayout({
   children,
@@ -27,6 +28,8 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("ui-lang")?.value);
   const theme = resolveTheme(cookieStore.get("ui-theme")?.value) ?? DEFAULT_THEME;
+  const sideNavCollapsed = resolveSideNavCollapsed(cookieStore.get(SIDE_NAV_COOKIE_KEY)?.value);
+  const isTenantAdmin = await fetchIsTenantAdminServer();
 
   return (
     <html lang={locale} data-theme={theme} suppressHydrationWarning>
@@ -37,8 +40,14 @@ export default async function RootLayout({
         <UiTextProvider locale={locale}>
           <ProjectProvider>
             <PermissionsProvider>
-              <AppHeader theme={theme} locale={locale} leadingNav={<ProjectSwitcher />} />
-              <div className="mx-auto max-w-[min(1400px,calc(100%-2rem))] px-4 py-6">{children}</div>
+              <ProjectAwareAppShell
+                theme={theme}
+                locale={locale}
+                isTenantAdmin={isTenantAdmin}
+                initialCollapsed={sideNavCollapsed}
+              >
+                {children}
+              </ProjectAwareAppShell>
             </PermissionsProvider>
           </ProjectProvider>
         </UiTextProvider>

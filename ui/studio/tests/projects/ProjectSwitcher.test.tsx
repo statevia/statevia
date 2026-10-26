@@ -1,13 +1,6 @@
 import { fireEvent, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderWithUiText } from "../testUtils";
-
-vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
 
 import type { ProjectSummary } from "@/features/projects/types";
 import { ProjectSwitcher } from "@/features/projects/ui/ProjectSwitcher";
@@ -39,7 +32,7 @@ describe("ProjectSwitcher", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("所属 Project を表示名とロールで並べ、admin ならメンバーへのリンクを出す", () => {
+  it("所属 Project を表示名とロールで並べ、先頭を選択する", () => {
     // Arrange & Act
     renderWithUiText(<ProjectSwitcher />, {
       projects: [project("alpha", "Alpha", "admin"), project("beta", "Beta", "reader")],
@@ -50,10 +43,9 @@ describe("ProjectSwitcher", () => {
     const optionLabels = Array.from(select.querySelectorAll("option")).map((option) => option.textContent);
     expect(optionLabels).toEqual(["Alpha（管理）", "Beta（閲覧）"]);
     expect(select).toHaveValue("alpha");
-    expect(screen.getByRole("link", { name: "メンバー" })).toHaveAttribute("href", "/projects/members");
   });
 
-  it("admin 以外を選ぶとメンバーへのリンクを消す", () => {
+  it("別の Project を選ぶと選択が切り替わり、メンバーへのリンクは出さない", () => {
     // Arrange
     renderWithUiText(<ProjectSwitcher />, {
       projects: [project("alpha", "Alpha", "admin"), project("beta", "Beta", "reader")],
@@ -64,7 +56,7 @@ describe("ProjectSwitcher", () => {
 
     // Assert
     expect(screen.getByRole("combobox", { name: "プロジェクト" })).toHaveValue("beta");
-    expect(screen.queryByRole("link", { name: "メンバー" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("ロールが未知の所属はロール名を空にして表示する", () => {
@@ -73,6 +65,5 @@ describe("ProjectSwitcher", () => {
 
     // Assert
     expect(screen.getByRole("option")).toHaveTextContent("Gamma（）");
-    expect(screen.queryByRole("link", { name: "メンバー" })).not.toBeInTheDocument();
   });
 });

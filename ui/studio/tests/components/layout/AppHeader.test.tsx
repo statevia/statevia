@@ -1,22 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { AppHeader } from "@/shared/ui/AppHeader";
 import { uiText } from "@/shared/i18n/uiText";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
-import { clearSessionAndRedirectToLogin } from "@/shared/auth/authRedirect";
-
-const usePathname = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  usePathname: () => usePathname()
-}));
 
 vi.mock("next/image", () => ({
   default: ({ alt }: { alt: string }) => <img alt={alt} />
-}));
-
-vi.mock("@/shared/ui/AdminNavLinks", () => ({
-  AdminNavLinks: () => <span data-testid="admin-nav">admin</span>
 }));
 
 vi.mock("@/shared/ui/ThemeToggle", () => ({
@@ -27,62 +16,58 @@ vi.mock("@/shared/ui/LanguageToggle", () => ({
   LanguageToggle: () => <span data-testid="language-toggle">lang</span>
 }));
 
-vi.mock("@/features/projects/ui/ProjectSwitcher", () => ({
-  ProjectSwitcher: () => <span data-testid="project-switcher">project</span>
+vi.mock("@/shared/ui/UserMenu", () => ({
+  UserMenu: () => <span data-testid="user-menu">user</span>
 }));
 
-vi.mock("@/shared/auth/authRedirect", () => ({
-  clearSessionAndRedirectToLogin: vi.fn()
-}));
-
-function renderHeader(pathname: string) {
-  usePathname.mockReturnValue(pathname);
+/**
+ * 日本語辞書でヘッダーを描画する。
+ * @param showNavigation ログイン済み画面か。
+ * @param onOpenNavigation メニューボタン押下時。
+ * @returns render 結果。
+ */
+function renderHeader(showNavigation: boolean, onOpenNavigation?: () => void) {
   return render(
     <UiTextProvider locale="ja">
-      <AppHeader theme="dark" locale="ja" />
+      <AppHeader theme="dark" locale="ja" showNavigation={showNavigation} onOpenNavigation={onOpenNavigation} />
     </UiTextProvider>
   );
 }
 
 describe("AppHeader", () => {
-  beforeEach(() => {
-    usePathname.mockReset();
-    vi.mocked(clearSessionAndRedirectToLogin).mockClear();
-  });
+  it("ログイン済み画面ではメニューボタン・テーマ・言語・ユーザーメニューを出し、画面リンクは持たない", () => {
+    // Arrange & Act
+    renderHeader(true);
 
-  it("通常画面ではアプリ内ナビを表示する", () => {
-    renderHeader("/dashboard");
-
-    expect(screen.getByRole("link", { name: uiText.navigation.dashboard })).toHaveAttribute(
-      "href",
-      "/dashboard"
-    );
-    expect(screen.getByRole("link", { name: uiText.navigation.definitions })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: uiText.navigation.account })).toHaveAttribute(
-      "href",
-      "/account"
-    );
-    expect(screen.getByRole("button", { name: uiText.navigation.logout })).toBeInTheDocument();
-    expect(screen.getByTestId("admin-nav")).toBeInTheDocument();
-  });
-
-  it("ログイン画面ではアプリ内ナビを表示しない", () => {
-    renderHeader("/login");
-
-    expect(screen.queryByRole("link", { name: uiText.navigation.dashboard })).toBeNull();
+    // Assert
+    expect(screen.getByRole("button", { name: uiText.navigation.openMenu })).toBeInTheDocument();
+    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+    expect(screen.getByTestId("language-toggle")).toBeInTheDocument();
+    expect(screen.getByTestId("user-menu")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: uiText.navigation.definitions })).toBeNull();
-    expect(screen.queryByRole("link", { name: uiText.navigation.executions })).toBeNull();
-    expect(screen.queryByRole("link", { name: uiText.navigation.account })).toBeNull();
-    expect(screen.queryByRole("button", { name: uiText.navigation.logout })).toBeNull();
-    expect(screen.queryByTestId("admin-nav")).toBeNull();
+    expect(document.querySelector('header a[href="/dashboard"]')).not.toBeNull();
+  });
+
+  it("ログイン画面ではメニューボタンとユーザーメニューを出さない", () => {
+    // Arrange & Act
+    renderHeader(false);
+
+    // Assert
+    expect(screen.queryByRole("button", { name: uiText.navigation.openMenu })).toBeNull();
+    expect(screen.queryByTestId("user-menu")).toBeNull();
+    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
     expect(document.querySelector('header a[href="/login"]')).not.toBeNull();
   });
 
-  it("ログアウト押下でセッション破棄を from なしで呼ぶ", () => {
-    renderHeader("/dashboard");
+  it("メニューボタン押下で親へ通知する", () => {
+    // Arrange
+    const onOpenNavigation = vi.fn();
+    renderHeader(true, onOpenNavigation);
 
-    fireEvent.click(screen.getByRole("button", { name: uiText.navigation.logout }));
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: uiText.navigation.openMenu }));
 
-    expect(clearSessionAndRedirectToLogin).toHaveBeenCalledWith({ includeFrom: false });
+    // Assert
+    expect(onOpenNavigation).toHaveBeenCalledTimes(1);
   });
 });
