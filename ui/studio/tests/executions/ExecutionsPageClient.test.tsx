@@ -40,11 +40,22 @@ vi.mock("@/features/executions/api", async (importOriginal) => {
   };
 });
 
+vi.mock("@/features/projects/projectContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/projects/projectContext")>();
+  return { ...actual, useProject: vi.fn(actual.useProject) };
+});
+
 import { apiGet, apiPost } from "@/shared/api";
+import { buildExecutionsListPath } from "@/features/executions/api";
+import { useProject } from "@/features/projects/projectContext";
+import { testProjectId } from "../testUtils";
 
 describe("ExecutionsPageClient", () => {
   beforeEach(() => {
     replace.mockClear();
+    vi.mocked(apiGet).mockClear();
+    vi.mocked(buildExecutionsListPath).mockClear();
+    vi.mocked(useProject).mockReset();
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path.startsWith("/event-subscriptions")) {
         return { subscriptions: [{ topic: "orders.updated", key: "sku" }] };
@@ -61,6 +72,44 @@ describe("ExecutionsPageClient", () => {
       expect(apiGet).toHaveBeenCalled();
     });
     expect(apiGet).toHaveBeenCalledWith("/executions?limit=20&offset=0");
+  });
+
+  it("選択中 Project の projectId で一覧を取得する", async () => {
+    // Arrange & Act
+    renderWithUiText(<ExecutionsPageClient />);
+
+    // Assert
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith("/executions?limit=20&offset=0"));
+    expect(buildExecutionsListPath).toHaveBeenCalledWith(expect.objectContaining({ projectId: testProjectId }));
+  });
+
+  it("所属一覧の取得前は一覧を取得しない", () => {
+    // Arrange
+    vi.mocked(useProject).mockReturnValue({
+      projects: [],
+      selectedProject: null,
+      loaded: false,
+      selectProject: vi.fn(),
+      roleOf: () => null,
+      reload: () => Promise.resolve(),
+    });
+
+    // Act
+    renderWithUiText(<ExecutionsPageClient />);
+
+    // Assert
+    expect(buildExecutionsListPath).not.toHaveBeenCalled();
+    expect(apiGet).not.toHaveBeenCalledWith("/executions?limit=20&offset=0");
+  });
+
+  it("所属 Project が無ければ一覧を取得せず空にする", async () => {
+    // Arrange & Act
+    renderWithUiText(<ExecutionsPageClient />, { projects: [] });
+
+    // Assert
+    await waitFor(() => expect(screen.queryByText("実行一覧を読み込み中です。")).not.toBeInTheDocument());
+    expect(buildExecutionsListPath).not.toHaveBeenCalled();
+    expect(apiGet).not.toHaveBeenCalledWith("/executions?limit=20&offset=0");
   });
 
   it("フィルタ送信で URL を更新する", async () => {

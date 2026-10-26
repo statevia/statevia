@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useProject } from "@/features/projects/projectContext";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { TenantMissingBanner } from "@/shared/ui/TenantMissingBanner";
 import { NAVIGATION_BUTTON_CLASS, OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
@@ -16,7 +17,18 @@ import type { DashboardExecutionItem, DashboardExecutionsPage } from "../types";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 
 /**
+ * 直近実行の取得パス。
+ * @param projectId 選択中 Project。Service API は未指定だと所属 Project の和を返すため、必ず付ける。
+ * @returns `/executions` の相対パス。
+ */
+function buildRecentExecutionsPath(projectId: string): string {
+  const query = new URLSearchParams({ limit: "10", offset: "0", projectId });
+  return `/executions?${query.toString()}`;
+}
+
+/**
  * 直近実行 10 件のダッシュボード（一覧取得・空状態・詳細への導線）。
+ * 一覧はサイドメニューで選択中の Project に絞る。所属一覧の取得前は取得せず、所属が無いときは空表示にする。
  */
 export function DashboardPageClient() {
   const { uiText, locale } = useI18n();
@@ -26,12 +38,25 @@ export function DashboardPageClient() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const { selectedProject, loaded: projectsLoaded } = useProject();
+  const projectId = selectedProject?.projectId ?? null;
 
   const load = useCallback(async () => {
+    if (!projectsLoaded) {
+      return;
+    }
+    if (projectId === null) {
+      // 未指定で呼ぶと所属の和が返る。選択が無いときは取得せず空にする。
+      setItems([]);
+      setTotalCount(0);
+      setToast(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setToast(null);
     try {
-      const page = await apiGet<DashboardExecutionsPage>("/executions?limit=10&offset=0");
+      const page = await apiGet<DashboardExecutionsPage>(buildRecentExecutionsPath(projectId));
       setItems(page.items);
       setTotalCount(page.totalCount);
     } catch (error) {
@@ -41,7 +66,7 @@ export function DashboardPageClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [projectId, projectsLoaded]);
 
   useEffect(() => {
     void load();

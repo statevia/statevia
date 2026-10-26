@@ -95,8 +95,8 @@ export type ExecutionsPageModel = {
   /** 次のページへ移す。 */
   goToNextPage: () => void;
   /**
-   * 一覧を再取得する。
-   * @returns 取得できたか。失敗時はトーストを残して false。
+   * 一覧を再取得する。選択中 Project で絞る。所属一覧の取得前は取得せず、選択が無ければ取得せず空にする。
+   * @returns 取得できたか（選択が無く空にしたときも true）。所属一覧の取得前と失敗時は false。失敗時はトーストを残す。
    */
   reload: () => Promise<boolean>;
   /** 集合配送の受理トーストを出す。 */
@@ -178,7 +178,8 @@ function toSortOrder(value: string): SortOrder {
  */
 export function useExecutionsPage(): ExecutionsPageModel {
   const { uiText } = useI18n();
-  const { selectedProject } = useProject();
+  const { selectedProject, loaded: projectsLoaded } = useProject();
+  const projectId = selectedProject?.projectId ?? null;
   const searchParams = useSearchParams();
   const router = useRouter();
   const [items, setItems] = useState<ExecutionDTO[] | null>(null);
@@ -211,6 +212,17 @@ export function useExecutionsPage(): ExecutionsPageModel {
   const hasNext = totalCount !== null && listQuery.pagination.offset + (items?.length ?? 0) < totalCount;
 
   const reload = useCallback(async (): Promise<boolean> => {
+    // projectId を付けずに呼ぶと所属 Project の和が返る。所属一覧の取得前は取得せず、選択が無ければ空にする。
+    if (!projectsLoaded) {
+      return false;
+    }
+    if (projectId === null) {
+      setItems([]);
+      setTotalCount(0);
+      setToast(null);
+      setLoading(false);
+      return true;
+    }
     setLoading(true);
     setToast(null);
     try {
@@ -220,7 +232,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
         status: listQuery.status,
         name: listQuery.name,
         definitionId: listQuery.definitionId,
-        projectId: selectedProject?.projectId,
+        projectId,
       });
       const page = await apiGet<PagedExecutions>(path);
       setItems(page.items);
@@ -234,7 +246,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     } finally {
       setLoading(false);
     }
-  }, [listQuery, selectedProject?.projectId]);
+  }, [listQuery, projectId, projectsLoaded]);
 
   useEffect(() => {
     void reload();
