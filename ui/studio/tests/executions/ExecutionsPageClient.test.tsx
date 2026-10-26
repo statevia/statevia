@@ -91,7 +91,7 @@ describe("ExecutionsPageClient", () => {
       loaded: false,
       selectProject: vi.fn(),
       roleOf: () => null,
-      reload: () => Promise.resolve(),
+      reload: () => Promise.resolve(true),
     });
 
     // Act
