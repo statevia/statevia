@@ -1,4 +1,5 @@
 import {
+  Bot,
   FileCode,
   FolderKanban,
   FolderPlus,
@@ -37,6 +38,7 @@ export type NavItemId =
   | "adminUsers"
   | "adminGroups"
   | "adminApiKeys"
+  | "adminServiceAccounts"
   | "adminProjects"
   | "adminActionBindings"
   | "adminNotificationSmtp";
@@ -101,6 +103,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { id: "adminUsers", href: "/admin/users", matchPrefixes: ["/admin/users"], visibility: "tenantAdmin", icon: UserCog },
       { id: "adminGroups", href: "/admin/groups", matchPrefixes: ["/admin/groups"], visibility: "tenantAdmin", icon: UsersRound },
       { id: "adminApiKeys", href: "/admin/api-keys", matchPrefixes: ["/admin/api-keys"], visibility: "tenantAdmin", icon: KeyRound },
+      {
+        id: "adminServiceAccounts",
+        href: "/admin/service-accounts",
+        matchPrefixes: ["/admin/service-accounts"],
+        visibility: "tenantAdmin",
+        icon: Bot,
+      },
     ],
   },
   {

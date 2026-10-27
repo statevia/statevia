@@ -1,5 +1,6 @@
 import { actionBindingText } from "./actionBindingText";
 import { notificationSmtpText } from "./notificationSmtpText";
+import { serviceAccountText } from "./serviceAccountText";
 import type { AdminFeatureUiText } from "./types";
 
 /**
@@ -91,6 +92,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
     },
     actionBindings: actionBindingText("ja"),
     notificationSmtp: notificationSmtpText("ja"),
+    serviceAccounts: serviceAccountText("ja"),
 
   },
 };
