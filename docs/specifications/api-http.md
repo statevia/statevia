@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.33 |
-| 更新日 | 2026-10-26 |
+| Version | 1.34 |
+| 更新日 | 2026-10-27 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.34（2026-10-27）**: Studio は `/admin/service-accounts` で ServiceAccount の一覧・作成・部分更新を行う。削除と API キー発行は画面に無い。HTTP の成否は変えない。
 
 **Version 1.33（2026-10-26）**: `GET /v1/auth/me` に `permissions`（グループから展開した semantic permission key）を足す。Studio の表示制御用で、認可の評価は変えない。
 
@@ -652,6 +654,8 @@ Request:
 | DELETE | `/action-bindings/{name}` | 行を削除。行が無くても **204** |
 
 Studio の `/admin/notification-smtp` は、通知 SMTP の GET / PUT / DELETE で全体置換と削除を行う。パスワードは画面の初期値にも保存後の再表示にも出さない。未入力のパスワードで前回値は残さない。疎通確認の操作は無い。
+
+Studio の `/admin/service-accounts` は、ServiceAccount の一覧・作成・詳細の部分更新を行う。作成は `name` と `groupIds` だけを送り、API キーの入力は置かない。詳細の `PATCH` は変えた項目だけを送り、空の `groupIds` は送らない。止めるときは無効化する（紐づくスケジュールは自動では止まらない）。削除の操作は無い（API にも無い）。API キーの発行と失効は `/admin/api-keys` で行う。
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 
