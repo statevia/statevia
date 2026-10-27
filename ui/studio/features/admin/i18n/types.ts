@@ -166,6 +166,18 @@ export type AdminFeatureUiText = {
       nameTooLong: (maxLength: number) => string;
       nameInvalidFormat: string;
       groupsRequired: string;
+      backToList: string;
+      notFound: string;
+      detailLoadFailed: string;
+      principalIdLabel: string;
+      editTitle: string;
+      activeLabel: string;
+      deactivationNote: string;
+      apiKeyNote: string;
+      saveSubmit: string;
+      saving: string;
+      saved: string;
+      unchanged: string;
     };
 
   };

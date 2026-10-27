@@ -48,7 +48,28 @@ const serviceAccountCopy = {
     en: "Use ASCII letters or digits. Space, hyphen, underscore, and dot are allowed only between them.",
     ja: "名前は英数字のみです。スペース・ハイフン・アンダースコア・ドットは途中だけ使えます。"
   },
-  groupsRequired: { en: "Select at least one group.", ja: "グループを 1 件以上選んでください。" }
+  groupsRequired: { en: "Select at least one group.", ja: "グループを 1 件以上選んでください。" },
+  backToList: { en: "Back to service accounts", ja: "ServiceAccount 一覧へ戻る" },
+  notFound: {
+    en: "This service account was not found. It may belong to another tenant or the ID may be wrong.",
+    ja: "この ServiceAccount は見つかりません。ID が違うか、別のテナントの主体です。"
+  },
+  detailLoadFailed: { en: "Failed to load the service account.", ja: "ServiceAccount の読み込みに失敗しました。" },
+  principalIdLabel: { en: "Principal ID", ja: "Principal ID" },
+  editTitle: { en: "Edit", ja: "編集" },
+  activeLabel: { en: "Active", ja: "有効にする" },
+  deactivationNote: {
+    en: "Deactivating disables the principal, so it can no longer run as run-as. Schedules that use it are not stopped automatically; stop them separately. This is separate from revoking an API key.",
+    ja: "無効にすると Principal が無効になり、run-as として実行できなくなります。この主体を使うスケジュールは自動では止まらないため、別に止めてください。API キーの失効とは別の操作です。"
+  },
+  apiKeyNote: {
+    en: "This account has an API key. Revoke the key on the API keys page.",
+    ja: "この主体は API キーを持っています。キーの失効は API キー画面で行います。"
+  },
+  saveSubmit: { en: "Save", ja: "保存" },
+  saving: { en: "Saving…", ja: "保存中…" },
+  saved: { en: "Saved.", ja: "保存しました。" },
+  unchanged: { en: "There are no changes to save.", ja: "変更はありません。" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**
@@ -85,6 +106,18 @@ export function serviceAccountText(locale: "en" | "ja"): ServiceAccountText {
     nameTooLong: (maxLength: number) =>
       locale === "ja" ? `名前は ${maxLength} 文字までです。` : `Name must be at most ${maxLength} characters.`,
     nameInvalidFormat: text(serviceAccountCopy.nameInvalidFormat),
-    groupsRequired: text(serviceAccountCopy.groupsRequired)
+    groupsRequired: text(serviceAccountCopy.groupsRequired),
+    backToList: text(serviceAccountCopy.backToList),
+    notFound: text(serviceAccountCopy.notFound),
+    detailLoadFailed: text(serviceAccountCopy.detailLoadFailed),
+    principalIdLabel: text(serviceAccountCopy.principalIdLabel),
+    editTitle: text(serviceAccountCopy.editTitle),
+    activeLabel: text(serviceAccountCopy.activeLabel),
+    deactivationNote: text(serviceAccountCopy.deactivationNote),
+    apiKeyNote: text(serviceAccountCopy.apiKeyNote),
+    saveSubmit: text(serviceAccountCopy.saveSubmit),
+    saving: text(serviceAccountCopy.saving),
+    saved: text(serviceAccountCopy.saved),
+    unchanged: text(serviceAccountCopy.unchanged)
   };
 }
