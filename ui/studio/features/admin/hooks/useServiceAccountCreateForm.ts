@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { apiGet } from "@/shared/api";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { buildCreateServiceAccountBody, type ServiceAccountFieldErrors } from "../serviceAccounts";
 import { createServiceAccount } from "../serviceAccountsApi";
-import type { AdminGroupListItem, AdminServiceAccount } from "../types";
+import type { AdminServiceAccount } from "../types";
+import { useServiceAccountGroupSelection, type ServiceAccountGroupSelection } from "./useServiceAccountGroupSelection";
 
 /**
  * 作成成功後に呼び出し側が行う後処理（一覧の再取得など）。
@@ -14,8 +14,8 @@ import type { AdminGroupListItem, AdminServiceAccount } from "../types";
  */
 export type ServiceAccountCreatedHandler = (serviceAccount: AdminServiceAccount) => Promise<void>;
 
-/** ServiceAccount 作成フォームの描画用状態。ReactNode は含まない。 */
-export type ServiceAccountCreateFormModel = {
+/** ServiceAccount 作成フォームの描画用状態。ReactNode は含まない。グループ選択は共通の型から持つ。 */
+export type ServiceAccountCreateFormModel = Omit<ServiceAccountGroupSelection, "replaceSelectedGroupIds"> & {
   /** 名前の入力値。 */
   name: string;
   /**
@@ -23,17 +23,6 @@ export type ServiceAccountCreateFormModel = {
    * @param value 入力値。
    */
   setName: (value: string) => void;
-  /** 選べるグループ。読込前と失敗時は null。 */
-  groups: AdminGroupListItem[] | null;
-  /** グループ一覧の取得に失敗したか。 */
-  groupsLoadFailed: boolean;
-  /** 選択中のグループ ID。 */
-  selectedGroupIds: ReadonlySet<string>;
-  /**
-   * グループの選択を切り替える。
-   * @param groupId グループ ID。
-   */
-  toggleGroup: (groupId: string) => void;
   /** 送信前に止めた項目エラー。 */
   fieldErrors: ServiceAccountFieldErrors;
   /** サーバーが返したエラー（422 など）。フォームの値は残す。無ければ null。 */
@@ -62,41 +51,13 @@ export function useServiceAccountCreateForm(onCreated: ServiceAccountCreatedHand
   const { locale, uiText } = useI18n();
   const text = uiText.admin.serviceAccounts;
   const [name, setName] = useState("");
-  const [groups, setGroups] = useState<AdminGroupListItem[] | null>(null);
-  const [groupsLoadFailed, setGroupsLoadFailed] = useState(false);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<ReadonlySet<string>>(new Set());
+  const { groups, groupsLoadFailed, selectedGroupIds, replaceSelectedGroupIds, toggleGroup } =
+    useServiceAccountGroupSelection();
   const [fieldErrors, setFieldErrors] = useState<ServiceAccountFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [toast, setToast] = useState<ToastState | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const rows = await apiGet<AdminGroupListItem[]>("/admin/groups");
-        if (!cancelled) setGroups(rows);
-      } catch {
-        if (!cancelled) setGroupsLoadFailed(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const toggleGroup = useCallback((groupId: string) => {
-    setSelectedGroupIds((current) => {
-      const next = new Set(current);
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-      return next;
-    });
-  }, []);
 
   const submit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -118,7 +79,7 @@ export function useServiceAccountCreateForm(onCreated: ServiceAccountCreatedHand
       try {
         const created = await createServiceAccount(result.body);
         setName("");
-        setSelectedGroupIds(new Set());
+        replaceSelectedGroupIds([]);
         setToast({ tone: "success", message: text.created(created.name) });
         await onCreated(created);
       } catch (error) {
@@ -128,7 +89,7 @@ export function useServiceAccountCreateForm(onCreated: ServiceAccountCreatedHand
         setSubmitting(false);
       }
     },
-    [locale, name, onCreated, selectedGroupIds, text]
+    [locale, name, onCreated, replaceSelectedGroupIds, selectedGroupIds, text]
   );
 
   return {

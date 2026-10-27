@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { isApiNotFound } from "@/features/projects/httpStatus";
-import { apiGet } from "@/shared/api";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { buildUpdateServiceAccountBody, type ServiceAccountFieldErrors } from "../serviceAccounts";
 import { getServiceAccount, updateServiceAccount } from "../serviceAccountsApi";
-import type { AdminGroupListItem, AdminServiceAccount } from "../types";
+import type { AdminServiceAccount } from "../types";
+import { useServiceAccountGroupSelection, type ServiceAccountGroupSelection } from "./useServiceAccountGroupSelection";
 
 /**
  * 詳細の読込状態。
@@ -16,8 +16,8 @@ import type { AdminGroupListItem, AdminServiceAccount } from "../types";
  */
 export type ServiceAccountDetailLoadState = "loading" | "ready" | "notFound" | "error";
 
-/** ServiceAccount 詳細の描画用状態。ReactNode は含まない。 */
-export type AdminServiceAccountDetailModel = {
+/** ServiceAccount 詳細の描画用状態。ReactNode は含まない。グループ選択は共通の型から持つ。 */
+export type AdminServiceAccountDetailModel = Omit<ServiceAccountGroupSelection, "replaceSelectedGroupIds"> & {
   /** 読込状態。 */
   loadState: ServiceAccountDetailLoadState;
   /** 最後に読んだ（または保存した）現在値。`ready` 以外は null。 */
@@ -38,17 +38,6 @@ export type AdminServiceAccountDetailModel = {
    * @param value 入力値。
    */
   setName: (value: string) => void;
-  /** 選べるグループ。読込前と失敗時は null。 */
-  groups: AdminGroupListItem[] | null;
-  /** グループ一覧の取得に失敗したか。 */
-  groupsLoadFailed: boolean;
-  /** 選択中のグループ ID。 */
-  selectedGroupIds: ReadonlySet<string>;
-  /**
-   * グループの選択を切り替える。
-   * @param groupId グループ ID。
-   */
-  toggleGroup: (groupId: string) => void;
   /** 送信前に止めた項目エラー。 */
   fieldErrors: ServiceAccountFieldErrors;
   /** サーバーが返したエラー（422 など）。フォームの値は残す。無ければ null。 */
@@ -82,9 +71,8 @@ export function useAdminServiceAccountDetail(serviceAccountId: string): AdminSer
   const [serviceAccount, setServiceAccount] = useState<AdminServiceAccount | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [name, setName] = useState("");
-  const [selectedGroupIds, setSelectedGroupIds] = useState<ReadonlySet<string>>(new Set());
-  const [groups, setGroups] = useState<AdminGroupListItem[] | null>(null);
-  const [groupsLoadFailed, setGroupsLoadFailed] = useState(false);
+  const { groups, groupsLoadFailed, selectedGroupIds, replaceSelectedGroupIds, toggleGroup } =
+    useServiceAccountGroupSelection();
   const [fieldErrors, setFieldErrors] = useState<ServiceAccountFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [unchanged, setUnchanged] = useState(false);
@@ -100,11 +88,11 @@ export function useAdminServiceAccountDetail(serviceAccountId: string): AdminSer
     setServiceAccount(current);
     setIsActive(current.isActive);
     setName(current.name);
-    setSelectedGroupIds(new Set(current.groupIds));
+    replaceSelectedGroupIds(current.groupIds);
     setFieldErrors({});
     setSubmitError(null);
     setUnchanged(false);
-  }, []);
+  }, [replaceSelectedGroupIds]);
 
   const reload = useCallback(async () => {
     setLoadState("loading");
@@ -120,33 +108,6 @@ export function useAdminServiceAccountDetail(serviceAccountId: string): AdminSer
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const rows = await apiGet<AdminGroupListItem[]>("/admin/groups");
-        if (!cancelled) setGroups(rows);
-      } catch {
-        if (!cancelled) setGroupsLoadFailed(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const toggleGroup = useCallback((groupId: string) => {
-    setSelectedGroupIds((current) => {
-      const next = new Set(current);
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-      return next;
-    });
-  }, []);
 
   const submit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
