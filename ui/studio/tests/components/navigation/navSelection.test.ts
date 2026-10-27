@@ -38,6 +38,23 @@ describe("selectVisibleGroups", () => {
     expect(groups.map((group) => group.id)).toEqual(["workflow", "tenantAccess", "tenantSettings"]);
   });
 
+  it("テナント管理者のアクセス管理グループは API キーの次に ServiceAccount を持つ", () => {
+    // Arrange
+    const context = { isTenantAdmin: true, isProjectAdmin: false, canCreateProject: false };
+
+    // Act
+    const groups = selectVisibleGroups(NAV_GROUPS, context);
+
+    // Assert
+    const tenantAccess = groups.find((group) => group.id === "tenantAccess");
+    expect(tenantAccess?.items.map((item) => item.href)).toEqual([
+      "/admin/users",
+      "/admin/groups",
+      "/admin/api-keys",
+      "/admin/service-accounts",
+    ]);
+  });
+
   it("projects.create を持てば所属 0 件でもプロジェクトグループに作成だけを返す", () => {
     // Arrange
     const context = { isTenantAdmin: false, isProjectAdmin: false, canCreateProject: true };
@@ -85,6 +102,17 @@ describe("resolveActiveItemId", () => {
 
     // Assert
     expect(activeItemId).toBe("adminGroups");
+  });
+
+  it("ServiceAccount の詳細 URL では ServiceAccount の項目を選択する", () => {
+    // Arrange
+    const pathname = "/admin/service-accounts/sa-1";
+
+    // Act
+    const activeItemId = resolveActiveItemId(allGroups, pathname);
+
+    // Assert
+    expect(activeItemId).toBe("adminServiceAccounts");
   });
 
   it("接頭辞の境界が `/` でない URL は一致させない", () => {

@@ -139,6 +139,20 @@ export type AdminFeatureUiText = {
       deleteFailed: string;
       retry: string;
     };
+    serviceAccounts: {
+      title: string;
+      description: string;
+      empty: string;
+      active: string;
+      inactive: string;
+      hasApiKey: string;
+      noApiKey: string;
+      groupCount: (count: number) => string;
+      createdLabel: (value: string) => string;
+      openDetail: string;
+      loadFailed: string;
+      retry: string;
+    };
 
   };
 };
