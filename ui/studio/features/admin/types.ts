@@ -55,6 +55,20 @@ export type AdminApiKeyListItem = {
   isActive: boolean;
 };
 
+/**
+ * ServiceAccount 一覧・詳細・作成・更新の応答。
+ * 平文キーは型に持たない。`hasApiKey` はキー付きの行かどうかの表示にだけ使う。
+ */
+export type AdminServiceAccount = {
+  serviceAccountId: string;
+  principalId: string;
+  name: string;
+  isActive: boolean;
+  hasApiKey: boolean;
+  groupIds: string[];
+  createdAt: string;
+};
+
 /** API キー作成応答（平文は一度だけ）。 */
 export type CreatedAdminApiKey = {
   apiKeyId: string;
