@@ -152,6 +152,20 @@ export type AdminFeatureUiText = {
       openDetail: string;
       loadFailed: string;
       retry: string;
+      createTitle: string;
+      createDescription: string;
+      nameLabel: string;
+      nameHint: string;
+      groupsLabel: string;
+      noGroups: string;
+      groupsLoadFailed: string;
+      createSubmit: string;
+      creating: string;
+      created: (name: string) => string;
+      nameRequired: string;
+      nameTooLong: (maxLength: number) => string;
+      nameInvalidFormat: string;
+      groupsRequired: string;
     };
 
   };

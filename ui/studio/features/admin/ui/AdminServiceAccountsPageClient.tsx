@@ -4,10 +4,12 @@ import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { useAdminServiceAccountsPage } from "../hooks/useAdminServiceAccountsPage";
+import { AdminServiceAccountCreateForm } from "./AdminServiceAccountCreateForm";
 import { AdminServiceAccountList } from "./AdminServiceAccountList";
 
 /**
- * ServiceAccount 一覧。テナント管理者以外は `app/admin/layout.tsx` が戻す。
+ * ServiceAccount の作成と一覧。作成フォームは 0 件のときの作成導線を兼ねる。
+ * テナント管理者以外は `app/admin/layout.tsx` が戻す。
  * @returns ServiceAccount 管理画面。
  */
 export function AdminServiceAccountsPageClient() {
@@ -17,6 +19,7 @@ export function AdminServiceAccountsPageClient() {
 
   return (
     <PageShell title={text.title} description={text.description}>
+      <AdminServiceAccountCreateForm onCreated={page.reload} />
       {page.loading ? <PageState state="loading" /> : null}
       {!page.loading && serviceAccounts === null ? (
         <PageState
