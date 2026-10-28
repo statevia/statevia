@@ -1,0 +1,28 @@
+---
+description: UI の画面改修後は、起動中の ui-studio を再ビルドしてからブラウザで操作確認する
+globs: ui/studio/**
+alwaysApply: false
+---
+
+# UI 改修後の実機確認
+
+`docker-compose.yml` の `ui-studio` は、イメージビルド時に `ui/studio` を `npm run build` し、コンテナは `npm run start` で配信する。ソースのバインドマウントは無い。ホスト上の改修は、イメージを作り直すまで `http://localhost:3000` に出ない。
+
+## 常時原則
+
+- 画面の振る舞い・表示・操作が変わる改修は、ブラウザでその操作を通してから完了とする。
+- 「起動中コンテナが古い」「再ビルドが必要」は確認を省く理由にしない。確認対象が compose の `ui-studio` なら、先にそのサービスだけ再ビルドし、新しいビルドが応答してから操作する。
+- 再ビルドは `ui-studio` に限る。PostgreSQL や `service-api` は、今回の改修がそれらのイメージに含まれるときだけ作り直す。
+- ビルド失敗や Docker 未起動で確認できないときは、止まった理由を書いて完了扱いにしない。
+
+## 手順
+
+リポジトリルートで次を実行する。
+
+```bash
+docker compose up -d --build ui-studio
+```
+
+`http://localhost:3000` が応答してから、変更した画面の操作を通す。
+
+ポート 3000 を `ui/studio` の `next dev` が既に配信しているときは、イメージの再ビルドは不要。その開発サーバ上で同じ操作確認を行う。

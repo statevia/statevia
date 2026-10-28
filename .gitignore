@@ -33,9 +33,13 @@ coverage/
 !.vscode/settings.json
 
 # --- エージェント / ローカルツール ---
-.cursor/
+# Cursor / Claude Code のルール・コマンド・スキル・フックは共有する。
+# フックのロック、個人用 MCP 設定、個人の許可リスト、worktree は除外。
+.cursor/hooks/*.lock
+.cursor/mcp.json
 .cursorrules
-.claude/
+.claude/settings.local.json
+.claude/worktrees/
 # Serena 作業ファイルは除外。ルートの C# 横断 project.yml だけ共有する。
 **/.serena/
 !/.serena/

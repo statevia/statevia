@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/format-after-file-edit.ps1",
+        "timeout": 600
+      },
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/eslint-fix-after-file-edit.ps1",
+        "timeout": 180
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+---
+description: docs/ は利用者・ライブラリ利用者向け。実装を正とし、無い契約と作業メモを混ぜない
+globs: docs/**
+alwaysApply: false
+---
+# docs 読者と契約の正本
+
+詳細の体裁は `docs/DOCUMENTATION-STANDARD.md`。内部 Spec リンクは `docs-no-spec-links.mdc`。
+
+## 常時原則
+
+- **第一読者**は API / UI / 運用の利用者と Engine ライブラリ利用者。Cursor エージェントとコントリビュータは第一読者ではない。
+- **実装が正。** Controller / Middleware / compose に無い振る舞いを現行契約として書かない。
+- **無い契約は落とす。** 実装に無い `error.code` や、API が読まないヘッダを推奨・必須にしない。
+- **`AGENTS.md` を正本にしない。** 利用者向け本文から指さない。逆方向（AGENTS → docs）は可。
+- **将来案は `docs/future/`。** 現行 Guide / Specification に長い将来節・STV / task 見出しを置かない。未実装は短い 1 行まで。
+- **未完了 sibling の契約を先取りしない**（例: 未実装の 403 を「必須」と書かない）。
+- 触ったファイルだけ標準メタを付ける。新規カテゴリとルート直下 md は増やさない。
+
+## よい例 / 悪い例
+
+```markdown
+<!-- ❌ BAD -->
+Service API は認証未使用。詳細は AGENTS.md。
+SSE は認証なし。`error.code` は COMMAND_REJECTED（実装に無い）。
+
+<!-- ✅ GOOD -->
+Runtime API は JWT または `X-Api-Key` と `X-Tenant-Id` が必須。
+SSE（`GET /v1/executions/{id}/stream`）も Principal 必須。
+状態競合は 409。実装に無い `error.code` は書かない。
+```
+
+## コントリビュータ文書
+
+`development-guidelines.md`、`logging-property-keys.md`、`ui-studio-structure.md`、`domain-model-boundaries.md` は `docs/` に残してよい。Quick Start / Guides の第一入口には出さない。冒頭で読者を明示する。

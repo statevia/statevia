@@ -1,0 +1,28 @@
+---
+description: HTTP 境界の改修後は、起動中の Service API を作り直してから変更したエンドポイントを呼ぶ
+globs: service/api/**,core/application/**
+alwaysApply: false
+---
+
+# API 改修後の実機確認
+
+`docker-compose.yml` の `service-api` は、イメージビルド時に API と依存プロジェクトを `dotnet publish` する。マウントされるのは `./modules` だけで、ホスト上の C# 改修はイメージを作り直すまで `http://localhost:8080` に出ない。
+
+## 常時原則
+
+- HTTP の契約、またはクライアントから観測できる振る舞いが変わる改修は、変更したエンドポイントを実際に呼んでから完了とする。観測できる振る舞いが変わらない内部整理では実コールは不要。
+- 「起動中コンテナが古い」「再ビルドが必要」は確認を省く理由にしない。
+- Runtime API（`/v1/definitions` など）は Principal（JWT または `X-Api-Key`）と `X-Tenant-Id` が必要。ローカルの開発用資格情報を使い、秘密をログや完了報告に書かない。
+- ビルド失敗、Docker 未起動、認証不足で確認できないときは、止まった理由を書いて完了扱いにしない。
+
+## 手順
+
+ポート 8080 を compose の `service-api` が配信しているときは、リポジトリルートで次を実行し、応答してから変更箇所を呼ぶ。
+
+```bash
+docker compose up -d --build service-api
+```
+
+分離 compose で `scheduler` / `worker` が起動しており、今回の改修がそのプロセスの振る舞いに出るときは、同じ compose ファイル指定でそのサービスも作り直す。
+
+ポート 8080 をホストの `dotnet run`（`Statevia.Service.Api`）が配信しているときは、イメージの再ビルドは不要。そのプロセスを停止し、同じ起動コマンドで上げ直してから呼ぶ。

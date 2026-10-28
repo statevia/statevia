@@ -1,0 +1,50 @@
+---
+description: コメント・API ドキュメント・仕様ドキュメントの充実方針（言語横断）
+alwaysApply: true
+---
+# コメント・ドキュメント規約
+
+実装とあわせて、**読み手が意図・契約・制約をコード外からも追える**ことを今後の標準とする。本文は日本語で記述する。
+
+## いつ書くか
+
+- **新規・改修した公開 API**（`public` / `internal` / `export`）には、変更と同じ PR でドキュメントを付ける。
+- **自明でない振る舞い**（セキュリティ境界、サイズ上限、パス解決、上書き、例外、外部連携）には必ず説明を残す。
+- **ユーザー依頼で仕様・制限・運用が変わった**ときは、関連する `docs/` や `.spec/` も整合する範囲で更新する（依頼外の無関係ドキュメント拡大はしない）。ただし **`docs/` から `.spec/` へリンクしない**（`.cursor/rules/docs-no-spec-links.mdc`）。
+
+## 何を書くか
+
+| 対象 | 最低限 |
+|------|--------|
+| クラス / モジュール | 目的、呼び出し元・利用コンテキスト、主要な振る舞い・制約（`<remarks>` / JSDoc の詳細ブロック可） |
+| メソッド / 関数 | 引数・戻り値・投げうる例外・副作用 |
+| 定数（制限値など） | 値の意味と採用理由（推測でない根拠） |
+| private ヘルパー | コードだけでは分からない判定・正規化・防御的チェック |
+| テスト | 日本語 `/// <summary>` またはケース名で検証シナリオを明示 |
+
+## 書かないもの
+
+- コードをそのまま言い換える行コメント（`// ファイルを開く` など）。
+- 実装と矛盾する・根拠のない remarks。
+- 機密情報（トークン、接続文字列、個人情報）。
+
+## 言語別の形式
+
+- **C#**: XML ドキュメント（`///`）。クラスは `<summary>` + 必要なら `<remarks>`（箇条書き・段落）。例外は `<exception>`。
+- **TypeScript / React**: JSDoc（`/** */`）。`export` には `@param` / `@returns` / 必要なら `@remarks`。
+- **Markdown 仕様**: `.cursor/skills/markdown-spec-authoring/SKILL.md` に従う。編集後は `markdownlint-cli2` で確認。
+
+## 例（C# クラス）
+
+```csharp
+/// <summary>Action Module 配布 zip を modules ルート配下へ安全に展開する。</summary>
+/// <remarks>
+/// <para>CLI の module install から利用。展開先は Core-API の filesystem scan 対象。</para>
+/// <para>セキュリティ: パストラバーサル拒否、展開後 32 MiB/entry・64 MiB/archive 上限。</para>
+/// </remarks>
+```
+
+## 補足
+
+- C# / TypeScript の細目はそれぞれ `csharp-standards.mdc` / `typescript-standards.mdc`。
+- 人向け正本の要約は `docs/development-guidelines.md` §4.3。

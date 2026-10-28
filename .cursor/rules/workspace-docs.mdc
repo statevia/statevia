@@ -1,0 +1,15 @@
+---
+description: 旧 .workspace-docs アーカイブ（新規編集禁止）
+globs: .spec/archive/workspace-docs/**/*.md
+alwaysApply: false
+---
+# 旧 `.workspace-docs`（アーカイブ済み）
+
+詳細は `.cursor/skills/workspace-docs-ops/SKILL.md` を使用する。
+
+## 常時原則
+
+- **新規作成・内容の実質編集は禁止。** 参照のみ。
+- 実体は **`.spec/archive/workspace-docs/`**（旧ルート `.workspace-docs/` は廃止）。
+- 正本・経緯の履歴: `.spec/archive/workspace-docs/20_discussion/docs-format-unification.md`
+- 新しい仕様・計画は **`.spec/specs/`**（テンプレは `.spec/templates/`）を使う。
