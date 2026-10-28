@@ -177,7 +177,25 @@ describe("useResourceGrantsEditor", () => {
     expect(apiPut).not.toHaveBeenCalled();
   });
 
-  it("主体が見つからないときは notFound にする", async () => {
+  it("付いていた種別を空にするときは確認を待ち、確認後に空配列を送る", async () => {
+    // Arrange
+    mockGets(async () => ({ projectIds: ["p-1"], definitionIds: [] }));
+    vi.mocked(apiPut).mockImplementation(async (_path: string, body: unknown) => body);
+    const { result } = await renderLoaded();
+    act(() => result.current.toggleProject("p-1"));
+    await act(() => result.current.submit(submitEvent));
+    expect(result.current.pendingClearFields).toEqual(["projectIds"]);
+    expect(apiPut).not.toHaveBeenCalled();
+
+    // Act
+    await act(() => result.current.confirmClear());
+
+    // Assert
+    expect(apiPut).toHaveBeenCalledWith(grantsPath, { projectIds: [], definitionIds: [] });
+    expect(result.current.pendingClearFields).toBeNull();
+  });
+
+  it("プリンシパルが見つからないときは notFound にする", async () => {
     // Arrange
     mockGets(async () => {
       throw Object.assign(new Error("not found"), { status: 404 });

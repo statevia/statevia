@@ -86,3 +86,89 @@ export function buildReplaceResourceGrantsBody(selection: ResourceGrantsSelectio
   };
   return Object.keys(errors).length === 0 ? { ok: true, body: { projectIds, definitionIds } } : { ok: false, errors };
 }
+
+/** 定義候補を Project ごとにまとめた 1 組。 */
+export type ResourceGrantDefinitionGroup = {
+  /** まとめた Project の ID。所属が分からない定義の組は null。 */
+  projectId: string | null;
+  /** 組の見出しに使う Project の表示名。所属が分からない組は null（画面の辞書で出す）。 */
+  projectName: string | null;
+  definitions: ResourceGrantDefinitionCandidate[];
+};
+
+/** Project の名前解決に使う最小の形。 */
+export type ResourceGrantProjectName = {
+  projectId: string;
+  displayName: string;
+};
+
+/**
+ * 定義候補を所属 Project ごとにまとめる。組は Project 名順、所属が分からない組は最後に置く。
+ * 組の中は候補の並び（名前順）を保つ。
+ * @param candidates 定義候補。
+ * @param projects 名前解決に使う Project 一覧。
+ * @returns Project ごとの組。
+ */
+export function groupDefinitionCandidates(
+  candidates: readonly ResourceGrantDefinitionCandidate[],
+  projects: readonly ResourceGrantProjectName[]
+): ResourceGrantDefinitionGroup[] {
+  const projectNames = new Map(projects.map((project) => [project.projectId, project.displayName]));
+  const groups = candidates.reduce((byProject, definition) => {
+    const key = definition.projectId !== null && projectNames.has(definition.projectId) ? definition.projectId : null;
+    byProject.set(key, [...(byProject.get(key) ?? []), definition]);
+    return byProject;
+  }, new Map<string | null, ResourceGrantDefinitionCandidate[]>());
+
+  const named = [...groups.entries()]
+    .flatMap(([projectId, definitions]) =>
+      projectId === null ? [] : [{ projectId, projectName: projectNames.get(projectId) ?? null, definitions }]
+    )
+    .sort((left, right) => (left.projectName ?? "").localeCompare(right.projectName ?? ""));
+  const unassigned = groups.get(null);
+  return unassigned === undefined ? named : [...named, { projectId: null, projectName: null, definitions: unassigned }];
+}
+
+/**
+ * 選択中の ID のうち候補に無いものを返す。候補の欠けで付与済み ID を表示から落とさないために使う。
+ * @param selectedIds 選択中の ID。
+ * @param candidateIds 候補の ID。
+ * @returns 候補に無い ID（選択の並び）。
+ */
+export function idsOutsideCandidates(selectedIds: Iterable<string>, candidateIds: Iterable<string>): string[] {
+  const known = new Set(candidateIds);
+  return [...selectedIds].filter((id) => !known.has(id));
+}
+
+/**
+ * project と定義の両方を付けたとき、選んだ project の外にあって許可されない定義を返す。
+ * 両方の行があると「両方を満たす定義だけ」が許可されるため、画面で注意を出す（送信は止めない）。
+ * 所属が分からない定義（候補に無い ID や `projectId` が無い候補）は判定しない。
+ * @param selection 画面の選択。
+ * @param candidates 定義候補。
+ * @returns 選んだ project の外にある、選択中の定義候補。
+ */
+export function definitionsOutsideSelectedProjects(
+  selection: { projectIds: ReadonlySet<string>; definitionIds: ReadonlySet<string> },
+  candidates: readonly ResourceGrantDefinitionCandidate[]
+): ResourceGrantDefinitionCandidate[] {
+  if (selection.projectIds.size === 0) return [];
+  return candidates.filter(
+    (definition) =>
+      selection.definitionIds.has(definition.resourceId)
+      && definition.projectId !== null
+      && !selection.projectIds.has(definition.projectId)
+  );
+}
+
+/**
+ * 保存済みでは付いていたのに、今回の本文で空になる種別を返す。
+ * 空配列はその種別の追加制限を消すため、保存前に確認する。
+ * @param saved 保存済みの許可。
+ * @param body 送る本文。
+ * @returns 空になる種別（project、定義の順）。
+ */
+export function clearedGrantFields(saved: PrincipalResourceGrants, body: PrincipalResourceGrants): ResourceGrantField[] {
+  const fields: ResourceGrantField[] = ["projectIds", "definitionIds"];
+  return fields.filter((field) => saved[field].length > 0 && body[field].length === 0);
+}

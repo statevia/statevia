@@ -8,8 +8,10 @@ import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import {
   buildReplaceResourceGrantsBody,
+  clearedGrantFields,
   type PrincipalResourceGrants,
   type ResourceGrantDefinitionCandidate,
+  type ResourceGrantField,
   type ResourceGrantLimitErrors,
   type ResourceGrantSubject
 } from "../resourceGrants";
@@ -65,10 +67,17 @@ export type ResourceGrantsEditorModel = {
   /** 成功通知を閉じる。 */
   clearToast: () => void;
   /**
-   * 両配列を PUT する。上限を超えるときは送らない。失敗したら許可を読み直して表示を合わせる。
+   * 両配列を PUT する。上限を超えるときは送らない。付いていた種別が空になるときは確認を待つ。
+   * 失敗したら許可を読み直して表示を合わせる。
    * @param event フォームの submit。
    */
   submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  /** 確認待ちの、空になる種別。確認中でなければ null。 */
+  pendingClearFields: ResourceGrantField[] | null;
+  /** 空にする確認を受けて PUT する。 */
+  confirmClear: () => Promise<void>;
+  /** 空にする確認を取り消す。選択はそのまま残す。 */
+  cancelClear: () => void;
 };
 
 /**
@@ -107,6 +116,7 @@ export function useResourceGrantsEditor(subject: ResourceGrantSubject): Resource
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [pendingClearFields, setPendingClearFields] = useState<ResourceGrantField[] | null>(null);
 
   /**
    * 選択を許可の現在値に戻す。
@@ -172,28 +182,34 @@ export function useResourceGrantsEditor(subject: ResourceGrantSubject): Resource
 
   const canSave = loadState === "ready" && !candidatesLoadFailed && projectCandidates !== null && !saving;
 
-  const submit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (savingRef.current || !canSave) return;
+  /**
+   * 選択から本文を作る。上限を超えるときは項目エラーを出して null を返す。
+   * @returns 送れる本文。送れないときは null。
+   */
+  const buildBody = useCallback((): PrincipalResourceGrants | null => {
+    const result = buildReplaceResourceGrantsBody({
+      projectIds: selectedProjectIds,
+      definitionIds: selectedDefinitionIds
+    });
+    if (result.ok) return result.body;
+    setLimitErrors(result.errors);
+    setSubmitError(null);
+    return null;
+  }, [selectedDefinitionIds, selectedProjectIds]);
 
-      const result = buildReplaceResourceGrantsBody({
-        projectIds: selectedProjectIds,
-        definitionIds: selectedDefinitionIds
-      });
-      if (!result.ok) {
-        setLimitErrors(result.errors);
-        setSubmitError(null);
-        return;
-      }
-
+  /**
+   * 本文を PUT する。失敗したら許可を読み直して表示を合わせる。
+   * @param body 送る本文。
+   */
+  const save = useCallback(
+    async (body: PrincipalResourceGrants) => {
       savingRef.current = true;
       setSaving(true);
       setLimitErrors({});
       setSubmitError(null);
       setToast(null);
       try {
-        resetSelection(await replaceResourceGrants(subject, result.body));
+        resetSelection(await replaceResourceGrants(subject, body));
         setToast({ tone: "success", message: text.saved });
       } catch (error) {
         setSubmitError(toToastError(error, locale).message);
@@ -204,8 +220,32 @@ export function useResourceGrantsEditor(subject: ResourceGrantSubject): Resource
         setSaving(false);
       }
     },
-    [canSave, locale, reloadGrants, resetSelection, selectedDefinitionIds, selectedProjectIds, subject, text]
+    [locale, reloadGrants, resetSelection, subject, text]
   );
+
+  const submit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (savingRef.current || !canSave || savedGrants === null) return;
+
+      const body = buildBody();
+      if (body === null) return;
+      const cleared = clearedGrantFields(savedGrants, body);
+      if (cleared.length > 0) {
+        setPendingClearFields(cleared);
+        return;
+      }
+      await save(body);
+    },
+    [buildBody, canSave, save, savedGrants]
+  );
+
+  const confirmClear = useCallback(async () => {
+    setPendingClearFields(null);
+    if (savingRef.current || !canSave) return;
+    const body = buildBody();
+    if (body !== null) await save(body);
+  }, [buildBody, canSave, save]);
 
   return {
     loadState,
@@ -225,6 +265,9 @@ export function useResourceGrantsEditor(subject: ResourceGrantSubject): Resource
     saving,
     toast,
     clearToast: () => setToast(null),
-    submit
+    submit,
+    pendingClearFields,
+    confirmClear,
+    cancelClear: () => setPendingClearFields(null)
   };
 }
