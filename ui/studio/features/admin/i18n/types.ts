@@ -180,10 +180,13 @@ export type AdminFeatureUiText = {
       saving: string;
       saved: string;
       unchanged: string;
+      /** 詳細から実行リソース許可へ進むリンク。 */
+      resourceGrants: string;
     };
     resourceGrants: {
       title: string;
       backToUsers: string;
+      backToServiceAccount: string;
       description: string;
       loadFailed: string;
       notFound: string;

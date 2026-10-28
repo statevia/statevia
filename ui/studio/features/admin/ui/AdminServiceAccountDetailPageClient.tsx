@@ -89,7 +89,7 @@ function EditForm({ detail, serviceAccount }: Readonly<EditFormProps>) {
 }
 
 /**
- * ServiceAccount 詳細。有効・表示名・所属を部分更新する。
+ * ServiceAccount 詳細。有効・表示名・所属を部分更新する。実行リソース許可の画面へ進める。
  * 404 は一覧へ戻るリンクだけを出し、それ以外の失敗は再試行できる。
  * テナント管理者以外は `app/admin/layout.tsx` が戻す。
  * @param props ServiceAccount ID。
@@ -149,6 +149,14 @@ export function AdminServiceAccountDetailPageClient({
           {serviceAccount.hasApiKey ? text.hasApiKey : text.noApiKey}
         </p>
         <p>{text.createdLabel(formatDateTimeLocalized(serviceAccount.createdAt, getDateTimeLocale(locale)))}</p>
+      </div>
+      <div className="mb-4">
+        <Link
+          href={`/admin/service-accounts/${encodeURIComponent(serviceAccount.serviceAccountId)}/resource-grants`}
+          className="inline-block rounded-lg border border-md-outline px-3 py-1.5 text-sm hover:bg-md-surface-container"
+        >
+          {text.resourceGrants}
+        </Link>
       </div>
       <EditForm detail={detail} serviceAccount={serviceAccount} />
     </PageShell>

@@ -69,7 +69,8 @@ const serviceAccountCopy = {
   saveSubmit: { en: "Save", ja: "保存" },
   saving: { en: "Saving…", ja: "保存中…" },
   saved: { en: "Saved.", ja: "保存しました。" },
-  unchanged: { en: "There are no changes to save.", ja: "変更はありません。" }
+  unchanged: { en: "There are no changes to save.", ja: "変更はありません。" },
+  resourceGrants: { en: "Resource grants", ja: "実行リソース許可" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**
@@ -118,6 +119,7 @@ export function serviceAccountText(locale: "en" | "ja"): ServiceAccountText {
     saveSubmit: text(serviceAccountCopy.saveSubmit),
     saving: text(serviceAccountCopy.saving),
     saved: text(serviceAccountCopy.saved),
-    unchanged: text(serviceAccountCopy.unchanged)
+    unchanged: text(serviceAccountCopy.unchanged),
+    resourceGrants: text(serviceAccountCopy.resourceGrants)
   };
 }
