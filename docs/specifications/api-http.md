@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.34 |
-| 更新日 | 2026-10-27 |
+| Version | 1.35 |
+| 更新日 | 2026-10-29 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.35（2026-10-29）**: Studio はユーザーと ServiceAccount の実行リソース許可を画面で置換する。project は全 Project から追加・解除し、定義の候補は操作する管理者が所属する Project の定義に限る。HTTP の成否は変えない。
 
 **Version 1.34（2026-10-27）**: Studio は `/admin/service-accounts` で ServiceAccount の一覧・作成・部分更新を行う。削除と API キー発行は画面に無い。HTTP の成否は変えない。
 
@@ -656,6 +658,13 @@ Request:
 Studio の `/admin/notification-smtp` は、通知 SMTP の GET / PUT / DELETE で全体置換と削除を行う。パスワードは画面の初期値にも保存後の再表示にも出さない。未入力のパスワードで前回値は残さない。疎通確認の操作は無い。
 
 Studio の `/admin/service-accounts` は、ServiceAccount の一覧・作成・詳細の部分更新を行う。作成は `name` と `groupIds` だけを送り、API キーの入力は置かない。詳細の `PATCH` は変えた項目だけを送り、空の `groupIds` は送らない。止めるときは無効化する（紐づくスケジュールは自動では止まらない）。削除の操作は無い（API にも無い）。API キーの発行と失効は `/admin/api-keys` で行う。
+
+Studio の `/admin/users/{userId}/resource-grants` と `/admin/service-accounts/{serviceAccountId}/resource-grants` は、実行リソース許可の GET と PUT で両種別をまとめて置換する。入口はユーザー一覧の各行と ServiceAccount 詳細である。保存は常に `projectIds` と `definitionIds` の両方を送り、project 32 件・定義 128 件を超える選択は送らない。付いていた種別を空にするときは、所属の範囲で追加制限が無くなることを確認してから送る。
+
+- **project**: 候補は `GET /v1/admin/projects`（テナント内の全 Project）で、名前で追加・解除する。付与先 Principal の所属では絞らない。executor 以上で所属していない project は保存時の **422** で分かり、既存の許可は残る。
+- **定義**: 候補は `GET /v1/definitions` の 1 ページ（最大 500 件、名前順）で、Project ごとにまとめて選ぶ。一覧は操作する管理者自身の所属と許可で絞られるため、管理者が所属していない Project の定義は候補に出ない。500 件を超えるときは候補が欠けていることを画面に出す。
+- **候補に無い付与済み ID**: GUID のまま表示し、保存の本文から落とさない。候補を読めないときは保存させない。
+- project と定義の両方を付けると、両方を満たす定義だけが許可される。選んだ project の外にある定義には画面で注意を出すが、送信は止めない。
 
 管理者パスワード更新の成功も **204**（応答ボディなし）。平文・ハッシュはログに出さない。更新後も **既存 JWT は期限まで有効**。
 
