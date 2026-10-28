@@ -1,0 +1,31 @@
+---
+description: docs/ から .spec/ 等の内部作業フォルダへのリンク禁止
+globs: docs/**
+alwaysApply: false
+---
+# docs 境界（内部 Spec へのリンク禁止）
+
+## 常時原則
+
+- **`docs/` 配下の Markdown から `.spec/` へリンクしない**（相対・絶対・リポジトリ相対いずれも不可）。
+- 同様に **`.spec/archive/workspace-docs/`** など内部作業・下書き用フォルダへのリンクも禁止する。
+- 契約・説明の正本は `docs/` に書く。完了内容を `.spec/` に残したまま `docs/` から参照しない。
+
+## よい例 / 悪い例
+
+```markdown
+<!-- ❌ BAD: docs → .spec -->
+詳細は [execution-context](../../.spec/specs/execution-context/requirements.md)。
+
+<!-- ✅ GOOD: docs 内で完結、または docs 同士 -->
+評価根は Execution Context 全体である（実装型: `WorkflowExecutionContext`）。
+詳細は [definition.md §1.6](../specifications/definition.md) を参照。
+```
+
+## 逆方向
+
+- `.spec/` や設計メモから **`docs/` の正本へリンクするのは可**。
+
+## 正本
+
+- 人向け: [`docs/DOCUMENTATION-STANDARD.md`](../../docs/DOCUMENTATION-STANDARD.md) 「リンク」節

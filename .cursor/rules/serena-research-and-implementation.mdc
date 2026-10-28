@@ -1,0 +1,16 @@
+---
+alwaysApply: true
+---
+
+# Serena MCP（調査・実装）
+
+statevia の Serena は **`user-serena-csharp`**（C#、ルート / `statevia.sln`）と **`user-serena-ui`**（UI）の 2 つ。調査・実装では、主戦場に対応するサーバーのシンボル系ツールを優先する。
+
+## 常時原則
+
+- タスク開始時は主戦場プロジェクトを決め、対応する **`user-serena-*` が ready** であることを確認する。
+- ready でない／もう一方の Serena だけが動いているときは、**作業を一旦停止**し、Cursor UI で対象 `serena-*` を On・もう一方を Off するよう促す（エージェントによる自動トグルは不可）。
+- ユーザーが「Serena なしで続行」と明示したときだけ、通常の読み取り・編集へフォールバックする。未接続を理由にサイレントに諦めない。
+- コードの探索・参照追跡・シンボル編集は、Serena の **`find_symbol` / `get_symbols_overview` / `find_referencing_symbols` 等**を、grep やファイル一括読みより先に検討する。
+- **`activate_project` でプロジェクト切替しない**（切替は UI トグルのみ）。
+- 手順の詳細は `.cursor/skills/serena-workflow-research-impl/SKILL.md` と `.cursor/skills/serena-mcp-project-switch/SKILL.md` を使う。

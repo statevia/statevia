@@ -1,0 +1,26 @@
+---
+description: CLI の改修後は、編集したソースを dotnet run で実行して確認する
+globs: service/cli/**
+alwaysApply: false
+---
+
+# CLI 改修後の実機確認
+
+統合 CLI は compose のサービスではない。PATH 上の `statevia` や `artifacts/statevia/statevia.exe` は、直前に今回のソースから出し直さない限り改修を含まない。
+
+## 常時原則
+
+- サブコマンドの引数、終了コード、標準出力、API 呼び出し結果が変わる改修は、そのサブコマンドを実行してから完了とする。
+- 公開済みバイナリが古いことは、確認を省く理由にしない。確認は編集したソースに対する `dotnet run` で行う。
+- API を呼ぶサブコマンドは、呼び出し先が今回の API 改修を含むプロセスであること。`service-api` イメージが古いときは、先にそのサービスだけ作り直す。
+- ビルド失敗や API 未起動で確認できないときは、止まった理由を書いて完了扱いにしない。秘密（JWT、API キー）をログや完了報告に書かない。
+
+## 手順
+
+リポジトリルートで、変更したサブコマンドを実行する。
+
+```bash
+dotnet run --project service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj -- <subcommand> [options]
+```
+
+`def validate` のようにローカルだけで完結するサブコマンドは、API の再起動を待たずにこのコマンドで確認する。

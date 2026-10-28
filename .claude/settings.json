@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-cursor-hook.ps1\" -HookName format-after-file-edit",
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-cursor-hook.ps1\" -HookName eslint-fix-after-file-edit",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}
