@@ -179,6 +179,9 @@ export type AdminFeatureUiText = {
       saved: string;
       unchanged: string;
     };
+    resourceGrants: {
+      saved: string;
+    };
 
   };
 };

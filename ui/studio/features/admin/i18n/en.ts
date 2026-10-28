@@ -1,5 +1,6 @@
 import { actionBindingText } from "./actionBindingText";
 import { notificationSmtpText } from "./notificationSmtpText";
+import { resourceGrantText } from "./resourceGrantText";
 import { serviceAccountText } from "./serviceAccountText";
 import type { AdminFeatureUiText } from "./types";
 
@@ -95,6 +96,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
     actionBindings: actionBindingText("en"),
     notificationSmtp: notificationSmtpText("en"),
     serviceAccounts: serviceAccountText("en"),
+    resourceGrants: resourceGrantText("en"),
 
   },
 };
