@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import type { AdminUserListItem } from "../types";
 
@@ -21,6 +22,7 @@ export type AdminUserListProps = {
 
 /**
  * テナントユーザーの一覧。取得中・空・失敗は呼び出し側に残す。
+ * 各行から実行リソース許可の画面へ進める。
  * @param props 行と操作コマンド。
  * @returns ユーザーのリスト。
  */
@@ -50,6 +52,13 @@ export function AdminUserList({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/admin/users/${encodeURIComponent(user.userId)}/resource-grants`}
+              aria-label={`${user.username}: ${uiText.admin.users.resourceGrants}`}
+              className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
+            >
+              {uiText.admin.users.resourceGrants}
+            </Link>
             <button
               type="button"
               onClick={() => onOpenPassword(user)}

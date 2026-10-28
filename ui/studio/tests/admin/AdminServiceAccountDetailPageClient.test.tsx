@@ -60,6 +60,20 @@ describe("AdminServiceAccountDetailPageClient", () => {
     vi.clearAllMocks();
   });
 
+  it("詳細から実行リソース許可の画面へ進むリンクを出す", async () => {
+    // Arrange
+    mockGets(async () => serviceAccount);
+
+    // Act
+    await renderReady();
+
+    // Assert
+    expect(screen.getByRole("link", { name: "実行リソース許可" })).toHaveAttribute(
+      "href",
+      "/admin/service-accounts/sa-1/resource-grants"
+    );
+  });
+
   it("無効化だけを変えると isActive だけを PATCH する", async () => {
     // Arrange
     mockGets(async () => serviceAccount);

@@ -32,6 +32,8 @@ export type AdminFeatureUiText = {
       updatePasswordSubmit: string;
       updatingPassword: string;
       cancel: string;
+      /** ユーザー行から実行リソース許可へ進むリンク。 */
+      resourceGrants: string;
     };
     groupManagement: {
       title: string;
@@ -178,6 +180,48 @@ export type AdminFeatureUiText = {
       saving: string;
       saved: string;
       unchanged: string;
+      /** 詳細から実行リソース許可へ進むリンク。 */
+      resourceGrants: string;
+    };
+    resourceGrants: {
+      title: string;
+      backToUsers: string;
+      backToServiceAccount: string;
+      description: string;
+      loadFailed: string;
+      notFound: string;
+      retry: string;
+      candidatesLoadFailed: string;
+      limitReason: string;
+      projectsTitle: string;
+      projectCount: (count: number, max: number) => string;
+      projectsTooMany: (max: number) => string;
+      projectsEmpty: string;
+      projectsMembershipNote: string;
+      projectAddLabel: string;
+      projectAddPlaceholder: string;
+      projectAddSubmit: string;
+      noMoreProjects: string;
+      remove: string;
+      removeNamed: (name: string) => string;
+      unknownProject: string;
+      definitionsTitle: string;
+      definitionCount: (count: number, max: number) => string;
+      definitionsTooMany: (max: number) => string;
+      definitionsEmpty: string;
+      definitionsScopeNote: string;
+      definitionsTruncated: string;
+      definitionsUnassigned: string;
+      noDefinitionCandidates: string;
+      unknownDefinitionsTitle: string;
+      outsideProjectsWarning: string;
+      saveSubmit: string;
+      saving: string;
+      saved: string;
+      clearConfirmTitle: string;
+      clearConfirmBody: (fieldLabels: readonly string[]) => string;
+      clearConfirm: string;
+      cancel: string;
     };
 
   };

@@ -15,7 +15,7 @@ const serviceAccountCopy = {
   title: { en: "Service accounts", ja: "ServiceAccount" },
   description: {
     en: "Principals without credentials, used as run-as for schedules. Accounts are disabled instead of deleted. API keys are issued on the API keys page.",
-    ja: "資格を持たない主体です。定期実行の run-as に使います。削除の代わりに無効化します。API キーの発行は API キー画面で行います。"
+    ja: "資格を持たないプリンシパルです。定期実行の run-as に使います。削除の代わりに無効化します。API キーの発行は API キー画面で行います。"
   },
   empty: { en: "No service accounts yet.", ja: "ServiceAccount はまだありません。" },
   active: { en: "Active", ja: "有効" },
@@ -28,7 +28,7 @@ const serviceAccountCopy = {
   createTitle: { en: "Create service account", ja: "ServiceAccount を作成" },
   createDescription: {
     en: "Creates a principal without an API key. Permissions come from the selected groups.",
-    ja: "API キーを持たない主体を作ります。権限は選んだグループから付きます。"
+    ja: "API キーを持たないプリンシパルを作ります。権限は選んだグループから付きます。"
   },
   nameLabel: { en: "Name", ja: "名前" },
   nameHint: {
@@ -52,7 +52,7 @@ const serviceAccountCopy = {
   backToList: { en: "Back to service accounts", ja: "ServiceAccount 一覧へ戻る" },
   notFound: {
     en: "This service account was not found. It may belong to another tenant or the ID may be wrong.",
-    ja: "この ServiceAccount は見つかりません。ID が違うか、別のテナントの主体です。"
+    ja: "この ServiceAccount は見つかりません。ID が違うか、別のテナントのプリンシパルです。"
   },
   detailLoadFailed: { en: "Failed to load the service account.", ja: "ServiceAccount の読み込みに失敗しました。" },
   principalIdLabel: { en: "Principal ID", ja: "Principal ID" },
@@ -60,16 +60,17 @@ const serviceAccountCopy = {
   activeLabel: { en: "Active", ja: "有効にする" },
   deactivationNote: {
     en: "Deactivating disables the principal, so it can no longer run as run-as. Schedules that use it are not stopped automatically; stop them separately. This is separate from revoking an API key.",
-    ja: "無効にすると Principal が無効になり、run-as として実行できなくなります。この主体を使うスケジュールは自動では止まらないため、別に止めてください。API キーの失効とは別の操作です。"
+    ja: "無効にするとプリンシパルが無効になり、run-as として実行できなくなります。このプリンシパルを使うスケジュールは自動では止まらないため、別に止めてください。API キーの失効とは別の操作です。"
   },
   apiKeyNote: {
     en: "This account has an API key. Revoke the key on the API keys page.",
-    ja: "この主体は API キーを持っています。キーの失効は API キー画面で行います。"
+    ja: "このプリンシパルは API キーを持っています。キーの失効は API キー画面で行います。"
   },
   saveSubmit: { en: "Save", ja: "保存" },
   saving: { en: "Saving…", ja: "保存中…" },
   saved: { en: "Saved.", ja: "保存しました。" },
-  unchanged: { en: "There are no changes to save.", ja: "変更はありません。" }
+  unchanged: { en: "There are no changes to save.", ja: "変更はありません。" },
+  resourceGrants: { en: "Resource grants", ja: "実行リソース許可" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**
@@ -118,6 +119,7 @@ export function serviceAccountText(locale: "en" | "ja"): ServiceAccountText {
     saveSubmit: text(serviceAccountCopy.saveSubmit),
     saving: text(serviceAccountCopy.saving),
     saved: text(serviceAccountCopy.saved),
-    unchanged: text(serviceAccountCopy.unchanged)
+    unchanged: text(serviceAccountCopy.unchanged),
+    resourceGrants: text(serviceAccountCopy.resourceGrants)
   };
 }

@@ -50,6 +50,17 @@ describe("AdminUsersPageClient", () => {
     expect(await screen.findByText("admin")).toBeInTheDocument();
   });
 
+  it("各行から実行リソース許可の画面へ進むリンクを出す", async () => {
+    // Arrange
+    renderWithUiText(<AdminUsersPageClient />);
+
+    // Act
+    const link = await screen.findByRole("link", { name: `admin: ${uiText.admin.users.resourceGrants}` });
+
+    // Assert
+    expect(link).toHaveAttribute("href", "/admin/users/user-1/resource-grants");
+  });
+
   it("ユーザーを作成して一覧を再読み込みする", async () => {
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");

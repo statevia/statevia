@@ -1,5 +1,6 @@
 import { actionBindingText } from "./actionBindingText";
 import { notificationSmtpText } from "./notificationSmtpText";
+import { resourceGrantText } from "./resourceGrantText";
 import { serviceAccountText } from "./serviceAccountText";
 import type { AdminFeatureUiText } from "./types";
 
@@ -37,6 +38,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       updatePasswordSubmit: "更新",
       updatingPassword: "更新中…",
       cancel: "キャンセル",
+      resourceGrants: "実行リソース許可",
     },
     groupManagement: {
       title: "グループ管理",
@@ -93,6 +95,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
     actionBindings: actionBindingText("ja"),
     notificationSmtp: notificationSmtpText("ja"),
     serviceAccounts: serviceAccountText("ja"),
+    resourceGrants: resourceGrantText("ja"),
 
   },
 };
