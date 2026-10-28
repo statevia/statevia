@@ -1,6 +1,5 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Statevia.Core.Application.Contracts.Services;
 using Statevia.Core.Application.Contracts.Validation;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Security;

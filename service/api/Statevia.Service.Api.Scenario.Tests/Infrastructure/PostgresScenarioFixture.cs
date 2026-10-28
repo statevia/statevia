@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Security;
 using Testcontainers.PostgreSql;
 

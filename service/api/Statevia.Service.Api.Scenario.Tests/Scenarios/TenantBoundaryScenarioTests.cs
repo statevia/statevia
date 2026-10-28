@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using Statevia.Service.Api.Scenario.Tests.Infrastructure;
 using Xunit.Abstractions;
 
