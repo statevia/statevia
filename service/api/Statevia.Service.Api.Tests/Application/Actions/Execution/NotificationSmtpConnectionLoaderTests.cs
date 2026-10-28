@@ -1,6 +1,5 @@
 using Statevia.Core.Actions.Abstractions.Execution;
 using Statevia.Infrastructure.Persistence;
-using Statevia.Infrastructure.Security;
 using Statevia.Service.Api.Application.Actions.Execution;
 using Statevia.Service.Api.Tests.Infrastructure;
 

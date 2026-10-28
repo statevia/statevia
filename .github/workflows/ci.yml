@@ -1,8 +1,16 @@
 name: CI
 
+# PR ブランチは pull_request だけで検証する。push も拾うと同じコミットで 2 回走る。
 on:
   push:
+    branches:
+      - main
   pull_request:
+
+# 同じ ref の新しい push が来たら、進行中の検証は打ち切る。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   architecture-tests:

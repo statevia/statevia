@@ -1,15 +1,23 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  リポジトリ内の全 .NET ソリューションに、インデント・空白・不要な using のクリーンアップを適用する。
+  リポジトリ内の .NET コードに、インデント・空白・不要な using のクリーンアップを適用する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から各 sln のパスを解決する。
+  スクリプト配置（リポジトリの sonar/）からリポジトリルートと各 sln のパスを解決する。
   カレントディレクトリに依存しない。
-  `whitespace` と `style --diagnostics IDE0005 IDE0065` を順に実行し、
+  `whitespace` と `style --diagnostics IDE0005 IDE0065` を実行し、
   インデント・空白・不要な using の削除、using 配置の整理に限定する。
 
-  対象（コンポーネント別 6 sln。IDE 用 `statevia.sln` は含めない）:
+  -Solution 未指定時はリポジトリ全体を一括で処理する（CI もこのモード）。
+  - whitespace: `--folder` でリポジトリルートの .cs をまとめて処理する。
+    MSBuild のワークスペース読み込みが不要なため速い。
+    gitignore 対象のうち .cs を含むもの（bin / obj、.claude/、modules/local/）は除外する。
+  - style: IDE 用 `statevia.sln` を 1 回だけ読み込む。
+    `statevia.sln` に含まれない Scenario.Tests は個別の csproj として追加で処理する。
+  コンポーネント別 sln を個別に処理すると、共通プロジェクトの restore と読み込みが sln ごとに繰り返されて遅い。
+
+  -Solution 指定時は、そのコンポーネント別 sln だけに whitespace と style を順に実行する。
   - core/engine/statevia-engine.sln
   - service/api/statevia-api.sln
   - service/action-host/statevia-action-host.sln
@@ -26,7 +34,7 @@
 
 .PARAMETER Solution
   対象 sln の識別子（`engine` / `api` / `action-host` / `cli` / `infrastructure` / `reference`）、
-  相対パス、またはファイル名（例: statevia-api.sln）。未指定時は全ソリューション。
+  相対パス、またはファイル名（例: statevia-api.sln）。未指定時はリポジトリ全体。
 
 .EXAMPLE
   .\sonar\dotnet-format-all.ps1
@@ -59,8 +67,63 @@ $allSolutions = @(
     @{ Name = 'reference'; RelativePath = 'modules/reference/statevia-reference.sln' }
 )
 
-$targets = if ([string]::IsNullOrWhiteSpace($Solution)) {
-    $allSolutions
+# リポジトリ全体モードで whitespace --folder から除外するパス。gitignore 対象で .cs を含むもの。
+$folderExcludes = @('.claude', 'modules/local', '**/bin', '**/obj')
+
+# リポジトリ全体モードで style を掛ける workspace。statevia.sln に含まれないプロジェクトはここへ足す。
+$repoStyleWorkspaces = @(
+    'statevia.sln'
+    'service/api/Statevia.Service.Api.Scenario.Tests/Statevia.Service.Api.Scenario.Tests.csproj'
+)
+
+function Resolve-RepoPath {
+    <#
+    .SYNOPSIS
+      リポジトリルートからの相対パスを絶対パスへ変換する。
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $RelativePath
+    )
+
+    Join-Path $repoRoot ($RelativePath -replace '[\\/]', [System.IO.Path]::DirectorySeparatorChar)
+}
+
+function New-StyleArgs {
+    <#
+    .SYNOPSIS
+      using の整理に限定した `dotnet format style` の引数を返す。
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $WorkspacePath
+    )
+
+    @('format', 'style', $WorkspacePath, '--diagnostics', 'IDE0005', 'IDE0065', '--severity', 'info', '--verbosity', $Verbosity)
+}
+
+# 各ターゲットは Name と、順に実行する dotnet format コマンド（Commands）を持つ。
+$targets = @(if ([string]::IsNullOrWhiteSpace($Solution)) {
+    $missing = @($repoStyleWorkspaces | Where-Object { -not (Test-Path -LiteralPath (Resolve-RepoPath $_) -PathType Leaf) })
+    if ($missing.Count -gt 0) {
+        Write-Error ("style の対象が見つかりません: {0}" -f ($missing -join ', '))
+        exit 1
+    }
+
+    $excludeArgs = @($folderExcludes | ForEach-Object { '--exclude', $_ })
+    $repoCommands = @(
+        @{
+            Name = 'whitespace'
+            Args = @('format', 'whitespace', $repoRoot, '--folder') + $excludeArgs + @('--verbosity', $Verbosity)
+        }
+    ) + @($repoStyleWorkspaces | ForEach-Object {
+        @{
+            Name = "using-cleanup ($_)"
+            Args = New-StyleArgs -WorkspacePath (Resolve-RepoPath $_)
+        }
+    })
+
+    @(@{ Name = 'repository'; Commands = $repoCommands })
 } else {
     $matched = $allSolutions | Where-Object {
         $_.Name -eq $Solution -or
@@ -73,10 +136,30 @@ $targets = if ([string]::IsNullOrWhiteSpace($Solution)) {
         exit 1
     }
 
-    @($matched)
-}
+    @($matched | ForEach-Object {
+        $solutionPath = Resolve-RepoPath $_.RelativePath
+        if (-not (Test-Path -LiteralPath $solutionPath -PathType Leaf)) {
+            Write-Error "ソリューションが見つかりません: $solutionPath"
+            exit 1
+        }
 
-Write-Host "dotnet format: $($targets.Count) solution(s)" -ForegroundColor Cyan
+        @{
+            Name = "$($_.Name) ($($_.RelativePath))"
+            Commands = @(
+                @{
+                    Name = 'whitespace'
+                    Args = @('format', 'whitespace', $solutionPath, '--verbosity', $Verbosity)
+                }
+                @{
+                    Name = 'using-cleanup'
+                    Args = New-StyleArgs -WorkspacePath $solutionPath
+                }
+            )
+        }
+    })
+})
+
+Write-Host "dotnet format:$($targets.Count) target(s)" -ForegroundColor Cyan
 Write-Host "Repo: $repoRoot"
 if ($VerifyNoChanges) {
     Write-Host 'Mode: verify-no-changes' -ForegroundColor Yellow
@@ -85,45 +168,18 @@ if ($VerifyNoChanges) {
 $failed = [System.Collections.Generic.List[string]]::new()
 
 foreach ($target in $targets) {
-    $relativePath = $target.RelativePath -replace '[\\/]', [System.IO.Path]::DirectorySeparatorChar
-    $solutionPath = Join-Path $repoRoot $relativePath
-    if (-not (Test-Path -LiteralPath $solutionPath -PathType Leaf)) {
-        $failed.Add("$($target.Name): not found ($solutionPath)")
-        continue
-    }
-
     Write-Host ""
-    Write-Host "=== $($target.Name) ($($target.RelativePath)) ===" -ForegroundColor Cyan
+    Write-Host "=== $($target.Name) ===" -ForegroundColor Cyan
 
-    $formatCommands = @(
-        @{
-            Name = 'whitespace'
-            Args = @('format', 'whitespace', $solutionPath, '--verbosity', $Verbosity)
-        }
-        @{
-            Name = 'using-cleanup'
-            Args = @('format', 'style', $solutionPath, '--diagnostics', 'IDE0005', 'IDE0065', '--severity', 'info', '--verbosity', $Verbosity)
-        }
-    )
+    foreach ($formatCommand in $target.Commands) {
+        $formatArgs = if ($VerifyNoChanges) { $formatCommand.Args + '--verify-no-changes' } else { $formatCommand.Args }
 
-    if ($VerifyNoChanges) {
-        foreach ($formatCommand in $formatCommands) {
-            $formatCommand.Args += '--verify-no-changes'
-        }
-    }
-
-    $targetFailed = $false
-    foreach ($formatCommand in $formatCommands) {
         Write-Host ("--- {0}" -f $formatCommand.Name) -ForegroundColor DarkCyan
-        & dotnet @($formatCommand.Args)
+        & dotnet @($formatArgs)
         if ($LASTEXITCODE -ne 0) {
-            $targetFailed = $true
+            $failed.Add("$($target.Name): $($formatCommand.Name)")
             break
         }
-    }
-
-    if ($targetFailed) {
-        $failed.Add($target.Name)
     }
 }
 
@@ -133,4 +189,4 @@ if ($failed.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'dotnet format completed for all solutions.' -ForegroundColor Green
+Write-Host 'dotnet format completed.' -ForegroundColor Green
