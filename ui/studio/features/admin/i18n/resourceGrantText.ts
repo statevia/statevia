@@ -12,6 +12,8 @@ type LocaleCopy = {
  * 英語と日本語は同じキーに並べ、locale ごとのオブジェクト複製を避ける。
  */
 const resourceGrantCopy = {
+  title: { en: "Resource grants", ja: "実行リソース許可" },
+  backToUsers: { en: "Back to users", ja: "ユーザー一覧へ戻る" },
   description: {
     en: "Limits which definitions this principal can view, start, resume and cancel (including scheduled runs). An empty list adds no limit within its project memberships; it never denies.",
     ja: "このプリンシパルが閲覧・開始・再開・取消（定期実行を含む）できる定義を絞ります。空の種別は、所属の範囲で追加の制限がありません。禁止ではありません。"
@@ -81,6 +83,8 @@ const resourceGrantCopy = {
 export function resourceGrantText(locale: "en" | "ja"): ResourceGrantText {
   const text = (entry: LocaleCopy) => entry[locale];
   return {
+    title: text(resourceGrantCopy.title),
+    backToUsers: text(resourceGrantCopy.backToUsers),
     description: text(resourceGrantCopy.description),
     loadFailed: text(resourceGrantCopy.loadFailed),
     notFound: text(resourceGrantCopy.notFound),

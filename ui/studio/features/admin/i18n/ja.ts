@@ -38,6 +38,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       updatePasswordSubmit: "更新",
       updatingPassword: "更新中…",
       cancel: "キャンセル",
+      resourceGrants: "実行リソース許可",
     },
     groupManagement: {
       title: "グループ管理",

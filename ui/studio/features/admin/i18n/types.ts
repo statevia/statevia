@@ -32,6 +32,8 @@ export type AdminFeatureUiText = {
       updatePasswordSubmit: string;
       updatingPassword: string;
       cancel: string;
+      /** ユーザー行から実行リソース許可へ進むリンク。 */
+      resourceGrants: string;
     };
     groupManagement: {
       title: string;
@@ -180,6 +182,8 @@ export type AdminFeatureUiText = {
       unchanged: string;
     };
     resourceGrants: {
+      title: string;
+      backToUsers: string;
       description: string;
       loadFailed: string;
       notFound: string;

@@ -38,6 +38,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       updatePasswordSubmit: "Update",
       updatingPassword: "Updating…",
       cancel: "Cancel",
+      resourceGrants: "Resource grants",
     },
     groupManagement: {
       title: "Group management",
