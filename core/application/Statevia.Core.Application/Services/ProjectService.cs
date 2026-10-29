@@ -389,11 +389,11 @@ internal sealed class ProjectService(
             new { field = "principalId" });
     }
 
-    /// <summary>画面の種別。Principal の種別だけで決め、API キーの有無では変えない。</summary>
+    /// <summary>画面の種別。ユーザーと API キー以外は system。</summary>
     private static string ToMemberKind(PrincipalType principalType) => principalType switch
     {
         PrincipalType.User => "user",
-        PrincipalType.ServiceAccount => "serviceAccount",
+        PrincipalType.ServiceAccount => "apiKey",
         PrincipalType.System => "system",
         _ => throw new ArgumentOutOfRangeException(nameof(principalType), principalType, null)
     };

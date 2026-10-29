@@ -5381,8 +5381,7 @@ public sealed class ExecutionServiceTests
                 new EmptyPrincipalResourceGrantStore(),
                 sqlite.TenantAccessor,
                 new MissingPrincipalDataAccess()),
-            sqlite.TenantAccessor,
-            TestRepositoryFactory.CreateProjectRepository());
+            sqlite.TenantAccessor);
         var checkpointStoreResolved = checkpointStore ?? new FakeExecutionCheckpointStore();
         var engineSession = new ExecutionEngineSession(
             engine,

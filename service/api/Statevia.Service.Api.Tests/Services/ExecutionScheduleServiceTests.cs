@@ -18,7 +18,7 @@ public sealed class ExecutionScheduleServiceTests
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
         var caller = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, sourceYaml: "states: []", executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId, sourceYaml: "states: []");
         var sut = CreateSut(db, caller, runAs);
 
         // Act
@@ -43,9 +43,8 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        var caller = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs, caller]);
-        var sut = CreateSut(db, caller, runAs);
+        await SeedDefinitionAsync(db, definitionId);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var request = NewCreateRequest(definitionId, runAs);
         request.Input = JsonDocument.Parse("""{"k":1}""").RootElement.Clone();
         var created = await sut.CreateAsync(request, CancellationToken.None);
@@ -69,7 +68,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var userPrincipal = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [userPrincipal]);
+        await SeedDefinitionAsync(db, definitionId);
         var principals = new StubPrincipalDataAccess();
         principals.Add(userPrincipal, TestTenantIds.DefaultTenantId, PrincipalType.User, isActive: true);
         var sut = CreateSut(db, Guid.NewGuid(), userPrincipal, principals);
@@ -90,7 +89,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var grants = new MutableGrantStore();
         grants.Rows.Add(Grant(runAs, PrincipalResourceGrantKinds.Definition, Guid.NewGuid()));
         var sut = CreateSut(db, Guid.NewGuid(), runAs, resourceGrants: grants);
@@ -113,7 +112,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var grants = new MutableGrantStore();
         var sut = CreateSut(db, Guid.NewGuid(), runAs, resourceGrants: grants);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
@@ -140,7 +139,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var request = NewCreateRequest(definitionId, runAs);
         request.CronExpression = "not-a-cron";
@@ -161,7 +160,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var request = NewCreateRequest(definitionId, runAs);
         request.TimeZone = "Not/AZone";
@@ -182,7 +181,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var request = NewCreateRequest(definitionId, runAs);
         request.DefinitionVersion = 99;
@@ -194,7 +193,7 @@ public sealed class ExecutionScheduleServiceTests
         await Assert.ThrowsAsync<NotFoundException>(act);
     }
 
-    /// <summary>他テナントのスケジュールは 404。</summary>
+    /// <summary>他テナントの行は 404。</summary>
     [Fact]
     public async Task GetAsync_WhenOtherTenantRow_ThrowsNotFound()
     {
@@ -202,7 +201,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, tenantId: TestTenantIds.T1TenantId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId, tenantId: TestTenantIds.T1TenantId);
         var otherSut = CreateSut(
             db,
             Guid.NewGuid(),
@@ -219,7 +218,7 @@ public sealed class ExecutionScheduleServiceTests
         await Assert.ThrowsAsync<NotFoundException>(act);
     }
 
-    /// <summary>enabled=false にするとスケジュールは残るが Dispatcher 対象外。</summary>
+    /// <summary>enabled=false にすると行は残るが Dispatcher 対象外。</summary>
     [Fact]
     public async Task UpdateAsync_WhenDisabled_PersistsEnabledFalse()
     {
@@ -227,7 +226,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
 
@@ -250,7 +249,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
 
@@ -269,7 +268,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var dispatch = new RecordingDispatchService();
         var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
@@ -293,7 +292,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var dispatch = new RecordingDispatchService();
         var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
@@ -319,7 +318,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var dispatch = new RecordingDispatchService();
         var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
         var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
@@ -341,7 +340,7 @@ public sealed class ExecutionScheduleServiceTests
         using var db = new SqliteTestDatabase();
         var definitionId = Guid.NewGuid();
         var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        await SeedDefinitionAsync(db, definitionId);
         var sut = CreateSut(db, Guid.NewGuid(), runAs);
         await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
 
@@ -351,329 +350,6 @@ public sealed class ExecutionScheduleServiceTests
         // Assert
         var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
         Assert.Equal("name", ReadField(ex));
-    }
-
-    /// <summary>run-as が定義の Project に所属していなければ、作成は 422 で保存しない。</summary>
-    [Fact]
-    public async Task CreateAsync_WhenRunAsNotMember_ThrowsValidationWithoutSaving()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-
-        // Act
-        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("runAsPrincipalId", ReadField(ex));
-        await using var verify = db.Factory.CreateDbContext();
-        Assert.Empty(verify.ExecutionSchedules.IgnoreQueryFilters());
-    }
-
-    /// <summary>run-as が reader の作成は 422。executor 以上が要る。</summary>
-    [Fact]
-    public async Task CreateAsync_WhenRunAsReader_ThrowsValidation()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        var projectId = await SeedDefinitionAsync(db, definitionId);
-        await GrantAccessAsync(db, projectId, runAs, ProjectAccessRole.Reader);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-
-        // Act
-        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("runAsPrincipalId", ReadField(ex));
-    }
-
-    /// <summary>無効のまま作成するなら run-as の所属は確かめない。有効にするときに確かめる。</summary>
-    [Fact]
-    public async Task CreateAsync_WhenDisabledAndRunAsNotMember_Persists()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var request = NewCreateRequest(definitionId, runAs);
-        request.Enabled = false;
-
-        // Act
-        var created = await sut.CreateAsync(request, CancellationToken.None);
-
-        // Assert
-        Assert.False(created.Enabled);
-    }
-
-    /// <summary>run-as の所属が外れた有効なスケジュールも、無効化は通す。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndDisabling_Persists()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await RemoveAccessAsync(db, runAs);
-
-        // Act
-        var updated = await sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Enabled = false },
-            CancellationToken.None);
-
-        // Assert
-        Assert.False(updated.Enabled);
-    }
-
-    /// <summary>run-as の所属が外れた有効なスケジュールは、無効化以外の更新を 422 で止める。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingEnabledRow_ThrowsValidation()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await RemoveAccessAsync(db, runAs);
-
-        // Act
-        var act = () => sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Name = "renamed-job" },
-            CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("runAsPrincipalId", ReadField(ex));
-        var stored = await sut.GetAsync(created.ScheduleId, CancellationToken.None);
-        Assert.Equal("nightly-job", stored.Name);
-    }
-
-    /// <summary>run-as の所属が外れた無効なスケジュールは、名前を変えられる。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingDisabledRow_Persists()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await sut.UpdateAsync(created.ScheduleId, new UpdateExecutionScheduleRequest { Enabled = false }, CancellationToken.None);
-        await RemoveAccessAsync(db, runAs);
-
-        // Act
-        var updated = await sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Name = "renamed-job" },
-            CancellationToken.None);
-
-        // Assert
-        Assert.Equal("renamed-job", updated.Name);
-    }
-
-    /// <summary>run-as の所属が外れた無効なスケジュールを有効にすると 422。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndEnabling_ThrowsValidation()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await sut.UpdateAsync(created.ScheduleId, new UpdateExecutionScheduleRequest { Enabled = false }, CancellationToken.None);
-        await RemoveAccessAsync(db, runAs);
-
-        // Act
-        var act = () => sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Enabled = true },
-            CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("runAsPrincipalId", ReadField(ex));
-    }
-
-    /// <summary>run-as の許可を狭めたスケジュールも、無効化は通す。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenGrantNarrowedAndDisabling_Persists()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var grants = new MutableGrantStore();
-        var sut = CreateSut(db, Guid.NewGuid(), runAs, resourceGrants: grants);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        grants.Rows.Add(Grant(runAs, PrincipalResourceGrantKinds.Definition, Guid.NewGuid()));
-
-        // Act
-        var updated = await sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Enabled = false },
-            CancellationToken.None);
-
-        // Assert
-        Assert.False(updated.Enabled);
-    }
-
-    /// <summary>手動実行は run-as が未所属なら 422 で、Start しない。</summary>
-    [Fact]
-    public async Task RunNowAsync_WhenRunAsNotMember_ThrowsValidationWithoutStart()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var dispatch = new RecordingDispatchService();
-        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await RemoveAccessAsync(db, runAs);
-
-        // Act
-        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("runAsPrincipalId", ReadField(ex));
-        Assert.Equal(0, dispatch.RunCount);
-    }
-
-    /// <summary>手動実行は run-as の許可の外なら 403 で、Start しない。</summary>
-    [Fact]
-    public async Task RunNowAsync_WhenRunAsLacksGrant_ThrowsForbiddenWithoutStart()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var grants = new MutableGrantStore();
-        var dispatch = new RecordingDispatchService();
-        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch, resourceGrants: grants);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        grants.Rows.Add(Grant(runAs, PrincipalResourceGrantKinds.Definition, Guid.NewGuid()));
-
-        // Act
-        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
-
-        // Assert
-        var error = await Assert.ThrowsAsync<ForbiddenException>(act);
-        Assert.Equal("RESOURCE_GRANT_DENIED", error.Code);
-        Assert.Equal(0, dispatch.RunCount);
-    }
-
-    /// <summary>定義が論理削除されたスケジュールの手動実行は 422（field=definitionId）。</summary>
-    [Fact]
-    public async Task RunNowAsync_WhenDefinitionDeleted_ThrowsValidationOnDefinitionId()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var dispatch = new RecordingDispatchService();
-        var sut = CreateSut(db, Guid.NewGuid(), runAs, dispatch: dispatch);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await DeleteDefinitionAsync(db, definitionId);
-
-        // Act
-        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("definitionId", ReadField(ex));
-        Assert.Equal(0, dispatch.RunCount);
-    }
-
-    /// <summary>定義が論理削除されたスケジュールも無効化できる。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenDefinitionDeletedAndDisabling_Persists()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await DeleteDefinitionAsync(db, definitionId);
-
-        // Act
-        var updated = await sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Enabled = false },
-            CancellationToken.None);
-
-        // Assert
-        Assert.False(updated.Enabled);
-    }
-
-    /// <summary>定義が論理削除されたスケジュールも削除できる。</summary>
-    [Fact]
-    public async Task DeleteAsync_WhenDefinitionDeleted_Deletes()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await DeleteDefinitionAsync(db, definitionId);
-
-        // Act
-        await sut.DeleteAsync(created.ScheduleId, CancellationToken.None);
-
-        // Assert
-        await using var verify = db.Factory.CreateDbContext();
-        var stored = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
-        Assert.NotNull(stored.DeletedAt);
-    }
-
-    /// <summary>定義が論理削除されたスケジュールを有効にすると 422（field=definitionId）。</summary>
-    [Fact]
-    public async Task UpdateAsync_WhenDefinitionDeletedAndEnabling_ThrowsValidationOnDefinitionId()
-    {
-        // Arrange
-        using var db = new SqliteTestDatabase();
-        var definitionId = Guid.NewGuid();
-        var runAs = Guid.NewGuid();
-        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
-        var sut = CreateSut(db, Guid.NewGuid(), runAs);
-        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
-        await sut.UpdateAsync(created.ScheduleId, new UpdateExecutionScheduleRequest { Enabled = false }, CancellationToken.None);
-        await DeleteDefinitionAsync(db, definitionId);
-
-        // Act
-        var act = () => sut.UpdateAsync(
-            created.ScheduleId,
-            new UpdateExecutionScheduleRequest { Enabled = true },
-            CancellationToken.None);
-
-        // Assert
-        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
-        Assert.Equal("definitionId", ReadField(ex));
     }
 
     private static CreateExecutionScheduleRequest NewCreateRequest(Guid definitionId, Guid runAs) =>
@@ -692,14 +368,11 @@ public sealed class ExecutionScheduleServiceTests
         return field as string;
     }
 
-    /// <summary>Project と定義を作り、指定 Principal を executor でその Project のメンバーにする。</summary>
-    /// <returns>作成した Project ID。</returns>
-    private static async Task<Guid> SeedDefinitionAsync(
+    private static async Task SeedDefinitionAsync(
         SqliteTestDatabase db,
         Guid definitionId,
         string sourceYaml = "x",
-        Guid? tenantId = null,
-        Guid[]? executorMembers = null)
+        Guid? tenantId = null)
     {
         var resolvedTenant = tenantId ?? TestTenantIds.DefaultTenantId;
         var tenantKey = resolvedTenant == TestTenantIds.T1TenantId ? "t1" : "default";
@@ -713,42 +386,6 @@ public sealed class ExecutionScheduleServiceTests
             "wf-schedule",
             projectId,
             sourceYaml: sourceYaml);
-        foreach (var principalId in executorMembers ?? [])
-        {
-            ProjectTestData.AddPrincipal(ctx, resolvedTenant, principalId);
-            ProjectTestData.GrantAccess(ctx, projectId, principalId, ProjectAccessRole.Executor);
-        }
-        await ctx.SaveChangesAsync();
-        return projectId;
-    }
-
-    /// <summary>既定テナントに Principal を作り、指定ロールで Project のメンバーにする。</summary>
-    private static async Task GrantAccessAsync(
-        SqliteTestDatabase db,
-        Guid projectId,
-        Guid principalId,
-        ProjectAccessRole role)
-    {
-        await using var ctx = db.Factory.CreateDbContext();
-        ProjectTestData.AddPrincipal(ctx, TestTenantIds.DefaultTenantId, principalId);
-        ProjectTestData.GrantAccess(ctx, projectId, principalId, role);
-        await ctx.SaveChangesAsync();
-    }
-
-    /// <summary>Principal の Project 所属をすべて外す。</summary>
-    private static async Task RemoveAccessAsync(SqliteTestDatabase db, Guid principalId)
-    {
-        await using var ctx = db.Factory.CreateDbContext();
-        ctx.ProjectAccesses.RemoveRange(ctx.ProjectAccesses.Where(access => access.PrincipalId == principalId));
-        await ctx.SaveChangesAsync();
-    }
-
-    /// <summary>定義を論理削除する。</summary>
-    private static async Task DeleteDefinitionAsync(SqliteTestDatabase db, Guid definitionId)
-    {
-        await using var ctx = db.Factory.CreateDbContext();
-        var definition = await ctx.Definitions.IgnoreQueryFilters().SingleAsync(row => row.DefinitionId == definitionId);
-        definition.DeletedAt = DateTime.UtcNow;
         await ctx.SaveChangesAsync();
     }
 
@@ -786,8 +423,7 @@ public sealed class ExecutionScheduleServiceTests
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
                 accessor,
                 principalAccess),
-            accessor,
-            TestRepositoryFactory.CreateProjectRepository());
+            accessor);
 
         var transactionExecutor = new TestCoreTransactionExecutor(uowFactory);
         return new ExecutionScheduleService(

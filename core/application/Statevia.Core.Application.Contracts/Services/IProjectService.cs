@@ -118,11 +118,11 @@ public sealed class ProjectMemberResponse
     [JsonPropertyName("principalId")]
     public Guid PrincipalId { get; set; }
 
-    /// <summary>ユーザーまたは ServiceAccount の表示名。</summary>
+    /// <summary>ユーザー表示名または API キー名。</summary>
     [JsonPropertyName("displayName")]
     public string DisplayName { get; set; } = "";
 
-    /// <summary><c>user</c> / <c>serviceAccount</c> / <c>system</c>。</summary>
+    /// <summary><c>user</c> / <c>apiKey</c> / <c>system</c>。</summary>
     [JsonPropertyName("kind")]
     public string Kind { get; set; } = "";
 
@@ -142,11 +142,11 @@ public sealed class ProjectGrantCandidateResponse
     [JsonPropertyName("principalId")]
     public Guid PrincipalId { get; set; }
 
-    /// <summary>ユーザーまたは ServiceAccount の表示名。</summary>
+    /// <summary>ユーザー表示名または API キー名。</summary>
     [JsonPropertyName("displayName")]
     public string DisplayName { get; set; } = "";
 
-    /// <summary><c>user</c> または <c>serviceAccount</c>。</summary>
+    /// <summary><c>user</c> または <c>apiKey</c>。</summary>
     [JsonPropertyName("kind")]
     public string Kind { get; set; } = "";
 }

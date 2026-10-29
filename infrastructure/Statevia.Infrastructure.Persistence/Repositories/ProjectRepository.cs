@@ -242,13 +242,14 @@ internal sealed class ProjectRepository(IIdGenerator idGenerator) : IProjectRepo
         CancellationToken ct)
     {
         var db = uow.GetDb();
+        var apiKeyPrincipalIds = db.ApiKeys.Select(key => key.PrincipalId);
         var rows = await db.Principals.AsNoTracking()
             .Where(principal => principal.TenantId == tenantId
                 && principal.DeletedAt == null
                 && principal.IsActive
                 && !principal.IsSystem
                 && (principal.PrincipalType == PrincipalType.User
-                    || principal.PrincipalType == PrincipalType.ServiceAccount))
+                    || apiKeyPrincipalIds.Contains(principal.PrincipalId)))
             .OrderBy(principal => principal.DisplayName)
             .ThenBy(principal => principal.PrincipalId)
             .Select(principal => new ProjectPrincipalLabel
