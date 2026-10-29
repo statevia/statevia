@@ -140,8 +140,7 @@ public sealed class ExecutionAuthorizationGuardTests
                 new EmptyPrincipalResourceGrantStore(),
                 db.TenantAccessor,
                 new MissingPrincipalDataAccess()),
-            db.TenantAccessor,
-            TestRepositoryFactory.CreateProjectRepository());
+            db.TenantAccessor);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -446,8 +445,7 @@ public sealed class ExecutionAuthorizationGuardTests
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
                 accessor,
                 principals ?? new MissingPrincipalDataAccess()),
-            accessor,
-            TestRepositoryFactory.CreateProjectRepository());
+            accessor);
     }
 
     /// <summary>Principal 付きのテナント文脈を作る。</summary>

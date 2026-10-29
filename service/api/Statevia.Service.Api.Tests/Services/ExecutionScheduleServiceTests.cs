@@ -786,8 +786,7 @@ public sealed class ExecutionScheduleServiceTests
                 resourceGrants ?? new EmptyPrincipalResourceGrantStore(),
                 accessor,
                 principalAccess),
-            accessor,
-            TestRepositoryFactory.CreateProjectRepository());
+            accessor);
 
         var transactionExecutor = new TestCoreTransactionExecutor(uowFactory);
         return new ExecutionScheduleService(
@@ -796,7 +795,8 @@ public sealed class ExecutionScheduleServiceTests
             new ExecutionScheduleDefinitionResolver(
                 new GuidParsingDisplayIdService(),
                 TestRepositoryFactory.CreateDefinitionRepository(),
-                transactionExecutor),
+                transactionExecutor,
+                TestRepositoryFactory.CreateProjectRepository()),
             principalAccess,
             accessor,
             new DefaultIdGenerator(),

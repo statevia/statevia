@@ -16,7 +16,6 @@ namespace Statevia.Core.Application.Services;
 /// <param name="executor">トランザクション実行。</param>
 /// <param name="resourceGrantAuth">Principal の実行リソース許可。</param>
 /// <param name="tenantContext">呼び出しスコープのテナント文脈。Principal の無い Worker 経路を見分ける。</param>
-/// <param name="projects">呼び出し元ではない Principal（スケジュールの run-as）の実効ロール解決。</param>
 internal sealed class ExecutionAuthorizationGuard(
     IRuntimePermissionAuthorization runtimeAuth,
     IExecutionMutationAuthorization mutationAuth,
@@ -24,12 +23,8 @@ internal sealed class ExecutionAuthorizationGuard(
     IDefinitionRepository definitions,
     ICoreTransactionExecutor executor,
     PrincipalResourceGrantAuthorization resourceGrantAuth,
-    ITenantContextAccessor tenantContext,
-    IProjectRepository projects)
+    ITenantContextAccessor tenantContext)
 {
-    private const string RunAsNotProjectExecutor =
-        "runAsPrincipalId must be a member of the definition's project with the executor role or higher.";
-
     /// <summary>Runtime の executions:read を要求する。</summary>
     /// <param name="ct">キャンセル。</param>
     public Task EnsureExecutionsReadAsync(CancellationToken ct) =>
@@ -140,41 +135,6 @@ internal sealed class ExecutionAuthorizationGuard(
                 await projectAuth
                     .EnsureCanExecuteAsync(uow, tenantId, projectId.Value, innerCt)
                     .ConfigureAwait(false);
-            },
-            ct);
-
-    /// <summary>スケジュールの run-as が、定義の Project で executor 以上のメンバーかを要求する。</summary>
-    /// <remarks>
-    /// <para>呼び出し元ではなく <paramref name="runAsPrincipalId"/> を評価する。テナント管理者の免除は無い。</para>
-    /// <para>発火時の Start は run-as を呼び出し元にして同じ所属を見るため、保存と手動実行の前に同じ条件で止める。</para>
-    /// </remarks>
-    /// <param name="tenantId">テナント ID。</param>
-    /// <param name="runAsPrincipalId">run-as の Principal。</param>
-    /// <param name="definitionId">未削除の論理定義 ID。</param>
-    /// <param name="ct">キャンセル。</param>
-    /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
-    /// <exception cref="ApiValidationException">所属が無い、または executor 未満のとき。<c>field=runAsPrincipalId</c>。</exception>
-    public Task EnsureRunAsCanExecuteOnDefinitionAsync(
-        Guid tenantId,
-        Guid runAsPrincipalId,
-        Guid definitionId,
-        CancellationToken ct) =>
-        executor.ExecuteReadOnlyAsync(
-            async (uow, innerCt) =>
-            {
-                var projectId = await definitions
-                    .ResolveProjectIdAsync(uow, tenantId, definitionId, innerCt)
-                    .ConfigureAwait(false);
-                if (projectId is null)
-                    throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
-
-                var role = await projects
-                    .ResolveEffectiveRoleAsync(uow, tenantId, runAsPrincipalId, projectId.Value, innerCt)
-                    .ConfigureAwait(false);
-                if (role is { } effectiveRole && ProjectAccessRolePolicy.MeetsMinimum(effectiveRole, ProjectAccessRole.Executor))
-                    return;
-
-                throw new ApiValidationException(RunAsNotProjectExecutor, new { field = "runAsPrincipalId" });
             },
             ct);
 

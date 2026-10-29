@@ -303,7 +303,7 @@ internal sealed class ExecutionScheduleService(
     {
         await definitions.EnsureDefinitionNotDeletedAsync(tenantId, definitionId, cancellationToken).ConfigureAwait(false);
         await EnsureActiveServiceAccountAsync(tenantId, runAsPrincipalId, cancellationToken).ConfigureAwait(false);
-        await authorization.EnsureRunAsCanExecuteOnDefinitionAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
+        await definitions.EnsureRunAsCanExecuteOnDefinitionAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
             .ConfigureAwait(false);
         await authorization.EnsureResourceGrantForPrincipalAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
             .ConfigureAwait(false);
