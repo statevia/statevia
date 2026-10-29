@@ -16,7 +16,7 @@ export function isProjectRole(value: unknown): value is ProjectRole {
 /**
  * メンバー種別か。
  * @param value API の kind。文字列以外は false。
- * @returns user / apiKey / system なら true。
+ * @returns user / serviceAccount / system なら true。
  */
 export function isProjectMemberKind(value: unknown): value is ProjectMemberKind {
   return typeof value === "string" && projectMemberKindValues.includes(value);

@@ -23,9 +23,13 @@ describe("project roles", () => {
     expect(canAdmin("admin")).toBe(true);
   });
 
-  it("メンバー種別は user / apiKey / system だけ", () => {
+  it("メンバー種別は user / serviceAccount / system だけ", () => {
     expect(isProjectMemberKind("user")).toBe(true);
-    expect(isProjectMemberKind("apiKey")).toBe(true);
+    expect(isProjectMemberKind("serviceAccount")).toBe(true);
     expect(isProjectMemberKind("principal")).toBe(false);
+  });
+
+  it("廃止した apiKey はメンバー種別として受け取らない", () => {
+    expect(isProjectMemberKind("apiKey")).toBe(false);
   });
 });

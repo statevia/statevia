@@ -9,6 +9,8 @@ internal sealed class ExecutionScheduleDefinitionResolver(
     IDefinitionRepository definitions,
     ICoreTransactionExecutor executor)
 {
+    private const string DefinitionDeleted = "definitionId refers to a deleted definition.";
+
     /// <summary>display または UUID を定義 UUID に解決する。</summary>
     /// <param name="definitionIdOrDisplay">定義 ID。</param>
     /// <param name="cancellationToken">キャンセル。</param>
@@ -23,6 +25,30 @@ internal sealed class ExecutionScheduleDefinitionResolver(
             throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
         return definitionId.Value;
     }
+
+    /// <summary>既存スケジュールの定義が論理削除されていないことを要求する。</summary>
+    /// <remarks>
+    /// 発火準備検査の最初の段。発火時の Start は削除済み定義を解決できず失敗するため、
+    /// 有効なスケジュールの保存と手動実行の前に 422 で止める。スケジュールが指す定義そのものが無い場合も同じ扱いにする。
+    /// </remarks>
+    /// <param name="tenantId">テナント。</param>
+    /// <param name="definitionId">スケジュールの定義。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <exception cref="ApiValidationException">定義が論理削除済みのとき。<c>field=definitionId</c>。</exception>
+    public Task EnsureDefinitionNotDeletedAsync(
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken cancellationToken) =>
+        executor.ExecuteReadOnlyAsync(
+            async (uow, innerCt) =>
+            {
+                var projectId = await definitions
+                    .ResolveProjectIdAsync(uow, tenantId, definitionId, innerCt)
+                    .ConfigureAwait(false);
+                if (projectId is null)
+                    throw new ApiValidationException(DefinitionDeleted, new { field = "definitionId" });
+            },
+            cancellationToken);
 
     /// <summary>指定があれば版をピンし、省略時は null（発火時 latest）。</summary>
     /// <param name="tenantId">テナント。</param>
