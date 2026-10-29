@@ -17,15 +17,15 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
     },
     members: {
       title: "Project members",
-      description: "Grant a role to a user or a service account.",
+      description: "Grant a role to a user or an API key.",
       forbidden: "Project admin role is required to manage members.",
       emptyProject: "You are not a member of any project.",
       candidateLabel: "Add",
-      candidateRequired: "Choose a user or a service account to add.",
-      emptyCandidates: "There is no user or service account left to add.",
+      candidateRequired: "Choose a user or an API key to add.",
+      emptyCandidates: "There is no user or API key left to add.",
       kinds: {
         user: "User",
-        serviceAccount: "Service account",
+        apiKey: "API key",
         system: "System",
       },
       label: (displayName, kindLabel) =>

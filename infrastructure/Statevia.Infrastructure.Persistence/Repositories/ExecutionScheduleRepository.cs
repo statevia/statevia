@@ -23,30 +23,12 @@ internal sealed class ExecutionScheduleRepository(IDbContextFactory<CoreDbContex
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ExecutionScheduleRow>> ListVisibleAsync(
-        Guid tenantId,
-        Guid principalId,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ExecutionScheduleRow>> ListAsync(CancellationToken cancellationToken)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        var accessibleProjectIds = ProjectAccessQueries.AccessibleProjectIds(db, principalId, ProjectAccessRole.Reader);
-        // 削除済み定義も所属 Project で判定するため、定義の DeletedAt では絞らない。
-        var visibleDefinitions = db.Definitions.AsNoTracking()
-            .Where(definition => definition.TenantId == tenantId && accessibleProjectIds.Contains(definition.ProjectId));
-        var grantScope = await ResourceGrantListScope.LoadAsync(db, principalId, cancellationToken).ConfigureAwait(false);
-        if (grantScope.ProjectIds is { } grantedProjectIds)
-            visibleDefinitions = visibleDefinitions.Where(definition => grantedProjectIds.Contains(definition.ProjectId));
-
-        if (grantScope.DefinitionIds is { } grantedDefinitionIds)
-            visibleDefinitions = visibleDefinitions.Where(definition => grantedDefinitionIds.Contains(definition.DefinitionId));
-
-        var visibleDefinitionIds = visibleDefinitions.Select(definition => (Guid?)definition.DefinitionId);
         return await db.ExecutionSchedules
             .AsNoTracking()
-            .Where(row => row.TenantId == tenantId
-                && row.DeletedAt == null
-                && row.JobKey == null
-                && visibleDefinitionIds.Contains(row.DefinitionId))
+            .Where(row => row.DeletedAt == null && row.JobKey == null)
             .OrderBy(row => row.Name)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

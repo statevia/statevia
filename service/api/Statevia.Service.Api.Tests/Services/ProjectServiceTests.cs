@@ -364,9 +364,9 @@ public sealed class ProjectServiceTests
         Assert.Equal("admin", member.Role);
     }
 
-    /// <summary>付与候補は同一テナントのユーザーと ServiceAccount。API キーの有無では絞らない。</summary>
+    /// <summary>付与候補は同一テナントのユーザーと API キーだけ。</summary>
     [Fact]
-    public async Task ListGrantCandidatesAsync_IncludesUsersAndServiceAccounts()
+    public async Task ListGrantCandidatesAsync_IncludesUsersAndApiKeysOnly()
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
@@ -416,11 +416,8 @@ public sealed class ProjectServiceTests
         Assert.Contains(candidates, candidate =>
             candidate.PrincipalId == apiKeyPrincipalId
             && candidate.DisplayName == "ci-key"
-            && candidate.Kind == "serviceAccount");
-        Assert.Contains(candidates, candidate =>
-            candidate.PrincipalId == serviceAccountId
-            && candidate.DisplayName == "worker"
-            && candidate.Kind == "serviceAccount");
+            && candidate.Kind == "apiKey");
+        Assert.DoesNotContain(candidates, candidate => candidate.PrincipalId == serviceAccountId);
         Assert.DoesNotContain(candidates, candidate => candidate.PrincipalId == outsiderId);
     }
 

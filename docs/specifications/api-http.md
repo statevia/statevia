@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.36 |
+| Version | 1.35 |
 | 更新日 | 2026-10-29 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
@@ -26,8 +26,6 @@
 ---
 
 Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
-
-**Version 1.36（2026-10-29）**: 定期実行を Project の所属に揃える。一覧と取得は定義の Project の所属と実行リソース許可で絞る。有効なスケジュールの保存と手動実行の前に発火準備検査（定義が未削除、run-as の有効性・所属・許可）を行い、run-as の所属不足は 422。無効化と削除は run-as と定義の状態で止めない。Project のメンバー候補に資格のない ServiceAccount を入れ、`kind` の `apiKey` を `serviceAccount` に変える。
 
 **Version 1.35（2026-10-29）**: Studio はユーザーと ServiceAccount の実行リソース許可を画面で置換する。project は全 Project から追加・解除し、定義の候補は操作する管理者が所属する Project の定義に限る。HTTP の成否は変えない。
 
@@ -315,7 +313,7 @@ Project は現在テナントの中だけで、定義を束ねる。他テナン
 | GET | `/v1/projects/{projectId}` | 所属 | 200。未所属は 404 |
 | PATCH | `/v1/projects/{projectId}` | `project.admin` | 200。`displayName` / `description` / `slug` の指定項目だけ |
 | GET | `/v1/projects/{projectId}/members` | `project.admin` または `tenant.admin` | 200 |
-| GET | `/v1/projects/{projectId}/member-candidates` | 同上 | 200。同一テナントの有効なユーザーと ServiceAccount（API キーの有無は問わない） |
+| GET | `/v1/projects/{projectId}/member-candidates` | 同上 | 200。同一テナントのユーザーと API キー |
 | PUT | `/v1/projects/{projectId}/members/{principalId}` | 同上 | 204。自己昇格を含む |
 | DELETE | `/v1/projects/{projectId}/members/{principalId}` | 同上 | 204。未所属の対象は 404 |
 | GET | `/v1/admin/projects` | `tenant.admin` | 200。未所属を含む。未所属の `role` は null |
@@ -325,9 +323,9 @@ Project は現在テナントの中だけで、定義を束ねる。他テナン
 - ロールは `reader` / `executor` / `publisher` / `admin`。それ以外は **422**（`field=role`）。
 - 他テナントの Principal、または存在しない Principal は **422**（`field=principalId`）。
 - 最後の `admin` を外す、または `admin` 以外へ下げる操作は `tenant.admin` だけ。それ以外は **422**（`field=principalId`）。
-- メンバー応答は `principalId`、`displayName`、`kind`（`user` / `serviceAccount` / `system`。ServiceAccount は API キーの有無で分けない）、`role`、`createdAt`。候補は `system` を含まない。`principalId` は付与 API の識別子。
+- メンバー応答は `principalId`、`displayName`、`kind`（`user` / `apiKey` / `system`）、`role`、`createdAt`。候補は `system` を含まない。`principalId` は付与 API の識別子。
 - `tenant.admin` は未所属でもメンバーを付けられる。定義と実行の閲覧は所属が無いと **404** のまま。
-- 新規ユーザー、新規 ServiceAccount、新規 API キーは、既存 Project のメンバーにはならない。定期実行の run-as にする ServiceAccount は、定義の Project に executor 以上で加える（§3.12）。
+- 新規ユーザーと新規 API キーは、既存 Project のメンバーにはならない。
 
 ### 3.1 実行開始
 
@@ -542,30 +540,21 @@ Request:
 
 定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。run-as の ServiceAccount に実行リソース許可があれば、発火と手動実行の Start はその許可で絞る。
 
-権限は専用キーを増やさない。一覧・取得は `executions.read` と、定義の Project で reader 以上の所属、かつ実行リソース許可の範囲。所属の無いスケジュールは一覧に出ず、取得は不在と同じ 404（`Schedule not found`）。許可の外は一覧に出ず、取得は 403（`RESOURCE_GRANT_DENIED`）。`tenant.admin` でも所属が無ければ見えない。作成・更新・削除・手動実行は `executions.write` と、定義の Project で executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。既存スケジュールの更新・削除・手動実行は、定義が論理削除されていてもその所属 Project で判定する。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みのスケジュールは 404。
-
-**発火準備検査** — 有効なスケジュールを保存するとき（`enabled` が true の作成と、更新後に `enabled` が true の PATCH）と手動実行の前に、発火できる状態かを次の順で確かめる。満たさなければ保存も Start もしない。
-
-1. 定義が論理削除されていない。満たさなければ 422（`field=definitionId`）。
-2. run-as が同一テナントの有効な ServiceAccount。満たさなければ 422（`field=runAsPrincipalId`）。
-3. run-as が定義の Project で executor 以上のメンバー。満たさなければ 422（`field=runAsPrincipalId`）。発火の Start は run-as を呼び出し元にして所属を見るため、所属の無い run-as では発火できない。
-4. run-as の実行リソース許可に定義が入る。満たさなければ **403**（`RESOURCE_GRANT_DENIED`）。呼び出し側の許可では決めない。
-
-無効なスケジュール（`enabled` が false）の作成と更新、および削除では発火準備検査をしない。所属や許可が外れたスケジュール、定義が論理削除されたスケジュールも、無効化と削除はできる。保存後に所属・許可・ServiceAccount・定義が変わることはあるため、検査は発火を保証しない。発火時の Start が改めて評価する。
+権限は専用キーを増やさない。一覧・取得は `executions.read`。作成・更新・削除・手動実行は `executions.write` と、対象定義の project executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みは 404。
 
 システムがテナントごとに持つ点検行（`schedules.job_key` あり）は、一覧・取得・更新・削除・手動実行の対象にしない。ID を指定しても不在と同じ 404（`Schedule not found`）。作成リクエストに `job_key` は無く、成功レスポンスの形は変わらない。run を返す API を足す場合も、テナントから見える親（`job_key` が NULL）の run だけを返す。
 
-**POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。`enabled` が true なら発火準備検査を行う。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版と、論理削除済みの定義は 404。
+**POST /v1/schedules** — 201。`name`（ASCII ラベル 1〜128）、`definitionId`、`cronExpression`（5 フィールド）、`timeZone`（IANA。省略して UTC にしない）、`runAsPrincipalId` が必須。`definitionVersion` / `definitionVersionId` は任意（省略時は発火時点の latest）。`overlapPolicy` は `skip`（既定）または `allow`。`queue` は 422。`input` は任意。`enabled` 省略時 true。`nextFireAt` は UTC。定義 YAML は変わらない。ServiceAccount は自動発行しない。`runAsPrincipalId` は同一テナントの有効な ServiceAccount のみ（User や無効は 422、`field=runAsPrincipalId`）。テナント内の未削除名が重複すると 422。不明な cron / タイムゾーンは 422。存在しない定義・版は 404。run-as の実行リソース許可にその定義が無ければ **403**（`RESOURCE_GRANT_DENIED`）で保存しない。呼び出し側の許可では決めない。
 
-**GET /v1/schedules** — 200。呼び出し元が閲覧できるスケジュールだけ（上記）。`input` は含めない。
+**GET /v1/schedules** — 200。テナント内のみ。`input` は含めない。
 
-**GET /v1/schedules/{scheduleId}** — 200。`input` を含む。所属の無いスケジュールは 404、許可の外は 403。
+**GET /v1/schedules/{scheduleId}** — 200。`input` を含む。
 
-**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。更新後のスケジュールが有効なら発火準備検査を行う。無効にする更新と、無効なスケジュールの更新では行わない。`definitionId` を変えるときは、移し先の定義が未削除で、呼び出し元がその Project でも executor 以上であること（満たさなければ 404 / 403）。`runAsPrincipalId` を指定したときは、有効・無効にかかわらず有効な ServiceAccount であること（422）。
+**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。更新後の定義と run-as の組が実行リソース許可から外れていれば **403**（`RESOURCE_GRANT_DENIED`）で保存しない。
 
-**DELETE /v1/schedules/{scheduleId}** — 204。論理削除。以降は発火しない。run-as と定義の状態では止めない。
+**DELETE /v1/schedules/{scheduleId}** — 204。論理削除。以降は発火しない。
 
-**POST /v1/schedules/{scheduleId}/run** — 201 で `ExecutionResponse`。`X-Idempotency-Key` は任意（印字可能 ASCII）。cron 枠とは別の冪等キー。`nextFireAt` は進めない。`enabled=false` は 422（`field=enabled`）。続けて発火準備検査を行い、満たさなければ実行も `schedule_runs` の記録も作らない。前の実行が残っていても overlap skip は適用しない。
+**POST /v1/schedules/{scheduleId}/run** — 201 で `ExecutionResponse`。`X-Idempotency-Key` は任意（印字可能 ASCII）。cron 枠とは別の冪等キー。`nextFireAt` は進めない。`enabled=false` は 422（`field=enabled`）。前の実行が残っていても overlap skip は適用しない。実行リソース許可が外れていれば実行は作らず **403**（`RESOURCE_GRANT_DENIED`）。`schedule_runs` に `manual=true`、`outcome=failed`、`errorCode=RESOURCE_GRANT_DENIED` を残す。
 
 発火（Dispatcher）:
 
