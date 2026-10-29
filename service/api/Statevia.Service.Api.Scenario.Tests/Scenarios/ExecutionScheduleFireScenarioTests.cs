@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Statevia.Core.Application.Contracts;
 using Statevia.Core.Application.Contracts.Services;
 using Statevia.Infrastructure.Security;
 using Statevia.Service.Api.Hosting;
@@ -144,6 +145,48 @@ public sealed class ExecutionScheduleFireScenarioTests
         var workItem = await verify.ExecutionWorkItems.IgnoreQueryFilters()
             .SingleAsync(row => row.ExecutionId == started.ResourceId);
         Assert.Equal(ExecutionWorkItemKinds.Start, workItem.Kind);
+    }
+
+    /// <summary>run-as が定義の Project に所属していなければ、作成は 422 で保存しない（発火で毎回失敗するスケジュールを作らない）。</summary>
+    [SkippableFact]
+    public async Task CreateSchedule_WhenRunAsNotMember_ThrowsValidationWithoutSaving()
+    {
+        // Arrange
+        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        await using var context = await FireArrangement.OpenAsync(_fixture, "not-member");
+        await context.RemoveRunAsMembershipAsync();
+        using var tenant = context.BeginOperator();
+
+        // Act
+        var act = context.CreateScheduleAsync;
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Contains("runAsPrincipalId", exception.Message, StringComparison.Ordinal);
+        await using var verify = await context.CreateDbAsync();
+        Assert.False(await verify.ExecutionSchedules.IgnoreQueryFilters()
+            .AnyAsync(row => row.Name == context.ScheduleName));
+    }
+
+    /// <summary>作成後に run-as の所属が外れたら、手動実行は 422 で Start せず、枠結果も残さない。</summary>
+    [SkippableFact]
+    public async Task RunNow_WhenRunAsLeftProject_ThrowsValidationWithoutRun()
+    {
+        // Arrange
+        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        await using var context = await FireArrangement.OpenAsync(_fixture, "left-project");
+        using var tenant = context.BeginOperator();
+        var created = await context.CreateScheduleAsync();
+        await context.RemoveRunAsMembershipAsync();
+
+        // Act
+        var act = () => context.Schedules.RunNowAsync(created.ScheduleId, "manual-key", CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<ApiValidationException>(act);
+        await using var verify = await context.CreateDbAsync();
+        Assert.False(await verify.ExecutionScheduleRuns.IgnoreQueryFilters()
+            .AnyAsync(row => row.ScheduleId == created.ScheduleId));
     }
 
     /// <summary>1 テスト分の定義・運用者・run-as SA。</summary>
@@ -344,6 +387,15 @@ public sealed class ExecutionScheduleFireScenarioTests
                 .SingleAsync(row => row.ScheduleId == scheduleId);
             schedule.NextFireAt = nextFireAtUtc;
             await db.SaveChangesAsync();
+        }
+
+        /// <summary>run-as SA の Project 所属を外す。</summary>
+        public async Task RemoveRunAsMembershipAsync()
+        {
+            await using var db = await CreateDbAsync();
+            await db.ProjectAccesses
+                .Where(access => access.PrincipalId == RunAsPrincipalId)
+                .ExecuteDeleteAsync();
         }
 
         public Task<CoreDbContext> CreateDbAsync() =>

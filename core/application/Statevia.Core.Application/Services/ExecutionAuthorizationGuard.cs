@@ -97,6 +97,47 @@ internal sealed class ExecutionAuthorizationGuard(
         await resourceGrantAuth.EnsureAsync(projectId.Value, definitionId, ct).ConfigureAwait(false);
     }
 
+    /// <summary>定義が属するプロジェクト上で読取可能かを、読み取りトランザクションで要求する。</summary>
+    /// <remarks>削除済み定義も所属 Project で判定する。スケジュールの単票取得から呼ぶ。</remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    public Task EnsureCanReadOnDefinitionAsync(Guid tenantId, Guid definitionId, CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => EnsureCanReadOnDefinitionAsync(uow, tenantId, definitionId, innerCt),
+            ct);
+
+    /// <summary>削除済み定義も含めて所属 Project を解決し、呼び出し元に executor 以上を要求する。</summary>
+    /// <remarks>
+    /// 既存スケジュールへの書き込み（更新・削除・手動実行）から呼ぶ。
+    /// 定義が論理削除されても、スケジュールを無効化・削除できるようにするため。
+    /// </remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義行が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">所属が executor 未満のとき。コードは <c>PROJECT_ACCESS_DENIED</c>。</exception>
+    public Task EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            async (uow, innerCt) =>
+            {
+                var projectId = await definitions
+                    .ResolveProjectIdIncludingDeletedAsync(uow, tenantId, definitionId, innerCt)
+                    .ConfigureAwait(false);
+                if (projectId is null)
+                    throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
+
+                await projectAuth
+                    .EnsureCanExecuteAsync(uow, tenantId, projectId.Value, innerCt)
+                    .ConfigureAwait(false);
+            },
+            ct);
+
     /// <summary>
     /// User / ServiceAccount の Start に、project 許可と definition 許可の AND を要求する。
     /// </summary>

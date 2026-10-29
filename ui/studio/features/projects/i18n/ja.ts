@@ -17,15 +17,15 @@ export const projectsUiTextJa: ProjectsFeatureUiText = {
     },
     members: {
       title: "プロジェクトメンバー",
-      description: "ユーザーと API キーにロールを付与します。",
+      description: "ユーザーと ServiceAccount にロールを付与します。",
       forbidden: "メンバー管理にはプロジェクト管理者ロールが必要です。",
       emptyProject: "所属しているプロジェクトがありません。",
       candidateLabel: "追加する相手",
-      candidateRequired: "追加するユーザーまたは API キーを選んでください。",
-      emptyCandidates: "追加できるユーザーも API キーもありません。",
+      candidateRequired: "追加するユーザーまたは ServiceAccount を選んでください。",
+      emptyCandidates: "追加できるユーザーも ServiceAccount もありません。",
       kinds: {
         user: "ユーザー",
-        apiKey: "API キー",
+        serviceAccount: "ServiceAccount",
         system: "システム",
       },
       label: (displayName, kindLabel) =>
