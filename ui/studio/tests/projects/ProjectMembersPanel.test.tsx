@@ -30,7 +30,7 @@ const alice: ProjectMember = {
 
 const aliceCandidate: ProjectGrantCandidate = { principalId: "user-alice", displayName: "alice", kind: "user" };
 const bobCandidate: ProjectGrantCandidate = { principalId: "user-bob", displayName: "bob", kind: "user" };
-const keyCandidate: ProjectGrantCandidate = { principalId: "key-module", displayName: "module", kind: "apiKey" };
+const keyCandidate: ProjectGrantCandidate = { principalId: "key-module", displayName: "module", kind: "serviceAccount" };
 
 /** API エラー以外の失敗を toToastError が表す文言。 */
 const unknownErrorMessage = "UNKNOWN: Unknown error";
@@ -65,7 +65,7 @@ describe("ProjectMembersPanel", () => {
     expect(await screen.findByText("alice（ユーザー）")).toBeInTheDocument();
     const { candidateSelect } = grantSelects();
     const optionLabels = Array.from(candidateSelect.querySelectorAll("option")).map((option) => option.textContent);
-    expect(optionLabels).toEqual(["bob（ユーザー）", "module（API キー）"]);
+    expect(optionLabels).toEqual(["bob（ユーザー）", "module（ServiceAccount）"]);
     expect(candidateSelect).toHaveValue("user-bob");
     expect(listProjectMembers).toHaveBeenCalledWith(projectId);
     expect(listGrantCandidates).toHaveBeenCalledWith(projectId);
@@ -82,7 +82,7 @@ describe("ProjectMembersPanel", () => {
 
     // Assert
     expect(await screen.findByText("メンバーはいません。")).toBeInTheDocument();
-    expect(screen.getByText("追加できるユーザーも API キーもありません。")).toBeInTheDocument();
+    expect(screen.getByText("追加できるユーザーも ServiceAccount もありません。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "付与" })).toBeDisabled();
   });
 

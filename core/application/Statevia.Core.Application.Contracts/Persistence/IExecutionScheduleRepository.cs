@@ -7,13 +7,24 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// </remarks>
 public interface IExecutionScheduleRepository
 {
-    /// <summary>テナントから見える未削除スケジュールを 1 件取得する。システム行は不在と同じ。</summary>
+    /// <summary>テナントから見える未削除スケジュールを 1 件取得する。システムスケジュールは不在と同じ。</summary>
     Task<ExecutionScheduleRow?> GetByIdAsync(Guid scheduleId, CancellationToken cancellationToken);
 
-    /// <summary>テナントから見える未削除スケジュールを一覧する。</summary>
-    Task<IReadOnlyList<ExecutionScheduleRow>> ListAsync(CancellationToken cancellationToken);
+    /// <summary>呼び出し元が閲覧できる未削除スケジュールを一覧する。システムスケジュールは含めない。</summary>
+    /// <remarks>
+    /// 定義の Project で reader 以上のメンバーであり、かつ実行リソース許可の範囲に入るスケジュールだけを返す。
+    /// 定義が論理削除されていても、その所属 Project で判定する（実行一覧と同じ）。
+    /// </remarks>
+    /// <param name="tenantId">呼び出しテナント。</param>
+    /// <param name="principalId">呼び出し元 Principal。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>名前順のスケジュール。</returns>
+    Task<IReadOnlyList<ExecutionScheduleRow>> ListVisibleAsync(
+        Guid tenantId,
+        Guid principalId,
+        CancellationToken cancellationToken);
 
-    /// <summary>未削除のシステム行があるか。テナントフィルタは使わない。</summary>
+    /// <summary>未削除のシステムスケジュールがあるか。テナントフィルタは使わない。</summary>
     /// <param name="tenantId">対象テナント。</param>
     /// <param name="jobKey">ジョブ識別子。</param>
     /// <param name="cancellationToken">キャンセル。</param>
@@ -25,7 +36,7 @@ public interface IExecutionScheduleRepository
     /// <summary>スケジュールを追加する。</summary>
     Task AddAsync(ExecutionScheduleRow row, CancellationToken cancellationToken);
 
-    /// <summary>既存行を保存する。</summary>
+    /// <summary>既存のスケジュールを保存する。</summary>
     Task UpdateAsync(ExecutionScheduleRow row, CancellationToken cancellationToken);
 
     /// <summary>枠結果を追加する。同一枠の二重 INSERT は一意制約で失敗する。</summary>
@@ -86,7 +97,7 @@ public interface IExecutionScheduleRepository
         DateTime createdAfter,
         CancellationToken cancellationToken);
 
-    /// <summary>当該システム行の直近 <c>completed</c> の <c>scheduled_fire_at</c>。無ければ null。</summary>
+    /// <summary>当該システムスケジュールの直近 <c>completed</c> の <c>scheduled_fire_at</c>。無ければ null。</summary>
     /// <param name="uow">読み取りに使う UoW。</param>
     /// <param name="scheduleId">点検中のシステムスケジュール。</param>
     /// <param name="tenantId">点検中スケジュールのテナント。</param>

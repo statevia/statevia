@@ -5,10 +5,15 @@ namespace Statevia.Core.Application.Services;
 
 /// <summary>定期実行スケジュールの CRUD。定義 YAML は変更せず、SA も発行しない。</summary>
 /// <remarks>
-/// <para>書き込みは <c>executions.write</c> と対象定義の project executor。読み取りは <c>executions.read</c>。</para>
+/// <para>読み取りは <c>executions.read</c> と、定義の Project での reader 以上の所属と実行リソース許可。所属外は不在と同じ 404。</para>
+/// <para>書き込みは <c>executions.write</c> と、定義の Project での executor 以上。既存のスケジュールは、定義が論理削除されていても所属 Project で判定する。</para>
+/// <para>
+/// 保存後のスケジュールが有効な作成・更新と手動実行では、発火準備検査（定義が未削除、run-as が有効な ServiceAccount、
+/// run-as の所属、run-as の実行リソース許可）を行う。無効化と削除は run-as と定義の状態で止めない。
+/// </para>
 /// <para>他テナントの ID は 404。run-as は同一テナントの Active な ServiceAccount のみ。</para>
 /// </remarks>
-/// <param name="schedules">スケジュール行。</param>
+/// <param name="schedules">スケジュールの永続化。</param>
 /// <param name="authorization">実行認可。</param>
 /// <param name="definitions">定義 ID / 版ピン解決。</param>
 /// <param name="principals">run-as 検証。</param>
@@ -32,18 +37,28 @@ internal sealed class ExecutionScheduleService(
     {
         await authorization.EnsureExecutionsReadAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
-        var rows = await schedules.ListAsync(cancellationToken).ConfigureAwait(false);
-        return rows
-            .Where(row => row.TenantId == tenantId)
-            .Select(ToListItem)
-            .ToList();
+        var callerPrincipalId = RequireCallerPrincipalId();
+        var rows = await schedules.ListVisibleAsync(tenantId, callerPrincipalId, cancellationToken).ConfigureAwait(false);
+        return rows.Select(ToListItem).ToList();
     }
 
     /// <inheritdoc />
     public async Task<ExecutionScheduleDetailDto> GetAsync(Guid scheduleId, CancellationToken cancellationToken)
     {
         await authorization.EnsureExecutionsReadAsync(cancellationToken).ConfigureAwait(false);
+        var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await authorization.EnsureCanReadOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (NotFoundException exception)
+        {
+            // 所属外を「スケジュールが無い」と区別しない。
+            throw new NotFoundException(ScheduleNotFound, exception);
+        }
+
         return ToDetail(row);
     }
 
@@ -71,12 +86,11 @@ internal sealed class ExecutionScheduleService(
                 request.DefinitionVersion,
                 cancellationToken)
             .ConfigureAwait(false);
-        await EnsureActiveServiceAccountAsync(tenantId, request.RunAsPrincipalId, cancellationToken)
-            .ConfigureAwait(false);
-        await authorization.EnsureResourceGrantForPrincipalAsync(
+        await EnsureRunAsForSaveAsync(
                 tenantId,
-                request.RunAsPrincipalId,
                 definitionId,
+                request.RunAsPrincipalId,
+                request.Enabled,
                 cancellationToken)
             .ConfigureAwait(false);
         await EnsureUniqueNameAsync(tenantId, name, excludingScheduleId: null, cancellationToken)
@@ -115,6 +129,11 @@ internal sealed class ExecutionScheduleService(
         await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
+        await authorization.EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
+                tenantId,
+                row.RequireDefinitionId(),
+                cancellationToken)
+            .ConfigureAwait(false);
 
         if (request.Name is { } nameRaw)
         {
@@ -124,7 +143,13 @@ internal sealed class ExecutionScheduleService(
         }
 
         if (request.DefinitionId is { } definitionRaw)
-            row.DefinitionId = await definitions.ResolveDefinitionIdAsync(definitionRaw, cancellationToken).ConfigureAwait(false);
+        {
+            var definitionId = await definitions.ResolveDefinitionIdAsync(definitionRaw, cancellationToken).ConfigureAwait(false);
+            // 移し先の定義は未削除でなければならない。呼び出し元はその Project でも executor 以上が要る。
+            await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, definitionId, cancellationToken)
+                .ConfigureAwait(false);
+            row.DefinitionId = definitionId;
+        }
 
         if (request.DefinitionVersionId is { } || request.DefinitionVersion is { })
         {
@@ -137,21 +162,8 @@ internal sealed class ExecutionScheduleService(
                 .ConfigureAwait(false);
         }
 
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
-            .ConfigureAwait(false);
-
         if (request.RunAsPrincipalId is { } runAs)
-        {
-            await EnsureActiveServiceAccountAsync(tenantId, runAs, cancellationToken).ConfigureAwait(false);
             row.RunAsPrincipalId = runAs;
-        }
-
-        await authorization.EnsureResourceGrantForPrincipalAsync(
-                tenantId,
-                row.RequireRunAsPrincipalId(),
-                row.RequireDefinitionId(),
-                cancellationToken)
-            .ConfigureAwait(false);
 
         if (request.OverlapPolicy is { } overlapRaw && overlapRaw.Length > 0)
             row.OverlapPolicy = NormalizeOverlapPolicy(overlapRaw);
@@ -175,6 +187,13 @@ internal sealed class ExecutionScheduleService(
         if (request.Enabled is { } enabled)
             row.Enabled = enabled;
 
+        // 保存後の状態で判定する。無効化と、無効なスケジュールの編集は、run-as と定義の状態で止めない。
+        if (row.Enabled)
+            await EnsureFireReadyAsync(tenantId, row.RequireDefinitionId(), row.RequireRunAsPrincipalId(), cancellationToken)
+                .ConfigureAwait(false);
+        else if (request.RunAsPrincipalId is { } runAsToValidate)
+            await EnsureActiveServiceAccountAsync(tenantId, runAsToValidate, cancellationToken).ConfigureAwait(false);
+
         if (cronChanged)
             row.NextFireAt = ComputeNextFireAt(row.CronExpression, row.TimeZone);
 
@@ -189,7 +208,10 @@ internal sealed class ExecutionScheduleService(
         await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
+        await authorization.EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
+                tenantId,
+                row.RequireDefinitionId(),
+                cancellationToken)
             .ConfigureAwait(false);
         var now = DateTime.UtcNow;
         row.DeletedAt = now;
@@ -206,10 +228,17 @@ internal sealed class ExecutionScheduleService(
         await authorization.EnsureExecutionsWriteAsync(cancellationToken).ConfigureAwait(false);
         var tenantId = tenantContext.GetRequiredTenantId();
         var row = await LoadOwnedOrNotFoundAsync(scheduleId, cancellationToken).ConfigureAwait(false);
-        await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, row.RequireDefinitionId(), cancellationToken)
+        await authorization.EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
+                tenantId,
+                row.RequireDefinitionId(),
+                cancellationToken)
             .ConfigureAwait(false);
         if (!row.Enabled)
             throw new ApiValidationException("schedule is disabled.", new { field = "enabled" });
+
+        // Start の失敗（run-as の 404 / 403）を呼び出し元の問題に見せないよう、先に同じ条件で止める。
+        await EnsureFireReadyAsync(tenantId, row.RequireDefinitionId(), row.RequireRunAsPrincipalId(), cancellationToken)
+            .ConfigureAwait(false);
 
         return await dispatch.RunManuallyAsync(scheduleId, idempotencyKey, cancellationToken)
             .ConfigureAwait(false);
@@ -243,6 +272,41 @@ internal sealed class ExecutionScheduleService(
         throw new ApiValidationException(
             "name must be unique in the tenant.",
             new { field = "name" });
+    }
+
+    /// <summary>
+    /// 作成時の run-as を検査する。有効なスケジュールとして作成するなら発火準備検査、無効なスケジュールとして作成するなら値の検査（有効な ServiceAccount か）だけを行う。
+    /// </summary>
+    private Task EnsureRunAsForSaveAsync(
+        Guid tenantId,
+        Guid definitionId,
+        Guid runAsPrincipalId,
+        bool enabled,
+        CancellationToken cancellationToken) =>
+        enabled
+            ? EnsureFireReadyAsync(tenantId, definitionId, runAsPrincipalId, cancellationToken)
+            : EnsureActiveServiceAccountAsync(tenantId, runAsPrincipalId, cancellationToken);
+
+    /// <summary>
+    /// 発火準備検査。有効なスケジュールが、保存と手動実行の時点で発火できることを確かめる。
+    /// </summary>
+    /// <remarks>
+    /// 順は、定義が未削除（422 <c>definitionId</c>）、run-as が有効な ServiceAccount（422 <c>runAsPrincipalId</c>）、
+    /// run-as の所属（422 <c>runAsPrincipalId</c>）、run-as の実行リソース許可（403 <c>RESOURCE_GRANT_DENIED</c>）。
+    /// 保存後も所属や許可は変わりうるため保証ではない。発火時の Start が改めて評価する。
+    /// </remarks>
+    private async Task EnsureFireReadyAsync(
+        Guid tenantId,
+        Guid definitionId,
+        Guid runAsPrincipalId,
+        CancellationToken cancellationToken)
+    {
+        await definitions.EnsureDefinitionNotDeletedAsync(tenantId, definitionId, cancellationToken).ConfigureAwait(false);
+        await EnsureActiveServiceAccountAsync(tenantId, runAsPrincipalId, cancellationToken).ConfigureAwait(false);
+        await authorization.EnsureRunAsCanExecuteOnDefinitionAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
+            .ConfigureAwait(false);
+        await authorization.EnsureResourceGrantForPrincipalAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task EnsureActiveServiceAccountAsync(

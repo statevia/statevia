@@ -92,9 +92,12 @@ public interface IProjectRepository
         CancellationToken ct);
 
     /// <summary>
-    /// 付与候補。削除されていない有効なユーザー Principal と、API キーを持つ Principal。
-    /// System と API キーでないサービスアカウントは含めない。
+    /// 付与候補。削除されていない有効なユーザー Principal と ServiceAccount Principal。System は含めない。
     /// </summary>
+    /// <remarks>
+    /// ServiceAccount は API キーの有無で絞らない。資格のない ServiceAccount も、定期実行の run-as として
+    /// 定義の Project に所属させる必要があるため。
+    /// </remarks>
     Task<IReadOnlyList<ProjectPrincipalLabel>> ListGrantCandidatesAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,

@@ -137,6 +137,81 @@ public sealed class ExecutionScheduleIntegrationTests
         Assert.Equal("Schedule not found", exception.Message);
     }
 
+    /// <summary>定義の Project に所属しない Principal の一覧には、そのスケジュールが出ない。</summary>
+    [Fact]
+    public async Task List_WhenCallerNotMember_ReturnsEmpty()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using (context.BeginOperator())
+            await context.CreateScheduleAsync("member-only");
+        using var outsider = context.BeginOutsider();
+
+        // Act
+        var listed = await context.Schedules.ListAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(listed);
+    }
+
+    /// <summary>定義の Project に所属しない Principal の単票取得は、不在と同じ 404。</summary>
+    [Fact]
+    public async Task Get_WhenCallerNotMember_ThrowsNotFound()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        ExecutionScheduleDetailDto created;
+        using (context.BeginOperator())
+            created = await context.CreateScheduleAsync("member-only");
+        using var outsider = context.BeginOutsider();
+
+        // Act
+        var act = () => context.Schedules.GetAsync(created.ScheduleId, CancellationToken.None);
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        Assert.Equal("Schedule not found", exception.Message);
+    }
+
+    /// <summary>定義が論理削除されても、所属しない Principal はスケジュールを削除できない。</summary>
+    [Fact]
+    public async Task Delete_WhenDefinitionDeletedAndCallerNotMember_ThrowsNotFound()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        ExecutionScheduleDetailDto created;
+        using (context.BeginOperator())
+            created = await context.CreateScheduleAsync("orphan");
+        await context.DeleteDefinitionAsync();
+        using var outsider = context.BeginOutsider();
+
+        // Act
+        var act = () => context.Schedules.DeleteAsync(created.ScheduleId, CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(act);
+        await using var verify = context.Database.Factory.CreateDbContext();
+        Assert.Null((await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync()).DeletedAt);
+    }
+
+    /// <summary>定義が論理削除されても、所属するメンバーはスケジュールを削除できる。</summary>
+    [Fact]
+    public async Task Delete_WhenDefinitionDeletedAndCallerMember_Deletes()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var created = await context.CreateScheduleAsync("orphan");
+        await context.DeleteDefinitionAsync();
+
+        // Act
+        await context.Schedules.DeleteAsync(created.ScheduleId, CancellationToken.None);
+
+        // Assert
+        await using var verify = context.Database.Factory.CreateDbContext();
+        Assert.NotNull((await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync()).DeletedAt);
+    }
+
     private static DateTime AsUtc(DateTime value) =>
         value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
@@ -249,6 +324,30 @@ public sealed class ExecutionScheduleIntegrationTests
                     WellKnownPermissionKeys.ExecutionsRead
                 }
             });
+
+        /// <summary>
+        /// 定義の Project に所属しない Principal の文脈を張る。権限キーは運用者と同じで、所属だけが無い。
+        /// </summary>
+        public IDisposable BeginOutsider() =>
+            Accessor.SetContext(TestTenantIds.DefaultContext with
+            {
+                PrincipalId = Guid.NewGuid(),
+                EffectivePermissionKeys = new HashSet<string>(StringComparer.Ordinal)
+                {
+                    WellKnownPermissionKeys.ExecutionsWrite,
+                    WellKnownPermissionKeys.ExecutionsRead
+                }
+            });
+
+        /// <summary>スケジュールの定義を論理削除する。</summary>
+        public async Task DeleteDefinitionAsync()
+        {
+            await using var db = Database.Factory.CreateDbContext();
+            var definition = await db.Definitions.IgnoreQueryFilters()
+                .SingleAsync(row => row.DefinitionId == DefinitionId);
+            definition.DeletedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
 
         public async Task<ExecutionScheduleDetailDto> CreateScheduleAsync(string name)
         {

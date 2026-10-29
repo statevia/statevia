@@ -16,6 +16,7 @@ namespace Statevia.Core.Application.Services;
 /// <param name="executor">トランザクション実行。</param>
 /// <param name="resourceGrantAuth">Principal の実行リソース許可。</param>
 /// <param name="tenantContext">呼び出しスコープのテナント文脈。Principal の無い Worker 経路を見分ける。</param>
+/// <param name="projects">呼び出し元ではない Principal（スケジュールの run-as）の実効ロール解決。</param>
 internal sealed class ExecutionAuthorizationGuard(
     IRuntimePermissionAuthorization runtimeAuth,
     IExecutionMutationAuthorization mutationAuth,
@@ -23,8 +24,12 @@ internal sealed class ExecutionAuthorizationGuard(
     IDefinitionRepository definitions,
     ICoreTransactionExecutor executor,
     PrincipalResourceGrantAuthorization resourceGrantAuth,
-    ITenantContextAccessor tenantContext)
+    ITenantContextAccessor tenantContext,
+    IProjectRepository projects)
 {
+    private const string RunAsNotProjectExecutor =
+        "runAsPrincipalId must be a member of the definition's project with the executor role or higher.";
+
     /// <summary>Runtime の executions:read を要求する。</summary>
     /// <param name="ct">キャンセル。</param>
     public Task EnsureExecutionsReadAsync(CancellationToken ct) =>
@@ -96,6 +101,82 @@ internal sealed class ExecutionAuthorizationGuard(
             .ConfigureAwait(false);
         await resourceGrantAuth.EnsureAsync(projectId.Value, definitionId, ct).ConfigureAwait(false);
     }
+
+    /// <summary>定義が属するプロジェクト上で読取可能かを、読み取りトランザクションで要求する。</summary>
+    /// <remarks>削除済み定義も所属 Project で判定する。スケジュールの単票取得から呼ぶ。</remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    public Task EnsureCanReadOnDefinitionAsync(Guid tenantId, Guid definitionId, CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => EnsureCanReadOnDefinitionAsync(uow, tenantId, definitionId, innerCt),
+            ct);
+
+    /// <summary>削除済み定義も含めて所属 Project を解決し、呼び出し元に executor 以上を要求する。</summary>
+    /// <remarks>
+    /// 既存スケジュールへの書き込み（更新・削除・手動実行）から呼ぶ。
+    /// 定義が論理削除されても、スケジュールを無効化・削除できるようにするため。
+    /// </remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="definitionId">定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義行が無い、または Project 未所属のとき。</exception>
+    /// <exception cref="ForbiddenException">所属が executor 未満のとき。コードは <c>PROJECT_ACCESS_DENIED</c>。</exception>
+    public Task EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
+        Guid tenantId,
+        Guid definitionId,
+        CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            async (uow, innerCt) =>
+            {
+                var projectId = await definitions
+                    .ResolveProjectIdIncludingDeletedAsync(uow, tenantId, definitionId, innerCt)
+                    .ConfigureAwait(false);
+                if (projectId is null)
+                    throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
+
+                await projectAuth
+                    .EnsureCanExecuteAsync(uow, tenantId, projectId.Value, innerCt)
+                    .ConfigureAwait(false);
+            },
+            ct);
+
+    /// <summary>スケジュールの run-as が、定義の Project で executor 以上のメンバーかを要求する。</summary>
+    /// <remarks>
+    /// <para>呼び出し元ではなく <paramref name="runAsPrincipalId"/> を評価する。テナント管理者の免除は無い。</para>
+    /// <para>発火時の Start は run-as を呼び出し元にして同じ所属を見るため、保存と手動実行の前に同じ条件で止める。</para>
+    /// </remarks>
+    /// <param name="tenantId">テナント ID。</param>
+    /// <param name="runAsPrincipalId">run-as の Principal。</param>
+    /// <param name="definitionId">未削除の論理定義 ID。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
+    /// <exception cref="ApiValidationException">所属が無い、または executor 未満のとき。<c>field=runAsPrincipalId</c>。</exception>
+    public Task EnsureRunAsCanExecuteOnDefinitionAsync(
+        Guid tenantId,
+        Guid runAsPrincipalId,
+        Guid definitionId,
+        CancellationToken ct) =>
+        executor.ExecuteReadOnlyAsync(
+            async (uow, innerCt) =>
+            {
+                var projectId = await definitions
+                    .ResolveProjectIdAsync(uow, tenantId, definitionId, innerCt)
+                    .ConfigureAwait(false);
+                if (projectId is null)
+                    throw new NotFoundException(ExecutionValidationMessages.DefinitionNotFound);
+
+                var role = await projects
+                    .ResolveEffectiveRoleAsync(uow, tenantId, runAsPrincipalId, projectId.Value, innerCt)
+                    .ConfigureAwait(false);
+                if (role is { } effectiveRole && ProjectAccessRolePolicy.MeetsMinimum(effectiveRole, ProjectAccessRole.Executor))
+                    return;
+
+                throw new ApiValidationException(RunAsNotProjectExecutor, new { field = "runAsPrincipalId" });
+            },
+            ct);
 
     /// <summary>
     /// User / ServiceAccount の Start に、project 許可と definition 許可の AND を要求する。
