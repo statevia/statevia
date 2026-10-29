@@ -103,7 +103,7 @@ describe("project api", () => {
 
   it("候補は system と不正行を捨てる", async () => {
     vi.mocked(apiGet).mockResolvedValue([
-      { principalId: "key-1", displayName: "module", kind: "apiKey" },
+      { principalId: "key-1", displayName: "module", kind: "serviceAccount" },
       { principalId: "sys-1", displayName: "system", kind: "system" },
       { displayName: "broken", kind: "user" },
     ]);
@@ -112,7 +112,7 @@ describe("project api", () => {
 
     expect(apiGet).toHaveBeenCalledWith("/projects/p%201/member-candidates");
     expect(rows).toEqual([
-      { principalId: "key-1", displayName: "module", kind: "apiKey" },
+      { principalId: "key-1", displayName: "module", kind: "serviceAccount" },
     ]);
   });
 

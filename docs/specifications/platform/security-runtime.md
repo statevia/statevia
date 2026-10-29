@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.5 |
-| 更新日 | 2026-10-25 |
+| Version | 1.2.6 |
+| 更新日 | 2026-10-29 |
 | 関連 | [decisions/action-module-signing.md](../../decisions/action-module-signing.md), [actions/platform.md](../actions/platform.md) |
 
 ---
@@ -127,6 +127,8 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 
 - **Owner** = `startedByPrincipalId`（Start 発行者）。Snapshot 上の `effectivePermissionKeys` で Owner 経路を評価できる（権限剥奪後も Resume / Cancel 可 — Principal が有効な場合）。定期実行の Start では Owner は run-as の ServiceAccount であり、スケジュール作成者ではない。
 - **Operator** = Owner 以外。常に Live の `executions.write` を要求。人間が定期実行の Resume / Cancel をするときは Operator。
+- 定期実行の run-as の ServiceAccount も、ユーザーと同じく定義の Project の所属で認可する。定期実行だけ所属を免除する経路は無い。発火の Start は run-as を呼び出し元にするため、run-as は定義の Project に executor 以上で所属している必要がある。有効なスケジュールの保存と手動実行の前に同じ条件を確かめ、満たさなければ 422（`field=runAsPrincipalId`）にする（[api-http.md](../api-http.md) §3.12）。
+- スケジュールの一覧と取得は、定義の Project での reader 以上の所属と実行リソース許可で絞る。`tenant.admin` でも所属が無ければ見えない。
 - スナップショット未保存の execution（移行前データ）は Resume / Cancel で **Live** にフォールバック。
 - Principal 無効化（`disabled_at` / `deleted_at` / `is_active=false`）は Identity で **403**（`PRINCIPAL_INACTIVE`）。
 

@@ -7,4 +7,7 @@ internal static class TestRepositoryFactory
 {
     /// <summary>認可なしの <see cref="DefinitionRepository"/>（Infrastructure Persistence）。</summary>
     public static DefinitionRepository CreateDefinitionRepository() => new();
+
+    /// <summary>認可なしの <see cref="ProjectRepository"/>（Infrastructure Persistence）。</summary>
+    public static ProjectRepository CreateProjectRepository() => new(new DefaultIdGenerator());
 }

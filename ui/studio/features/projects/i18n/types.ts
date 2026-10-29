@@ -21,7 +21,7 @@ export type ProjectsFeatureUiText = {
       emptyCandidates: string;
       kinds: {
         user: string;
-        apiKey: string;
+        serviceAccount: string;
         system: string;
       };
       label: (displayName: string, kindLabel: string) => string;
