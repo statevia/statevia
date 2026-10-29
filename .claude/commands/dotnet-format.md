@@ -1,5 +1,5 @@
 ---
-description: 全 .NET ソリューションに dotnet format を適用し、EditorConfig に基づく書式を統一する
+description: リポジトリ内の .NET コードに dotnet format を適用し、EditorConfig に基づく書式を統一する
 ---
 
 # dotnet-format（Claude Code 用ラッパー）

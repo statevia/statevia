@@ -25,6 +25,12 @@ dotnet_analyzer_diagnostic.category-Minor Bug.severity = warning
 dotnet_analyzer_diagnostic.category-Minor Code Smell.severity = warning
 dotnet_analyzer_diagnostic.category-Minor Vulnerability.severity = warning
 
+# IDE0005: 不要な using。既定の重大度は hidden で、dotnet format style --severity info の対象にならない。
+# suggestion にして dotnet-format-all.ps1 -VerifyNoChanges（CI）で検出する。
+# warning にしないのは、EnforceCodeStyleInBuild のプロジェクトで GenerateDocumentationFile が false だと
+# ビルドが EnableGenerateDocumentationFile 警告を出し、Warning 0 を崩すため。
+dotnet_diagnostic.IDE0005.severity = suggestion
+
 # =============================================================================
 # core/engine/Statevia.Core.Engine.Tests
 # =============================================================================
