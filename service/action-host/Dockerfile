@@ -2,7 +2,8 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 WORKDIR /src
 
-# Abstractions.csproj が Import する（無いと MSB4019）
+# 共通のビルド設定とパッケージ版。Directory.Build.props が build/ の props を読み込む（どれが欠けても restore に失敗する）
+COPY Directory.Build.props Directory.Packages.props ./
 COPY build/ ./build/
 
 COPY service/action-host/Statevia.Service.ActionHost/Statevia.Service.ActionHost.csproj ./service/action-host/Statevia.Service.ActionHost/

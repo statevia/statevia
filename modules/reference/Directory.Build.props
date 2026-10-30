@@ -3,5 +3,6 @@
     <!-- reference スキャン以外では Sonar の protobuf を出さない。 -->
     <StateviaSonarComponent>reference</StateviaSonarComponent>
   </PropertyGroup>
-  <Import Project="..\..\build\SonarQube.ComponentScope.props" />
+  <!-- 共通設定。StateviaSonarComponent を設定した後に読み込む。 -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 </Project>

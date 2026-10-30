@@ -12,10 +12,10 @@
   <!--
     プロダクションコードだけ SonarAnalyzer を参照する。テストは Scanner と同じく対象外。
     重大度は .editorconfig の Sonar カテゴリで Warning にし、Cursor が診断を読めるようにする。
-    バージョンは IDE に入っている SonarQube for IDE の Analyzer（10.35）に合わせる。
+    版は Directory.Packages.props で、IDE に入っている SonarQube for IDE の Analyzer に合わせる。
   -->
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138">
+    <PackageReference Include="SonarAnalyzer.CSharp">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
