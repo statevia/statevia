@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.11 |
-| 更新日 | 2026-09-03 |
+| Version | 1.12 |
+| 更新日 | 2026-10-30 |
 | 関連 | [../../service/cli/Statevia.Service.Cli/](../../service/cli/Statevia.Service.Cli/) |
 
 ---
@@ -83,7 +83,7 @@ statevia def validate path/to/workflow.yaml --name override-name
 Service API の定義運用コアを呼びます。認証は `auth login` または `--api-key` / ホーム `secrets` です。`--api-base` / `--tenant` はフラグ > 環境変数 > ホーム `config` です。
 
 ```bash
-statevia def create --file path/to/workflow.yaml
+statevia def create --file path/to/workflow.yaml --project-id <project-uuid>
 # --name 省略時は YAML の workflow 名。両方あるときは --name 優先
 
 statevia def publish <id> --file path/to/workflow.yaml
@@ -98,12 +98,14 @@ statevia def restore <id>
 | サブコマンド | HTTP |
 | --- | --- |
 | `validate <yaml-file> [--name]` | `POST /v1/definitions/validate` |
-| `create --file [--name]` | `POST /v1/definitions` |
+| `create --file --project-id [--name]` | `POST /v1/definitions` |
 | `publish <id> --file [--name]` | `PUT /v1/definitions/{id}`（版追加） |
 | `list` | `GET /v1/definitions`（`--limit` 既定 50、`--offset` 既定 0） |
 | `get <id>` | `GET /v1/definitions/{id}` |
 | `delete <id>` | `DELETE /v1/definitions/{id}` |
 | `restore <id>` | `POST /v1/definitions/{id}/restore` |
+
+`create` の `--project-id` は必須で、定義を置く Project の UUID を渡します。呼び出し元が Publisher 以上で所属している Project でなければなりません。省略すると API を呼ばずに失敗します。Project の UUID は `GET /v1/projects`（所属 Project の一覧）の `projectId` で確かめます。`publish` は所属 Project を変えないので `--project-id` を取りません。
 
 `list` の任意フィルタ: `--name` / `--sort-by` / `--sort-order` / `--include-deleted`。`create` / `publish` / `delete` / `restore` には任意 `--idempotency-key`（未指定時は自動生成しない）。`validate` には付けない。成功時は API JSON を stdout へ（204 は空）。graph / SSE は対象外です。パスの `id` は 1 セグメントだけを許し、`/` や `..` は拒否します。
 

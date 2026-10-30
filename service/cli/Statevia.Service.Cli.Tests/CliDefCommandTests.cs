@@ -6,6 +6,9 @@ namespace Statevia.Service.Cli.Tests;
 /// <summary><c>def</c> サブコマンドの HttpListener テスト。</summary>
 public sealed class CliDefCommandTests : IDisposable
 {
+    /// <summary>create に渡す所属 Project。本文に同じ値が載ることを確かめる。</summary>
+    private const string ProjectId = "0193a5f2-7c41-7d2e-9b1a-3f6e8c2d4a10";
+
     private readonly CliIsolatedHome _home = new();
 
     /// <inheritdoc />
@@ -44,9 +47,9 @@ public sealed class CliDefCommandTests : IDisposable
         Assert.DoesNotContain("Reload requires", stderr, StringComparison.Ordinal);
     }
 
-    /// <summary>create は name と yaml を送り、2xx JSON を stdout に出す。</summary>
+    /// <summary>create は name・yaml・projectId を送り、2xx JSON を stdout に出す。</summary>
     [Fact]
-    public async Task DefCreate_SendsNameAndYaml()
+    public async Task DefCreate_SendsNameYamlAndProjectId()
     {
         // Arrange
         CliCommandTestSupport.SaveValidCredentials();
@@ -66,6 +69,8 @@ public sealed class CliDefCommandTests : IDisposable
             "create",
             "--file",
             yamlPath,
+            "--project-id",
+            ProjectId,
             "--api-base",
             $"http://127.0.0.1:{port}",
             "--tenant",
@@ -79,7 +84,67 @@ public sealed class CliDefCommandTests : IDisposable
         Assert.Equal("acme-corp", captured.TenantId);
         Assert.Contains("\"name\":\"cli-test\"", captured.Body, StringComparison.Ordinal);
         Assert.Contains("workflow:", captured.Body, StringComparison.Ordinal);
+        Assert.Contains($"\"projectId\":\"{ProjectId}\"", captured.Body, StringComparison.Ordinal);
         Assert.Contains("wf-1", stdout, StringComparison.Ordinal);
+    }
+
+    /// <summary>create は --project-id が無いと API を呼ばずに失敗する。</summary>
+    [Fact]
+    public async Task DefCreate_WithoutProjectId_ReturnsFailureWithoutCallingApi()
+    {
+        // Arrange
+        CliCommandTestSupport.SaveValidCredentials();
+        var yamlPath = await CliCommandTestSupport.WriteTempYamlAsync(CliCommandTestSupport.ValidYaml);
+
+        // Act
+        var (exitCode, _, stderr) = await CliCommandTestSupport.RunAsync(
+            "def",
+            "create",
+            "--file",
+            yamlPath,
+            "--api-base",
+            "http://127.0.0.1:1",
+            "--tenant",
+            "acme-corp");
+
+        // Assert
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains("--project-id", stderr, StringComparison.Ordinal);
+        Assert.DoesNotContain("connection", stderr, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>publish は所属 Project を変えないため projectId を送らない。</summary>
+    [Fact]
+    public async Task DefPublish_DoesNotSendProjectId()
+    {
+        // Arrange
+        CliCommandTestSupport.SaveValidCredentials();
+        var yamlPath = await CliCommandTestSupport.WriteTempYamlAsync(CliCommandTestSupport.ValidYaml);
+        var port = CliCommandTestSupport.GetFreeTcpPort();
+        using var listener = new HttpListener();
+        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        listener.Start();
+        var listenerTask = CliCommandTestSupport.RespondOnceAsync(
+            listener,
+            HttpStatusCode.OK,
+            """{"displayId":"wf-1","latestVersion":2}""");
+
+        // Act
+        var (exitCode, _, _) = await CliCommandTestSupport.RunAsync(
+            "def",
+            "publish",
+            "wf-1",
+            "--file",
+            yamlPath,
+            "--api-base",
+            $"http://127.0.0.1:{port}",
+            "--tenant",
+            "acme-corp");
+        var captured = await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.Equal(0, exitCode);
+        Assert.DoesNotContain("projectId", captured.Body, StringComparison.Ordinal);
     }
 
     /// <summary>--name は YAML 上の名前より優先する。</summary>
@@ -106,6 +171,8 @@ public sealed class CliDefCommandTests : IDisposable
             yamlPath,
             "--name",
             "flag-name",
+            "--project-id",
+            ProjectId,
             "--api-base",
             $"http://127.0.0.1:{port}",
             "--tenant",
