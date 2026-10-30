@@ -1,7 +1,12 @@
 <Project>
-  <!-- uuid-v7-id-generation-consistency: Guid.NewGuid 禁止パイロット（テスト・Engine は対象外） -->
-  <ItemGroup Condition="'$(IsTestProject)' != 'true'">
-    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+  <!--
+    uuid-v7-id-generation-consistency: Guid.NewGuid の禁止（ルートの Directory.Build.props が読み込む）。
+    テストと、StateviaAllowGuidNewGuid=true を設定したプロジェクト（Engine など）は対象外。
+    条件は ItemGroup に置く。項目の条件はプロパティをすべて評価した後に評価されるため、csproj で設定した値も効く。
+    版は Directory.Packages.props。
+  -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' and '$(StateviaAllowGuidNewGuid)' != 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt" />
   </ItemGroup>
 </Project>

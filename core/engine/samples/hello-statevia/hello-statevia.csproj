@@ -2,9 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <!-- Engine のサンプル。Engine と同じく、Guid.NewGuid の禁止（build/BannedGuidNewGuid.props）の対象外にする。 -->
+    <StateviaAllowGuidNewGuid>true</StateviaAllowGuidNewGuid>
   </PropertyGroup>
 
   <ItemGroup>

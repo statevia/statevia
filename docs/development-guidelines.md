@@ -73,6 +73,8 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 - **XML ドキュメント**: `public` / `internal` の型・メンバーに `/// <summary>` 等を付ける。`private` は意図が自明でない箇所のみ。
 - **テスト**: メソッドごとに日本語の `/// <summary>` と **`// Arrange` / `// Act` / `// Assert`** 区切り。1 テスト 1 シナリオ（AAA）。
 - **セキュリティ**: 外部入力の検証、認可・テナント境界、機密情報の非出力（ログ・エラー応答含む）。
+- **共通のビルド設定**: `TargetFramework` / `Nullable` / `ImplicitUsings` と `Guid.NewGuid` の禁止（`build/BannedGuidNewGuid.props`）は、ルートの `Directory.Build.props` で全プロジェクトに効かせる。csproj には書かない。禁止から外すプロジェクト（Engine など）は、csproj で `StateviaAllowGuidNewGuid` を `true` にする。C# のイメージのビルドはコンポーネント別の `Directory.Build.props` をコピーしないため、イメージのビルドにも効かせる例外はそこに書かない。
+- **パッケージ版**: ルートの `Directory.Packages.props`（Central Package Management）に `PackageVersion` で置く。csproj と props / targets の `PackageReference` には `Version` を書かない（書くと NU1008 になる）。同じパッケージの版は 1 つにし、EF Core（`Microsoft.EntityFrameworkCore.*`）は製品とテストで同じ版にする。
 - **構造化ログ**: `ILogger.Log*`（`LogWarning` / `LogError` 等）を直接呼ばない。`[LoggerMessage]` のソース生成 partial（例: `*LogMessages.cs`）経由で出す。キー命名と EventId の桁は [`reference/logging-property-keys.md`](reference/logging-property-keys.md)。
 - **Options 検証（Service API）**: `AddOptions<T>().Bind()` した設定は、次の分類で扱う。キー別の許容範囲・不正時挙動は [`reference/environment-variables.md`](reference/environment-variables.md) を参照する。
   - **A（起動失敗）**: 範囲外・矛盾など既定では安全に動けない値 → `.Validate()` + `ValidateOnStart()`。メッセージはキー名と制約のみ（値は出さない）。
@@ -282,6 +284,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-10-30 | §4.1 に、ルートの `Directory.Build.props`（共通のビルド設定）と `Directory.Packages.props`（パッケージ版の一元管理）を追記 |
 | 2026-10-26 | §4.3 に UI ESLint の `sonarjs` 導入・off にしたルールと理由、`jsx-a11y/prefer-tag-over-role` を追記 |
 | 2026-10-04 | §4.2 に画面フックと UI の境界を追記 |
 | 2026-10-03 | §4.4 / §5 の Sonar 送信先を SonarQube Cloud（組織 `statevia`、Sonar way）へ更新 |

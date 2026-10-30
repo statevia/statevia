@@ -1,9 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <RootNamespace>Statevia.Core.Engine</RootNamespace>
     <AssemblyName>Statevia.Core.Engine</AssemblyName>
     <PackageId>Statevia.Core.Engine</PackageId>
@@ -11,6 +8,8 @@
     <Authors>MichiharuShiba</Authors>
     <Description>Definition-driven workflow execution engine based on state-driven FSM</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Engine は DI 境界のため、当面 Guid.NewGuid を許す（build/BannedGuidNewGuid.props の対象外）。 -->
+    <StateviaAllowGuidNewGuid>true</StateviaAllowGuidNewGuid>
     <!-- SonarScanner for .NET: SDK 形式は既定 GUID を持たない。sln 外の ProjectReference で 00000000 重複警告になるのを防ぐ。 -->
     <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
   </PropertyGroup>
@@ -20,9 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-    <PackageReference Include="YamlDotNet" Version="15.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
 </Project>

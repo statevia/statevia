@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    C# の全プロジェクトに共通のビルド設定。
+    - コンポーネント別の Directory.Build.props は、StateviaSonarComponent を設定してから本ファイルを読み込む。
+      build/SonarQube.ComponentScope.props の条件は読み込んだ時点で評価されるため、順序が逆だと担当外の除外が効かない。
+    - C# のイメージの Dockerfile は、本ファイルと Directory.Packages.props、build/ をコピーする。
+      コンポーネント別の props はコピーしないため、イメージのビルドにも効かせる例外は csproj に書く。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Guid.NewGuid の禁止。テストと、StateviaAllowGuidNewGuid=true のプロジェクトは対象外。 -->
+  <Import Project="$(MSBuildThisFileDirectory)build\BannedGuidNewGuid.props" />
+  <Import Project="$(MSBuildThisFileDirectory)build\SonarQube.ComponentScope.props" />
+</Project>

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Actions.Abstractions は API スキャンで解析する。他コンポーネントでは Sonar protobuf を出さない。 -->
+    <StateviaSonarComponent>api</StateviaSonarComponent>
+  </PropertyGroup>
+  <!-- 共通設定。StateviaSonarComponent を設定した後に読み込む。 -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+</Project>

@@ -4,6 +4,8 @@
     sonar.exclusions でファイルを落としても protobuf は残るため、
     「analysis context にファイルが無い」警告が出る。
     コンポーネント専用スキャンでは、担当外プロジェクトを SonarQubeExclude する。
+    条件は読み込んだ時点で評価されるため、StateviaSonarComponent は、本ファイルを読み込む
+    ルートの Directory.Build.props より前（コンポーネント別の Directory.Build.props）で設定する。
   -->
   <PropertyGroup Condition="'$(StateviaSonarScope)' != '' and '$(StateviaSonarComponent)' != '' and '$(StateviaSonarScope)' != '$(StateviaSonarComponent)'">
     <SonarQubeExclude>true</SonarQubeExclude>
