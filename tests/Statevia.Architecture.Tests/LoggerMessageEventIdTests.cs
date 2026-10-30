@@ -144,12 +144,16 @@ public sealed partial class LoggerMessageEventIdTests
         throw new DirectoryNotFoundException("statevia.sln を含むリポジトリルートが見つかりません。");
     }
 
-    /// <summary>ビルド出力・依存パッケージなど走査しないディレクトリかを判定する。</summary>
+    /// <summary>ビルド出力・依存パッケージ・worktree など、走査しないディレクトリかを判定する。</summary>
+    /// <remarks>
+    /// <c>.claude</c> を外すのは、Claude Code が worktree（リポジトリの完全な写し）を <c>.claude/worktrees/</c> に置くため。
+    /// 写しを数えると、すべての EventId が本体との組で重複と報告される。<c>.claude</c> は設定の置き場で、C# のソースは無い。
+    /// </remarks>
     /// <param name="relativePath">リポジトリルートからの相対パス。</param>
     private static bool IsExcludedDirectory(string relativePath) =>
         relativePath
             .Split(PathSeparators)
-            .Any(segment => segment is "bin" or "obj" or "node_modules" or ".git" or "artifacts");
+            .Any(segment => segment is "bin" or "obj" or "node_modules" or ".git" or "artifacts" or ".claude");
 
     /// <summary><c>LoggerMessage</c> 属性の引数部を捕捉する（複数行の属性も対象）。</summary>
     [GeneratedRegex(@"\[LoggerMessage\s*\((?<arguments>.*?)\)\s*\]", RegexOptions.Singleline)]
