@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.5 |
-| 更新日 | 2026-09-05 |
+| Version | 1.6 |
+| 更新日 | 2026-10-30 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
 ---
@@ -12,6 +12,8 @@
 Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を publish して実行するまでの最短手順。定義 YAML の例は [samples/](../samples/)。
 
 定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
+
+**Version 1.6（2026-10-30）**: 定義登録に必須の `projectId` を、所属 Project の一覧から取る（無ければ作る）手順を追加。
 
 **Version 1.5（2026-09-05）**: 定義名・状態名・イベント名は ASCII 識別子。既存の非 ASCII 識別子は次回 write で 422。
 
@@ -73,7 +75,7 @@ docker compose up -d
 
 ## 3. 認証（Runtime API）
 
-`/v1/definitions` / `/v1/executions` / `/v1/events` / `/v1/actions` は **Principal 必須**（JWT または `X-Api-Key`）+ `X-Tenant-Id`（`tenant_key`、既定 `default`）。
+`/v1/definitions` / `/v1/executions` / `/v1/projects` / `/v1/events` / `/v1/actions` は **Principal 必須**（JWT または `X-Api-Key`）+ `X-Tenant-Id`（`tenant_key`、既定 `default`）。
 
 **Development**（`docker compose` の既定）では API 起動時に次の管理者が自動作成される（`skip-if-exists`、マイグレーション適用後）:
 
@@ -95,20 +97,35 @@ curl -s -X POST http://localhost:8080/v1/auth/login \
 
 初回は **`POST /v1/definitions`**（`201 Created`）。`PUT /v1/definitions/{id}` は **既存定義への版追加** のみで、未定義の ID では **404** になる。
 
-本文は **`application/json`**（`name` + `yaml`）。詳細は [api-http.md](../specifications/api-http.md)。
+本文は **`application/json`**（`name` + `yaml` + `projectId`）。`projectId` は必須で、省略すると **422**（`field=projectId`）。呼び出し元が Publisher 以上で所属する Project を指定する。詳細は [api-http.md](../specifications/api-http.md)。
+
+`projectId` は `GET /v1/projects`（所属 Project の一覧）から取る。新しく作った環境では Project が 1 つも無いので、`POST /v1/projects` で作る（作成者が admin になる）。次の手順は `slug` が `default` の Project を使い、無ければ作る。
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"tenantKey":"default","username":"admin","password":"admin123"}' | jq -r .accessToken)
 
+PROJECT_ID=$(curl -s "http://localhost:8080/v1/projects" \
+  -H "X-Tenant-Id: default" \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.[] | select(.slug=="default") | .projectId')
+
+[ -n "$PROJECT_ID" ] || PROJECT_ID=$(curl -s -X POST "http://localhost:8080/v1/projects" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"slug":"default","displayName":"Default"}' | jq -r .projectId)
+
 DEF_ID=$(curl -s -X POST "http://localhost:8080/v1/definitions" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -H "Authorization: Bearer $TOKEN" \
   -d "$(jq -n --rawfile yaml docs/samples/ui-customer-order-parallel.yaml \
-    '{name:"my-workflow",yaml:$yaml}')" | jq -r .displayId)
+    --arg projectId "$PROJECT_ID" \
+    '{name:"my-workflow",yaml:$yaml,projectId:$projectId}')" | jq -r .displayId)
 ```
+
+テナント内に `default` の slug が既にあり自分が所属していないときは、作成が **422**（`field=slug`）になる。その場合は所属している別の Project の `projectId` を使う。
 
 YAML を改訂して再 publish する場合は `PUT /v1/definitions/$DEF_ID` を使う（版が 1 つ増える）。
 

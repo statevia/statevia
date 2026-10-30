@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.5 |
-| 更新日 | 2026-09-03 |
+| Version | 1.6 |
+| 更新日 | 2026-10-30 |
 | 関連 | [getting-started.md](getting-started.md), [../specifications/api-http.md](../specifications/api-http.md) |
 
 ---
 
 Service API（`http://localhost:8080`）への代表的な HTTP 呼び出し例。契約の正本は [api-http 仕様](../specifications/api-http.md) です。
+
+**Version 1.6（2026-10-30）**: 定義の初回登録に必須の `projectId` と、所属 Project の一覧の例を追加。
 
 **Version 1.5（2026-09-03）**: `POST /v1/definitions/validate` の dry-run 例を追加。
 
@@ -42,9 +44,19 @@ curl -s -X POST "http://localhost:8080/v1/definitions/validate" \
     '{yaml:$yaml}')"
 ```
 
+## 所属 Project の一覧
+
+`GET /v1/projects` — 呼び出し元が所属する Project の配列を返す。各項目の `projectId` を定義の初回登録に使う。所属が無ければ `POST /v1/projects`（`slug` と `displayName`）で作る。作成者が admin になる。
+
+```bash
+PROJECT_ID=$(curl -s "http://localhost:8080/v1/projects" \
+  -H "X-Tenant-Id: default" \
+  -H "Authorization: Bearer <token>" | jq -r '.[] | select(.slug=="default") | .projectId')
+```
+
 ## 定義の初回登録
 
-`POST /v1/definitions` — `Content-Type: application/json` で `name` と `yaml` を送る。応答の `displayId` を実行開始時の `definitionId` に使う。
+`POST /v1/definitions` — `Content-Type: application/json` で `name`、`yaml`、`projectId` を送る。`projectId` は必須で、省略は 422（`field=projectId`）。応答の `displayId` を実行開始時の `definitionId` に使う。
 
 ```bash
 DEF_ID=$(curl -s -X POST "http://localhost:8080/v1/definitions" \
@@ -52,7 +64,8 @@ DEF_ID=$(curl -s -X POST "http://localhost:8080/v1/definitions" \
   -H "X-Tenant-Id: default" \
   -H "Authorization: Bearer <token>" \
   -d "$(jq -n --rawfile yaml docs/samples/ui-customer-order-parallel.yaml \
-    '{name:"my-workflow",yaml:$yaml}')" | jq -r .displayId)
+    --arg projectId "$PROJECT_ID" \
+    '{name:"my-workflow",yaml:$yaml,projectId:$projectId}')" | jq -r .displayId)
 ```
 
 ## 定義の版追加（既存のみ）
