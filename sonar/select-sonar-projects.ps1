@@ -6,7 +6,7 @@
 .DESCRIPTION
   push では 7 件すべてを選ぶ。
   pull_request では変更ファイルに対応するコンポーネントだけを選ぶ。
-  sonar/、build/、Directory.Build.*、Directory.Packages.props、.editorconfig の変更は全件を選ぶ。
+  sonar/、build/、Directory.Build.*、Directory.Packages.props、global.json、.editorconfig の変更は全件を選ぶ。
   結果は GITHUB_OUTPUT の has_work と matrix（JSON 配列）へ書く。
   対象が 0 件のときは has_work=false とし、空配列でワークフローが落ちないようプレースホルダを matrix に入れる。
 
@@ -71,6 +71,7 @@ $sharedPrefixes = @(
     'build/',
     'Directory.Build.',
     'Directory.Packages.props',
+    'global.json',
     '.editorconfig',
     '.github/workflows/sonar.yml'
 )

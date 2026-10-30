@@ -126,7 +126,9 @@ function Ensure-TestModuleLayout {
         throw "TestActionModule build failed."
     }
 
-    $outDir = Join-Path $repoRoot "service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/bin/Release/net8.0"
+    # 出力先の対象フレームワークは、ルートの Directory.Build.props の値をビルドシステムから読む（版を直書きしない）。
+    $targetFramework = (& dotnet msbuild $moduleProject -getProperty:TargetFramework).Trim()
+    $outDir = Join-Path $repoRoot "service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/bin/Release/$targetFramework"
     $entryDll = Join-Path $outDir "TestActionModule.dll"
     if (-not (Test-Path $entryDll)) {
         throw "Built assembly not found: $entryDll"

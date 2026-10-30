@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.6 |
-| 更新日 | 2026-10-30 |
+| Version | 1.7 |
+| 更新日 | 2026-10-31 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
 ---
@@ -12,6 +12,8 @@
 Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を publish して実行するまでの最短手順。定義 YAML の例は [samples/](../samples/)。
 
 定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
+
+**Version 1.7（2026-10-31）**: 必要な SDK を .NET 10 に更新。
 
 **Version 1.6（2026-10-30）**: 定義登録に必須の `projectId` を、所属 Project の一覧から取る（無ければ作る）手順を追加。
 
@@ -26,7 +28,7 @@ Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を
 ## 前提
 
 - Docker / Docker Compose が使えること
-- .NET 8 SDK（マイグレーションをホストから実行する場合）
+- .NET 10 SDK（マイグレーションをホストから実行する場合。リポジトリルートの `global.json` で 10 系に限っている）
 - リポジトリルートに `.env`（初回は `.env.example` をコピー）
 
 ## 1. データベースとマイグレーション

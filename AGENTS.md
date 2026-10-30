@@ -89,4 +89,4 @@ Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines
 
 ## .NET SDK
 
-.NET 8: `/usr/local/share/dotnet`（Cloud VM）。PATH は `~/.bashrc` 参照。
+.NET 10 SDK が必要（リポジトリルートの `global.json` で 10 系に限っている）。Cloud VM での置き場所は `/usr/local/share/dotnet`。PATH は `~/.bashrc` 参照。

@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.3 |
-| 更新日 | 2026-10-30 |
+| Version | 2.4 |
+| 更新日 | 2026-10-31 |
 | 関連 | [ui-studio-structure.md](ui-studio-structure.md), [overview.md](overview.md) |
+
+**Version 2.4（2026-10-31）**: ルートに C# の SDK を 10 系に限る `global.json` を追加。
 
 **Version 2.3（2026-10-30）**: ルートに C# の `Directory.Build.props`（共通のビルド設定）と `Directory.Packages.props`（パッケージ版）を追加。既存の `Directory.Build.targets` もツリーに載せた。
 
@@ -27,6 +29,7 @@ statevia/
 ├─ Directory.Build.props        # C# の共通ビルド設定（対象 FW・Nullable・ImplicitUsings・Guid.NewGuid の禁止）
 ├─ Directory.Build.targets      # C# の Sonar 用設定（テストの除外・SonarAnalyzer）
 ├─ Directory.Packages.props     # C# のパッケージ版（Central Package Management）
+├─ global.json                  # C# の SDK を 10 系に限る（rollForward: latestFeature）
 ├─ docker-compose.yml            # postgres + service-api (C#) + ui
 ├─ .env.example                  # POSTGRES_*（.env はコミットしない）
 │

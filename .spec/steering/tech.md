@@ -2,14 +2,14 @@
 
 ## Project Type
 
-モノレポ構成の **ワークフローエンジン + REST API + Web UI**。バックエンドは **.NET 8**、フロントは **Node.js 上の Next.js**。
+モノレポ構成の **ワークフローエンジン + REST API + Web UI**。バックエンドは **.NET 10**、フロントは **Node.js 上の Next.js**。
 
 ## Primary Languages & Runtimes
 
 | 領域 | 言語 / ランタイム |
 | --- | --- |
-| Engine / Application / Infrastructure | C# / .NET 8 |
-| Service API / Action Host / CLI | C# / ASP.NET Core（.NET 8） |
+| Engine / Application / Infrastructure | C# / .NET 10 |
+| Service API / Action Host / CLI | C# / ASP.NET Core（.NET 10） |
 | UI | TypeScript / React / Next.js |
 
 ## Key Dependencies（概要）
