@@ -76,6 +76,14 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
 
         public bool Unload(string executionId) => false;
 
+        // ステップ完了・Suspend・Fork 展開の 3 つのハンドラがすべて登録されているか。
+        internal bool HasAllHandlers =>
+            _nodeCompletedHandler is not null && _suspendHandler is not null && _forkExpansionHandler is not null;
+
+        // 3 つのハンドラのどれかが登録されたまま残っているか。
+        internal bool HasAnyHandler =>
+            _nodeCompletedHandler is not null || _suspendHandler is not null || _forkExpansionHandler is not null;
+
         internal Task EmitNodeCompletedAsync(Guid executionId) =>
             _nodeCompletedHandler?.Invoke(executionId.ToString("D")) ?? Task.CompletedTask;
 
@@ -544,6 +552,69 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
             // 既に Stop 済みでも二重停止は許容されるため、テスト終了時に安全側で呼ぶ。
             await queue.StopAsync(CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// StartAsync が返った時点で、エンジンの通知ハンドラ 3 つが登録済みであることを確認する。
+    /// .NET 10 では ExecuteAsync 全体がバックグラウンドで動くため、登録を ExecuteAsync に置くと起動直後の通知を取りこぼす。
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WhenReturned_RegistersAllEngineHandlers()
+    {
+        // Arrange
+        var executionEngine = new FakeExecutionEngine();
+        var executionService = new FakeExecutionService(failuresBeforeSuccess: 0);
+        await using var serviceProvider = BuildServiceProvider(executionService);
+        var queue = BuildQueueService(executionEngine, serviceProvider, new ExecutionProjectionQueueOptions
+        {
+            MaxGlobalQueueSize = 10,
+            ProjectionFlushDebounceMs = 0,
+            MaxRetryAttempts = 3,
+            RetryBaseDelayMs = 0,
+            RetryMaxDelayMs = 0
+        });
+
+        // Act
+        await queue.StartAsync(CancellationToken.None);
+
+        try
+        {
+            // Assert
+            Assert.True(executionEngine.HasAllHandlers);
+        }
+        finally
+        {
+            await queue.StopAsync(CancellationToken.None);
+        }
+    }
+
+    /// <summary>
+    /// Dispose の後に StopAsync が呼ばれても例外にならないことを確認する（WebApplicationFactory の破棄で起きる順序）。
+    /// </summary>
+    [Fact]
+    public async Task StopAsync_AfterDispose_DoesNotThrow()
+    {
+        // Arrange
+        var executionEngine = new FakeExecutionEngine();
+        var executionService = new FakeExecutionService(failuresBeforeSuccess: 0);
+        await using var serviceProvider = BuildServiceProvider(executionService);
+        var queue = BuildQueueService(executionEngine, serviceProvider, new ExecutionProjectionQueueOptions
+        {
+            MaxGlobalQueueSize = 10,
+            ProjectionFlushDebounceMs = 0,
+            MaxRetryAttempts = 3,
+            RetryBaseDelayMs = 0,
+            RetryMaxDelayMs = 0
+        });
+        await queue.StartAsync(CancellationToken.None);
+        queue.Dispose();
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => queue.StopAsync(CancellationToken.None));
+
+        // Assert
+        Assert.Null(exception);
+        Assert.False(executionEngine.HasAnyHandler);
     }
 
     /// <summary>
