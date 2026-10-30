@@ -67,6 +67,11 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
     private readonly int _maxRetryAttempts;
     private readonly int _retryBaseDelayMs;
     private readonly int _retryMaxDelayMs;
+    // エンジンの通知ハンドラに渡す停止トークン。ハンドラは StartAsync で登録するが、
+    // BackgroundService の stoppingToken は base.StartAsync の中で作られるため、自前で持つ。StopAsync で取り消す。
+    private readonly CancellationTokenSource _handlerStopping = new();
+    // Dispose 済みか。WebApplicationFactory などは Dispose の後に StopAsync を呼ぶことがあるため、破棄済みの CTS に触れないよう使う。
+    private bool _disposed;
 
     public ExecutionProjectionUpdateQueueService(
         IServiceScopeFactory scopeFactory,
@@ -161,8 +166,30 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
         }
     }
 
+    /// <summary>
+    /// エンジンの通知ハンドラを登録してから、ワーカーループを開始する。
+    /// </summary>
+    /// <remarks>
+    /// .NET 10 以降、<see cref="BackgroundService"/> は <c>ExecuteAsync</c> 全体をバックグラウンドで実行する。
+    /// 登録を <c>ExecuteAsync</c> に置くと、StartAsync が返った時点で未登録のことがあり、
+    /// 起動直後のステップ完了通知（checkpoint と投影更新）を取りこぼす。そのため、ここで同期的に登録する。
+    /// </remarks>
+    /// <param name="cancellationToken">起動の取り消し。</param>
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        RegisterEngineHandlers(_handlerStopping.Token);
+        return base.StartAsync(cancellationToken);
+    }
+
     /// <inheritdoc />
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        RunWorkerLoopAsync(stoppingToken);
+
+    /// <summary>
+    /// エンジンのステップ完了・Suspend・Fork 展開の通知ハンドラを登録する。
+    /// </summary>
+    /// <param name="stoppingToken">ハンドラ内の処理に渡す停止トークン。</param>
+    private void RegisterEngineHandlers(CancellationToken stoppingToken)
     {
         // Engine からの通知は executionId(string) で届くので Guid へ変換して queue へ流す。
         // ステップ完了ごとに checkpoint（Unload なし）を先に永続化し、続けて投影更新を enqueue する。
@@ -242,8 +269,6 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
                     () => handler.HandleAsync(evt, stoppingToken))
                 .ConfigureAwait(false);
         });
-
-        return RunWorkerLoopAsync(stoppingToken);
     }
 
     /// <summary>
@@ -287,7 +312,26 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
         _executionEngine.SetSuspendHandler(null);
         _executionEngine.SetForkExpansionHandler(null);
         await DrainPendingExecutionsOnShutdownAsync(cancellationToken).ConfigureAwait(false);
+        // ハンドラの停止トークンは、従来の stoppingToken と同じく base.StopAsync の直前に取り消す。
+        // Dispose 済みなら Dispose で取り消してある。
+        if (!_disposed)
+            await _handlerStopping.CancelAsync().ConfigureAwait(false);
         await base.StopAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// ハンドラの停止トークンを取り消してから破棄する（<see cref="BackgroundService"/> が Dispose で stoppingToken を取り消すのに合わせる）。
+    /// </summary>
+    public override void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            _handlerStopping.Cancel();
+            _handlerStopping.Dispose();
+        }
+
+        base.Dispose();
     }
 
     /// <summary>
