@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 
 WORKDIR /src
 
@@ -21,7 +21,7 @@ COPY infrastructure/Statevia.Infrastructure.Modules/ ./infrastructure/Statevia.I
 RUN dotnet publish ./service/action-host/Statevia.Service.ActionHost/Statevia.Service.ActionHost.csproj \
     -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 
 ARG APP_UID=10001
 ARG APP_GID=10001

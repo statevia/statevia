@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2 |
-| 更新日 | 2026-08-15 |
+| Version | 1.3 |
+| 更新日 | 2026-10-31 |
 | 関連 | [platform.md](platform.md), [guides/operations-docker.md](../../guides/operations-docker.md) |
 
 ---
@@ -54,6 +54,12 @@ Service API は module ディレクトリの **直下**（サブフォルダは�
 | 直下に `*.dll` が 0 または 2 以上（かつ `{name}.dll` なし） | **skip**（load されない） |
 
 **推奨**: ディレクトリ名と同名の `{moduleDirectoryName}.dll` を zip に含める。
+
+### 対象フレームワーク
+
+- ホスト（Service API・Action Host）は **.NET 10** で動く。新しく作る Module は `net10.0` でビルドする。
+- `net8.0` でビルドして配布済みの Module は、作り直さずにそのまま読み込める。共有アセンブリ（§3）は、Module が同梱していてもホストの版が使われる。
+- 2026-10-31 に、`net8.0` でビルドしたテスト用 Module とリファレンス Module（`statevia.action.reference.http` / `statevia.action.reference.notification`）を .NET 10 のホストに置き、読み込みと Catalog への掲載を確かめた（テスト用 Module は Action の実行まで）。
 
 ---
 

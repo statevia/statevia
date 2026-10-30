@@ -178,6 +178,48 @@ public sealed class DatabaseConnectionTests
         Assert.Contains("Password=secret", connectionString, StringComparison.Ordinal);
     }
 
+    /// <summary>GSS 暗号化の指定が無い接続文字列には、無効の指定を末尾に足す。</summary>
+    [Fact]
+    public void Resolve_AddsGssEncryptionDisable_WhenNotSpecified()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder().Build();
+
+        // Act
+        var connectionString = DatabaseConnection.Resolve(config, "Host=cli;Database=statevia;Username=u;Password=p;");
+
+        // Assert
+        Assert.Equal("Host=cli;Database=statevia;Username=u;Password=p;GSS Encryption Mode=Disable", connectionString);
+    }
+
+    /// <summary>GSS 暗号化を明示した接続文字列は、そのまま使う。</summary>
+    [Fact]
+    public void WithGssEncryptionDisabledByDefault_KeepsExplicitSetting()
+    {
+        // Arrange
+        const string connectionString = "Host=h;Database=d;gss encryption mode=Require";
+
+        // Act
+        var result = DatabaseConnection.WithGssEncryptionDisabledByDefault(connectionString);
+
+        // Assert
+        Assert.Equal(connectionString, result);
+    }
+
+    /// <summary>別名のキー（GssEncryptionMode）で明示した場合も、そのまま使う。</summary>
+    [Fact]
+    public void WithGssEncryptionDisabledByDefault_KeepsExplicitSettingByAlias()
+    {
+        // Arrange
+        const string connectionString = "Host=h;Database=d;GssEncryptionMode=Prefer";
+
+        // Act
+        var result = DatabaseConnection.WithGssEncryptionDisabledByDefault(connectionString);
+
+        // Assert
+        Assert.Equal(connectionString, result);
+    }
+
     /// <summary>null 入力は ArgumentNullException。</summary>
     [Fact]
     public void Resolve_Throws_WhenConfigurationNull()

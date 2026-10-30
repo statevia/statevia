@@ -7,7 +7,7 @@ C# 分析時のカバレッジ XML（`service-*-coverage.xml` / `core-engine-cov
 ## 前提条件
 
 - **Docker**（`docker compose` が使えること）
-- **.NET 8 SDK** と次のツール
+- **.NET 10 SDK** と次のツール
   - `dotnet sonarscanner`（例: `dotnet tool install --global dotnet-sonarscanner`）
   - `dotnet-coverage`（PATH で実行できること）
 - **UI 分析**: Node.js / npm、`ui/studio` で `npm install` 済みであること

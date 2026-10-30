@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.12 |
-| 更新日 | 2026-10-30 |
+| Version | 1.13 |
+| 更新日 | 2026-10-31 |
 | 関連 | [../../service/cli/Statevia.Service.Cli/](../../service/cli/Statevia.Service.Cli/) |
 
 ---
@@ -35,7 +35,7 @@ cd service/cli
 dotnet run --project Statevia.Service.Cli -- <subcommand> [options]
 ```
 
-`dotnet build -c Release` だけでも `bin/Release/net8.0/statevia.exe` は出ますが、同じフォルダの DLL と **.NET 8 ランタイム**が必要です。
+`dotnet build -c Release` だけでも `bin/Release/net10.0/statevia.exe` は出ますが、同じフォルダの DLL と **.NET 10 ランタイム**が必要です。
 
 ## ホームディレクトリ（`STATEVIA_HOME`）
 

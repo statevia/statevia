@@ -73,8 +73,8 @@ public sealed class LoginFailureLockPersistenceTests
         Assert.Equal(["attempt_id"], attemptPk);
         Assert.Equal(typeof(LoginFailureLockRow), attemptFk?.PrincipalEntityType.ClrType);
         Assert.Equal(DeleteBehavior.Cascade, attemptFk?.DeleteBehavior);
-        Assert.Null(locks?.GetQueryFilter());
-        Assert.Null(attempts?.GetQueryFilter());
+        Assert.Empty(locks?.GetDeclaredQueryFilters() ?? []);
+        Assert.Empty(attempts?.GetDeclaredQueryFilters() ?? []);
     }
 
     private static string[] ColumnNames(IEntityType? entity, string tableName)

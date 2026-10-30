@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Microsoft.Extensions.Configuration;
 
 namespace Statevia.Infrastructure.Common;
@@ -7,9 +8,13 @@ namespace Statevia.Infrastructure.Common;
 /// </summary>
 public static class DatabaseConnection
 {
+    // GSS 暗号化の指定に使える Npgsql のキー（表示名と、その別名）。大文字小文字は区別しない。
+    private static readonly string[] GssEncryptionModeKeys = ["GSS Encryption Mode", "GssEncryptionMode"];
+
     /// <summary>
     /// 環境変数・設定から Npgsql 用接続文字列を解決する。
     /// <c>DATABASE_URL</c> と設定の <c>DefaultConnection</c> は、<c>postgres://</c> なら Npgsql 形式へ正規化する。
+    /// GSS 暗号化の指定が無ければ無効にする（<see cref="WithGssEncryptionDisabledByDefault"/>）。
     /// </summary>
     /// <param name="configuration">アプリケーション設定。</param>
     /// <param name="connectionStringOverride">CLI 等で明示した接続文字列。指定時は環境変数より優先する。</param>
@@ -20,11 +25,11 @@ public static class DatabaseConnection
         ArgumentNullException.ThrowIfNull(configuration);
 
         if (!string.IsNullOrWhiteSpace(connectionStringOverride))
-            return NormalizeConnectionString(connectionStringOverride.Trim());
+            return WithGssEncryptionDisabledByDefault(NormalizeConnectionString(connectionStringOverride.Trim()));
 
         var rawDatabaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
         if (!string.IsNullOrWhiteSpace(rawDatabaseUrl))
-            return NormalizeConnectionString(rawDatabaseUrl);
+            return WithGssEncryptionDisabledByDefault(NormalizeConnectionString(rawDatabaseUrl));
 
         var configured = configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(configured))
@@ -33,7 +38,28 @@ public static class DatabaseConnection
                 "DATABASE_URL or ConnectionStrings:DefaultConnection is required.");
         }
 
-        return NormalizeConnectionString(configured);
+        return WithGssEncryptionDisabledByDefault(NormalizeConnectionString(configured));
+    }
+
+    /// <summary>
+    /// 接続文字列に GSS 暗号化の指定が無ければ、<c>GSS Encryption Mode=Disable</c> を末尾に足す。
+    /// </summary>
+    /// <remarks>
+    /// Npgsql 10 で GSS 暗号化の既定が Prefer になり、Kerberos のライブラリが無いイメージでは、
+    /// プロセスの最初の接続で標準エラーに <c>libgssapi_krb5.so.2</c> を読み込めないと出る（接続は成功する）。
+    /// statevia は GSS を使わないため、Npgsql 8 のころと同じく試みないようにする。明示した指定はそのまま使う。
+    /// </remarks>
+    /// <param name="connectionString">Npgsql 形式の接続文字列。</param>
+    /// <returns>GSS 暗号化の指定を含む接続文字列。</returns>
+    public static string WithGssEncryptionDisabledByDefault(string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(connectionString);
+
+        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
+        if (GssEncryptionModeKeys.Any(builder.ContainsKey))
+            return connectionString;
+
+        return $"{connectionString.TrimEnd().TrimEnd(';')};{GssEncryptionModeKeys[0]}=Disable";
     }
 
     /// <summary>

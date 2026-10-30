@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 
 WORKDIR /src
 
@@ -19,6 +19,9 @@ COPY infrastructure/Statevia.Infrastructure.Notification/Statevia.Infrastructure
 COPY infrastructure/Statevia.Infrastructure.Common/Statevia.Infrastructure.Common.csproj ./infrastructure/Statevia.Infrastructure.Common/
 COPY infrastructure/Statevia.Infrastructure.Actions.Grpc/Statevia.Infrastructure.Actions.Grpc.csproj ./infrastructure/Statevia.Infrastructure.Actions.Grpc/
 COPY infrastructure/Statevia.Infrastructure.Modules/Statevia.Infrastructure.Modules.csproj ./infrastructure/Statevia.Infrastructure.Modules/
+# Api.csproj が参照するリファレンス Module（Scheduler と同じ。無いと SDK 10 で MSB9008 の警告になる）
+COPY modules/reference/Statevia.Reference.Http/Statevia.Reference.Http.csproj ./modules/reference/Statevia.Reference.Http/
+COPY modules/reference/Statevia.Reference.Notification/Statevia.Reference.Notification.csproj ./modules/reference/Statevia.Reference.Notification/
 RUN dotnet restore ./service/runtime/Statevia.Service.Runtime.Worker/Statevia.Service.Runtime.Worker.csproj
 
 COPY service/runtime/Statevia.Service.Runtime.Worker/ ./service/runtime/Statevia.Service.Runtime.Worker/
@@ -26,6 +29,8 @@ COPY service/api/Statevia.Service.Api/ ./service/api/Statevia.Service.Api/
 COPY service/runtime/Statevia.Runtime/ ./service/runtime/Statevia.Runtime/
 COPY core/engine/Statevia.Core.Engine/ ./core/engine/Statevia.Core.Engine/
 COPY core/actions/Statevia.Core.Actions.Abstractions/ ./core/actions/Statevia.Core.Actions.Abstractions/
+COPY modules/reference/Statevia.Reference.Http/ ./modules/reference/Statevia.Reference.Http/
+COPY modules/reference/Statevia.Reference.Notification/ ./modules/reference/Statevia.Reference.Notification/
 COPY core/application/Statevia.Core.Application.Contracts/ ./core/application/Statevia.Core.Application.Contracts/
 COPY core/application/Statevia.Core.Application/ ./core/application/Statevia.Core.Application/
 COPY infrastructure/Statevia.Infrastructure.Notification/ ./infrastructure/Statevia.Infrastructure.Notification/
@@ -40,7 +45,7 @@ RUN dotnet publish \
     -o /app/publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 
 ARG APP_UID=10001
 ARG APP_GID=10001
