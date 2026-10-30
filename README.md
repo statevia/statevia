@@ -59,7 +59,7 @@ docker compose up -d
 | ユーザー（username） | `admin` |
 | パスワード | `admin123` |
 
-**1 回実行する**（ログイン → 定義登録 → 実行）:
+**1 回実行する**（ログイン → Project の用意 → 定義登録 → 実行）:
 
 ```bash
 # トークン取得
@@ -67,13 +67,26 @@ TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"tenantKey":"default","username":"admin","password":"admin123"}' | jq -r .accessToken)
 
+# 定義を置く Project（projectId は定義登録で必須）。所属一覧から slug=default を取る
+PROJECT_ID=$(curl -s "http://localhost:8080/v1/projects" \
+  -H "X-Tenant-Id: default" \
+  -H "Authorization: Bearer $TOKEN" | jq -r '.[] | select(.slug=="default") | .projectId')
+
+# 新しい環境では Project が無いので作る（作成者が admin になる）
+[ -n "$PROJECT_ID" ] || PROJECT_ID=$(curl -s -X POST "http://localhost:8080/v1/projects" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"slug":"default","displayName":"Default"}' | jq -r .projectId)
+
 # 定義を初回登録（POST。PUT は既存定義への版追加のみ）
 DEF_ID=$(curl -s -X POST "http://localhost:8080/v1/definitions" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -H "Authorization: Bearer $TOKEN" \
   -d "$(jq -n --rawfile yaml docs/samples/ui-customer-order-parallel.yaml \
-    '{name:"my-workflow",yaml:$yaml}')" | jq -r .displayId)
+    --arg projectId "$PROJECT_ID" \
+    '{name:"my-workflow",yaml:$yaml,projectId:$projectId}')" | jq -r .displayId)
 
 # 実行を開始（definitionId は登録応答の displayId）
 curl -s -X POST "http://localhost:8080/v1/executions" \
