@@ -1,0 +1,43 @@
+# statevia リポジトリルートの .dockerignore
+# C# のイメージ（service-api / action-host / scheduler / worker）は、compose でリポジトリルートを
+# ビルドコンテキストにする（context: .）。Studio は ui/studio をコンテキストにし、ui/studio/.dockerignore を使う。
+#
+# BuildKit は Dockerfile の COPY 元だけを転送する。ただし COPY 元のプロジェクトディレクトリにある
+# ホストの bin/ と obj/ も転送され、コンテナ内で restore した obj/（project.assets.json）を上書きする。
+# 除外を足すときは、各 Dockerfile の COPY 元（build/ と各プロジェクトのディレクトリ）を含めないこと。
+
+# --- ビルド出力・テスト結果 ---
+**/[Bb]in
+**/[Oo]bj
+**/[Tt]est[Rr]esult*
+**/coverage
+**/*.binlog
+**/node_modules
+
+# --- IDE / 個人設定 ---
+**/.vs
+**/*.user
+**/*.suo
+**/Properties/launchSettings.json
+.vscode
+.cursor
+.claude
+.serena
+.sonarlint
+.scannerwork
+.playwright-mcp
+
+# --- 秘密情報・ローカルデータ・生成物 ---
+# いずれも COPY 元には含まれない。COPY . . 等が入ったときに混ざらないよう明示的に除外する。
+.git
+.env
+.env.*
+.local
+.spec
+artifacts
+docs/out
+modules/default
+modules/local
+
+# --- C# のイメージが使わないもの ---
+ui
