@@ -54,6 +54,11 @@ public static class DefCommand
     {
         var fileOption = CreateFileOption();
         var nameOption = CreateNameOption();
+        // API は projectId 必須（省略は 422）。publish（PUT）は所属 Project を変えないため create だけに付ける。
+        var projectIdOption = new Option<Guid>("--project-id", "Project id (UUID) that owns the definition")
+        {
+            IsRequired = true,
+        };
         var apiBaseOption = CliRuntimeCommandSupport.CreateApiBaseOption();
         var tenantOption = CliRuntimeCommandSupport.CreateTenantOption();
         var apiKeyOption = CliRuntimeCommandSupport.CreateApiKeyOption();
@@ -62,6 +67,7 @@ public static class DefCommand
         {
             fileOption,
             nameOption,
+            projectIdOption,
             apiBaseOption,
             tenantOption,
             apiKeyOption,
@@ -70,6 +76,7 @@ public static class DefCommand
         var binder = new CliValueBinder<CreateArgs>(ctx => new CreateArgs(
             ctx.ParseResult.GetValueForOption(fileOption),
             ctx.ParseResult.GetValueForOption(nameOption),
+            ctx.ParseResult.GetValueForOption(projectIdOption),
             ctx.ParseResult.GetValueForOption(apiBaseOption),
             ctx.ParseResult.GetValueForOption(tenantOption),
             ctx.ParseResult.GetValueForOption(apiKeyOption),
@@ -290,7 +297,7 @@ public static class DefCommand
                 new CliApiSendRequest(
                     HttpMethod.Post,
                     "v1/definitions",
-                    Body: new CreateOrPublishBody(prepared.Value.Name, prepared.Value.Yaml),
+                    Body: new CreateBody(prepared.Value.Name, prepared.Value.Yaml, args.ProjectId),
                     IdempotencyKey: session.IdempotencyKey))
             .ConfigureAwait(false);
     }
@@ -325,7 +332,7 @@ public static class DefCommand
                 new CliApiSendRequest(
                     HttpMethod.Put,
                     $"v1/definitions/{definitionId}",
-                    Body: new CreateOrPublishBody(prepared.Value.Name, prepared.Value.Yaml),
+                    Body: new PublishBody(prepared.Value.Name, prepared.Value.Yaml),
                     IdempotencyKey: session.IdempotencyKey))
             .ConfigureAwait(false);
     }
@@ -457,6 +464,7 @@ public static class DefCommand
     private sealed record CreateArgs(
         FileInfo? File,
         string? Name,
+        Guid ProjectId,
         string? ApiBase,
         string? Tenant,
         string? ApiKey,
@@ -489,7 +497,9 @@ public static class DefCommand
         string? ApiKey,
         string? IdempotencyKey);
 
-    private sealed record CreateOrPublishBody(string Name, string Yaml);
+    private sealed record CreateBody(string Name, string Yaml, Guid ProjectId);
+
+    private sealed record PublishBody(string Name, string Yaml);
 
     private sealed record ValidateBody(string Yaml, string? Name);
 }
