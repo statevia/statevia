@@ -6,7 +6,7 @@
 .DESCRIPTION
   push では 7 件すべてを選ぶ。
   pull_request では変更ファイルに対応するコンポーネントだけを選ぶ。
-  sonar/ と、dotnet/ の build/・Directory.Build.*・Directory.Packages.props・global.json・.editorconfig の変更は全件を選ぶ。
+  scripts/sonar/ と、dotnet/ の build/・Directory.Build.*・Directory.Packages.props・global.json・.editorconfig の変更は全件を選ぶ。
   結果は GITHUB_OUTPUT の has_work と matrix（JSON 配列）へ書く。
   対象が 0 件のときは has_work=false とし、空配列でワークフローが落ちないようプレースホルダを matrix に入れる。
 
@@ -24,51 +24,51 @@ if ([string]::IsNullOrWhiteSpace($env:GITHUB_OUTPUT)) {
 $projectCatalog = @(
     @{
         Id = 'engine'
-        Script = './sonar/sonar-scanner-engine.ps1'
+        Script = './scripts/sonar/sonar-scanner-engine.ps1'
         Node = $false
         Prefixes = @('dotnet/core/engine/')
     }
     @{
         Id = 'api'
-        Script = './sonar/sonar-scanner-api.ps1'
+        Script = './scripts/sonar/sonar-scanner-api.ps1'
         Node = $false
         # テスト用 Module フィクスチャは Api.Tests と ActionHost.Tests が読み込む。
         Prefixes = @('dotnet/service/api/', 'dotnet/core/application/', 'dotnet/core/actions/', 'dotnet/infrastructure/', 'dotnet/tests/Fixtures/ActionModules/')
     }
     @{
         Id = 'runtime'
-        Script = './sonar/sonar-scanner-runtime.ps1'
+        Script = './scripts/sonar/sonar-scanner-runtime.ps1'
         Node = $false
         Prefixes = @('dotnet/service/runtime/')
     }
     @{
         Id = 'cli'
-        Script = './sonar/sonar-scanner-cli.ps1'
+        Script = './scripts/sonar/sonar-scanner-cli.ps1'
         Node = $false
         Prefixes = @('dotnet/service/cli/')
     }
     @{
         Id = 'action-host'
-        Script = './sonar/sonar-scanner-action-host.ps1'
+        Script = './scripts/sonar/sonar-scanner-action-host.ps1'
         Node = $false
         Prefixes = @('dotnet/service/action-host/', 'dotnet/tests/Fixtures/ActionModules/')
     }
     @{
         Id = 'reference'
-        Script = './sonar/sonar-scanner-reference.ps1'
+        Script = './scripts/sonar/sonar-scanner-reference.ps1'
         Node = $false
         Prefixes = @('dotnet/modules/reference/')
     }
     @{
         Id = 'ui'
-        Script = './sonar/sonar-scanner-ui.ps1'
+        Script = './scripts/sonar/sonar-scanner-ui.ps1'
         Node = $true
         Prefixes = @('nodejs/studio/')
     }
 )
 
 $sharedPrefixes = @(
-    'sonar/',
+    'scripts/sonar/',
     'dotnet/build/',
     'dotnet/Directory.Build.',
     'dotnet/Directory.Packages.props',

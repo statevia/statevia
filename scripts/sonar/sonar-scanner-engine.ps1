@@ -4,7 +4,7 @@
   engine 向け SonarScanner（begin → build → coverage → end）を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から engine とカバレッジ出力パスを解決する。
+  スクリプト配置（リポジトリの scripts/sonar/）から engine とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   build / test に /p:StateviaSonarScope=engine を渡し、担当外プロジェクトを SonarQubeExclude する。

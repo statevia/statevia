@@ -4,7 +4,7 @@
   cli 向け SonarScanner（begin → build → coverage → end）を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から cli とカバレッジ出力パスを解決する。
+  スクリプト配置（リポジトリの scripts/sonar/）から cli とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   依存アセンブリ（engine / api / ui / infrastructure）が混ざらないよう解析・カバレッジ除外を設定する。
   sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。

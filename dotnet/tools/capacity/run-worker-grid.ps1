@@ -38,7 +38,7 @@ function Invoke-Compose {
     param([string[]] $ComposeArgs)
     Push-Location $RepoRoot
     try {
-        & docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml @ComposeArgs
+        & docker compose -f docker-compose.yml -f compose/split-runtime.yml @ComposeArgs
         if ($LASTEXITCODE -ne 0) {
             throw "docker compose failed: $($ComposeArgs -join ' ')"
         }
@@ -70,7 +70,7 @@ function Wait-WorkerReplicas {
     do {
         Push-Location $RepoRoot
         try {
-            $ids = & docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml ps worker --status running -q
+            $ids = & docker compose -f docker-compose.yml -f compose/split-runtime.yml ps worker --status running -q
         }
         finally {
             Pop-Location

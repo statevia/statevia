@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.15 |
-| 更新日 | 2026-10-14 |
+| Version | 1.16 |
+| 更新日 | 2026-10-31 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
+
+**Version 1.16（2026-10-31）**: 重ね合わせファイルを `compose/` へ移した（`compose/split-runtime.yml` / `compose/logging.yml` / `compose/logging-split.yml`）。`.env` の `COMPOSE_FILE` で重ねるファイルを固定する手順を追加。
 
 **Version 1.15（2026-10-14）**: 台数を増やさないコンテナは `container_name` でレプリカ番号を付けない。`worker` は `--scale` のため付けない。
 
@@ -52,13 +54,13 @@ docker compose up -d
 
 既定の compose では **Worker / DelayWait Scheduler / Ownership Recovery / 定期実行 Dispatcher は Service API プロセス内**で動作します（`Statevia:Runtime:EnableInProcess*` 既定 `true`。Dispatcher は `EnableInProcessScheduleDispatcher`）。API 内ワーカーで `MaxConcurrency` を 1 より大きくすると、実行負荷が API プロセスに乗ります。
 
-プロセスを分ける場合は、override ファイル `docker-compose.split-runtime.yml` を追加します。これだけで次の両方が同時に効きます。
+プロセスを分ける場合は、override ファイル `compose/split-runtime.yml` を追加します。これだけで次の両方が同時に効きます。
 
 1. `service-api` の `Statevia__Runtime__EnableInProcess*` を `false` にする
 2. `scheduler` / `worker` コンテナを起動する
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
+docker compose -f docker-compose.yml -f compose/split-runtime.yml up -d
 ```
 
 | サービス | 役割 |
@@ -73,14 +75,14 @@ docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
 スロットは未設定時 16 です。変えるときだけ `STATEVIA_WORKER_MAX_CONCURRENCY` を付けます。
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
+docker compose -f docker-compose.yml -f compose/split-runtime.yml \
   up -d --scale worker=2 --force-recreate worker
 ```
 
 通常の `docker compose up -d` では `scheduler` / `worker` は定義されず、API 内 HostedService のままです。分離をやめるときは次のように戻します。
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml down
+docker compose -f docker-compose.yml -f compose/split-runtime.yml down
 docker compose up -d
 ```
 
@@ -89,10 +91,28 @@ docker compose up -d
 既定の `docker compose up -d` ではログ基盤は起動しません。手順・Org 写像・JSON パス・保持は [operations-logging.md](operations-logging.md) です。契約は [logging-operations.md](../specifications/platform/logging-operations.md) です。
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+docker compose -f docker-compose.yml -f compose/logging.yml up -d
 ```
 
-Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オペレータ Org）。ランタイム分離と同時なら `docker-compose.logging-split.yml` も並べます。fluentd ドライバが不通なら `STATEVIA_FLUENTD_ADDRESS=host.docker.internal:24224`。
+Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オペレータ Org）。ランタイム分離と同時なら `compose/logging-split.yml` も並べます。fluentd ドライバが不通なら `STATEVIA_FLUENTD_ADDRESS=host.docker.internal:24224`。
+
+## 重ねるファイルを `.env` で固定する（任意）
+
+重ね合わせるファイルは `compose/` にあります。ランタイム分離とログ収集を両方使う 4 ファイル重ねは次のとおりです。
+
+```bash
+docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+  -f compose/logging.yml -f compose/logging-split.yml up -d --build
+```
+
+毎回 `-f` を並べる代わりに、手元の `.env` に `COMPOSE_FILE` を書くと、`docker compose up -d --build` だけで同じファイルを重ねます。区切りは Windows では `;`、macOS / Linux では `:` です（`.env.example` に例があります）。
+
+```dotenv
+# Windows
+COMPOSE_FILE=docker-compose.yml;compose/split-runtime.yml;compose/logging.yml;compose/logging-split.yml
+```
+
+`compose/` の中のファイルの相対パス（`./dotnet`、`./modules`、`./compose/logging/...`）は、最初に指定する `docker-compose.yml` の場所（リポジトリルート）を基準に解決されます。`docker compose` はリポジトリルートで実行してください。
 
 ## ヘルス
 
@@ -101,7 +121,7 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 
 ## 容量・負荷計測
 
-暫定の件数指針は [service-capacity.md](../reference/service-capacity.md) です。計測手順は [capacity-load-testing.md](capacity-load-testing.md) です。本 Guide に数値は書きません。現行の参照構成はランタイム分離（`docker-compose.split-runtime.yml`）です。
+暫定の件数指針は [service-capacity.md](../reference/service-capacity.md) です。計測手順は [capacity-load-testing.md](capacity-load-testing.md) です。本 Guide に数値は書きません。現行の参照構成はランタイム分離（`compose/split-runtime.yml`）です。
 
 ## API ドキュメント（OpenAPI / Scalar）
 
@@ -128,10 +148,10 @@ Grafana は `http://localhost:3001`。データソースは `statevia-ops`（オ
 | service-api | `DATABASE_URL`（`POSTGRES_*` から組み立て）, `ASPNETCORE_URLS`, `ASPNETCORE_ENVIRONMENT`（compose では `Development`）。分離時は override で `Statevia__Runtime__EnableInProcess*=false`。ブラウザから API へ直叩きする場合のみ `Statevia__Cors__AllowedOrigins__0`（未設定時はクロスオリジン不許可。Studio はプロキシ） |
 | postgres    | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`（`.env` / `.env.example`） |
 | action-host | `ASPNETCORE_URLS`（compose では `http://+:5001`）, `STATEVIA_MODULES_PATH`（`/app/modules`） |
-| scheduler / worker | `DATABASE_URL`（`docker-compose.split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__Endpoints__0` と `Endpoints__1` を API と共有し、`BaseUrl` は空。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 16。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
+| scheduler / worker | `DATABASE_URL`（`compose/split-runtime.yml`）。ローカル compose は `DOTNET_ENVIRONMENT=Development`（Generic Host。ASP.NET イメージ既定の Production を上書き）。worker は `Statevia__ActionHost__Endpoints__0` と `Endpoints__1` を API と共有し、`BaseUrl` は空。JWT 署名鍵は不要。並列は `Statevia__Runtime__Worker__MaxConcurrency`（API 内既定 1、分離 compose 未設定時 16。範囲 1〜64）。Cancel 独立ループは `Statevia__Runtime__Worker__CancelConcurrency`（未設定時 1。範囲 1〜8）。分離 compose では `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` で上書き。watchdog は `Statevia__Runtime__Worker__NoProgressTimeout`（既定 `00:10:00`。長い Action は対象外）。API 内ワーカーでも同じキー |
 | ui-studio  | `SERVICE_API_INTERNAL_BASE` |
 
-詳細は `docker-compose.yml` / `docker-compose.split-runtime.yml` と [environment-variables.md](../reference/environment-variables.md) を参照してください。
+詳細は `docker-compose.yml` / `compose/split-runtime.yml` と [environment-variables.md](../reference/environment-variables.md) を参照してください。
 
 ## Action Module（plugins）
 

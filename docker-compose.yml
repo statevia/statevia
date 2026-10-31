@@ -1,5 +1,5 @@
 # v2: engine (C#), service-api (C# ASP.NET Core), ui-studio (Next.js/TS)
-# 初回: cp .env.example .env（POSTGRES_*）。マイグレーションは docs/operations-docker.md を参照services:
+# 初回: cp .env.example .env（POSTGRES_*）。マイグレーションは docs/guides/operations-docker.md を参照services:
 services:
   postgres:
     container_name: statevia-postgres
@@ -28,7 +28,7 @@ services:
       Statevia__ActionHost__BaseUrl: ""
       Statevia__ActionHost__Endpoints__0: "http://action-host-1:5001"
       Statevia__ActionHost__Endpoints__1: "http://action-host-2:5001"
-      # 既定は API 内 HostedService On。分離は docker-compose.split-runtime.yml を追加する。
+      # 既定は API 内 HostedService On。分離は compose/split-runtime.yml を追加する。
       Statevia__Runtime__EnableInProcessWorker: "true"
       Statevia__Runtime__EnableInProcessDelayWaitScheduler: "true"
       Statevia__Runtime__EnableInProcessOwnershipRecovery: "true"

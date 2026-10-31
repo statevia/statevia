@@ -12,13 +12,13 @@
 1. **フォーマット適用**（指定がなければ `dotnet/` 全体）:
 
    ```powershell
-   .\sonar\dotnet-format-all.ps1
+   .\scripts\dotnet-format-all.ps1
    ```
 
 2. **特定ソリューションのみ**（ユーザーから指示があれば）:
 
    ```powershell
-   .\sonar\dotnet-format-all.ps1 -Solution <name>
+   .\scripts\dotnet-format-all.ps1 -Solution <name>
    ```
 
    `<name>` は `engine` / `api` / `action-host` / `cli` / `infrastructure` / `reference`、
@@ -27,7 +27,7 @@
 3. **CI チェックモード**（変更がないことを検証、差分があれば exit 1）:
 
    ```powershell
-   .\sonar\dotnet-format-all.ps1 -VerifyNoChanges
+   .\scripts\dotnet-format-all.ps1 -VerifyNoChanges
    ```
 
 4. フォーマット後、変更があればユーザーへ要約を報告する。

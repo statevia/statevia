@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   物理行数（空行・コメント含む）と実効コード行数（空行・コメント除く）を出力する。
-  リポジトリの sonar/ から相対パスを解決するため、カレントディレクトリに依存しない。
+  リポジトリの scripts/ から相対パスを解決するため、カレントディレクトリに依存しない。
 
 .PARAMETER Detailed
   サブプロジェクト単位・言語別・Migrations / ui e2e などの内訳を表示する。
@@ -14,13 +14,13 @@
   集計結果を JSON で標準出力する（テーブル出力は行わない）。
 
 .EXAMPLE
-  .\sonar\measure-loc.ps1
+  .\scripts\measure-loc.ps1
 
 .EXAMPLE
-  .\sonar\measure-loc.ps1 -Detailed
+  .\scripts\measure-loc.ps1 -Detailed
 
 .EXAMPLE
-  .\sonar\measure-loc.ps1 -Json | Set-Content loc-report.json
+  .\scripts\measure-loc.ps1 -Json | Set-Content loc-report.json
 #>
 [CmdletBinding()]
 param(

@@ -22,14 +22,14 @@
 既定の `docker compose up -d` では Loki / Grafana / Fluent Bit は起動しない。Quick Start の必須ステップでもない。
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+docker compose -f docker-compose.yml -f compose/logging.yml up -d
 ```
 
-ランタイム分離と同時に使うときは `docker-compose.logging-split.yml` も並べる（Compose は未定義サービスの部分マージができないため）。
+ランタイム分離と同時に使うときは `compose/logging-split.yml` も並べる（Compose は未定義サービスの部分マージができないため）。
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
-  -f docker-compose.logging.yml -f docker-compose.logging-split.yml up -d
+docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+  -f compose/logging.yml -f compose/logging-split.yml up -d
 ```
 
 Grafana は `http://localhost:3001`（Studio の 3000 と分ける）。UI の既定言語は日本語。匿名 Admin は **ローカル例に限る**。テナント利用者に Grafana を渡さない。
@@ -45,7 +45,7 @@ Grafana は `http://localhost:3001`（Studio の 3000 と分ける）。UI の�
 戻すとき:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.logging.yml down
+docker compose -f docker-compose.yml -f compose/logging.yml down
 docker compose up -d
 ```
 

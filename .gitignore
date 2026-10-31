@@ -57,14 +57,10 @@ coverage/
 !.spec/steering/**
 
 # --- SonarQube ---
-# カバレッジ XML とスキャナ作業ディレクトリは生成物。スクリプト・README・compose は共有。
+# スキャナの作業ディレクトリは生成物。カバレッジ XML は artifacts/sonar/ に出す（artifacts/ で除外済み）。
 .sonarqube/
 .sonarlint/
 .scannerwork/
-sonar/*
-!sonar/*.ps1
-!sonar/README.md
-!sonar/docker-compose.yaml
 
 # --- 秘密情報 / ローカルデータ ---
 .env

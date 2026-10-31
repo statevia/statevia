@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.6 |
+| Version | 2.7 |
 | 更新日 | 2026-10-31 |
 | 関連 | [ui-studio-structure.md](ui-studio-structure.md), [overview.md](overview.md) |
+
+**Version 2.7（2026-10-31）**: Compose の重ね合わせファイル 3 つを `compose/` へ移した（`compose/split-runtime.yml` / `compose/logging.yml` / `compose/logging-split.yml`）。`sonar/` を解体し、スキャナと README を `scripts/sonar/`、Sonar サーバの compose を `compose/sonar.yml`、`dotnet-format-all.ps1` と `measure-loc.ps1` を `scripts/`、カバレッジ XML を `artifacts/sonar/` へ移した。
 
 **Version 2.6（2026-10-31）**: テスト用 Module のフィクスチャ（Api.Tests と action-host の下にあった 3 つ）を `dotnet/tests/Fixtures/ActionModules/` に集めた。
 
@@ -28,8 +30,15 @@ statevia/
 ├─ README.md
 ├─ LICENSE
 ├─ .gitignore
-├─ docker-compose.yml            # postgres + service-api (C#) + ui
-├─ .env.example                  # POSTGRES_*（.env はコミットしない）
+├─ docker-compose.yml            # ローカル起動の入口（postgres + service-api (C#) + ui）
+├─ .env.example                  # POSTGRES_*・COMPOSE_FILE の例（.env はコミットしない）
+│
+├─ compose/                      # Compose の重ね合わせ定義と、その設定ファイル
+│  ├─ split-runtime.yml          # Scheduler / Worker を別プロセスにする
+│  ├─ logging.yml                # Fluent Bit / Loki / Grafana
+│  ├─ logging-split.yml          # logging.yml の Worker / Scheduler 向け追記（split-runtime と併用）
+│  ├─ logging/                   # logging.yml がマウントする設定
+│  └─ sonar.yml                  # ローカル SonarQube（name: sonar）
 │
 ├─ docs/
 │  ├─ statevia-architecture.md   # システム構成 + レイヤー
@@ -118,7 +127,12 @@ statevia/
 │     ├─ shared/                 # 横断 api / ui / i18n / auth / lib
 │     └─ Dockerfile
 │
-└─ scripts/                      # ビルド・運用スクリプト
+├─ scripts/                      # 言語をまたぐ、またはリポジトリ全体の運用スクリプト
+│  ├─ dotnet-format-all.ps1      # C# の整形（CI の format-check と編集後フックが呼ぶ）
+│  ├─ measure-loc.ps1            # 行数集計
+│  └─ sonar/                     # Sonar のスキャナと README（プロジェクトキー一覧の正本）
+│
+└─ artifacts/                    # ビルド・スキャンの出力（gitignore。Sonar のカバレッジ XML は artifacts/sonar/）
 ```
 
 - **dotnet/**: C# のすべて。sln・共通のビルド設定・C# 用の `.editorconfig` はここに置き、リポジトリルートには置かない。SDK はカレントディレクトリから上をたどって `global.json` を探すため、`dotnet/global.json` は `dotnet/` の中で実行したコマンドにだけ効く。
@@ -128,4 +142,6 @@ statevia/
 - **dotnet/service/**: HTTP / gRPC / CLI のアダプタ。Composition Root として DI を組み立てる。
 - **dotnet/tests/**: ソリューション横断のアーキテクチャテストと、複数のテストプロジェクトが使うフィクスチャ。テスト用 Module は `Fixtures/ActionModules/` に置き、テストプロジェクトが他のテストプロジェクトのフォルダを参照しないようにする。
 - **modules/**: 実行時の modules ルート。ビルドがリファレンス Module を、CLI が Module を書き込む（git 管理外）。
+- **docker-compose.yml / compose/**: ルート直下の compose はローカル起動の入口の `docker-compose.yml` だけにし、重ね合わせるファイルは `compose/` に置く。`-f` で重ねたファイルの中の相対パスは、最初に指定した `docker-compose.yml` の場所（リポジトリルート）を基準に解決される。手元の `.env` に `COMPOSE_FILE` を書けば、`-f` を並べずに重ねて起動できる（[operations-docker.md](../guides/operations-docker.md)）。
+- **scripts/**: 言語をまたぐ、またはリポジトリ全体の運用スクリプト。C# だけを扱うもの（`dotnet-format-all.ps1` 等）も、CI と文書がリポジトリルートからの実行を前提にしているためここに置く。Sonar のスキャナは `scripts/sonar/`、生成物は `artifacts/sonar/` に出す。
 - **nodejs/studio/**: Next.js（`@statevia/studio`）。`/api/core/*` で Service API にプロキシ。内部構成（`app` / `features` / `shared`）の正本は [ui-studio-structure.md](ui-studio-structure.md)。

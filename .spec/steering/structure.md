@@ -11,7 +11,8 @@ dotnet/                # C# のすべて（sln・共通のビルド設定を含�
 └─ tools/capacity/     # 容量計測ハーネス（CI 常時実行外）
 nodejs/studio/         # Web ダッシュボード（Next.js — @statevia/studio）
 docs/                  # 契約・運用・開発ガイド
-scripts/               # ビルド・運用スクリプト
+compose/               # Compose の重ね合わせ定義（split-runtime / logging / sonar）。入口はルートの docker-compose.yml
+scripts/               # 運用スクリプト（dotnet-format-all.ps1・measure-loc.ps1、Sonar は scripts/sonar/）
 ```
 
 ## Core（`dotnet/core/`）

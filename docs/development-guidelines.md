@@ -128,7 +128,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
     - `sonarjs/function-return-type`: 意図的に複数の型を返す関数まで指摘するため。
     - `sonarjs/no-hardcoded-passwords`（`**/i18n/**` のみ）: i18n 辞書の「パスワード」ラベルを誤検知するため。SonarCloud 側でも `typescript:S2068` を同範囲で除外済み。
   - **jsx-a11y/prefer-tag-over-role**: Sonar の S6819（`role="dialog"` ではなく `<dialog>` を使う等）に相当。jsx-a11y の推奨設定に含まれないため個別に error にしている。
-- **SonarQube（Service API）**: プロジェクトキー **`statevia_statevia_api`**。Quality Gate は SonarQube Cloud の組み込み **Sonar way**（新規コードのみ。信頼性・セキュリティ・保守性は A、Security Hotspot はすべてレビュー、カバレッジ 80% 以上、重複行 3% 以下）。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[sonar/README.md](../sonar/README.md)）。
+- **SonarQube（Service API）**: プロジェクトキー **`statevia_statevia_api`**。Quality Gate は SonarQube Cloud の組み込み **Sonar way**（新規コードのみ。信頼性・セキュリティ・保守性は A、Security Hotspot はすべてレビュー、カバレッジ 80% 以上、重複行 3% 以下）。手順は **§5.1**。テストプロジェクトはスキャン対象外（`excludeTestProjects` / `SonarQubeExclude`）。SonarQube for IDE も同じ範囲に揃える（[scripts/sonar/README.md](../scripts/sonar/README.md)）。
 - **SonarQube（UI Studio）**: プロジェクトキー **`statevia_statevia_ui`**。Quality Gate は API と同じ **Sonar way**（新規コードのみ）。手順は **§5.2**。C# と同様、`tests/` はスキャン対象外（`sonar.exclusions`）。カバレッジは lcov のプロダクションパスだけを見る。
 
 ---
@@ -141,7 +141,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 | Service API | `cd dotnet/service/api && dotnet test statevia-api.sln` |
 | UI | `cd nodejs/studio && npm run lint && npm run typecheck && npm run test:run` |
 | UI（Sonar 前） | `cd nodejs/studio && npm run test:coverage` |
-| Sonar（一括） | `./sonar/sonar-scanner-all.ps1`（`-Projects engine,api` で複数指定可。[sonar/README.md](../sonar/README.md)） |
+| Sonar（一括） | `./scripts/sonar/sonar-scanner-all.ps1`（`-Projects engine,api` で複数指定可。[scripts/sonar/README.md](../scripts/sonar/README.md)） |
 | Sonar（CI） | `.github/workflows/sonar.yml`（`main` は全プロジェクト、`main` 向け PR は変更コンポーネント） |
 
 変更した領域に対応するテストを追加または更新し、ローカルで green を確認してから共有する。UI を Sonar に送る前はカバレッジ付きテストを実行する（**§5.2**）。C# の Scanner for .NET スクリプトはすべて `sonar.scanner.scanAll=false` とし、`nodejs/studio` は **`statevia_statevia_ui`** だけが解析する。
@@ -172,14 +172,14 @@ dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage"
 dotnet build-server shutdown
 
 # トークン設定後
-./sonar/sonar-scanner-api.ps1
+./scripts/sonar/sonar-scanner-api.ps1
 ```
 
 スクリプトは次を順に実行する。
 
 1. `dotnet sonarscanner begin`（キー `statevia_statevia_api`、除外は Engine / UI / Program / Migrations / `dotnet/modules/reference` 等。`sonar.scanner.scanAll=false` で `nodejs/studio` を JS/TS 解析に混ぜない）
 2. `dotnet build dotnet/service/api/statevia-api.sln`
-3. `dotnet-coverage collect "dotnet test"` → `sonar/service-api-coverage.xml`
+3. `dotnet-coverage collect "dotnet test"` → `artifacts/sonar/service-api-coverage.xml`
 4. `dotnet sonarscanner end`
 
 **注意**
@@ -194,7 +194,7 @@ dotnet build-server shutdown
 **前提**
 
 - 環境変数 **`SONAR_TOKEN`** を設定していること（SonarQube Cloud の個人アクセストークン）
-- 既定の送信先は SonarQube Cloud（`https://sonarcloud.io`、組織 `statevia`）。ローカル Community Build へ送るときは **`SONAR_HOST_URL=http://localhost:9000`** を指定する（`sonar/docker-compose.yaml`）
+- 既定の送信先は SonarQube Cloud（`https://sonarcloud.io`、組織 `statevia`）。ローカル Community Build へ送るときは **`SONAR_HOST_URL=http://localhost:9000`** を指定する（`compose/sonar.yml`）
 - Node.js / npm が PATH にあり、`nodejs/studio` で `npm install` 済みであること
 - グローバルまたは `npx` で **`sonar-scanner`** が実行できること
 
@@ -213,7 +213,7 @@ npm run test:coverage
 
 ```powershell
 # トークン設定後
-./sonar/sonar-scanner-ui.ps1
+./scripts/sonar/sonar-scanner-ui.ps1
 ```
 
 スクリプトは次を順に実行する。
@@ -234,7 +234,7 @@ npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)" "-Dsonar.projectKey=
 - HTTP 契約・プロキシ挙動は本リファクタの対象外（`docs/specifications/api-http.md` 等は変更しない）。
 - スキャン直後は Sonar UI の数値が遅れて反映されることがある。Quality Gate 判定は Sonar のプロジェクト画面を正とする。
 - `tests/` は `sonar.exclusions` でスキャン対象外にする（C# の `excludeTestProjects` と同趣旨）。カバレッジは `coverage/lcov.info` のプロダクションパスだけを使う。
-- 詳細は `sonar/README.md` も参照。
+- 詳細は `scripts/sonar/README.md` も参照。
 
 ### 5.3 リファレンス Module — Sonar（手動）
 
@@ -242,7 +242,7 @@ first-party Module（`dotnet/modules/reference/`）は **`statevia_statevia_refe
 
 ```powershell
 dotnet build-server shutdown
-./sonar/sonar-scanner-reference.ps1
+./scripts/sonar/sonar-scanner-reference.ps1
 ```
 
 スクリプトは `dotnet/modules/reference/statevia-reference.sln` を build / test し、プロダクションコードだけを当該キーへ送る。`sonar.scanner.scanAll=false` で `nodejs/studio` など MSBuild 対象外のファイルが CPD に混ざらないようにする。ActionPublication の JSON スキーマ定型は独立 Module 間の意図的な重複のため、`sonar.cpd.exclusions` で `*Publication.cs` を CPD 対象外にする。

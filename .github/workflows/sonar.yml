@@ -38,7 +38,7 @@ jobs:
         env:
           SONAR_DIFF_BASE: ${{ github.event.pull_request.base.sha }}
           SONAR_DIFF_HEAD: ${{ github.sha }}
-        run: ./sonar/select-sonar-projects.ps1
+        run: ./scripts/sonar/select-sonar-projects.ps1
 
   sonar:
     name: Analyze ${{ matrix.id }}

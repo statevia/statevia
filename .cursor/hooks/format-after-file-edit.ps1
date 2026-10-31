@@ -69,7 +69,7 @@ if ($solutions.Count -eq 0) {
   return
 }
 
-$formatScriptPath = Join-Path $repoRoot 'sonar\dotnet-format-all.ps1'
+$formatScriptPath = Join-Path $repoRoot 'scripts\dotnet-format-all.ps1'
 if (-not (Test-Path -LiteralPath $formatScriptPath)) {
   throw "dotnet format script not found: $formatScriptPath"
 }

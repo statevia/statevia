@@ -19,18 +19,25 @@ function Get-StateviaRepositoryRoot {
     .SYNOPSIS
       リポジトリルートの絶対パスを返す。
     .DESCRIPTION
-      本ファイルの置き場所から求める（関数内の $PSScriptRoot は、呼び出し元ではなく本ファイルのディレクトリを指す）。
+      本ファイルの置き場所（scripts/sonar/）の 2 つ上を返す（関数内の $PSScriptRoot は、呼び出し元ではなく本ファイルのディレクトリを指す）。
       各スキャナはこの関数でルートを求めるため、スクリプトの置き場所を変えるときは本関数だけを直す。
     #>
-    return Split-Path -Parent $PSScriptRoot
+    return Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 }
 
 function Get-StateviaSonarOutputDirectory {
     <#
     .SYNOPSIS
-      カバレッジ XML などスキャンの生成物を置くディレクトリを返す。
+      カバレッジ XML などスキャンの生成物を置くディレクトリ（artifacts/sonar/）を返す。無ければ作る。
+    .DESCRIPTION
+      artifacts/ は .gitignore で除外しているため、生成物は git status に出ない。
     #>
-    return $PSScriptRoot
+    $outputDirectory = Join-Path (Join-Path (Get-StateviaRepositoryRoot) 'artifacts') 'sonar'
+    if (-not (Test-Path -LiteralPath $outputDirectory -PathType Container)) {
+        [void](New-Item -ItemType Directory -Path $outputDirectory -Force)
+    }
+
+    return $outputDirectory
 }
 
 function Get-StateviaSonarHostUrl {
