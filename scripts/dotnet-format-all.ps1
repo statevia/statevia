@@ -12,7 +12,7 @@
   -Solution 未指定時は dotnet/ 全体を一括で処理する（CI もこのモード）。
   - whitespace: `--folder` で dotnet/ の .cs をまとめて処理する。
     MSBuild のワークスペース読み込みが不要なため速い。
-    gitignore 対象のうち .cs を含むもの（bin / obj、手元実験用 Module の dotnet/modules/local/）は除外する。
+    gitignore 対象のうち .cs を含むもの（bin / obj、modules/local/）は除外する。
   - style: IDE 用 `statevia.sln` を 1 回だけ読み込む。
     `statevia.sln` に含まれない Scenario.Tests は個別の csproj として追加で処理する。
   コンポーネント別 sln を個別に処理すると、共通プロジェクトの restore と読み込みが sln ごとに繰り返されて遅い。

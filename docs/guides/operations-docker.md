@@ -3,13 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.17 |
+| Version | 1.16 |
 | 更新日 | 2026-10-31 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
-
-**Version 1.17（2026-10-31）**: Action Module のソース（`dotnet/modules/`）と、実行時の modules ルート（リポジトリルートの `modules/`）の分担を追記。
 
 **Version 1.16（2026-10-31）**: 重ね合わせファイルを `compose/` へ移した（`compose/split-runtime.yml` / `compose/logging.yml` / `compose/logging-split.yml`）。`.env` の `COMPOSE_FILE` で重ねるファイルを固定する手順を追加。
 
@@ -159,14 +157,7 @@ COMPOSE_FILE=docker-compose.yml;compose/split-runtime.yml;compose/logging.yml;co
 
 Service API は起動時に **modules ルート**（`STATEVIA_MODULES_PATH` または `Statevia:Modules:Path`、未設定時は `{ContentRoot}/modules`）を **テナント別**（`{modulesRoot}/{tenantKey}/{module}/`）に scan して Action Module を load する。更新・削除の反映は **再起動**または **明示 reload** が必要（add-only watcher は新規追加のみ）。
 
-compose は、リポジトリルートの `modules/` を実行時の modules ルートとして `/app/modules` にマウントする。このディレクトリは git 管理外で、置かれるのはテナントごとのディレクトリ（`modules/<テナントキー>/<Module>/`）だけである。書き込むのは次の 2 つで、Service API が Module を書き込む HTTP エンドポイントは無い。
-
-- **ホストでのビルド**: リファレンス Module（ソースは `dotnet/modules/reference/`）をビルドすると、DLL を `modules/default/<ModuleId>/` へコピーする。コピー先の基点は `dotnet/Directory.Build.props` の `StateviaModulesOutputRoot`。
-- **CLI の `statevia module install`**: 後述の手順で `modules/<テナントキー>/` に展開する。
-
-Module のソースは `dotnet/modules/` に置き、`modules/` には置かない（`modules/` 直下のディレクトリはテナントとして読まれる）。手元実験用の Module のソースは `dotnet/modules/local/`（git 管理外）に置く。
-
-**Action Host**（`docker compose` の `action-host-1` と `action-host-2`）は同じ `./modules` ボリュームを読み取り専用でマウントし、**別プロセス**で Module を ALC load して gRPC 実行する。Service API は `Statevia:ActionHost:Endpoints`（compose では `http://action-host-1:5001` と `http://action-host-2:5001`）で接続する。未設定のとき、OutOfProcess が必要な実行は失敗する（安全側）。手順は [action-host.md](action-host.md)。
+**Action Host**（`docker compose` の `action-host-1` と `action-host-2`）は同じ `./modules` ボリュームをマウントし、**別プロセス**で Module を ALC load して gRPC 実行する。Service API は `Statevia:ActionHost:Endpoints`（compose では `http://action-host-1:5001` と `http://action-host-2:5001`）で接続する。未設定のとき、OutOfProcess が必要な実行は失敗する（安全側）。手順は [action-host.md](action-host.md)。
 
 ### 配置（CLI）
 

@@ -64,7 +64,7 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      # Module はホストのビルド（リファレンス Module）と CLI の module install が ./modules に書く。Action Host は読み取り専用でマウントする。
+      # Module の配置は service-api が書く。Action Host からは置き換えられないように読み取り専用。
       - ./modules:/app/modules:ro
 
   action-host-2:

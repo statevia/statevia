@@ -67,7 +67,7 @@ Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines
 | `DATABASE_URL` | PostgreSQL 接続 |
 | `SERVICE_API_INTERNAL_BASE` | UI → Service API |
 | `STATEVIA_ENABLE_API_DOCS` | 本番で OpenAPI / Scalar を有効化 |
-| `STATEVIA_MODULES_PATH` | 実行時の Action Module ルート（compose ではリポジトリルートの `modules/` を `/app/modules` にマウント。ソースは `dotnet/modules/`） |
+| `STATEVIA_MODULES_PATH` | Action Module ルート |
 | `Statevia:ActionHost:BaseUrl` | OutOfProcess 実行（未設定時は `ActionHostNotConfigured`） |
 | `Statevia:Modules:Signing:*` | Module 署名・TrustLevel |
 | `Statevia:Modules:Oci:*` | OCI Module Source |
