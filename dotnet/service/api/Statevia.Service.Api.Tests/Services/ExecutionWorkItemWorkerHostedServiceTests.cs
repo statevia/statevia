@@ -1293,12 +1293,18 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
     {
         private readonly HashSet<Guid> _claimed = [];
 
+        // Worker は item を並行に処理するため、呼び出しカウンタは Interlocked で加算する（++ は加算が失われる）。
+        private int _claimCallCount;
+        private int _completeCallCount;
+        private int _releaseCallCount;
+        private int _releaseWithoutCountingAttemptCallCount;
+
         public List<ExecutionWorkItemRow> ItemsToClaim { get; set; } = [];
         public List<string>? OperationLog { get; set; }
-        public int ClaimCallCount { get; private set; }
-        public int CompleteCallCount { get; private set; }
-        public int ReleaseCallCount { get; private set; }
-        public int ReleaseWithoutCountingAttemptCallCount { get; private set; }
+        public int ClaimCallCount => Volatile.Read(ref _claimCallCount);
+        public int CompleteCallCount => Volatile.Read(ref _completeCallCount);
+        public int ReleaseCallCount => Volatile.Read(ref _releaseCallCount);
+        public int ReleaseWithoutCountingAttemptCallCount => Volatile.Read(ref _releaseWithoutCountingAttemptCallCount);
         public bool RequeueOnReleaseWithoutCountingAttempt { get; set; }
         public bool RenewLeaseResult { get; set; } = true;
         public bool ThrowOnClaim { get; set; }
@@ -1330,7 +1336,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             _ = leaseOwner;
             _ = utcNow;
             _ = leaseDuration;
-            ClaimCallCount++;
+            Interlocked.Increment(ref _claimCallCount);
             if (ThrowOnClaim)
                 throw new InvalidOperationException("claim failed");
 
@@ -1353,7 +1359,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
 
         public Task CompleteAsync(Guid workItemId, string leaseOwner, CancellationToken ct)
         {
-            CompleteCallCount++;
+            Interlocked.Increment(ref _completeCallCount);
             OperationLog?.Add($"complete:{workItemId:D}");
             return Task.CompletedTask;
         }
@@ -1379,7 +1385,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             DateTime availableAt,
             CancellationToken ct)
         {
-            ReleaseCallCount++;
+            Interlocked.Increment(ref _releaseCallCount);
             return Task.CompletedTask;
         }
 
@@ -1389,8 +1395,8 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             DateTime availableAt,
             CancellationToken ct)
         {
-            ReleaseWithoutCountingAttemptCallCount++;
-            ReleaseCallCount++;
+            Interlocked.Increment(ref _releaseWithoutCountingAttemptCallCount);
+            Interlocked.Increment(ref _releaseCallCount);
             var item = ItemsToClaim.Find(row => row.WorkItemId == workItemId);
             if (item is not null && item.Attempts > 0)
                 item.Attempts -= 1;
@@ -1416,20 +1422,33 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
     {
         private int _awaitLocalInFlight;
 
+        // Worker は item を並行に処理するため、呼び出しカウンタは Interlocked で加算する（++ は加算が失われる）。
+        private int _beginOwnedSessionCalls;
+        private int _endOwnedSessionCalls;
+        private int _executeQueuedStartCalls;
+        private int _awaitLocalLoadCalls;
+        private int _cancelCalls;
+        private int _recoverCalls;
+        private int _resumeCalls;
+        private int _abandonCalls;
+        private int _markUnstartedPermanentFailureCalls;
+        private int _markUnclassifiedAttemptLimitCalls;
+        private int _concurrentAwaitLocalLoadPeak;
+
         public long? BeginGenerationToReturn { get; set; } = 1;
-        public int BeginOwnedSessionCalls { get; private set; }
-        public int EndOwnedSessionCalls { get; private set; }
-        public int ExecuteQueuedStartCalls { get; private set; }
-        public int AwaitLocalLoadCalls { get; private set; }
+        public int BeginOwnedSessionCalls => Volatile.Read(ref _beginOwnedSessionCalls);
+        public int EndOwnedSessionCalls => Volatile.Read(ref _endOwnedSessionCalls);
+        public int ExecuteQueuedStartCalls => Volatile.Read(ref _executeQueuedStartCalls);
+        public int AwaitLocalLoadCalls => Volatile.Read(ref _awaitLocalLoadCalls);
         public int ConcurrentAwaitLocalLoad { get; private set; }
-        public int ConcurrentAwaitLocalLoadPeak { get; private set; }
-        public int CancelCalls { get; private set; }
+        public int ConcurrentAwaitLocalLoadPeak => Volatile.Read(ref _concurrentAwaitLocalLoadPeak);
+        public int CancelCalls => Volatile.Read(ref _cancelCalls);
         public List<string>? OperationLog { get; set; }
-        public int RecoverCalls { get; private set; }
-        public int ResumeCalls { get; private set; }
-        public int AbandonCalls { get; private set; }
-        public int MarkUnstartedPermanentFailureCalls { get; private set; }
-        public int MarkUnclassifiedAttemptLimitCalls { get; private set; }
+        public int RecoverCalls => Volatile.Read(ref _recoverCalls);
+        public int ResumeCalls => Volatile.Read(ref _resumeCalls);
+        public int AbandonCalls => Volatile.Read(ref _abandonCalls);
+        public int MarkUnstartedPermanentFailureCalls => Volatile.Read(ref _markUnstartedPermanentFailureCalls);
+        public int MarkUnclassifiedAttemptLimitCalls => Volatile.Read(ref _markUnclassifiedAttemptLimitCalls);
         public Exception? CancelException { get; set; }
         public Exception? ExecuteQueuedStartException { get; set; }
         public bool ExecuteQueuedStartFailOnce { get; set; }
@@ -1445,7 +1464,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             TimeSpan leaseDuration,
             CancellationToken ct)
         {
-            BeginOwnedSessionCalls++;
+            Interlocked.Increment(ref _beginOwnedSessionCalls);
             return Task.FromResult(BeginGenerationToReturn);
         }
 
@@ -1457,7 +1476,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
 
         public Task EndOwnedSessionAsync(Guid executionId, CancellationToken ct)
         {
-            EndOwnedSessionCalls++;
+            Interlocked.Increment(ref _endOwnedSessionCalls);
             if (EndOwnedSessionException is { } endEx)
                 throw endEx;
             return Task.CompletedTask;
@@ -1465,7 +1484,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
 
         public Task AbandonLocalOwnedSessionAsync(Guid executionId)
         {
-            AbandonCalls++;
+            Interlocked.Increment(ref _abandonCalls);
             return Task.CompletedTask;
         }
 
@@ -1477,10 +1496,9 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             _ = executionId;
             _ = noProgressTimeout;
             var inFlight = Interlocked.Increment(ref _awaitLocalInFlight);
-            if (inFlight > ConcurrentAwaitLocalLoadPeak)
-                ConcurrentAwaitLocalLoadPeak = inFlight;
+            RecordConcurrentAwaitLocalLoadPeak(inFlight);
             ConcurrentAwaitLocalLoad = inFlight;
-            AwaitLocalLoadCalls++;
+            Interlocked.Increment(ref _awaitLocalLoadCalls);
             try
             {
                 if (AwaitLocalLoadGate is { } gate)
@@ -1494,14 +1512,27 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             }
         }
 
+        /// <summary>同時実行数の最大値を記録する。並行する呼び出しが小さい値で上書きしないよう、比較と交換で更新する。</summary>
+        private void RecordConcurrentAwaitLocalLoadPeak(int inFlight)
+        {
+            var observed = Volatile.Read(ref _concurrentAwaitLocalLoadPeak);
+            while (inFlight > observed)
+            {
+                var previous = Interlocked.CompareExchange(ref _concurrentAwaitLocalLoadPeak, inFlight, observed);
+                if (previous == observed)
+                    return;
+                observed = previous;
+            }
+        }
+
         public Task<ExecutionResponse> ExecuteQueuedStartAsync(
             Guid executionId,
             StartExecutionRequest request,
             CancellationToken ct)
         {
-            ExecuteQueuedStartCalls++;
+            var call = Interlocked.Increment(ref _executeQueuedStartCalls);
             if (ExecuteQueuedStartException is { } startEx
-                && (!ExecuteQueuedStartFailOnce || ExecuteQueuedStartCalls == 1))
+                && (!ExecuteQueuedStartFailOnce || call == 1))
             {
                 throw startEx;
             }
@@ -1518,7 +1549,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
         {
             _ = executionId;
             _ = ct;
-            MarkUnstartedPermanentFailureCalls++;
+            Interlocked.Increment(ref _markUnstartedPermanentFailureCalls);
             return Task.CompletedTask;
         }
 
@@ -1526,7 +1557,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
         {
             _ = executionId;
             _ = ct;
-            MarkUnclassifiedAttemptLimitCalls++;
+            Interlocked.Increment(ref _markUnclassifiedAttemptLimitCalls);
             return Task.CompletedTask;
         }
 
@@ -1536,7 +1567,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             CommandRequestContext requestContext,
             CancellationToken ct)
         {
-            CancelCalls++;
+            Interlocked.Increment(ref _cancelCalls);
             OperationLog?.Add("cancel");
             if (CancelException is { } cancelEx)
                 throw cancelEx;
@@ -1549,7 +1580,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             CommandRequestContext requestContext,
             CancellationToken ct)
         {
-            RecoverCalls++;
+            Interlocked.Increment(ref _recoverCalls);
             if (RecoverException is { } recoverEx)
                 throw recoverEx;
             return Task.CompletedTask;
@@ -1563,7 +1594,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             CommandRequestContext requestContext,
             CancellationToken ct)
         {
-            ResumeCalls++;
+            Interlocked.Increment(ref _resumeCalls);
             return Task.CompletedTask;
         }
 
