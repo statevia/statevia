@@ -267,6 +267,53 @@ public sealed partial class ExecutionEngineLoggingTests
                 e.Message.Contains("StateName=Start", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Fork 展開ハンドラが失敗すると Fork expansion handler failed（Error）を例外つきで残し、実行は Failed にしないことを検証する。
+    /// </summary>
+    [Fact]
+    public async Task Logging_ForkExpansionHandlerFailure_EmitsErrorWithoutFailingExecution()
+    {
+        // Arrange
+        var sink = new ListLogger();
+        var def = CreateDefinitionWithForkJoin();
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 2, executionLogger: sink);
+        var handlerFailure = new InvalidOperationException("fork expansion handler failure");
+        engine.SetForkExpansionHandler(_ => Task.FromException(handlerFailure));
+
+        // Act
+        var id = engine.Start(def);
+        // ハンドラは Engine ループと非同期に呼ばれるため、失敗ログが出るまで待つ。
+        (LogLevel Level, string Message, Exception? Exception)? failureEntry = null;
+        var elapsed = Stopwatch.StartNew();
+        while (failureEntry is null && elapsed.Elapsed < TimeSpan.FromSeconds(2))
+        {
+            lock (sink.Entries)
+            {
+                var index = sink.Entries.FindIndex(e => e.Message.Contains("Fork expansion handler failed", StringComparison.Ordinal));
+                if (index >= 0)
+                {
+                    failureEntry = sink.Entries[index];
+                }
+            }
+
+            if (failureEntry is null)
+            {
+                await Task.Delay(20);
+            }
+        }
+
+        elapsed.Stop();
+        var snapshot = engine.GetSnapshot(id);
+
+        // Assert
+        Assert.NotNull(failureEntry);
+        Assert.Equal(LogLevel.Error, failureEntry.Value.Level);
+        Assert.Contains($"ExecutionId={id}", failureEntry.Value.Message, StringComparison.Ordinal);
+        Assert.Same(handlerFailure, failureEntry.Value.Exception);
+        Assert.NotNull(snapshot);
+        Assert.False(snapshot.IsFailed);
+    }
+
     private sealed class ThrowingExecutionEngineLogger : ILogger<ExecutionEngine.ExecutionEngineLogger>
     {
         public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
