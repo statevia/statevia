@@ -177,7 +177,7 @@ Set-Location ..\..
 | ui | `nodejs/studio`（`tests/`・`e2e/`・`*.test.*` を除く `*.ts` / `*.tsx`） | `tests/`、`*.test.*`、`*.spec.*`、`e2e/` |
 | architecture | （なし） | `Statevia.Architecture.Tests` |
 
-除外: `bin/`, `obj/`, `node_modules/`, `.next/`, `coverage/`。`dotnet/core/engine/samples/` と `dotnet/service/action-host/Fixtures/` は対象プロジェクト定義に含めません。Migrations は `dotnet/infrastructure/Statevia.Infrastructure.Persistence/Migrations` を内訳表示します。
+除外: `bin/`, `obj/`, `node_modules/`, `.next/`, `coverage/`。`dotnet/core/engine/samples/` と `dotnet/tests/Fixtures/`（テスト用 Module フィクスチャ）は対象プロジェクト定義に含めません。Migrations は `dotnet/infrastructure/Statevia.Infrastructure.Persistence/Migrations` を内訳表示します。
 
 ## 主なファイル
 

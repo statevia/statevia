@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Fixtures/**/*.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -56,13 +52,13 @@
     <ProjectReference Include="..\Statevia.Service.Api.Bootstrap\Statevia.Service.Api.Bootstrap.csproj" />
     <ProjectReference Include="..\..\action-host\Statevia.Service.ActionHost\Statevia.Service.ActionHost.csproj" Aliases="ActionHost" />
     <ProjectReference Include="..\..\..\modules\reference\Statevia.Reference.Http\Statevia.Reference.Http.csproj" Aliases="HttpReference" />
-    <ProjectReference Include="Fixtures\TestActionModule\TestActionModule.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\tests\Fixtures\ActionModules\TestActionModule\TestActionModule.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Grpc.Net.Client" />
   </ItemGroup>
 
   <Target Name="CopyTestActionModuleFixture" AfterTargets="Build">
     <PropertyGroup>
-      <TestActionModuleOutput>$(MSBuildThisFileDirectory)Fixtures\TestActionModule\bin\$(Configuration)\$(TargetFramework)\</TestActionModuleOutput>
+      <TestActionModuleOutput>$(MSBuildThisFileDirectory)..\..\..\tests\Fixtures\ActionModules\TestActionModule\bin\$(Configuration)\$(TargetFramework)\</TestActionModuleOutput>
     </PropertyGroup>
     <ItemGroup>
       <TestActionModuleCopy Include="$(TestActionModuleOutput)*.dll" />

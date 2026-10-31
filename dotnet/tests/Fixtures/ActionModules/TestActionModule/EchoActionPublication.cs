@@ -1,7 +1,7 @@
 using Statevia.Core.Actions.Abstractions.Publication;
 using System.Text.Json;
 
-namespace Statevia.Service.Api.Tests.Fixtures.TestActionModule;
+namespace Statevia.Tests.Fixtures.ActionModules.TestActionModule;
 
 /// <summary>テスト Module <c>test.module.echo</c> の ActionPublication。</summary>
 internal static class EchoActionPublication

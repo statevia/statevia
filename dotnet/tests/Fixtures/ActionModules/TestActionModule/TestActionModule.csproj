@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>MalformedActionModule</AssemblyName>
-    <RootNamespace>Statevia.Service.ActionHost.Tests.Fixtures.MalformedActionModule</RootNamespace>
+    <AssemblyName>TestActionModule</AssemblyName>
+    <RootNamespace>Statevia.Tests.Fixtures.ActionModules.TestActionModule</RootNamespace>
     <!-- テスト用フィクスチャ。どのコンポーネントスキャンでも protobuf を出さない。 -->
     <SonarQubeExclude>true</SonarQubeExclude>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\actions\Statevia.Core.Actions.Abstractions\Statevia.Core.Actions.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\..\core\engine\Statevia.Core.Engine\Statevia.Core.Engine.csproj" />
     <ProjectReference Include="..\..\..\..\core\engine\Statevia.Core.Engine\Statevia.Core.Engine.csproj" />
   </ItemGroup>
 

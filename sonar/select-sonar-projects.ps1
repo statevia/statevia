@@ -32,7 +32,8 @@ $projectCatalog = @(
         Id = 'api'
         Script = './sonar/sonar-scanner-api.ps1'
         Node = $false
-        Prefixes = @('dotnet/service/api/', 'dotnet/core/application/', 'dotnet/core/actions/', 'dotnet/infrastructure/')
+        # テスト用 Module フィクスチャは Api.Tests と ActionHost.Tests が読み込む。
+        Prefixes = @('dotnet/service/api/', 'dotnet/core/application/', 'dotnet/core/actions/', 'dotnet/infrastructure/', 'dotnet/tests/Fixtures/ActionModules/')
     }
     @{
         Id = 'runtime'
@@ -50,7 +51,7 @@ $projectCatalog = @(
         Id = 'action-host'
         Script = './sonar/sonar-scanner-action-host.ps1'
         Node = $false
-        Prefixes = @('dotnet/service/action-host/')
+        Prefixes = @('dotnet/service/action-host/', 'dotnet/tests/Fixtures/ActionModules/')
     }
     @{
         Id = 'reference'

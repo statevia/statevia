@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3 |
+| Version | 1.4 |
 | 更新日 | 2026-10-31 |
 | 関連 | [platform.md](platform.md), [guides/operations-docker.md](../../guides/operations-docker.md) |
 
@@ -137,14 +137,26 @@ modules/bad.module/alpha/alpha.dll   # 直下に entry DLL なし → skip
 | `{moduleDirectoryName}.dll` | **必須**（推奨） | `IActionModule` 実装 |
 | 私有 NuGet 依存の `*.dll` | 必要なら | module ディレクトリ直下 |
 | `{moduleDirectoryName}.deps.json` | publish 時にあれば | `AssemblyDependencyResolver` が参照 |
-| `Statevia.Modules` 等の共有アセンブリ | **不要** | ホスト ALC が Default から共有（同梱しても動作はするが冗長） |
+| `Statevia.Infrastructure.Modules` 等の共有アセンブリ | **不要** | ホスト ALC が Default から共有（同梱しても動作はするが冗長） |
 
 ホストが共有するアセンブリ（同梱不要）:
 
-- `Statevia.Modules`
+- `Statevia.Infrastructure.Modules`
 - `Statevia.Core.Actions.Abstractions`
 - `Statevia.Core.Engine`
 - `Microsoft.Extensions.DependencyInjection.Abstractions`
+
+### Module が使ってよい Engine の範囲
+
+`Statevia.Core.Engine` はホストと共有するアセンブリですが、中には Engine の内部向けの型も入っています。Module が依存してよいのは、次の 2 つだけです。
+
+| 範囲 | 主な型 | 用途 |
+|------|--------|------|
+| `Statevia.Core.Engine.Abstractions` 名前空間の型 | `IState<TInput, TOutput>`, `StateContext`, `IStateExecutor`, `Unit` | Action の処理を書く。`ModuleActionRegistration` の `ExecutorFactory` が返す型 |
+| `Statevia.Core.Engine.Execution.DefaultStateExecutor` | `DefaultStateExecutor.Create(state)` | `IState<,>` の実装を `IStateExecutor` に包む |
+
+- 上記以外の Engine の型（`Statevia.Core.Engine.Engine`、`Statevia.Core.Engine.FSM`、`Statevia.Core.Engine.Execution` の `DefaultStateExecutor` 以外など）は、Engine の内部変更で予告なく変わります。Module から参照しないでください。
+- Module からは、Action の契約（`Statevia.Core.Actions.Abstractions`）と上記の範囲を使います。リファレンス Module（`statevia.action.reference.http` / `statevia.action.reference.notification`）も、この範囲だけを使っています。
 
 ---
 

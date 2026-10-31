@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.5 |
+| Version | 2.6 |
 | 更新日 | 2026-10-31 |
 | 関連 | [ui-studio-structure.md](ui-studio-structure.md), [overview.md](overview.md) |
+
+**Version 2.6（2026-10-31）**: テスト用 Module のフィクスチャ（Api.Tests と action-host の下にあった 3 つ）を `dotnet/tests/Fixtures/ActionModules/` に集めた。
 
 **Version 2.5（2026-10-31）**: C# を `dotnet/`、Studio を `nodejs/studio/` に集約。C# の sln・`Directory.Build.*`・`Directory.Packages.props`・`global.json`・`.editorconfig` も `dotnet/` へ移した。リファレンス Module のソース（`dotnet/modules/reference/`）と、実行時の modules ルート（リポジトリルートの `modules/`）を分けた。
 
@@ -98,8 +100,9 @@ statevia/
 │  │     ├─ Statevia.Service.Cli/              # statevia コマンド
 │  │     └─ Statevia.Service.Cli.Tests/
 │  │
-│  ├─ tests/                     # 横断テスト
-│  │  └─ Statevia.Architecture.Tests/  # 依存方向テスト
+│  ├─ tests/                     # 横断テスト・横断フィクスチャ
+│  │  ├─ Statevia.Architecture.Tests/  # 依存方向テスト
+│  │  └─ Fixtures/ActionModules/       # テスト用 Module（Api.Tests / ActionHost.Tests が読み込む）
 │  ├─ tools/                     # 補助の C# プロジェクト（容量計測等）
 │  └─ build/                     # MSBuild の共有設定
 │
@@ -123,6 +126,6 @@ statevia/
 - **dotnet/modules/reference/**: ユーザー Module と同じ SPI の first-party 実装のソース。ビルドが DLL をリポジトリルートの `modules/default/` へ copy する。
 - **dotnet/infrastructure/**: core の契約の技術実装。DB、認証、通知、Module ホスト等。
 - **dotnet/service/**: HTTP / gRPC / CLI のアダプタ。Composition Root として DI を組み立てる。
-- **dotnet/tests/**: ソリューション横断のアーキテクチャテスト。
+- **dotnet/tests/**: ソリューション横断のアーキテクチャテストと、複数のテストプロジェクトが使うフィクスチャ。テスト用 Module は `Fixtures/ActionModules/` に置き、テストプロジェクトが他のテストプロジェクトのフォルダを参照しないようにする。
 - **modules/**: 実行時の modules ルート。ビルドがリファレンス Module を、CLI が Module を書き込む（git 管理外）。
 - **nodejs/studio/**: Next.js（`@statevia/studio`）。`/api/core/*` で Service API にプロキシ。内部構成（`app` / `features` / `shared`）の正本は [ui-studio-structure.md](ui-studio-structure.md)。

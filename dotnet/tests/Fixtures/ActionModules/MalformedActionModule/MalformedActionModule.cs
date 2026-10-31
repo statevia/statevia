@@ -2,7 +2,7 @@ using Statevia.Core.Actions.Abstractions.Modules;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Execution;
 
-namespace Statevia.Service.ActionHost.Tests.Fixtures.MalformedActionModule;
+namespace Statevia.Tests.Fixtures.ActionModules.MalformedActionModule;
 
 /// <summary>LoadModuleCore のスキップ経路を検証するテスト Module。</summary>
 public sealed class MalformedActionModule : IActionModule
