@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.11 |
-| 更新日 | 2026-10-04 |
+| Version | 0.12 |
+| 更新日 | 2026-10-31 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.12（2026-10-31）**: テストの配置の規則を追加した（`tests/` の下に、対象ソースの位置をそのまま映す）。テストが使うエイリアス `@/app/*`・`@/middleware`・`@/tests/*` を追加した。
 
 **Version 0.11（2026-10-04）**: 画面の取得・検証・送信はフックがデータとコマンドで返す。`ReactNode` は返さない。loading / empty / error の出し分けは UI に残し、短い部品は行数だけで割らない。
 
@@ -52,6 +54,7 @@ nodejs/studio/
 │  ├─ i18n/                  # Context・locale・横断辞書 + feature 切片の合成
 │  ├─ auth/                  # session / jwt ヘルパ
 │  └─ lib/                   # dateTime, errors, validation, theme, graphLayout
+├─ tests/                    # 単体テスト。ソースの位置を映して置く（§5「テストの配置」）
 ├─ public/
 ├─ Dockerfile                # build 時に app / features / shared を COPY
 └─ .dockerignore
@@ -65,8 +68,11 @@ nodejs/studio/
 | --- | --- |
 | `@/features/*` | `features/*` |
 | `@/shared/*` | `shared/*` |
+| `@/app/*` | `app/*`（テストだけが使う） |
+| `@/middleware` | `middleware.ts`（テストだけが使う） |
+| `@/tests/*` | `tests/*`（テストだけが使う。`testUtils`・`helpers/`・`mocks/`） |
 
-`@/app/*` は原則使わない。route から feature を参照する。
+エイリアスは `tsconfig.json` の `paths` と `vitest.config.ts` の `resolve.alias` に揃えて書く。アプリのコードは `@/app/*` と `@/tests/*` を使わない。route から feature を参照する。
 
 ## 3. 依存方向（必須）
 
@@ -122,8 +128,25 @@ flowchart LR
 3. 横断関心のみ `shared/` に置く（ドメイン知識を `shared` に落とさない）。
 4. 文言を追加する場合は feature の i18n 切片を更新し、`shared/i18n/uiText*.ts` の合成を維持する。
 5. Tailwind CSS 4 はクラスをソースから自動検出する。`features` / `shared` のクラスは、Dockerfile がそれらのディレクトリを COPY していれば本番 CSS に含まれる。
-6. `npm run lint` / `typecheck` / `test:run` を通す。
+6. `npm run lint` / `typecheck` / `test:run` を通す。テストは次の「テストの配置」に従って置く。
 7. Docker イメージを使う場合は `nodejs/studio/Dockerfile` が `features` / `shared` を COPY していること、および再ビルドを前提にする。
+
+### テストの配置
+
+単体テスト（Vitest）は `tests/` の下に、対象ソースの位置をそのまま映して置く。テストの置き場所は、対象ソースの位置から一意に決まる。
+
+| 対象ソース | テストの置き場所 |
+| --- | --- |
+| `features/<name>/<path>/X.ts(x)` | `tests/features/<name>/<path>/X.test.ts(x)` |
+| `shared/<area>/<path>/X.ts(x)` | `tests/shared/<area>/<path>/X.test.ts(x)` |
+| `app/<route>/page.tsx`・`route.ts`・`layout.tsx` | `tests/app/<route>/`（`[definitionId]` などの動的セグメントもそのまま映す） |
+| `middleware.ts` | `tests/middleware.test.ts` |
+
+- 1 つのモジュールの一部の関数だけを確かめるテストは、関数名をファイル名にしてよい（例: `features/executions/hooks/useGraphData.ts` の `getNodeWithFallback` → `tests/features/executions/hooks/getNodeWithFallback.test.ts`）。置き場所は対象モジュールのディレクトリに従う。
+- 複数のソースにまたがるテストは、それらに共通する最も近いディレクトリに置く（例: 複数のページのスモーク → `tests/app/pages.smoke.test.tsx`）。
+- テストから `tests/` の外のソースとテスト用ヘルパーを import するときは、相対パスではなくエイリアス（§2）を使う。同じディレクトリに置くテスト専用の補助ファイルだけは `./` で import してよい。
+- テスト用の共通部品は、`tests/testUtils.tsx`・`tests/helpers/`・`tests/mocks/`・`tests/setup.ts` に置く。
+- E2E（Playwright）は `e2e/` に置き、この規則の対象外とする。
 
 ## 6. 段階移行チェックリスト
 
