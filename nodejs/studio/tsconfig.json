@@ -23,6 +23,15 @@
       ],
       "@/shared/*": [
         "./shared/*"
+      ],
+      "@/app/*": [
+        "./app/*"
+      ],
+      "@/middleware": [
+        "./middleware.ts"
+      ],
+      "@/tests/*": [
+        "./tests/*"
       ]
     },
     "plugins": [

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
-import DashboardPage from "../../app/dashboard/page";
-import DefinitionsPage from "../../app/definitions/page";
-import ExecutionsPage from "../../app/executions/page";
-import { renderWithUiText } from "../testUtils";
+import DashboardPage from "@/app/dashboard/page";
+import DefinitionsPage from "@/app/definitions/page";
+import ExecutionsPage from "@/app/executions/page";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),

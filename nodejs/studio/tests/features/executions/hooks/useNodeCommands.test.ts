@@ -1,0 +1,157 @@
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useNodeCommands } from "@/features/executions/hooks/useNodeCommands";
+import type { ExecutionNodeDTO, ExecutionView } from "@/features/executions/types";
+import * as api from "@/shared/api";
+
+const execWithNodes = (nodes: ExecutionNodeDTO[]): ExecutionView => ({
+  displayId: "ex-1",
+  resourceId: "r-1",
+  status: "Running",
+  startedAt: "2026-01-01T00:00:00Z",
+  cancelRequested: false,
+  restartLost: false,
+  graphId: "g-1",
+  nodes
+});
+
+describe("useNodeCommands", () => {
+  beforeEach(() => {
+    vi.spyOn(api, "apiPost").mockResolvedValue({
+      executionId: "ex-1",
+      command: "resume",
+      accepted: true,
+      idempotencyKey: "key-1"
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("resumeNode と loading を返す", () => {
+    // Arrange
+    const exec = execWithNodes([
+      { nodeId: "n-1", nodeType: "TASK", status: "WAITING", attempt: 1, workerId: null, waitKey: "wk-1", canceledByExecution: false }
+    ]);
+
+    // Act
+    const { result } = renderHook(() => useNodeCommands(exec));
+
+    // Assert
+    expect(result.current.loading).toBe(false);
+    expect(typeof result.current.resumeNode).toBe("function");
+  });
+
+  it("resumeNode 成功時に apiPost と onSuccess を呼ぶ", async () => {
+    // Arrange
+    const exec = execWithNodes([
+      { nodeId: "n-1", nodeType: "TASK", status: "WAITING", attempt: 1, workerId: null, waitKey: "wk-1", canceledByExecution: false }
+    ]);
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useNodeCommands(exec, { onSuccess }));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-1", "wk-1");
+    });
+
+    // Assert
+    expect(api.apiPost).toHaveBeenCalledWith(
+      "/executions/ex-1/nodes/n-1/resume",
+      { resumeKey: "wk-1" }
+    );
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it("複数 allowedEvents 時は引数の resumeKey を送る", async () => {
+    // Arrange
+    const exec = execWithNodes([
+      {
+        nodeId: "n-1",
+        nodeType: "Wait",
+        status: "WAITING",
+        attempt: 1,
+        workerId: null,
+        waitKey: null,
+        allowedEvents: ["approve", "reject"],
+        canceledByExecution: false
+      }
+    ]);
+    const { result } = renderHook(() => useNodeCommands(exec));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-1", "reject");
+    });
+
+    // Assert
+    expect(api.apiPost).toHaveBeenCalledWith(
+      "/executions/ex-1/nodes/n-1/resume",
+      { resumeKey: "reject" }
+    );
+  });
+
+  it("apiPost が throw したとき onError を呼ぶ", async () => {
+    // Arrange
+    vi.mocked(api.apiPost).mockRejectedValueOnce(new Error("Network error"));
+    const exec = execWithNodes([
+      { nodeId: "n-1", nodeType: "TASK", status: "WAITING", attempt: 1, workerId: null, waitKey: "wk-1", canceledByExecution: false }
+    ]);
+    const onError = vi.fn();
+    const { result } = renderHook(() => useNodeCommands(exec, { onError }));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-1", "wk-1");
+    });
+
+    // Assert
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it("execution が null のとき apiPost を呼ばない", async () => {
+    // Arrange
+    const { result } = renderHook(() => useNodeCommands(null));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-1", "wk-1");
+    });
+
+    // Assert
+    expect(api.apiPost).not.toHaveBeenCalled();
+  });
+
+  it("nodeId が execution に無いとき apiPost を呼ばない", async () => {
+    // Arrange
+    const exec = execWithNodes([
+      { nodeId: "n-1", nodeType: "TASK", status: "WAITING", attempt: 1, workerId: null, waitKey: "wk-1", canceledByExecution: false }
+    ]);
+    const { result } = renderHook(() => useNodeCommands(exec));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-missing", "wk-1");
+    });
+
+    // Assert
+    expect(api.apiPost).not.toHaveBeenCalled();
+  });
+
+  it("resumeKey が空白のみのとき apiPost を呼ばない", async () => {
+    // Arrange
+    const exec = execWithNodes([
+      { nodeId: "n-1", nodeType: "TASK", status: "WAITING", attempt: 1, workerId: null, waitKey: "wk-1", canceledByExecution: false }
+    ]);
+    const { result } = renderHook(() => useNodeCommands(exec));
+
+    // Act
+    await act(async () => {
+      await result.current.resumeNode("n-1", "   ");
+    });
+
+    // Assert
+    expect(api.apiPost).not.toHaveBeenCalled();
+  });
+});

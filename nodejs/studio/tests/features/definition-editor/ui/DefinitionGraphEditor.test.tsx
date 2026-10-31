@@ -1,0 +1,676 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { act, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
+import { DefinitionGraphEditor } from "@/features/definition-editor/ui/DefinitionGraphEditor";
+import { resetActionSchemaIndexSessionCacheForTests } from "@/features/definition-editor/actionSchema/actionSchemaIndexSessionCache";
+import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultDefinitionYaml";
+import { parseDefinitionYaml } from "@/features/definition-editor/lib/parseDefinitionYaml";
+import type { DefinitionGraphDocument } from "@/features/definition-editor/lib/types";
+import { useDefinitionGraphEditor } from "@/features/definition-editor/hooks/useDefinitionGraphEditor";
+import { useGraphActionSchemas } from "@/features/definition-editor/hooks/useGraphActionSchemas";
+import type { Connection, Node } from "reactflow";
+import type { DefinitionGraphNodeData } from "@/features/definition-editor/lib/definitionGraphCanvas";
+import { renderWithUiText } from "@/tests/testUtils";
+import { definitionGraphEditorTestLabels } from "./definitionGraphEditorLabels";
+
+vi.mock("@/shared/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/api")>();
+  return { ...actual, apiGet: vi.fn() };
+});
+
+import { apiGet } from "@/shared/api";
+
+const parseOpts = {
+  rootObjectRequired: () => "root",
+  nodesArrayRequired: () => "nodes"
+};
+
+/**
+ * GraphInspector の mount 時 schema index 取得と setState を act 内で完了させる。
+ * 未待ちだと "An update to GraphInspector was not wrapped in act(...)" が出る。
+ */
+async function settleGraphInspectorSchemaIndex(): Promise<void> {
+  await waitFor(() => {
+    expect(vi.mocked(apiGet)).toHaveBeenCalledWith("/actions/schema/index");
+  });
+  await act(async () => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  });
+}
+
+function StatefulGraphEditorHarness({
+  initialDocument
+}: Readonly<{ initialDocument: DefinitionGraphDocument }>) {
+  const [document, setDocument] = useState(initialDocument);
+  return (
+    <DefinitionGraphEditor
+      document={document}
+      onDocumentChange={setDocument}
+      validationMessages={[]}
+      labels={definitionGraphEditorTestLabels}
+    />
+  );
+}
+
+describe("DefinitionGraphEditor", () => {
+  beforeEach(() => {
+    resetActionSchemaIndexSessionCacheForTests();
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === "/actions/schema/index") {
+        return {
+          items: [
+            {
+              actionId: "statevia.action.builtin.execution.noop",
+              displayName: "No-op",
+              version: "1.0.0"
+            },
+            {
+              actionId: "statevia.action.reference.http.request",
+              displayName: "REST",
+              version: "1.0.0"
+            }
+          ]
+        };
+      }
+      return undefined;
+    });
+  });
+
+  it("ドキュメントをグラフとして描画する", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={vi.fn()}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    expect(screen.getByText(definitionGraphEditorTestLabels.title)).toBeInTheDocument();
+  });
+
+  it("document が null のとき空状態を表示する", () => {
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={null}
+        onDocumentChange={vi.fn()}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+
+    expect(screen.getByText(definitionGraphEditorTestLabels.empty)).toBeInTheDocument();
+  });
+
+  it("バリデーションメッセージとフルスクリーンを操作できる", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={vi.fn()}
+        validationMessages={["node id required"]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    expect(screen.getByText("node id required")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.fullscreenEnter }));
+    expect(screen.getByRole("button", { name: definitionGraphEditorTestLabels.fullscreenExit })).toBeInTheDocument();
+  });
+
+  it("wait ノード追加で onDocumentChange を呼ぶ", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByRole("button", { name: "wait" }));
+    expect(onDocumentChange).toHaveBeenCalled();
+    const nextDocument = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    const waitNode = nextDocument.nodes.find((node) => node.type === "wait");
+    expect(waitNode).toMatchObject({
+      type: "wait",
+      events: { resume: "" }
+    });
+    expect(waitNode?.event).toBeUndefined();
+  });
+
+  it("wait.events をインスペクタで追加・編集できる", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "s", type: "start", next: "w1" },
+        { name: "w1", type: "wait", events: { approve: "ok" } },
+        { name: "ok", type: "end" }
+      ]
+    };
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByText(definitionGraphEditorTestLabels.waitEventsSectionTitle)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitEventsAdd }));
+
+    expect(onDocumentChange).toHaveBeenCalled();
+    const afterAdd = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterAdd.nodes.find((node) => node.name === "w1")?.events).toEqual({
+      approve: "ok",
+      event1: ""
+    });
+
+    const eventNameInput = screen.getByDisplayValue("event1");
+    const row = eventNameInput.closest("div");
+    const targetInput = row?.querySelectorAll("input")[1];
+    expect(targetInput).toBeTruthy();
+    fireEvent.change(targetInput!, { target: { value: "ok" } });
+    fireEvent.blur(targetInput!);
+
+    const afterEdit = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterEdit.nodes.find((node) => node.name === "w1")?.events).toEqual({
+      approve: "ok",
+      event1: "ok"
+    });
+  });
+
+  it("旧形式 wait を開き events へ変換できる", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "s", type: "start", next: "w1" },
+        { name: "w1", type: "wait", event: "resume", next: "ok" },
+        { name: "ok", type: "end" }
+      ]
+    };
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByText(definitionGraphEditorTestLabels.waitLegacyEventLabel)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitConvertToEvents }));
+
+    const nextDocument = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(nextDocument.nodes.find((node) => node.name === "w1")).toEqual({
+      name: "w1",
+      type: "wait",
+      events: { resume: "ok" }
+    });
+  });
+
+  it("wait.events 2 件の YAML 往復後もインスペクタに表示される", async () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: w1
+  - name: w1
+    type: wait
+    events:
+      approve: ok
+      reject: ng
+  - name: ok
+    type: end
+  - name: ng
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={vi.fn()}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByDisplayValue("approve")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("reject")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ok")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ng")).toBeInTheDocument();
+  });
+
+  it("wait.subscribe をインスペクタで追加・編集できる", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "s", type: "start", next: "w1" },
+        { name: "w1", type: "wait", subscribe: [{ topic: "orders.created", next: "ok" }] },
+        { name: "ok", type: "end" }
+      ]
+    };
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByText(definitionGraphEditorTestLabels.waitSubscribeSectionTitle)).toBeInTheDocument();
+    expect(screen.queryByText(definitionGraphEditorTestLabels.waitEventsSectionTitle)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitSubscribeAdd }));
+
+    expect(onDocumentChange).toHaveBeenCalled();
+    const afterAdd = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterAdd.nodes.find((node) => node.name === "w1")?.subscribe).toEqual([
+      { topic: "orders.created", next: "ok" },
+      { topic: "", next: "" }
+    ]);
+    expect(afterAdd.nodes.find((node) => node.name === "w1")?.events).toBeUndefined();
+  });
+
+  it("wait.subscribe YAML を開くとインスペクタに topic が出る", async () => {
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: w1
+  - name: w1
+    type: wait
+    subscribe:
+      - topic: orders.created
+        key: "$.id"
+        next: ok
+      - topic: orders.cancelled
+        next: ng
+  - name: ok
+    type: end
+  - name: ng
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("w1"));
+    expect(screen.getByDisplayValue("orders.created")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("orders.cancelled")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("$.id")).toBeInTheDocument();
+    expect(screen.queryByText(definitionGraphEditorTestLabels.waitEventsSectionTitle)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: definitionGraphEditorTestLabels.waitSwitchToEvents }));
+    const afterSwitch = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    expect(afterSwitch.nodes.find((node) => node.name === "w1")).toEqual({
+      name: "w1",
+      type: "wait",
+      events: { resume: "" }
+    });
+  });
+
+  it("action 変更時に input をクリアする", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    const onDocumentChange = vi.fn();
+    const documentWithInput: DefinitionGraphDocument = {
+      ...parsed.document!,
+      nodes: parsed.document!.nodes.map((entry) =>
+        entry.name === "slowStep" && entry.type === "action"
+          ? {
+              ...entry,
+              input: {
+                channel: "email",
+                to: "user@example.com"
+              }
+            }
+          : entry
+      )
+    };
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={documentWithInput}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("slowStep"));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("statevia.action.builtin.execution.sleep")).toBeInTheDocument();
+    });
+    const actionInput = screen.getByDisplayValue("statevia.action.builtin.execution.sleep");
+    await act(async () => {
+      fireEvent.change(actionInput, { target: { value: "statevia.action.builtin.execution.noop" } });
+      fireEvent.blur(actionInput);
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    const nextDocument = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
+    const updatedNode = nextDocument.nodes.find((entry) => entry.name === "slowStep");
+    expect(updatedNode?.type).toBe("action");
+    if (updatedNode?.type === "action") {
+      expect(updatedNode.action).toBe("statevia.action.builtin.execution.noop");
+      expect(updatedNode.input).toBeUndefined();
+    }
+  });
+
+  it("ノード選択後に action を更新する", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    const onDocumentChange = vi.fn();
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={parsed.document}
+        onDocumentChange={onDocumentChange}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("slowStep"));
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    const actionInput = screen.getByDisplayValue("statevia.action.builtin.execution.sleep");
+    fireEvent.change(actionInput, { target: { value: "statevia.action.builtin.execution.noop" } });
+    fireEvent.blur(actionInput);
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
+  it("一覧にない actionId では詳細 API を呼ばない", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+
+    renderWithUiText(<StatefulGraphEditorHarness initialDocument={parsed.document!} />);
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("slowStep"));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("statevia.action.builtin.execution.sleep")).toBeInTheDocument();
+    });
+
+    const detailCalls = vi
+      .mocked(apiGet)
+      .mock.calls.filter((call) => String(call[0]).startsWith("/actions/schema/") && call[0] !== "/actions/schema/index");
+    expect(detailCalls).toHaveLength(0);
+
+    fireEvent.change(screen.getByDisplayValue("statevia.action.builtin.execution.sleep"), { target: { value: "custom.action" } });
+    fireEvent.blur(screen.getByDisplayValue("custom.action"));
+
+    const afterBlurCalls = vi
+      .mocked(apiGet)
+      .mock.calls.filter((call) => String(call[0]).startsWith("/actions/schema/") && call[0] !== "/actions/schema/index");
+    expect(afterBlurCalls).toHaveLength(0);
+  });
+
+  it("index に一致した actionId の入力時のみ Schema API を呼ぶ", async () => {
+    const parsed = parseDefinitionYaml(defaultDefinitionYaml, parseOpts);
+    expect(parsed.document).not.toBeNull();
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === "/actions/schema/index") {
+        return {
+          items: [
+            {
+              actionId: "statevia.action.builtin.execution.noop",
+              displayName: "No-op",
+              version: "1.0.0"
+            },
+            {
+              actionId: "statevia.action.reference.http.request",
+              displayName: "REST",
+              version: "1.0.0"
+            }
+          ]
+        };
+      }
+      if (path.startsWith("/actions/schema/")) {
+        return {
+          descriptor: { actionId: "statevia.action.builtin.execution.noop", version: "1.0.0", displayName: "Noop" },
+          schema: {
+            schemaVersion: "2020-12",
+            inputSchema: { type: "object", properties: {} },
+            outputSchema: { type: "object" }
+          }
+        };
+      }
+      throw new Error(`unexpected path: ${path}`);
+    });
+
+    renderWithUiText(<StatefulGraphEditorHarness initialDocument={parsed.document!} />);
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByText("slowStep"));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("statevia.action.builtin.execution.sleep")).toBeInTheDocument();
+    });
+    vi.mocked(apiGet).mockClear();
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/actions/schema/")) {
+        return {
+          descriptor: { actionId: "statevia.action.reference.http.request", version: "1.0.0", displayName: "REST" },
+          schema: {
+            schemaVersion: "2020-12",
+            inputSchema: { type: "object", properties: {} },
+            outputSchema: { type: "object" }
+          }
+        };
+      }
+      throw new Error(`unexpected path: ${path}`);
+    });
+
+    const actionInput = screen.getByDisplayValue("statevia.action.builtin.execution.sleep");
+    const detailPathCalls = (calls: unknown[][]) =>
+      calls.filter((call) => String(call[0]).startsWith("/actions/schema/") && call[0] !== "/actions/schema/index");
+
+    fireEvent.change(actionInput, { target: { value: "statevia.action.builtin.r" } });
+    expect(detailPathCalls(vi.mocked(apiGet).mock.calls)).toHaveLength(0);
+
+    fireEvent.change(actionInput, { target: { value: "statevia.action.reference.http.request" } });
+    await waitFor(() => {
+      expect(
+        vi.mocked(apiGet).mock.calls.filter((call) => call[0] === "/actions/schema/statevia.action.reference.http.request")
+      ).toHaveLength(1);
+    });
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+    expect(detailPathCalls(vi.mocked(apiGet).mock.calls)).toHaveLength(1);
+  });
+
+  it("error と wait と分岐の辺を描画する", async () => {
+    const document: DefinitionGraphDocument = {
+      version: 1,
+      workflow: { name: "w" },
+      nodes: [
+        { name: "start", type: "start", next: "act" },
+        {
+          name: "act",
+          type: "action",
+          action: "noop",
+          error: "end",
+          next: "wait1",
+          edges: [{ to: "end" }, { to: "" }]
+        },
+        {
+          name: "wait1",
+          type: "wait",
+          events: { go: "end", "": "end" },
+          subscribe: [
+            { topic: "", next: "end" },
+            { topic: "orders", next: "" }
+          ]
+        },
+        { name: "fork1", type: "fork", branches: ["end", ""] },
+        { name: "end", type: "end" }
+      ]
+    };
+
+    renderWithUiText(
+      <DefinitionGraphEditor
+        document={document}
+        onDocumentChange={vi.fn()}
+        validationMessages={[]}
+        labels={definitionGraphEditorTestLabels}
+      />
+    );
+    await settleGraphInspectorSchemaIndex();
+
+    fireEvent.click(screen.getByRole("button", { name: "action" }));
+    fireEvent.click(screen.getByRole("button", { name: "fork" }));
+    fireEvent.click(screen.getByRole("button", { name: "join" }));
+    expect(screen.getByText(definitionGraphEditorTestLabels.title)).toBeInTheDocument();
+  });
+});
+
+describe("定義グラフの接続と schema 取得", () => {
+  const document: DefinitionGraphDocument = {
+    version: 1,
+    workflow: { name: "w" },
+    nodes: [
+      { name: "start", type: "start", next: "act" },
+      { name: "act", type: "action", action: "statevia.action.builtin.execution.noop", next: "end" },
+      { name: "plain", type: "action", action: "noop", next: "end" },
+      { name: "waitSub", type: "wait", subscribe: [{ topic: "orders", next: "end" }] },
+      { name: "waitEv", type: "wait", events: { go: "end" } },
+      { name: "waitBad", type: "wait", events: { go: "end" }, subscribe: [{ topic: "t", next: "end" }] },
+      { name: "fork1", type: "fork", branches: [] },
+      { name: "end", type: "end" }
+    ]
+  };
+
+  beforeEach(() => {
+    resetActionSchemaIndexSessionCacheForTests();
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === "/actions/schema/index") {
+        return {
+          items: [
+            { actionId: "statevia.action.builtin.execution.noop", displayName: "No-op", version: "1.0.0" }
+          ]
+        };
+      }
+      throw new Error(`schema failed: ${path}`);
+    });
+  });
+
+  it("接続の種類ごとに文書更新か拒否をする", () => {
+    const onDocumentChange = vi.fn();
+    const { result } = renderHook(() =>
+      useDefinitionGraphEditor({
+        document,
+        onDocumentChange,
+        labels: definitionGraphEditorTestLabels
+      })
+    );
+
+    const connect = (source: string, target: string, sourceHandle: string | null) => {
+      const connection: Connection = { source, target, sourceHandle, targetHandle: "in" };
+      act(() => {
+        result.current.onConnect(connection);
+      });
+    };
+
+    connect("start", "start", "out");
+    expect(result.current.graphMessage).toBe(definitionGraphEditorTestLabels.selfReferenceRejected);
+
+    connect("start", "missing", "out");
+    connect("act", "end", "out-error");
+    expect(onDocumentChange).toHaveBeenCalled();
+    connect("start", "end", "out-error");
+    connect("waitBad", "end", "out");
+    connect("waitSub", "end", "out");
+    connect("waitEv", "end", "out");
+    connect("fork1", "end", "out");
+    connect("plain", "act", "out");
+    connect("start", "act", "out");
+
+    act(() => {
+      const node: Node<DefinitionGraphNodeData> = {
+        id: "start",
+        position: { x: 12, y: 24 },
+        data: { nodeType: "START", label: "start", width: 10, height: 10 }
+      };
+      result.current.onNodeDragStop(new MouseEvent("mouseup"), node);
+    });
+    expect(onDocumentChange).toHaveBeenCalled();
+  });
+
+  it("上流 action の schema 取得失敗を飲み込む", async () => {
+    const edgeSourceNode = document.nodes.find((node) => node.name === "end");
+    const { result } = renderHook(() =>
+      useGraphActionSchemas({ document, edgeSourceNode })
+    );
+
+    await waitFor(() => {
+      expect(result.current.actionCandidatesLoading).toBe(false);
+    });
+    await act(async () => {
+      await result.current.loadActionSchema("statevia.action.builtin.execution.noop");
+      await result.current.loadActionSchema("unknown.action");
+      await result.current.loadActionSchema(" ");
+    });
+    expect(result.current.getCachedActionSchema("statevia.action.builtin.execution.noop")).toBeUndefined();
+  });
+});
