@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   同時呼び出しの混在負荷やサービス容量の根拠には使わない（ベストエフォート）。
-  実行系（/v1/executions / /v1/events）は tools/capacity の対象であり、本スクリプトでは測らない。
+  実行系（/v1/executions / /v1/events）は dotnet/tools/capacity の対象であり、本スクリプトでは測らない。
   request/sec は scripts/measure-api-rps.ps1。
 
   既定スイートは読み取りと、後始末できる定義の書き込み。
@@ -67,7 +67,7 @@
 
 .EXAMPLE
   $env:STATEVIA_API_TAT_PASSWORD = 'admin123'
-  .\scripts\measure-api-tat.ps1 -Output tools/api-tat/results/tat.json
+  .\scripts\measure-api-tat.ps1 -Output dotnet/tools/api-tat/results/tat.json
 
 .EXAMPLE
   .\scripts\measure-api-tat.ps1 -Suite Read -Iterations 50

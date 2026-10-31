@@ -4,7 +4,7 @@ alwaysApply: true
 
 # Serena MCP（調査・実装）
 
-statevia の Serena は **`user-serena-csharp`**（C#、ルート / `statevia.sln`）と **`user-serena-ui`**（UI）の 2 つ。調査・実装では、主戦場に対応するサーバーのシンボル系ツールを優先する。
+statevia の Serena は **`user-serena-csharp`**（C#、`dotnet/` / `statevia.sln`）と **`user-serena-ui`**（UI）の 2 つ。調査・実装では、主戦場に対応するサーバーのシンボル系ツールを優先する。
 
 ## 常時原則
 

@@ -8,7 +8,7 @@
   カレントディレクトリに依存しない。
   公式提供 Module を statevia_statevia_reference として解析し、API / Engine / UI と二重計上しない。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=reference を渡し SonarQubeExclude する。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio 等を CPD に混ぜる。scanAll はオフにする。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
@@ -26,7 +26,7 @@ $sonarAnalysisExclusions = @(
     '**/service/**',
     '**/core/**',
     '**/infrastructure/**',
-    '**/ui/studio/**',
+    '**/nodejs/studio/**',
     '**/ui/**',
     '**/tests/**',
     '**/modules/default/**',
@@ -43,7 +43,8 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$referenceDir = Join-Path $repoRoot 'modules\reference'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$referenceDir = Join-Path $dotnetRoot 'modules\reference'
 $coverageXml = Join-Path $PSScriptRoot 'modules-reference-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $referenceDir -PathType Container)) {
@@ -55,7 +56,7 @@ Push-Location -LiteralPath $referenceDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_reference' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -Inclusions '**/modules/reference/**' `
         -AnalysisExclusions $sonarAnalysisExclusions `

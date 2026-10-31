@@ -1,6 +1,6 @@
 ---
 description: CLI の改修後は、編集したソースを dotnet run で実行して確認する
-globs: service/cli/**
+globs: dotnet/service/cli/**
 alwaysApply: false
 ---
 
@@ -20,7 +20,7 @@ alwaysApply: false
 リポジトリルートで、変更したサブコマンドを実行する。
 
 ```bash
-dotnet run --project service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj -- <subcommand> [options]
+dotnet run --project dotnet/service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj -- <subcommand> [options]
 ```
 
 `def validate` のようにローカルだけで完結するサブコマンドは、API の再起動を待たずにこのコマンドで確認する。

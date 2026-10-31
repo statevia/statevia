@@ -127,7 +127,7 @@ public sealed partial class LoggerMessageEventIdTests
     }
 
     /// <summary>
-    /// テスト実行ディレクトリから親をたどり、<c>statevia.sln</c> があるリポジトリルートを返す。
+    /// テスト実行ディレクトリから親をたどり、<c>dotnet/statevia.sln</c> があるリポジトリルートを返す。
     /// </summary>
     /// <returns>リポジトリルートの絶対パス。</returns>
     /// <exception cref="DirectoryNotFoundException">ルートが見つからないとき。</exception>
@@ -135,13 +135,13 @@ public sealed partial class LoggerMessageEventIdTests
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "statevia.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "dotnet", "statevia.sln")))
             {
                 return directory.FullName;
             }
         }
 
-        throw new DirectoryNotFoundException("statevia.sln を含むリポジトリルートが見つかりません。");
+        throw new DirectoryNotFoundException("dotnet/statevia.sln を含むリポジトリルートが見つかりません。");
     }
 
     /// <summary>ビルド出力・依存パッケージ・worktree など、走査しないディレクトリかを判定する。</summary>

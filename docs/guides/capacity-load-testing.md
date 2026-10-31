@@ -74,14 +74,14 @@ L1 / L1O / L2 / D1 の Definition はハーネスに同梱します（`statevia.
 
 ## ハーネス（L1 / L1O / L2 / L3 / D1 / C1）
 
-リポジトリの `tools/capacity/` です。詳細な引数は同ディレクトリの README を見てください。
+リポジトリの `dotnet/tools/capacity/` です。詳細な引数は同ディレクトリの README を見てください。
 
 ```bash
-dotnet test tools/capacity/Statevia.Tools.Capacity.sln
+dotnet test dotnet/tools/capacity/Statevia.Tools.Capacity.sln
 
 # Development の例。パスワードは環境変数へ
 export STATEVIA_CAPACITY_PASSWORD='admin123'
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- \
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- \
   --scenario L1 \
   --base-url http://localhost:8080 \
   --tenant default \
@@ -91,17 +91,17 @@ dotnet run --project tools/capacity/Statevia.Tools.Capacity -- \
   --hw-label ref-dev \
   --hw-notes "laptop, 実効 vCPU/メモリを記入" \
   --topology split-runtime \
-  --output tools/capacity/results/l1.json
+  --output dotnet/tools/capacity/results/l1.json
 ```
 
 PowerShell の例:
 
 ```powershell
-dotnet test tools/capacity/Statevia.Tools.Capacity.sln
+dotnet test dotnet/tools/capacity/Statevia.Tools.Capacity.sln
 
 # Development の例。パスワードは環境変数へ
 $env:STATEVIA_CAPACITY_PASSWORD = 'admin123'
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- `
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- `
   --scenario L1 `
   --base-url http://localhost:8080 `
   --tenant default `
@@ -111,7 +111,7 @@ dotnet run --project tools/capacity/Statevia.Tools.Capacity -- `
   --hw-label ref-dev `
   --hw-notes "laptop, 実効 vCPU/メモリを記入" `
   --topology split-runtime `
-  --output tools/capacity/results/l1.json
+  --output dotnet/tools/capacity/results/l1.json
 ```
 
 L2 は `--scenario L2`、L1O は `--scenario L1O`、L3 は `--scenario L3`、D1 は `--scenario D1`、C1 は `--scenario C1` です。出力は JSON と、同名の CSV です。トークン・パスワードはファイルに書きません。
@@ -130,7 +130,7 @@ JWT または `X-Api-Key` を使う場合は `--token` / `--api-key` を渡し�
 
 ```powershell
 $env:STATEVIA_API_TAT_PASSWORD = 'admin123'
-.\scripts\measure-api-tat.ps1 -Suite Default -Output tools/api-tat/results/tat.json
+.\scripts\measure-api-tat.ps1 -Suite Default -Output dotnet/tools/api-tat/results/tat.json
 ```
 
 `-Suite Read` は読み取りと定義検証のみ、`Admin` は管理者 GET と後始末できる書き込み、`All` は削除できないユーザー / グループ作成と Module reload を含みます。実行系（`/v1/executions` / `POST /v1/events`）とパスワード変更は測りません。引数の正本はスクリプトのコメントヘルプです。
@@ -139,7 +139,7 @@ $env:STATEVIA_API_TAT_PASSWORD = 'admin123'
 
 ```powershell
 $env:STATEVIA_API_TAT_PASSWORD = 'admin123'
-.\scripts\measure-api-rps.ps1 -Suite Read -Concurrency 8 -DurationSeconds 15 -Output tools/api-tat/results/rps.json
+.\scripts\measure-api-rps.ps1 -Suite Read -Concurrency 8 -DurationSeconds 15 -Output dotnet/tools/api-tat/results/rps.json
 ```
 
 ## 負荷ランプ
@@ -168,7 +168,7 @@ L2 は Resume の非 2xx を失敗と数えます。失敗が出た直前ステ�
 - L2 は格子に入れない（32 件で GET `/waits` 待ちがタイムアウトする）
 - 投影キューや PostgreSQL の頭打ちは、スロットを増やしても完了レートが伸びない地点として読む
 
-`worker` は `container_name` が無いので `--scale worker=N` できます。スロットと Cancel ループは `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` です（[operations-docker.md](operations-docker.md)）。一括実行は `tools/capacity/run-worker-grid.ps1` です。`ui-studio` は起動しません。セル間で Running の leftover を Cancel します。
+`worker` は `container_name` が無いので `--scale worker=N` できます。スロットと Cancel ループは `STATEVIA_WORKER_MAX_CONCURRENCY` / `STATEVIA_WORKER_CANCEL_CONCURRENCY` です（[operations-docker.md](operations-docker.md)）。一括実行は `dotnet/tools/capacity/run-worker-grid.ps1` です。`ui-studio` は起動しません。セル間で Running の leftover を Cancel します。
 
 数表の正本は [service-capacity.md](../reference/service-capacity.md) です。
 

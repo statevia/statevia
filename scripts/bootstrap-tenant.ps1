@@ -13,7 +13,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $repoRoot "service\api\Statevia.Service.Api.Bootstrap\Statevia.Service.Api.Bootstrap.csproj"
+$project = Join-Path $repoRoot "dotnet\service\api\Statevia.Service.Api.Bootstrap\Statevia.Service.Api.Bootstrap.csproj"
 
 $dotnetArgs = @(
     "run",

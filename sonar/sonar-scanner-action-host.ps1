@@ -7,7 +7,7 @@
   スクリプト配置（リポジトリの sonar/）から action-host とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   依存アセンブリ（engine / api / cli / ui / infrastructure）が混ざらないよう解析・カバレッジ除外を設定する。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=action-host を渡し SonarQubeExclude する。
 
 .NOTES
@@ -27,7 +27,7 @@ $ErrorActionPreference = 'Stop'
 $sonarAnalysisExclusions = @(
     '**/service/api/**',
     '**/api/**',
-    '**/ui/studio/**',
+    '**/nodejs/studio/**',
     '**/core/engine/**',
     '**/engine/**',
     '**/core/actions/**',
@@ -55,11 +55,12 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$actionHostDir = Join-Path $repoRoot 'service\action-host'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$actionHostDir = Join-Path $dotnetRoot 'service\action-host'
 $coverageXml = Join-Path $PSScriptRoot 'service-action-host-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $actionHostDir -PathType Container)) {
-    Write-Error "service/action-host ディレクトリが見つかりません: $actionHostDir"
+    Write-Error "dotnet/service/action-host ディレクトリが見つかりません: $actionHostDir"
     exit 1
 }
 
@@ -67,7 +68,7 @@ Push-Location -LiteralPath $actionHostDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_action_host' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -AnalysisExclusions $sonarAnalysisExclusions `
         -CoverageExclusions $sonarCoverageExclusions

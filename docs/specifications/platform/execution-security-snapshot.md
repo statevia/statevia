@@ -99,7 +99,7 @@ Start 成功時（同一 ReadCommitted tx 内で executions 行と一緒に確�
 
 #### projectRole の正規化
 
-[`ProjectAccessRolePolicy.ToStorageValue`](../../../core/application/Statevia.Core.Application.Contracts/Security/ProjectAccessRolePolicy.cs) と同一の **小文字 storage 値**を保存する。
+[`ProjectAccessRolePolicy.ToStorageValue`](../../../dotnet/core/application/Statevia.Core.Application.Contracts/Security/ProjectAccessRolePolicy.cs) と同一の **小文字 storage 値**を保存する。
 
 | 内部値 | 表示例（UI） |
 | --- | --- |

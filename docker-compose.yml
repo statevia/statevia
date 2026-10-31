@@ -17,7 +17,7 @@ services:
   service-api:
     container_name: statevia-service-api
     build:
-      context: .
+      context: ./dotnet
       dockerfile: service/api/Dockerfile
     environment:
       # ローカル compose は Development（OpenAPI / Scalar を /scalar/v1 で公開）。本番イメージ単体では Production のまま。
@@ -55,7 +55,7 @@ services:
   action-host-1:
     container_name: statevia-action-host-1
     build:
-      context: .
+      context: ./dotnet
       dockerfile: service/action-host/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -70,7 +70,7 @@ services:
   action-host-2:
     container_name: statevia-action-host-2
     build:
-      context: .
+      context: ./dotnet
       dockerfile: service/action-host/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -84,7 +84,7 @@ services:
   ui-studio:
     container_name: statevia-ui-studio
     build:
-      context: ui/studio
+      context: nodejs/studio
     environment:
       SERVICE_API_INTERNAL_BASE: "http://service-api:8080"
     ports:

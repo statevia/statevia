@@ -95,7 +95,7 @@ YAML 上の `action` 参照は syntax parse のあと、Service API Compiler（`
 
 Builtin の Catalog `ModuleId` は `statevia.action.builtin`。旧 canonical（例: `statevia.action.builtin.sleep`）と短名は解決しない。
 
-first-party リファレンス Module（ソースは `modules/reference/`。API ビルド時に `modules/default/` へ copy。未署名は Community）:
+first-party リファレンス Module（ソースは `dotnet/modules/reference/`。API ビルド時に `modules/default/` へ copy。未署名は Community）:
 
 | Action | ModuleId | canonical ID |
 | --- | --- | --- |

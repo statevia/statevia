@@ -5,7 +5,7 @@
 | 種別 | Guide |
 | Version | 1.2 |
 | 更新日 | 2026-09-03 |
-| 関連 | [../../core/engine/samples/hello-statevia/README.md](../../core/engine/samples/hello-statevia/README.md) |
+| 関連 | [../../dotnet/core/engine/samples/hello-statevia/README.md](../../dotnet/core/engine/samples/hello-statevia/README.md) |
 
 ---
 
@@ -14,7 +14,7 @@ Core-Engine は **C# ライブラリ**です。Service API なしで、サンプ
 ## サンプル: hello-statevia
 
 ```bash
-cd core/engine/samples/hello-statevia
+cd dotnet/core/engine/samples/hello-statevia
 dotnet run
 ```
 
@@ -29,7 +29,7 @@ Engine 単体でロードと実行を確認するには、上の hello-statevia 
 ## Engine テストの実行
 
 ```bash
-cd core/engine
+cd dotnet/core/engine
 dotnet test statevia-engine.sln
 ```
 

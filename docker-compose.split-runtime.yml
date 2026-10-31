@@ -15,7 +15,7 @@ services:
   scheduler:
     container_name: statevia-scheduler
     build:
-      context: .
+      context: ./dotnet
       dockerfile: service/runtime/Statevia.Service.Runtime.Scheduler/Dockerfile
     environment:
       # Generic Host は DOTNET_ENVIRONMENT。ランタイムイメージ既定 Production をローカルでは API と同じ Development に揃える。
@@ -27,7 +27,7 @@ services:
 
   worker:
     build:
-      context: .
+      context: ./dotnet
       dockerfile: service/runtime/Statevia.Service.Runtime.Worker/Dockerfile
     environment:
       DOTNET_ENVIRONMENT: Development

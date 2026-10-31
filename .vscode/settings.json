@@ -4,9 +4,9 @@
     "connectionId": "statevia",
     "projectKey": "statevia_statevia_engine"
   },
-  "dotnet.defaultSolution": "statevia.sln",
+  "dotnet.defaultSolution": "dotnet/statevia.sln",
   "json.schemaDownload.enable": true,
   "css.customData": [
-    "ui/studio/tailwind-css-data.json"
+    "nodejs/studio/tailwind-css-data.json"
   ]
 }

@@ -40,11 +40,11 @@ coverage/
 .cursorrules
 .claude/settings.local.json
 .claude/worktrees/
-# Serena 作業ファイルは除外。ルートの C# 横断 project.yml だけ共有する。
+# Serena 作業ファイルは除外。dotnet/ の C# 横断 project.yml だけ共有する。
 **/.serena/
-!/.serena/
-/.serena/*
-!/.serena/project.yml
+!/dotnet/.serena/
+/dotnet/.serena/*
+!/dotnet/.serena/project.yml
 .mcp.json
 .playwright-mcp/
 
@@ -79,11 +79,12 @@ Thumbs.db
 # --- リポジトリ固有の生成物 ---
 docs/out/
 # 容量計測の生結果（公開しない）
-tools/capacity/results/
+dotnet/tools/capacity/results/
 # API 単体 TAT の生結果（公開しない）
-tools/api-tat/results/
+dotnet/tools/api-tat/results/
 # ビルドで copy するリファレンス Module DLL（実行時配置）
 modules/default/statevia.action.reference.*/
 # 手元実験用 Module。ソースも default テナントへの配置もコミットしない。
 modules/local/
+dotnet/modules/local/
 modules/default/statevia.local.playground/

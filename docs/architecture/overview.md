@@ -23,11 +23,11 @@ Project: Statevia — Definition Driven Execution Platform
 
 ### 1.1 構成の要点
 
-- **Core-Engine（C#）**: `core/engine/` のライブラリ。API プロセス内で `IExecutionEngine` として同一プロセス利用。独立 HTTP サービスはない。
-- **Core-Application（C#）**: `core/application/`。ユースケース実装。Engine / Actions.Abstractions のみに依存し、infrastructure / service を参照しない。
-- **Infrastructure（C#）**: `infrastructure/`。EF Core 永続化、JWT 認証、通知、Module ホスト等の技術実装。
-- **Service API（C#）**: `service/api/`。ASP.NET Core。HTTP アダプタとして v1/definitions・v1/executions を提供。Composition Root として全層を結合。
-- **UI（TypeScript）**: `ui/studio/`。Next.js。Route Handler のプロキシ（`/api/core/*`）で Service API の `/v1/*` に転送。
+- **Core-Engine（C#）**: `dotnet/core/engine/` のライブラリ。API プロセス内で `IExecutionEngine` として同一プロセス利用。独立 HTTP サービスはない。
+- **Core-Application（C#）**: `dotnet/core/application/`。ユースケース実装。Engine / Actions.Abstractions のみに依存し、infrastructure / service を参照しない。
+- **Infrastructure（C#）**: `dotnet/infrastructure/`。EF Core 永続化、JWT 認証、通知、Module ホスト等の技術実装。
+- **Service API（C#）**: `dotnet/service/api/`。ASP.NET Core。HTTP アダプタとして v1/definitions・v1/executions を提供。Composition Root として全層を結合。
+- **UI（TypeScript）**: `nodejs/studio/`。Next.js。Route Handler のプロキシ（`/api/core/*`）で Service API の `/v1/*` に転送。
 
 ### 1.2 全体図
 
@@ -76,23 +76,23 @@ flowchart LR
 
 | 役割 | 場所 |
 | --- | --- |
-| Core-Engine | `core/engine/Statevia.Core.Engine/` |
-| Core-Application | `core/application/Statevia.Core.Application/` |
-| Application Contracts | `core/application/Statevia.Core.Application.Contracts/` |
-| Actions Abstractions | `core/actions/Statevia.Core.Actions.Abstractions/` |
-| Reference Modules | `modules/reference/`（実行時は `modules/default/`） |
-| Persistence | `infrastructure/Statevia.Infrastructure.Persistence/` |
-| Security | `infrastructure/Statevia.Infrastructure.Security/` |
-| Service API | `service/api/Statevia.Service.Api/` |
-| Action Host | `service/action-host/Statevia.Service.ActionHost/` |
-| CLI | `service/cli/Statevia.Service.Cli/` |
-| UI | `ui/studio/` |
+| Core-Engine | `dotnet/core/engine/Statevia.Core.Engine/` |
+| Core-Application | `dotnet/core/application/Statevia.Core.Application/` |
+| Application Contracts | `dotnet/core/application/Statevia.Core.Application.Contracts/` |
+| Actions Abstractions | `dotnet/core/actions/Statevia.Core.Actions.Abstractions/` |
+| Reference Modules | `dotnet/modules/reference/`（実行時は `modules/default/`） |
+| Persistence | `dotnet/infrastructure/Statevia.Infrastructure.Persistence/` |
+| Security | `dotnet/infrastructure/Statevia.Infrastructure.Security/` |
+| Service API | `dotnet/service/api/Statevia.Service.Api/` |
+| Action Host | `dotnet/service/action-host/Statevia.Service.ActionHost/` |
+| CLI | `dotnet/service/cli/Statevia.Service.Cli/` |
+| UI | `nodejs/studio/` |
 
 ### 1.4 Docker 構成（参考）
 
 - **postgres**: データベース
-- **service-api**: C# API（`service/api/Dockerfile`）
-- **ui**: Next.js（`ui/studio/Dockerfile`）
+- **service-api**: C# API（`dotnet/service/api/Dockerfile`）
+- **ui**: Next.js（`nodejs/studio/Dockerfile`）
 
 `docker-compose.yml` はリポジトリルートに配置。
 
@@ -153,7 +153,7 @@ flowchart LR
 
 ## 3. 依存方向（不変条件）
 
-クリーン・アーキテクチャ（オニオン）に準拠し、以下の依存方向を維持する。
+クリーン・アーキテクチャ（オニオン）に準拠し、以下の依存方向を維持する。C# の層は `dotnet/` からの相対パスで書く（`ui` は `nodejs/studio/`）。
 
 ```text
 core/engine                              ← 参照なし（最内殻）
@@ -166,7 +166,7 @@ service/*                                → core/* + infrastructure/*（Composi
 ui                                       → service/api（HTTP のみ）
 ```
 
-**禁止（`tests/Statevia.Architecture.Tests` で機械的に検出）:**
+**禁止（`dotnet/tests/Statevia.Architecture.Tests` で機械的に検出）:**
 
 - `core/*` → `infrastructure/*`
 - `core/*` → `service/*`
@@ -176,7 +176,7 @@ ui                                       → service/api（HTTP のみ）
 
 ## 4. Core-Engine のレイヤー
 
-Core-Engine は定義駆動・事実駆動型 FSM に基づくワークフローエンジン。以下はエンジン内部のレイヤーと責務（`core/engine/Statevia.Core.Engine/` に実装）。
+Core-Engine は定義駆動・事実駆動型 FSM に基づくワークフローエンジン。以下はエンジン内部のレイヤーと責務（`dotnet/core/engine/Statevia.Core.Engine/` に実装）。
 
 ### 4.1 概要（データフロー）
 

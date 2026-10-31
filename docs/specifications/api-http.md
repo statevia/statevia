@@ -25,7 +25,7 @@
 
 ---
 
-Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
+Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 **Version 1.36（2026-10-29）**: 定期実行を Project の所属に揃える。一覧と取得は定義の Project の所属と実行リソース許可で絞る。有効なスケジュールの保存と手動実行の前に発火準備検査（定義が未削除、run-as の有効性・所属・許可）を行い、run-as の所属不足は 422。無効化と削除は run-as と定義の状態で止めない。Project のメンバー候補に資格のない ServiceAccount を入れ、`kind` の `apiKey` を `serviceAccount` に変える。
 
@@ -95,7 +95,7 @@ Service API（C#、`service/api/`）の HTTP 契約。実装に準拠。
 
 | 項目 | 内容 |
 | --- | --- |
-| スキーマ・操作の正本 | Swashbuckle 生成の `/swagger/v1/swagger.json`、およびリポジトリ内 [`service/api/openapi/core-api-v1.openapi.json`](../../service/api/openapi/core-api-v1.openapi.json) |
+| スキーマ・操作の正本 | Swashbuckle 生成の `/swagger/v1/swagger.json`、およびリポジトリ内 [`dotnet/service/api/openapi/core-api-v1.openapi.json`](../../dotnet/service/api/openapi/core-api-v1.openapi.json) |
 | 閲覧 UI（Development） | Scalar — 例: `http://localhost:8080/scalar/v1`（`ASPNETCORE_URLS` に依存） |
 | 本番 | OpenAPI / Scalar は **既定オフ**。Staging または `STATEVIA_ENABLE_API_DOCS=true` で有効化 |
 | export | リポジトリルートから `.\scripts\export-core-api-openapi.ps1` |

@@ -38,7 +38,7 @@ docker compose up -d postgres
 # 初回のみ: 空の PostgreSQL にスキーマを作成（ホストから接続するため DB ホストは localhost）
 set -a && source .env && set +a
 export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}"
-(cd service/api && dotnet ef database update --project Statevia.Service.Api)
+(cd dotnet/service/api && dotnet ef database update --project Statevia.Service.Api)
 
 docker compose up -d
 ```
@@ -101,7 +101,7 @@ UI からは [http://localhost:3000/login](http://localhost:3000/login) で同�
 
 → セットアップ・認証・トラブルシュート: **[docs/guides/getting-started.md](docs/guides/getting-started.md)**
 
-Engine ライブラリだけ試す: [hello-statevia](core/engine/samples/hello-statevia) / [engine-standalone-guide](docs/guides/engine-standalone-guide.md)
+Engine ライブラリだけ試す: [hello-statevia](dotnet/core/engine/samples/hello-statevia) / [engine-standalone-guide](docs/guides/engine-standalone-guide.md)
 
 ---
 
@@ -166,11 +166,13 @@ Reference — 辞書・一覧（必要になったら）
 
 ```text
 statevia/
-├─ core/              # Engine · Application
-├─ infrastructure/    # 永続化 · Module · Security
-├─ service/           # Service API · CLI · action-host · runtime
-├─ ui/studio/         # Web UI
-└─ docs/              # ドキュメント正本
+├─ dotnet/              # C# のすべて（sln・共通のビルド設定を含む）
+│  ├─ core/             # Engine · Application
+│  ├─ infrastructure/   # 永続化 · Module · Security
+│  └─ service/          # Service API · CLI · action-host · runtime
+├─ nodejs/
+│  └─ studio/           # Web UI
+└─ docs/                # ドキュメント正本
 ```
 
 ---

@@ -38,7 +38,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$slnPath = Join-Path $PSScriptRoot '..\service\api\statevia-api.sln'
+$slnPath = Join-Path $PSScriptRoot '..\dotnet\service\api\statevia-api.sln'
 
 # 環境変数によるシナリオ除外フラグの読み取り
 $envSkip = $env:STATEVIA_SKIP_SCENARIO_TESTS -eq 'true'

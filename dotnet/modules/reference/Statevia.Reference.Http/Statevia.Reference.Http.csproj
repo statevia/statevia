@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Statevia.Reference.Notification</RootNamespace>
-    <AssemblyName>Statevia.Reference.Notification</AssemblyName>
+    <RootNamespace>Statevia.Reference.Http</RootNamespace>
+    <AssemblyName>Statevia.Reference.Http</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ReferenceModuleId>statevia.action.reference.notification</ReferenceModuleId>
-    <DefaultTenantModulesDir>$(MSBuildThisFileDirectory)..\..\..\modules\default\$(ReferenceModuleId)\</DefaultTenantModulesDir>
+    <ReferenceModuleId>statevia.action.reference.http</ReferenceModuleId>
+    <DefaultTenantModulesDir>$(StateviaModulesOutputRoot)default\$(ReferenceModuleId)\</DefaultTenantModulesDir>
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Statevia.Reference.Notification.Tests" />
+    <InternalsVisibleTo Include="Statevia.Reference.Http.Tests" />
   </ItemGroup>
 
   <ItemGroup>

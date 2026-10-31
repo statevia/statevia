@@ -67,7 +67,7 @@
 
 .EXAMPLE
   $env:STATEVIA_API_TAT_PASSWORD = 'admin123'
-  .\scripts\measure-api-rps.ps1 -Suite Read -Output tools/api-tat/results/rps.json
+  .\scripts\measure-api-rps.ps1 -Suite Read -Output dotnet/tools/api-tat/results/rps.json
 
 .EXAMPLE
   .\scripts\measure-api-rps.ps1 -Only health.get,auth.me.get -Concurrency 16 -DurationSeconds 20

@@ -15,7 +15,7 @@
 
 **Version 1.1（2026-10-13）**: Action Host は秘密の環境変数で起動せず、modules は読み取り専用。Container は実行テナントのディレクトリだけをマウントする。
 
-**Action Host**（`service/action-host/`）は、Policy が **OutOfProcess** を要求する Action を gRPC で実行するサンドボックスプロセスです。Service API から `Statevia:ActionHost:BaseUrl` で到達します。
+**Action Host**（`dotnet/service/action-host/`）は、Policy が **OutOfProcess** を要求する Action を gRPC で実行するサンドボックスプロセスです。Service API から `Statevia:ActionHost:BaseUrl` で到達します。
 
 ## いつ必要か
 
@@ -37,7 +37,7 @@ PostgreSQL と Service API と併せて起動する場合は Docker Compose が�
 単体で Action Host をホスト起動する例:
 
 ```bash
-cd service/action-host
+cd dotnet/service/action-host
 dotnet run --project Statevia.Service.ActionHost
 ```
 

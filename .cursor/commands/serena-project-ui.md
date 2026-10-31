@@ -4,7 +4,7 @@ Serena MCP で **statevia の UI（studio）** を使う（MCP サーバー `ser
 
 ## 実行してほしいこと
 
-1. 主戦場を **ui**（`ui/studio/`）とみなす。
+1. 主戦場を **ui**（`nodejs/studio/`）とみなす。
 2. MCP サーバー **`user-serena-ui`** が ready か確認する。
 3. ready でない場合は **作業を停止**し、ユーザーへ次を促す（自動トグルは不可）。
    - Cursor Customize / MCP で、他の `serena-*` をすべて **Off**

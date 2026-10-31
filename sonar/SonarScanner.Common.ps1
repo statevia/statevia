@@ -54,8 +54,8 @@ function Get-StateviaSonarBeginArguments {
       dotnet sonarscanner の begin 以降の引数を返す。
     .PARAMETER ProjectKey
       SonarQube Cloud の projectKey。
-    .PARAMETER RepositoryRoot
-      sonar.projectBaseDir に渡すリポジトリルート。
+    .PARAMETER ProjectBaseDir
+      sonar.projectBaseDir に渡すディレクトリ。C# は dotnet/（ファイルのキーを集約前と同じに保つ）。
     .PARAMETER CoverageReportPath
       VS Coverage XML のパス。空ならカバレッジ引数を付けない。
     .PARAMETER AnalysisExclusions
@@ -77,7 +77,7 @@ function Get-StateviaSonarBeginArguments {
         [string] $ProjectKey,
 
         [Parameter(Mandatory = $true)]
-        [string] $RepositoryRoot,
+        [string] $ProjectBaseDir,
 
         [string] $CoverageReportPath,
         [string] $AnalysisExclusions,
@@ -96,7 +96,7 @@ function Get-StateviaSonarBeginArguments {
     $arguments.Add("/k:$ProjectKey")
     $arguments.Add("/d:sonar.host.url=$(Get-StateviaSonarHostUrl)")
     $arguments.Add("/d:sonar.token=$($env:SONAR_TOKEN)")
-    $arguments.Add("/d:sonar.projectBaseDir=$RepositoryRoot")
+    $arguments.Add("/d:sonar.projectBaseDir=$ProjectBaseDir")
     $arguments.Add('/d:sonar.scanner.scanAll=false')
 
     $organization = Get-StateviaSonarOrganization

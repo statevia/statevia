@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($rawPayload)) {
 }
 
 $repoRoot = Get-RepositoryRoot
-$studioRoot = Join-Path $repoRoot 'ui\studio'
+$studioRoot = Join-Path $repoRoot 'nodejs\studio'
 $lockPath = Join-Path $PSScriptRoot '.eslint-fix-after-file-edit.lock'
 $minSecondsBetweenRuns = 45
 
@@ -35,7 +35,7 @@ function Add-MatchedPath([string]$candidate) {
   if ($candidate -notmatch '(?i)\.(tsx|ts)$') {
     return
   }
-  if ($candidate -notmatch '(?i)ui[\\/]studio[\\/]') {
+  if ($candidate -notmatch '(?i)nodejs[\\/]studio[\\/]') {
     return
   }
   [void]$matchedPaths.Add($candidate)
@@ -54,7 +54,7 @@ try {
 }
 
 $decodedPayload = $rawPayload -replace '\\\\', '\'
-$pathPattern = '(?i)(?:[A-Za-z]:\\|/)?(?:[^"\s]*?[\\/])?ui[\\/]studio[\\/][^"\s]+?\.(?:tsx|ts)\b'
+$pathPattern = '(?i)(?:[A-Za-z]:\\|/)?(?:[^"\s]*?[\\/])?nodejs[\\/]studio[\\/][^"\s]+?\.(?:tsx|ts)\b'
 foreach ($match in [regex]::Matches($decodedPayload, $pathPattern)) {
   Add-MatchedPath -candidate $match.Value.Trim('"', "'", ',', ']')
 }

@@ -33,14 +33,14 @@
 
 ---
 
-**Statevia Studio**（`ui/studio/`）は Next.js の Web ダッシュボードです。Service API へはブラウザから直接呼ばず、**同一オリジンのプロキシ**（`/api/core/*`）経由でアクセスします。
+**Statevia Studio**（`nodejs/studio/`）は Next.js の Web ダッシュボードです。Service API へはブラウザから直接呼ばず、**同一オリジンのプロキシ**（`/api/core/*`）経由でアクセスします。
 
 ## 起動
 
 Service API と PostgreSQL が起動している状態で:
 
 ```bash
-cd ui/studio
+cd nodejs/studio
 SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 ```
 

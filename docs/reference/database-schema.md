@@ -52,7 +52,7 @@ Project: 実行型ステートマシン
 ---
 
 Service API（C#）の EF Core マイグレーションで管理する PostgreSQL スキーマ。  
-実装: `infrastructure/Statevia.Infrastructure.Persistence/` および `Migrations/`。
+実装: `dotnet/infrastructure/Statevia.Infrastructure.Persistence/` および `Migrations/`。
 
 **書き込み経路（2026-05-20 時点）:** 定義の新規作成・publish は **`definitions` + `definition_versions` のみ**。`workflow_definitions` は移行期のレガシーテーブル（バックフィル元）として残存し、**新規 INSERT は行わない**。
 
@@ -1105,7 +1105,7 @@ erDiagram
 | `20261020131054_ProjectPrincipalAccesses` | `projects.owner_tenant_id` を `tenant_id` に改名。`visibility` を削除。`project_accesses` の付与先を `principal_id` にし、PK を `(project_id, principal_id)` にする |
 | `20261022121947_BackfillDefaultProjectAdmins` | 既存 `slug=default` のユーザーと API キーを admin で一度だけ載せる。再実行では既存メンバーを上書きしない |
 
-適用: `cd service/api && dotnet ef database update --project Statevia.Service.Api`
+適用: `cd dotnet/service/api && dotnet ef database update --project Statevia.Service.Api`
 
 **既存 DB への注意:** テーブルが手動作成済みで `InitialCreate` が失敗する場合は、マイグレーション履歴（`__EFMigrationsHistory`）と実スキーマの整合を確認してから適用する。未適用分のみ実行するか、クリーン DB で検証する。
 

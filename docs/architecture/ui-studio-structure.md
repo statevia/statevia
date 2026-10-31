@@ -25,14 +25,14 @@
 
 ---
 
-Statevia Studio（`ui/studio/`）の**内部モジュール境界**の正本である。目的は所有権の明確化と、ページ増加時の変更影響の見通しである。
+Statevia Studio（`nodejs/studio/`）の**内部モジュール境界**の正本である。目的は所有権の明確化と、ページ増加時の変更影響の見通しである。
 
 **契約・UX の非変更（必須）**: 本構成は配置と import 境界のみを対象とする。Service API の HTTP 契約（パス・クエリ・レスポンス形）および利用者向け画面の操作体験は変えない。契約の正本は [`../specifications/api-http.md`](../specifications/api-http.md) および各 UI 仕様である。
 
 ## 1. 最終ツリー
 
 ```text
-ui/studio/
+nodejs/studio/
 ├─ app/                      # App Router のみ（薄い page / layout / route handlers）
 │  ├─ api/                   # BFF（`/api/core/*`・auth）。移動しない
 │  ├─ admin|dashboard|definitions|executions|login/
@@ -85,7 +85,7 @@ flowchart LR
 | `shared` → `features` | **禁止**（例外: `shared/i18n/uiText*.ts` が feature の i18n 切片を合成 import する） |
 | feature → 他 feature の内部 | **禁止**（共有が必要なら `shared` へ上げるか公開エントリを明示） |
 
-機械チェック: `ui/studio/eslint.config.js` で `shared/**` からの `@/features` / `features` 参照を `no-restricted-imports` で error にする（`shared/i18n/uiText.ts` / `uiText.en.ts` のみ辞書合成のため除外）。feature 間内部参照はレビュー必須（下記チェックリスト）。
+機械チェック: `nodejs/studio/eslint.config.js` で `shared/**` からの `@/features` / `features` 参照を `no-restricted-imports` で error にする（`shared/i18n/uiText.ts` / `uiText.en.ts` のみ辞書合成のため除外）。feature 間内部参照はレビュー必須（下記チェックリスト）。
 
 ## 4. feature 内の標準レイヤ
 
@@ -123,7 +123,7 @@ flowchart LR
 4. 文言を追加する場合は feature の i18n 切片を更新し、`shared/i18n/uiText*.ts` の合成を維持する。
 5. Tailwind CSS 4 はクラスをソースから自動検出する。`features` / `shared` のクラスは、Dockerfile がそれらのディレクトリを COPY していれば本番 CSS に含まれる。
 6. `npm run lint` / `typecheck` / `test:run` を通す。
-7. Docker イメージを使う場合は `ui/studio/Dockerfile` が `features` / `shared` を COPY していること、および再ビルドを前提にする。
+7. Docker イメージを使う場合は `nodejs/studio/Dockerfile` が `features` / `shared` を COPY していること、および再ビルドを前提にする。
 
 ## 6. 段階移行チェックリスト
 

@@ -18,10 +18,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 if (-not $ResultsDir) {
     $stamp = Get-Date -Format 'yyyyMMddHHmmss'
-    $ResultsDir = Join-Path $RepoRoot "tools\capacity\results\grid-$stamp"
+    $ResultsDir = Join-Path $RepoRoot "dotnet\tools\capacity\results\grid-$stamp"
 }
 
 New-Item -ItemType Directory -Force -Path $ResultsDir | Out-Null
@@ -164,7 +164,7 @@ function Invoke-GridCell {
     Invoke-DrainRunning
 
     $jsonPath = Join-Path $ResultsDir "$CellId.json"
-    $project = Join-Path $RepoRoot 'tools\capacity\Statevia.Tools.Capacity'
+    $project = Join-Path $RepoRoot 'dotnet\tools\capacity\Statevia.Tools.Capacity'
     $args = @(
         'run', '--project', $project, '--',
         '--scenario', $Scenario,

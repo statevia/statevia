@@ -10,7 +10,7 @@
 
 ---
 
-Action Module の発見・登録・可視性・実行ポリシー・dispatch の Normative 概要。実装は `core/actions/Statevia.Core.Actions.Abstractions` と Service API の composition root にある。
+Action Module の発見・登録・可視性・実行ポリシー・dispatch の Normative 概要。実装は `dotnet/core/actions/Statevia.Core.Actions.Abstractions` と Service API の composition root にある。
 
 **Version 1.5（2026-10-15）**: 状態の `bindings` は input とは別フィールドで 1 回だけ渡す。InProcess は復号前に `ActionBindingRejected`。解決できないときは `ActionBindingUnavailable`。
 

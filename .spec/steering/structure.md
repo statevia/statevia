@@ -3,28 +3,29 @@
 ## Top-Level Layout
 
 ```text
-core/                  # ドメイン・契約（非デプロイ）
-infrastructure/        # 技術実装（差し替え可能・最外殻）
-service/               # デプロイ可能なインターフェイス（API / CLI / action-host / runtime）
-ui/studio/             # Web ダッシュボード（Next.js — @statevia/studio）
-tests/                 # 横断テスト（Architecture.Tests）
+dotnet/                # C# のすべて（sln・共通のビルド設定を含む）
+├─ core/               # ドメイン・契約（非デプロイ）
+├─ infrastructure/     # 技術実装（差し替え可能・最外殻）
+├─ service/            # デプロイ可能なインターフェイス（API / CLI / action-host / runtime）
+├─ tests/              # 横断テスト（Architecture.Tests）
+└─ tools/capacity/     # 容量計測ハーネス（CI 常時実行外）
+nodejs/studio/         # Web ダッシュボード（Next.js — @statevia/studio）
 docs/                  # 契約・運用・開発ガイド
 scripts/               # ビルド・運用スクリプト
-tools/capacity/        # 容量計測ハーネス（CI 常時実行外）
 ```
 
-## Core（`core/`）
+## Core（`dotnet/core/`）
 
 ドメインと契約。HTTP/DB に直接依存しない。
 
 | プロジェクト | 役割 |
 | --- | --- |
-| `core/engine/Statevia.Core.Engine` | ワークフローエンジン（FSM, Graph, Scheduler） |
-| `core/application/Statevia.Core.Application` | ユースケース実装 |
-| `core/application/Statevia.Core.Application.Contracts` | DDD ポート / DTO（リポジトリ、UoW、サービスインターフェース） |
-| `core/actions/Statevia.Core.Actions.Abstractions` | Action / Module SPI |
+| `dotnet/core/engine/Statevia.Core.Engine` | ワークフローエンジン（FSM, Graph, Scheduler） |
+| `dotnet/core/application/Statevia.Core.Application` | ユースケース実装 |
+| `dotnet/core/application/Statevia.Core.Application.Contracts` | DDD ポート / DTO（リポジトリ、UoW、サービスインターフェース） |
+| `dotnet/core/actions/Statevia.Core.Actions.Abstractions` | Action / Module SPI |
 
-## Infrastructure（`infrastructure/`）
+## Infrastructure（`dotnet/infrastructure/`）
 
 core の契約（`Application.Contracts` / `Actions.Abstractions`）の技術実装。
 
@@ -37,28 +38,28 @@ core の契約（`Application.Contracts` / `Actions.Abstractions`）の技術実
 | `Statevia.Infrastructure.Actions.Grpc` | gRPC Action Backend |
 | `Statevia.Infrastructure.Common` | IdGenerator (UUID v7) 等 |
 
-## Service（`service/`）
+## Service（`dotnet/service/`）
 
 HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で結合。
 
 | プロジェクト | 役割 |
 | --- | --- |
-| `service/api/Statevia.Service.Api` | HTTP アダプタ（Controllers + Hosting） |
-| `service/api/Statevia.Service.Api.Bootstrap` | エントリポイント（Program.cs） |
-| `service/runtime/Statevia.Runtime` | Worker / DelayWait Scheduler / OwnershipRecovery の HostedService 正本 |
-| `service/runtime/Statevia.Service.Runtime.Scheduler` | DelayWait / ownership recovery Generic Host（任意分離） |
-| `service/runtime/Statevia.Service.Runtime.Worker` | execution_work_items Worker Generic Host（任意分離） |
-| `service/action-host/Statevia.Service.ActionHost` | OutOfProcess Action 実行（gRPC sandbox） |
-| `service/cli/Statevia.Service.Cli` | 統合 `statevia` コマンド |
+| `dotnet/service/api/Statevia.Service.Api` | HTTP アダプタ（Controllers + Hosting） |
+| `dotnet/service/api/Statevia.Service.Api.Bootstrap` | エントリポイント（Program.cs） |
+| `dotnet/service/runtime/Statevia.Runtime` | Worker / DelayWait Scheduler / OwnershipRecovery の HostedService 正本 |
+| `dotnet/service/runtime/Statevia.Service.Runtime.Scheduler` | DelayWait / ownership recovery Generic Host（任意分離） |
+| `dotnet/service/runtime/Statevia.Service.Runtime.Worker` | execution_work_items Worker Generic Host（任意分離） |
+| `dotnet/service/action-host/Statevia.Service.ActionHost` | OutOfProcess Action 実行（gRPC sandbox） |
+| `dotnet/service/cli/Statevia.Service.Cli` | 統合 `statevia` コマンド |
 
-## UI（`ui/studio/`）
+## UI（`nodejs/studio/`）
 
 - Next.js の route handler で Service API にプロキシし、ブラウザからは同一オリジンの `/api/core/...` 等を利用。
 - 環境変数 `SERVICE_API_INTERNAL_BASE` でバックエンド基底 URL を指定（`AGENTS.md` の表）。
 
-## Tests（`tests/`）
+## Tests（`dotnet/tests/`）
 
-- `tests/Statevia.Architecture.Tests`: `NetArchTest.eNhancedEdition` で依存方向禁止ルールを機械的に検証。
+- `dotnet/tests/Statevia.Architecture.Tests`: `NetArchTest.eNhancedEdition` で依存方向禁止ルールを機械的に検証。
 
 ## Module Boundaries
 
@@ -67,11 +68,11 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 - **Service ↔ Core/Infrastructure**: DI で結合。Service は HTTP/gRPC 境界のみ担当。
 - **UI ↔ Service**: HTTP（プロキシ）のみ。DB に直接接続しない。
 
-## Tools（`tools/`）
+## Tools（`dotnet/tools/`）
 
 | 配置 | 役割 |
 | --- | --- |
-| `tools/capacity/` | Service API 向け容量計測ハーネス。公開件数の正本は `docs/reference/service-capacity.md`。CI 常時実行には載せない |
+| `dotnet/tools/capacity/` | Service API 向け容量計測ハーネス。公開件数の正本は `docs/reference/service-capacity.md`。CI 常時実行には載せない |
 
 ## Documentation & Specs
 

@@ -92,7 +92,7 @@ flowchart LR
 
 ### 1.1 Execution ドメインサービス（Core-Application）
 
-実装パスは `core/application/Statevia.Core.Application/Services/`。Worker / Controller の公開契約は `IExecutionService` のままである。
+実装パスは `dotnet/core/application/Statevia.Core.Application/Services/`。Worker / Controller の公開契約は `IExecutionService` のままである。
 
 | 型 | 責務 |
 | --- | --- |
@@ -116,7 +116,7 @@ flowchart LR
 ## 2. 読み方（要点）
 
 - `Core-Engine` は純粋ドメインロジック（定義解釈、遷移、グラフ生成）を担当し、I/O は持たない。
-- `Service API` は HTTP アダプタと Composition Root である。Execution のユースケースとトランザクション境界は `core/application` が担い、Engine 結果を永続化モデルへ写像する。
+- `Service API` は HTTP アダプタと Composition Root である。Execution のユースケースとトランザクション境界は `dotnet/core/application` が担い、Engine 結果を永続化モデルへ写像する。
 - HTTP / Worker 入口は `IExecutionService` Facade のみ。Repository / Auth / Engine は Facade が直接持たない。
 - 定期実行の HTTP と Dispatcher（Runtime の HostedService）はスケジュール用サービスへ入る。実行の開始はそこから Facade の Start。work item の kind は Start のまま。Dispatcher は Engine を呼ばない。
 - 投影更新の窓口は `ExecutionProjectionOrchestrator` である。operational sync の実処理は `ExecutionOperationalProjectionSync`。
@@ -153,7 +153,7 @@ Engine は `IStateExecutor` のみを知る。Action の解決・テナント可
 | `IModuleSource` / `CompositeModuleSource` | Module 取得元。`Priority` 昇順で集約し重複は高優先勝ち（DI 順非依存） | No |
 | `ModuleHost` | `CompositeModuleSource` が供給する Module の ALC load と Catalog 登録 | No |
 
-共有契約は `core/actions/Statevia.Core.Actions.Abstractions`（実行系）/ `infrastructure/Statevia.Infrastructure.Modules`（Module 系）。詳細は [actions/platform.md](../specifications/actions/platform.md)。
+共有契約は `dotnet/core/actions/Statevia.Core.Actions.Abstractions`（実行系）/ `dotnet/infrastructure/Statevia.Infrastructure.Modules`（Module 系）。詳細は [actions/platform.md](../specifications/actions/platform.md)。
 
 ### 5.1 ExecutionMode（隔離契約）と Backend（実装）の分離
 
@@ -165,7 +165,7 @@ Engine は `IStateExecutor` のみを知る。Action の解決・テナント可
 
 ### 5.3 Module 供給パイプライン（Source → Materialize → Host → Catalog）
 
-ModuleHost が consume するのは複数 Source を集約した `CompositeModuleSource`。各 Source は取得した Module を `MaterializedModule`（`infrastructure/Statevia.Infrastructure.Modules`・ローカル完全表現＝正本）へ materialize し、`DiscoveredModule`（DTO）へ射影して ModuleHost へ渡す。リモート取得は `MaterializingModuleSourceBase` 派生が acquire→cache→verify→extract→materialize を担う。実装済みは **`OciModuleSource`**（`IOciArtifactFetcher` / OrasProject.Oras、`Statevia:Modules:Oci`、Priority 既定 200）、**`S3ModuleSource`**（`IS3ArtifactFetcher` / AWSSDK.S3、`Statevia:Modules:S3`、Priority 既定 300）、**`GitModuleSource`**（`IGitArtifactFetcher` / HTTP archive・GitHub・GitLab、`Statevia:Modules:Git`、Priority 既定 400）。OCI / S3 / Git とも content identity（manifest digest / ETag・VersionId / commit SHA+ModulePath）解決後にキャッシュ命中なら本体再取得をスキップする。集約は明示 `Priority` 昇順（filesystem=100）、同名 Module は高優先勝ち＋warning、同 Priority は `SourceLabel` で tie-break。
+ModuleHost が consume するのは複数 Source を集約した `CompositeModuleSource`。各 Source は取得した Module を `MaterializedModule`（`dotnet/infrastructure/Statevia.Infrastructure.Modules`・ローカル完全表現＝正本）へ materialize し、`DiscoveredModule`（DTO）へ射影して ModuleHost へ渡す。リモート取得は `MaterializingModuleSourceBase` 派生が acquire→cache→verify→extract→materialize を担う。実装済みは **`OciModuleSource`**（`IOciArtifactFetcher` / OrasProject.Oras、`Statevia:Modules:Oci`、Priority 既定 200）、**`S3ModuleSource`**（`IS3ArtifactFetcher` / AWSSDK.S3、`Statevia:Modules:S3`、Priority 既定 300）、**`GitModuleSource`**（`IGitArtifactFetcher` / HTTP archive・GitHub・GitLab、`Statevia:Modules:Git`、Priority 既定 400）。OCI / S3 / Git とも content identity（manifest digest / ETag・VersionId / commit SHA+ModulePath）解決後にキャッシュ命中なら本体再取得をスキップする。集約は明示 `Priority` 昇順（filesystem=100）、同名 Module は高優先勝ち＋warning、同 Priority は `SourceLabel` で tie-break。
 
 ### 5.4 version coexist（責務分離・設計のみ）
 

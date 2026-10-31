@@ -5,9 +5,9 @@
 
 .DESCRIPTION
   HostedService 正本と分離ホストを statevia_statevia_runtime として解析する。
-  カバレッジは Api.Tests（DelayWait Scheduler 等）を service/api から収集する。
-  解析対象は service/runtime に限定し、API / Engine 等と二重計上しない。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
+  カバレッジは Api.Tests（DelayWait Scheduler 等）を dotnet/service/api から収集する。
+  解析対象は dotnet/service/runtime に限定し、API / Engine 等と二重計上しない。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   API sln をビルドするため、build / test に /p:StateviaSonarScope=runtime を渡し担当外プロジェクトを SonarQubeExclude する。
 
 .NOTES
@@ -20,14 +20,14 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
-# 解析は service/runtime のみ。依存ソースは除外する。
+# 解析は dotnet/service/runtime のみ。依存ソースは除外する。
 $sonarAnalysisExclusions = @(
     '**/service/api/**',
     '**/service/cli/**',
     '**/service/action-host/**',
     '**/core/**',
     '**/infrastructure/**',
-    '**/ui/studio/**',
+    '**/nodejs/studio/**',
     '**/tests/**',
     '**/Migrations/**',
     '**/*.Tests/**',
@@ -41,17 +41,18 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$runtimeDir = Join-Path $repoRoot 'service\runtime'
-$apiDir = Join-Path $repoRoot 'service\api'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$runtimeDir = Join-Path $dotnetRoot 'service\runtime'
+$apiDir = Join-Path $dotnetRoot 'service\api'
 $coverageXml = Join-Path $PSScriptRoot 'core-runtime-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $runtimeDir -PathType Container)) {
-    Write-Error "service/runtime ディレクトリが見つかりません: $runtimeDir"
+    Write-Error "dotnet/service/runtime ディレクトリが見つかりません: $runtimeDir"
     exit 1
 }
 
 if (-not (Test-Path -LiteralPath $apiDir -PathType Container)) {
-    Write-Error "service/api ディレクトリが見つかりません: $apiDir"
+    Write-Error "dotnet/service/api ディレクトリが見つかりません: $apiDir"
     exit 1
 }
 
@@ -59,7 +60,7 @@ Push-Location -LiteralPath $apiDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_runtime' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -Inclusions '**/service/runtime/**' `
         -AnalysisExclusions $sonarAnalysisExclusions `
