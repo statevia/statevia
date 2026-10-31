@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isApiNotFound } from "@/features/projects/httpStatus";
+import { isApiNotFound } from "@/shared/api/httpStatus";
 
 describe("isApiNotFound", () => {
   it("status 404 だけを未検出とみなす", () => {

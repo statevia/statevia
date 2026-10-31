@@ -3,8 +3,8 @@
 import type { ComponentProps } from "react";
 import { PROJECTS_CREATE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { AppShell } from "@/shared/ui/AppShell";
-import { canAdmin } from "../roles";
-import { useProject } from "../projectContext";
+import { canAdmin } from "@/shared/project/roles";
+import { useProject } from "@/shared/project/projectContext";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 
 type ProjectAwareAppShellProps = Omit<ComponentProps<typeof AppShell>, "isProjectAdmin" | "canCreateProject" | "projectSlot">;

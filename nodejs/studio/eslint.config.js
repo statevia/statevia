@@ -1,5 +1,6 @@
 // @ts-check
 /// <reference types="node" />
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import eslint from "@eslint/js";
@@ -26,6 +27,41 @@ const exportJsdocContexts = [
 
 /** AST selector fragment: literal value contains hiragana or katakana. */
 const japaneseCharClassInLiteral = String.raw `[value=/[\u3040-\u309F\u30A0-\u30FF]/]`;
+
+/**
+ * アプリのコード（app / features / shared / middleware）で使わないエイリアス。
+ * `@/tests/*` と `@/app/*` はテストが import するために置いている（docs/architecture/ui-studio-structure.md §2）。
+ */
+const testOnlyAliasPatterns = [{
+    group: ["@/tests", "@/tests/*", "@/app", "@/app/*"],
+    message: "@/tests/* と @/app/* はテスト専用のエイリアスです。アプリのコードでは使わないでください（route から feature を参照する）。",
+}];
+
+/** feature の名前（features/ 直下のディレクトリ）。feature を足すと、境界のルールも自動で足される。 */
+const featureNames = fs.readdirSync(path.join(tsconfigRootDir, "features"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+/**
+ * feature 内のファイルが守る import の制約（ui-studio-structure.md §3）。
+ * 他の feature は公開面（features/<name>/index.ts）だけを使い、相対 import で feature の外へ出ない。
+ * @param {string} featureName 対象の feature。
+ * @param {boolean} topLevel feature 直下のファイルか（直下では `../` がすでに feature の外を指す）。
+ * @returns {import("eslint").Linter.RuleEntry} no-restricted-imports の設定。
+ */
+const featureImportRestrictions = (featureName, topLevel) => ["error", {
+    patterns: [
+        ...testOnlyAliasPatterns,
+        {
+            regex: `^@/features/(?!${featureName}/)[^/]+/`,
+            message: "他の feature の内部は import しないでください。公開面 @/features/<name>（features/<name>/index.ts）から import します。",
+        },
+        {
+            regex: topLevel ? String.raw `^\.\./` : String.raw `^\.\./\.\./`,
+            message: "相対 import で feature の外へ出ないでください。feature 内の相対 import は 1 段上まで、それより遠いものは @/ のエイリアスで書きます。",
+        },
+    ],
+}];
 
 export default defineConfig({
     ignores: [
@@ -147,6 +183,22 @@ export default defineConfig({
         ],
     },
 }, {
+    files: ["app/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}", "middleware.ts"],
+    rules: {
+        "no-restricted-imports": ["error", { patterns: testOnlyAliasPatterns }],
+    },
+},
+...featureNames.flatMap((featureName) => [{
+    files: [`features/${featureName}/**/*.{ts,tsx}`],
+    rules: {
+        "no-restricted-imports": featureImportRestrictions(featureName, false),
+    },
+}, {
+    files: [`features/${featureName}/*.{ts,tsx}`],
+    rules: {
+        "no-restricted-imports": featureImportRestrictions(featureName, true),
+    },
+}]), {
     files: ["shared/i18n/uiText.ts", "shared/i18n/uiText.en.ts"],
     rules: {
         "jsdoc/require-jsdoc": "off",
@@ -160,7 +212,7 @@ export default defineConfig({
         "no-restricted-imports": [
             "error",
             {
-                patterns: [{
+                patterns: [...testOnlyAliasPatterns, {
                         group: ["@/features", "@/features/*"],
                         message: "shared は features を import してはいけません（依存方向: app → features → shared）。辞書合成は shared/i18n/uiText*.ts のみ例外。",
                     },

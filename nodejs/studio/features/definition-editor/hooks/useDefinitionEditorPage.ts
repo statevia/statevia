@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/shared/api";
-import { isApiNotFound } from "@/features/projects/httpStatus";
+import { isApiNotFound } from "@/shared/api/httpStatus";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength, matchesPattern } from "@/shared/lib/validation/primitives";

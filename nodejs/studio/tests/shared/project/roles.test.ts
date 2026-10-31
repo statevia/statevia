@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAdmin, canExecute, canPublish, isProjectMemberKind } from "@/features/projects/roles";
+import { canAdmin, canExecute, canPublish } from "@/shared/project/roles";
 
 describe("project roles", () => {
   it("reader は実行も公開もできない", () => {
@@ -21,15 +21,5 @@ describe("project roles", () => {
 
   it("admin はメンバーを管理できる", () => {
     expect(canAdmin("admin")).toBe(true);
-  });
-
-  it("メンバー種別は user / serviceAccount / system だけ", () => {
-    expect(isProjectMemberKind("user")).toBe(true);
-    expect(isProjectMemberKind("serviceAccount")).toBe(true);
-    expect(isProjectMemberKind("principal")).toBe(false);
-  });
-
-  it("廃止した apiKey はメンバー種別として受け取らない", () => {
-    expect(isProjectMemberKind("apiKey")).toBe(false);
   });
 });

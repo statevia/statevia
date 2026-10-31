@@ -8,13 +8,13 @@ vi.mock("next/navigation", () => ({
   usePathname: () => usePathname(),
 }));
 
-vi.mock("@/features/projects/api", () => ({
+vi.mock("@/shared/project/api", () => ({
   listMembershipProjects: vi.fn(),
 }));
 
-import { listMembershipProjects } from "@/features/projects/api";
-import { ProjectProvider, useProject } from "@/features/projects/projectContext";
-import type { ProjectSummary } from "@/features/projects/types";
+import { listMembershipProjects } from "@/shared/project/api";
+import { ProjectProvider, useProject } from "@/shared/project/projectContext";
+import type { ProjectSummary } from "@/shared/project/types";
 
 const STORAGE_KEY = "statevia.selectedProjectId";
 

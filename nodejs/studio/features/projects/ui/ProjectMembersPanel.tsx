@@ -10,7 +10,8 @@ import {
   removeProjectMember,
   upsertProjectMember,
 } from "../api";
-import { PROJECT_ROLES, type ProjectGrantCandidate, type ProjectMember, type ProjectRole } from "../types";
+import { PROJECT_ROLES, type ProjectRole } from "@/shared/project/types";
+import type { ProjectGrantCandidate, ProjectMember } from "../types";
 
 type ProjectMembersPanelProps = {
   /** 操作対象の Project。 */

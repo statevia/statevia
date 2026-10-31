@@ -1,4 +1,4 @@
-import type { ProjectRole } from "../types";
+import type { ProjectRole } from "@/shared/project/types";
 
 /**
  * projects feature の i18n 切片型。

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useDefinitionDetail } from "@/features/definitions/hooks/useDefinitionDetail";
-import { useProject } from "@/features/projects/projectContext";
-import { canExecute, canPublish } from "@/features/projects/roles";
+import { useProject } from "@/shared/project/projectContext";
+import { canExecute, canPublish } from "@/shared/project/roles";
 import {
   DEFINITIONS_WRITE_PERMISSION,
   EXECUTIONS_WRITE_PERMISSION,

@@ -2,8 +2,8 @@
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { PageShell } from "@/shared/ui/PageShell";
-import { canAdmin } from "../roles";
-import { useProject } from "../projectContext";
+import { canAdmin } from "@/shared/project/roles";
+import { useProject } from "@/shared/project/projectContext";
 import { ProjectMembersPanel } from "./ProjectMembersPanel";
 
 /**

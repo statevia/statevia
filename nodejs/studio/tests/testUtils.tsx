@@ -1,7 +1,7 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { ProjectProvider } from "@/features/projects/projectContext";
-import type { ProjectSummary } from "@/features/projects/types";
+import { ProjectProvider } from "@/shared/project/projectContext";
+import type { ProjectSummary } from "@/shared/project/types";
 import { PermissionsProvider } from "@/shared/auth/permissionsContext";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 import type { Locale } from "@/shared/i18n/i18n";

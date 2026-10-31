@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Script from "next/script";
-import { ProjectProvider } from "@/features/projects/projectContext";
+import { ProjectProvider } from "@/shared/project/projectContext";
 import { ProjectAwareAppShell } from "@/features/projects/ui/ProjectAwareAppShell";
 import { PermissionsProvider } from "@/shared/auth/permissionsContext";
 import { fetchIsTenantAdminServer } from "@/shared/auth/serverAuthMe";

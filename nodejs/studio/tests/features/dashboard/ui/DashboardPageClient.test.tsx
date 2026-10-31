@@ -13,14 +13,14 @@ vi.mock("@/shared/api", async (importOriginal) => {
   return { ...actual, apiGet: vi.fn() };
 });
 
-vi.mock("@/features/projects/projectContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/projects/projectContext")>();
+vi.mock("@/shared/project/projectContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/project/projectContext")>();
   return { ...actual, useProject: vi.fn(actual.useProject) };
 });
 
 import { apiGet } from "@/shared/api";
-import { useProject, type ProjectContextValue } from "@/features/projects/projectContext";
-import type { ProjectSummary } from "@/features/projects/types";
+import { useProject, type ProjectContextValue } from "@/shared/project/projectContext";
+import type { ProjectSummary } from "@/shared/project/types";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 
 /**

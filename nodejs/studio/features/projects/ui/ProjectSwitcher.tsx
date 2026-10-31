@@ -1,7 +1,7 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
-import { useProject } from "../projectContext";
+import { useProject } from "@/shared/project/projectContext";
 
 /**
  * サイドメニュー先頭の所属 Project 切替。未所属の Project は選択肢に出さない。

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary } from "@/shared/project/types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";

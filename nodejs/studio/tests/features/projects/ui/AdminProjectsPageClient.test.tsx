@@ -11,7 +11,7 @@ vi.mock("@/features/projects/ui/ProjectMembersPanel", () => ({
 }));
 
 import { listAdminProjects } from "@/features/projects/api";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary } from "@/shared/project/types";
 import { AdminProjectsPageClient } from "@/features/projects/ui/AdminProjectsPageClient";
 
 /** API エラー以外の失敗を toToastError が表す文言。 */

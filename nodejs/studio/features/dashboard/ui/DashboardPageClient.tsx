@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { useProject } from "@/features/projects/projectContext";
+import { useProject } from "@/shared/project/projectContext";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { TenantMissingBanner } from "@/shared/ui/TenantMissingBanner";
 import { NAVIGATION_BUTTON_CLASS, OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";

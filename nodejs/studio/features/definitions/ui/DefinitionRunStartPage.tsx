@@ -3,9 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getDefinition, startExecutionFromDefinition } from "@/features/definitions/api";
-import { isApiNotFound } from "@/features/projects/httpStatus";
-import { useProject } from "@/features/projects/projectContext";
-import { canExecute } from "@/features/projects/roles";
+import { isApiNotFound } from "@/shared/api/httpStatus";
+import { useProject } from "@/shared/project/projectContext";
+import { canExecute } from "@/shared/project/roles";
 import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";

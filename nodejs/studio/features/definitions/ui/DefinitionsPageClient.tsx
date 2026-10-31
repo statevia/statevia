@@ -7,8 +7,8 @@ import { useDefinitionCatalogActions } from "@/features/definitions/hooks/useDef
 import { useDefinitionsList } from "@/features/definitions/hooks/useDefinitionsList";
 import { useDefinitionsListQuery } from "@/features/definitions/hooks/useDefinitionsListQuery";
 import { isDeletedDefinition } from "@/features/definitions/types";
-import { useProject } from "@/features/projects/projectContext";
-import { canPublish } from "@/features/projects/roles";
+import { useProject } from "@/shared/project/projectContext";
+import { canPublish } from "@/shared/project/roles";
 import { DEFINITIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
