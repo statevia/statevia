@@ -72,7 +72,14 @@ public sealed partial class ExecutionEngineLoggingTests
         while (elapsed.Elapsed < TimeSpan.FromSeconds(2))
         {
             snapshot = engine.GetSnapshot(id);
-            if (snapshot is { IsCancelled: true, ActiveStates.Count: 0 })
+            // ActiveStates の除去は終端ログより先に起きるため、Cancelled ログの出力も待つ。
+            bool cancelledLogged;
+            lock (sink.Entries)
+            {
+                cancelledLogged = sink.Entries.Exists(e => e.Message.Contains("Execution cancelled", StringComparison.Ordinal));
+            }
+
+            if (snapshot is { IsCancelled: true, ActiveStates.Count: 0 } && cancelledLogged)
             {
                 break;
             }
