@@ -6,7 +6,7 @@
 .DESCRIPTION
   スクリプト配置（リポジトリの sonar/）から engine とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   build / test に /p:StateviaSonarScope=engine を渡し、担当外プロジェクトを SonarQubeExclude する。
 
 .NOTES
@@ -24,7 +24,8 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$engineDir = Join-Path $repoRoot 'core\engine'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$engineDir = Join-Path $dotnetRoot 'core\engine'
 $coverageXml = Join-Path $PSScriptRoot 'core-engine-coverage.xml'
 
 # Engine sln 内の *.Tests と他コンポーネントを除外
@@ -40,7 +41,7 @@ $sonarAnalysisExclusions = @(
 $sonarCoverageExclusions = $sonarAnalysisExclusions
 
 if (-not (Test-Path -LiteralPath $engineDir -PathType Container)) {
-    Write-Error "core/engine ディレクトリが見つかりません: $engineDir"
+    Write-Error "dotnet/core/engine ディレクトリが見つかりません: $engineDir"
     exit 1
 }
 
@@ -48,7 +49,7 @@ Push-Location -LiteralPath $engineDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_engine' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -AnalysisExclusions $sonarAnalysisExclusions `
         -CoverageExclusions $sonarCoverageExclusions `

@@ -318,76 +318,76 @@ function Measure-DefinitionGroup {
 # --- 集計対象定義（現行リポジトリ構成） ---
 
 $engineProductDefs = @(
-    @{ Name = 'Statevia.Core.Engine'; RelativePath = 'core\engine\Statevia.Core.Engine' }
+    @{ Name = 'Statevia.Core.Engine'; RelativePath = 'dotnet\core\engine\Statevia.Core.Engine' }
 )
 
 $engineTestDefs = @(
-    @{ Name = 'Statevia.Core.Engine.Tests'; RelativePath = 'core\engine\Statevia.Core.Engine.Tests' }
+    @{ Name = 'Statevia.Core.Engine.Tests'; RelativePath = 'dotnet\core\engine\Statevia.Core.Engine.Tests' }
 )
 
 $applicationProductDefs = @(
-    @{ Name = 'Statevia.Core.Application'; RelativePath = 'core\application\Statevia.Core.Application' }
-    @{ Name = 'Statevia.Core.Application.Contracts'; RelativePath = 'core\application\Statevia.Core.Application.Contracts' }
-    @{ Name = 'Statevia.Core.Actions.Abstractions'; RelativePath = 'core\actions\Statevia.Core.Actions.Abstractions' }
+    @{ Name = 'Statevia.Core.Application'; RelativePath = 'dotnet\core\application\Statevia.Core.Application' }
+    @{ Name = 'Statevia.Core.Application.Contracts'; RelativePath = 'dotnet\core\application\Statevia.Core.Application.Contracts' }
+    @{ Name = 'Statevia.Core.Actions.Abstractions'; RelativePath = 'dotnet\core\actions\Statevia.Core.Actions.Abstractions' }
 )
 
 $infrastructureProductDefs = @(
-    @{ Name = 'Statevia.Infrastructure.Common'; RelativePath = 'infrastructure\Statevia.Infrastructure.Common' }
-    @{ Name = 'Statevia.Infrastructure.Persistence'; RelativePath = 'infrastructure\Statevia.Infrastructure.Persistence' }
-    @{ Name = 'Statevia.Infrastructure.Security'; RelativePath = 'infrastructure\Statevia.Infrastructure.Security' }
-    @{ Name = 'Statevia.Infrastructure.Modules'; RelativePath = 'infrastructure\Statevia.Infrastructure.Modules' }
-    @{ Name = 'Statevia.Infrastructure.Notification'; RelativePath = 'infrastructure\Statevia.Infrastructure.Notification' }
-    @{ Name = 'Statevia.Infrastructure.Actions.Grpc'; RelativePath = 'infrastructure\Statevia.Infrastructure.Actions.Grpc' }
+    @{ Name = 'Statevia.Infrastructure.Common'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Common' }
+    @{ Name = 'Statevia.Infrastructure.Persistence'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Persistence' }
+    @{ Name = 'Statevia.Infrastructure.Security'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Security' }
+    @{ Name = 'Statevia.Infrastructure.Modules'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Modules' }
+    @{ Name = 'Statevia.Infrastructure.Notification'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Notification' }
+    @{ Name = 'Statevia.Infrastructure.Actions.Grpc'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Actions.Grpc' }
 )
 
 $infrastructureTestDefs = @(
-    @{ Name = 'Statevia.Infrastructure.Modules.Tests'; RelativePath = 'infrastructure\Statevia.Infrastructure.Modules.Tests' }
-    @{ Name = 'Statevia.Infrastructure.Actions.Grpc.Tests'; RelativePath = 'infrastructure\Statevia.Infrastructure.Actions.Grpc.Tests' }
+    @{ Name = 'Statevia.Infrastructure.Modules.Tests'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Modules.Tests' }
+    @{ Name = 'Statevia.Infrastructure.Actions.Grpc.Tests'; RelativePath = 'dotnet\infrastructure\Statevia.Infrastructure.Actions.Grpc.Tests' }
 )
 
 $apiProductDefs = @(
-    @{ Name = 'Statevia.Service.Api'; RelativePath = 'service\api\Statevia.Service.Api' }
-    @{ Name = 'Statevia.Service.Api.Bootstrap'; RelativePath = 'service\api\Statevia.Service.Api.Bootstrap' }
+    @{ Name = 'Statevia.Service.Api'; RelativePath = 'dotnet\service\api\Statevia.Service.Api' }
+    @{ Name = 'Statevia.Service.Api.Bootstrap'; RelativePath = 'dotnet\service\api\Statevia.Service.Api.Bootstrap' }
 )
 
 $apiTestDefs = @(
-    @{ Name = 'Statevia.Service.Api.Tests'; RelativePath = 'service\api\Statevia.Service.Api.Tests' }
+    @{ Name = 'Statevia.Service.Api.Tests'; RelativePath = 'dotnet\service\api\Statevia.Service.Api.Tests' }
 )
 
 $runtimeProductDefs = @(
-    @{ Name = 'Statevia.Runtime'; RelativePath = 'service\runtime\Statevia.Runtime' }
-    @{ Name = 'Statevia.Service.Runtime.Scheduler'; RelativePath = 'service\runtime\Statevia.Service.Runtime.Scheduler' }
-    @{ Name = 'Statevia.Service.Runtime.Worker'; RelativePath = 'service\runtime\Statevia.Service.Runtime.Worker' }
+    @{ Name = 'Statevia.Runtime'; RelativePath = 'dotnet\service\runtime\Statevia.Runtime' }
+    @{ Name = 'Statevia.Service.Runtime.Scheduler'; RelativePath = 'dotnet\service\runtime\Statevia.Service.Runtime.Scheduler' }
+    @{ Name = 'Statevia.Service.Runtime.Worker'; RelativePath = 'dotnet\service\runtime\Statevia.Service.Runtime.Worker' }
 )
 
 $cliProductDefs = @(
-    @{ Name = 'Statevia.Service.Cli'; RelativePath = 'service\cli\Statevia.Service.Cli' }
+    @{ Name = 'Statevia.Service.Cli'; RelativePath = 'dotnet\service\cli\Statevia.Service.Cli' }
 )
 
 $cliTestDefs = @(
-    @{ Name = 'Statevia.Service.Cli.Tests'; RelativePath = 'service\cli\Statevia.Service.Cli.Tests' }
+    @{ Name = 'Statevia.Service.Cli.Tests'; RelativePath = 'dotnet\service\cli\Statevia.Service.Cli.Tests' }
 )
 
 $actionHostProductDefs = @(
-    @{ Name = 'Statevia.Service.ActionHost'; RelativePath = 'service\action-host\Statevia.Service.ActionHost' }
+    @{ Name = 'Statevia.Service.ActionHost'; RelativePath = 'dotnet\service\action-host\Statevia.Service.ActionHost' }
 )
 
 $actionHostTestDefs = @(
-    @{ Name = 'Statevia.Service.ActionHost.Tests'; RelativePath = 'service\action-host\Statevia.Service.ActionHost.Tests' }
+    @{ Name = 'Statevia.Service.ActionHost.Tests'; RelativePath = 'dotnet\service\action-host\Statevia.Service.ActionHost.Tests' }
 )
 
 $architectureTestDefs = @(
-    @{ Name = 'Statevia.Architecture.Tests'; RelativePath = 'tests\Statevia.Architecture.Tests' }
+    @{ Name = 'Statevia.Architecture.Tests'; RelativePath = 'dotnet\tests\Statevia.Architecture.Tests' }
 )
 
 $referenceProductDefs = @(
-    @{ Name = 'Statevia.Reference.Http'; RelativePath = 'modules\reference\Statevia.Reference.Http' }
-    @{ Name = 'Statevia.Reference.Notification'; RelativePath = 'modules\reference\Statevia.Reference.Notification' }
+    @{ Name = 'Statevia.Reference.Http'; RelativePath = 'dotnet\modules\reference\Statevia.Reference.Http' }
+    @{ Name = 'Statevia.Reference.Notification'; RelativePath = 'dotnet\modules\reference\Statevia.Reference.Notification' }
 )
 
 $referenceTestDefs = @(
-    @{ Name = 'Statevia.Reference.Http.Tests'; RelativePath = 'modules\reference\Statevia.Reference.Http.Tests' }
-    @{ Name = 'Statevia.Reference.Notification.Tests'; RelativePath = 'modules\reference\Statevia.Reference.Notification.Tests' }
+    @{ Name = 'Statevia.Reference.Http.Tests'; RelativePath = 'dotnet\modules\reference\Statevia.Reference.Http.Tests' }
+    @{ Name = 'Statevia.Reference.Notification.Tests'; RelativePath = 'dotnet\modules\reference\Statevia.Reference.Notification.Tests' }
 )
 
 $engineProduct = Measure-DefinitionGroup -Definitions $engineProductDefs -Extensions @('.cs') -Language 'csharp'
@@ -406,7 +406,7 @@ $architectureTest = Measure-DefinitionGroup -Definitions $architectureTestDefs -
 $referenceProduct = Measure-DefinitionGroup -Definitions $referenceProductDefs -Extensions @('.cs') -Language 'csharp'
 $referenceTest = Measure-DefinitionGroup -Definitions $referenceTestDefs -Extensions @('.cs') -Language 'csharp'
 
-$uiRoot = Join-Path $RepoRoot 'ui\studio'
+$uiRoot = Join-Path $RepoRoot 'nodejs\studio'
 $uiProduct = Measure-PathGroup -RootPath $uiRoot -Extensions @('.ts', '.tsx') -Language 'typescript' -IncludeFile {
     param($fullPath)
     -not (Test-UiTestPath $fullPath)
@@ -425,7 +425,7 @@ foreach ($key in @('Files', 'Physical', 'Blank', 'Comment', 'Code')) {
     $uiUnitTestStats[$key] -= $uiE2e.Stats[$key]
 }
 
-$migrationsPath = Join-Path $RepoRoot 'infrastructure\Statevia.Infrastructure.Persistence\Migrations'
+$migrationsPath = Join-Path $RepoRoot 'dotnet\infrastructure\Statevia.Infrastructure.Persistence\Migrations'
 $migrations = Measure-PathGroup -RootPath $migrationsPath -Extensions @('.cs') -Language 'csharp'
 
 $infrastructureProductWithoutMigrations = New-LineStats
@@ -504,8 +504,8 @@ $report = [ordered]@{
     Notes       = @(
         'Physical = 物理行数（空行・コメント含む）'
         'Code = 実効コード行数（空行・行コメント・ブロックコメントを除く）'
-        'core/engine/samples・action-host/Fixtures は対象プロジェクト定義に含めない'
-        'Migrations は infrastructure/Statevia.Infrastructure.Persistence/Migrations'
+        'dotnet/core/engine/samples・action-host/Fixtures は対象プロジェクト定義に含めない'
+        'Migrations は dotnet/infrastructure/Statevia.Infrastructure.Persistence/Migrations'
         'ui テスト = tests/, *.test.*, *.spec.*, e2e/'
         'コメント判定は文字列リテラル内のスラッシュ連続を完全には除外しない近似'
     )

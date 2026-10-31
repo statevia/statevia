@@ -79,7 +79,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: ui/studio/package-lock.json
+          cache-dependency-path: nodejs/studio/package-lock.json
 
       - name: Install Sonar tools
         if: ${{ !matrix.node }}
@@ -90,7 +90,7 @@ jobs:
 
       - name: Install UI dependencies
         if: matrix.node
-        working-directory: ui/studio
+        working-directory: nodejs/studio
         # esbuild の実行ファイルは optional dependency として入る。lifecycle script は走らせない。
         run: npm ci --ignore-scripts
 

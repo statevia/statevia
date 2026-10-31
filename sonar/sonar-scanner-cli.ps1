@@ -7,7 +7,7 @@
   スクリプト配置（リポジトリの sonar/）から cli とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   依存アセンブリ（engine / api / ui / infrastructure）が混ざらないよう解析・カバレッジ除外を設定する。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=cli を渡し SonarQubeExclude する。
 
 .NOTES
@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 $sonarAnalysisExclusions = @(
     '**/service/api/**',
     '**/api/**',
-    '**/ui/studio/**',
+    '**/nodejs/studio/**',
     '**/core/engine/**',
     '**/engine/**',
     '**/Statevia.Core.Engine/**',
@@ -43,11 +43,12 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$cliDir = Join-Path $repoRoot 'service\cli'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$cliDir = Join-Path $dotnetRoot 'service\cli'
 $coverageXml = Join-Path $PSScriptRoot 'service-cli-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $cliDir -PathType Container)) {
-    Write-Error "service/cli ディレクトリが見つかりません: $cliDir"
+    Write-Error "dotnet/service/cli ディレクトリが見つかりません: $cliDir"
     exit 1
 }
 
@@ -55,7 +56,7 @@ Push-Location -LiteralPath $cliDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_cli' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -AnalysisExclusions $sonarAnalysisExclusions `
         -CoverageExclusions $sonarCoverageExclusions

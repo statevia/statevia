@@ -1814,7 +1814,7 @@ public sealed class DefinitionCompilerServiceTests
     public async Task ValidateAndCompile_ActionBindingsSample_RegistersAndRejectsInProcess()
     {
         // Arrange
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", ".."));
         var samplePath = Path.Combine(repoRoot, "docs", "samples", "ui-action-bindings.yaml");
         Assert.True(File.Exists(samplePath), samplePath);
         var svc = CreateSut();
@@ -1847,7 +1847,7 @@ public sealed class DefinitionCompilerServiceTests
     public void ValidateAndCompile_NestedWorkflowSampleYamls_Succeeds()
     {
         // Arrange
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", ".."));
         var parentPath = Path.Combine(repoRoot, "docs", "samples", "ui-nested-workflow-parent.yaml");
         var childPath = Path.Combine(repoRoot, "docs", "samples", "ui-nested-workflow-child.yaml");
         Assert.True(File.Exists(parentPath), parentPath);

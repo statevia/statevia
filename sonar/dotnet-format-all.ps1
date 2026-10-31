@@ -4,20 +4,20 @@
   リポジトリ内の .NET コードに、インデント・空白・不要な using のクリーンアップを適用する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）からリポジトリルートと各 sln のパスを解決する。
+  スクリプト配置（リポジトリの sonar/）から dotnet/ と各 sln のパスを解決する。
   カレントディレクトリに依存しない。
   `whitespace` と `style --diagnostics IDE0005 IDE0065` を実行し、
   インデント・空白・不要な using の削除、using 配置の整理に限定する。
 
-  -Solution 未指定時はリポジトリ全体を一括で処理する（CI もこのモード）。
-  - whitespace: `--folder` でリポジトリルートの .cs をまとめて処理する。
+  -Solution 未指定時は dotnet/ 全体を一括で処理する（CI もこのモード）。
+  - whitespace: `--folder` で dotnet/ の .cs をまとめて処理する。
     MSBuild のワークスペース読み込みが不要なため速い。
-    gitignore 対象のうち .cs を含むもの（bin / obj、.claude/、modules/local/）は除外する。
+    gitignore 対象のうち .cs を含むもの（bin / obj、modules/local/）は除外する。
   - style: IDE 用 `statevia.sln` を 1 回だけ読み込む。
     `statevia.sln` に含まれない Scenario.Tests は個別の csproj として追加で処理する。
   コンポーネント別 sln を個別に処理すると、共通プロジェクトの restore と読み込みが sln ごとに繰り返されて遅い。
 
-  -Solution 指定時は、そのコンポーネント別 sln だけに whitespace と style を順に実行する。
+  -Solution 指定時は、そのコンポーネント別 sln（dotnet/ からの相対パス）だけに whitespace と style を順に実行する。
   - core/engine/statevia-engine.sln
   - service/api/statevia-api.sln
   - service/action-host/statevia-action-host.sln
@@ -34,7 +34,7 @@
 
 .PARAMETER Solution
   対象 sln の識別子（`engine` / `api` / `action-host` / `cli` / `infrastructure` / `reference`）、
-  相対パス、またはファイル名（例: statevia-api.sln）。未指定時はリポジトリ全体。
+  dotnet/ からの相対パス、またはファイル名（例: statevia-api.sln）。未指定時は dotnet/ 全体。
 
 .EXAMPLE
   .\sonar\dotnet-format-all.ps1
@@ -57,6 +57,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
 
 $allSolutions = @(
     @{ Name = 'engine'; RelativePath = 'core/engine/statevia-engine.sln' }
@@ -67,10 +68,10 @@ $allSolutions = @(
     @{ Name = 'reference'; RelativePath = 'modules/reference/statevia-reference.sln' }
 )
 
-# リポジトリ全体モードで whitespace --folder から除外するパス。gitignore 対象で .cs を含むもの。
-$folderExcludes = @('.claude', 'modules/local', '**/bin', '**/obj')
+# 全体モードで whitespace --folder から除外するパス（dotnet/ からの相対）。gitignore 対象で .cs を含むもの。
+$folderExcludes = @('modules/local', '**/bin', '**/obj')
 
-# リポジトリ全体モードで style を掛ける workspace。statevia.sln に含まれないプロジェクトはここへ足す。
+# 全体モードで style を掛ける workspace（dotnet/ からの相対）。statevia.sln に含まれないプロジェクトはここへ足す。
 $repoStyleWorkspaces = @(
     'statevia.sln'
     'service/api/Statevia.Service.Api.Scenario.Tests/Statevia.Service.Api.Scenario.Tests.csproj'
@@ -79,14 +80,14 @@ $repoStyleWorkspaces = @(
 function Resolve-RepoPath {
     <#
     .SYNOPSIS
-      リポジトリルートからの相対パスを絶対パスへ変換する。
+      dotnet/ からの相対パスを絶対パスへ変換する。
     #>
     param(
         [Parameter(Mandatory = $true)]
         [string] $RelativePath
     )
 
-    Join-Path $repoRoot ($RelativePath -replace '[\\/]', [System.IO.Path]::DirectorySeparatorChar)
+    Join-Path $dotnetRoot ($RelativePath -replace '[\\/]', [System.IO.Path]::DirectorySeparatorChar)
 }
 
 function New-StyleArgs {
@@ -114,7 +115,7 @@ $targets = @(if ([string]::IsNullOrWhiteSpace($Solution)) {
     $repoCommands = @(
         @{
             Name = 'whitespace'
-            Args = @('format', 'whitespace', $repoRoot, '--folder') + $excludeArgs + @('--verbosity', $Verbosity)
+            Args = @('format', 'whitespace', $dotnetRoot, '--folder') + $excludeArgs + @('--verbosity', $Verbosity)
         }
     ) + @($repoStyleWorkspaces | ForEach-Object {
         @{
@@ -160,7 +161,7 @@ $targets = @(if ([string]::IsNullOrWhiteSpace($Solution)) {
 })
 
 Write-Host "dotnet format:$($targets.Count) target(s)" -ForegroundColor Cyan
-Write-Host "Repo: $repoRoot"
+Write-Host "Root: $dotnetRoot"
 if ($VerifyNoChanges) {
     Write-Host 'Mode: verify-no-changes' -ForegroundColor Yellow
 }

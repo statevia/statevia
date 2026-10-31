@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 # TypeScript / React コーディング規約
 
-対象は主に `ui/studio/`（Next.js）。インポート順・分割方針は既存コードに合わせる。
+対象は主に `nodejs/studio/`（Next.js）。インポート順・分割方針は既存コードに合わせる。
 
 ## 常時原則
 
@@ -56,7 +56,7 @@ alwaysApply: true
 
 ## 品質チェック
 
-- 変更後は、変更した `ui/studio` の TypeScript に `npx eslint`（警告も失敗）、`tsc --noEmit`、該当範囲の `npm run test:run` を通す。全体は `npm run lint`。
+- 変更後は、変更した `nodejs/studio` の TypeScript に `npx eslint`（警告も失敗）、`tsc --noEmit`、該当範囲の `npm run test:run` を通す。全体は `npm run lint`。
 
 ## 補足
 

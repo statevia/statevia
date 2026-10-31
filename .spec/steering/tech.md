@@ -36,12 +36,12 @@
 
 | 領域 | コマンド（例） |
 | --- | --- |
-| Engine | `cd core/engine && dotnet test statevia-engine.sln` |
-| Service API + Infrastructure + Architecture | `cd service/api && dotnet test statevia-api.sln` |
+| Engine | `cd dotnet/core/engine && dotnet test statevia-engine.sln` |
+| Service API + Infrastructure + Architecture | `cd dotnet/service/api && dotnet test statevia-api.sln` |
 | Infrastructure (standalone) | `cd infrastructure && dotnet test statevia-infrastructure.sln` |
-| Action Host | `cd service/action-host && dotnet test statevia-action-host.sln` |
-| CLI | `cd service/cli && dotnet test statevia-cli.sln` |
-| UI | `cd ui/studio && npm run test:run`（Vitest）、型は `tsc --noEmit` |
+| Action Host | `cd dotnet/service/action-host && dotnet test statevia-action-host.sln` |
+| CLI | `cd dotnet/service/cli && dotnet test statevia-cli.sln` |
+| UI | `cd nodejs/studio && npm run test:run`（Vitest）、型は `tsc --noEmit` |
 
 - **C# のコメント・XML・テスト**: `.cursor/rules/csharp-standards.mdc`。
 - **TypeScript / React のコメント・テスト**: `.cursor/rules/typescript-standards.mdc`。

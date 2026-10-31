@@ -1,10 +1,10 @@
 # serena-project-csharp
 
-Serena MCP で **statevia の C# 横断**（`statevia.sln`）を使う（MCP サーバー `serena-csharp`）。UI は `serena-ui`。
+Serena MCP で **statevia の C# 横断**（`dotnet/statevia.sln`）を使う（MCP サーバー `serena-csharp`）。UI は `serena-ui`。
 
 ## 実行してほしいこと
 
-1. 主戦場を **csharp**（リポジトリルート、プロダクト C#）とみなす。
+1. 主戦場を **csharp**（`dotnet/`、プロダクト C#）とみなす。
 2. MCP サーバー **`user-serena-csharp`** が ready か確認する。
 3. ready でない場合は **作業を停止**し、ユーザーへ次を促す（自動トグルは不可）。
    - Cursor Customize / MCP で、他の `serena-*` をすべて **Off**

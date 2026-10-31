@@ -24,8 +24,8 @@ SonarQube のスキャン結果（Quality Gate / issue / カバレッジ）を�
    - カバレッジ不足は対象範囲にテストを追加する（AAA・1ケース1シナリオ）。
    - issue ステータス変更（False Positive / Won't Fix 等）は**ユーザー合意がある場合のみ** `change_sonar_issue_status` を使い、理由を残す。
 6. ローカル検証（再スキャン前に green を確認）:
-   - Service API: `cd service/api && dotnet build statevia-api.sln`（Analyzer 警告方針は §4.3）+ `dotnet test`。カバレッジは `XPlat Code Coverage` / `dotnet-coverage`。
-   - UI: `cd ui/studio && npm run lint && npm run typecheck && npm run test:run`（Sonar 前は `npm run test:coverage`）。
+   - Service API: `cd dotnet/service/api && dotnet build statevia-api.sln`（Analyzer 警告方針は §4.3）+ `dotnet test`。カバレッジは `XPlat Code Coverage` / `dotnet-coverage`。
+   - UI: `cd nodejs/studio && npm run lint && npm run typecheck && npm run test:run`（Sonar 前は `npm run test:coverage`）。
 7. 再スキャン（**正本スクリプト**、リポジトリルートから。`SONAR_TOKEN` 設定後）:
    - Service API: `./sonar/sonar-scanner-api.ps1`
    - UI: `./sonar/sonar-scanner-ui.ps1`

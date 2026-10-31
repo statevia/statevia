@@ -5,11 +5,11 @@
 | 種別 | Guide |
 | Version | 1.13 |
 | 更新日 | 2026-10-31 |
-| 関連 | [../../service/cli/Statevia.Service.Cli/](../../service/cli/Statevia.Service.Cli/) |
+| 関連 | [../../dotnet/service/cli/Statevia.Service.Cli/](../../dotnet/service/cli/Statevia.Service.Cli/) |
 
 ---
 
-統合 CLI **`statevia`**（`service/cli/Statevia.Service.Cli`）のサブコマンド一覧。
+統合 CLI **`statevia`**（`dotnet/service/cli/Statevia.Service.Cli`）のサブコマンド一覧。
 
 ## 実行方法
 
@@ -22,7 +22,7 @@ statevia <subcommand> [options]
 ランタイム同梱の単一ファイルは、リポジトリルートから次で出力します。Windows（x64）の例です。
 
 ```powershell
-dotnet publish service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj `
+dotnet publish dotnet/service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj `
   -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o .\artifacts\statevia
 ```
 
@@ -31,7 +31,7 @@ dotnet publish service/cli/Statevia.Service.Cli/Statevia.Service.Cli.csproj `
 exe を使わない場合は `dotnet run` でも同じサブコマンドを呼べます。`--` 以降が CLI 引数です。
 
 ```bash
-cd service/cli
+cd dotnet/service/cli
 dotnet run --project Statevia.Service.Cli -- <subcommand> [options]
 ```
 

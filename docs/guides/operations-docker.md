@@ -39,7 +39,7 @@ docker compose up -d postgres
 # マイグレーション（ホストから。DB ホスト名は localhost）
 set -a && source .env && set +a
 export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}"
-cd service/api && dotnet ef database update --project Statevia.Service.Api
+cd dotnet/service/api && dotnet ef database update --project Statevia.Service.Api
 docker compose up -d
 ```
 
@@ -142,12 +142,12 @@ Service API は起動時に **modules ルート**（`STATEVIA_MODULES_PATH` ま�
 ### 配置（CLI）
 
 ```bash
-dotnet build service/cli/statevia-cli.sln
-dotnet run --project service/cli/Statevia.Service.Cli -- auth login \
+dotnet build dotnet/service/cli/statevia-cli.sln
+dotnet run --project dotnet/service/cli/Statevia.Service.Cli -- auth login \
   --api-base http://localhost:8080 \
   --tenant default \
   --username ops
-dotnet run --project service/cli/Statevia.Service.Cli -- module install ./my-module.zip \
+dotnet run --project dotnet/service/cli/Statevia.Service.Cli -- module install ./my-module.zip \
   --modules-path ./modules \
   --tenant default \
   --api-base http://localhost:8080

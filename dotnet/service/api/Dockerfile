@@ -38,11 +38,14 @@ COPY infrastructure/Statevia.Infrastructure.Persistence/ ./infrastructure/Statev
 COPY infrastructure/Statevia.Infrastructure.Common/ ./infrastructure/Statevia.Infrastructure.Common/
 COPY infrastructure/Statevia.Infrastructure.Actions.Grpc/ ./infrastructure/Statevia.Infrastructure.Actions.Grpc/
 COPY infrastructure/Statevia.Infrastructure.Modules/ ./infrastructure/Statevia.Infrastructure.Modules/
+# リファレンス Module の DLL は、既定ではビルドコンテキストの外（リポジトリルートの modules/）へコピーされる。
+# イメージに焼き込むため、/src/modules/ の下へコピーさせる（実行イメージの /app/modules/default へ移す）。
 RUN dotnet publish \
     ./service/api/Statevia.Service.Api/Statevia.Service.Api.csproj \
     -c Release \
     -o /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:StateviaModulesOutputRoot=/src/modules/
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 

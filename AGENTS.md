@@ -16,26 +16,26 @@ Cursor Cloud / エージェント向けの**薄い索引**。詳細は [`docs/RE
 
 | コンポーネント | 場所 |
 | --- | --- |
-| engine（C# ライブラリ） | `core/engine/` |
-| application | `core/application/` |
-| infrastructure | `infrastructure/` |
-| Service API（ASP.NET Core） | `service/api/` |
-| runtime（共有 HostedService） | `service/runtime/Statevia.Runtime/` |
-| scheduler（Generic Host・任意） | `service/runtime/Statevia.Service.Runtime.Scheduler/` |
-| worker（Generic Host・任意） | `service/runtime/Statevia.Service.Runtime.Worker/` |
-| action-host（gRPC） | `service/action-host/` |
-| cli | `service/cli/` |
-| ui（Next.js） | `ui/studio/` |
+| engine（C# ライブラリ） | `dotnet/core/engine/` |
+| application | `dotnet/core/application/` |
+| infrastructure | `dotnet/infrastructure/` |
+| Service API（ASP.NET Core） | `dotnet/service/api/` |
+| runtime（共有 HostedService） | `dotnet/service/runtime/Statevia.Runtime/` |
+| scheduler（Generic Host・任意） | `dotnet/service/runtime/Statevia.Service.Runtime.Scheduler/` |
+| worker（Generic Host・任意） | `dotnet/service/runtime/Statevia.Service.Runtime.Worker/` |
+| action-host（gRPC） | `dotnet/service/action-host/` |
+| cli | `dotnet/service/cli/` |
+| ui（Next.js） | `nodejs/studio/` |
 
 PostgreSQL 16 + EF Core。UI は `/api/core/*` で Service API にプロキシ。
 
 ## 起動
 
 1. **PostgreSQL** — Docker 例: `docker compose up -d postgres`、または [`docs/guides/getting-started.md`](docs/guides/getting-started.md)
-2. **マイグレーション** — `cd service/api && dotnet ef database update --project Statevia.Service.Api`
-3. **Service API** — `cd service/api && dotnet run --project Statevia.Service.Api --no-launch-profile`（`ASPNETCORE_URLS=http://0.0.0.0:8080` 推奨。`launchSettings.json` は git 管理外で、VS がランダムポートを付ける）
+2. **マイグレーション** — `cd dotnet/service/api && dotnet ef database update --project Statevia.Service.Api`
+3. **Service API** — `cd dotnet/service/api && dotnet run --project Statevia.Service.Api --no-launch-profile`（`ASPNETCORE_URLS=http://0.0.0.0:8080` 推奨。`launchSettings.json` は git 管理外で、VS がランダムポートを付ける）
 4. **（任意）Scheduler / Worker 分離** — `docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d`（API 内 HostedService Off と scheduler/worker 起動を同時に適用。手順: [`docs/guides/operations-docker.md`](docs/guides/operations-docker.md)）
-5. **UI** — `cd ui/studio && SERVICE_API_INTERNAL_BASE=http://localhost:8080 npm run dev`
+5. **UI** — `cd nodejs/studio && SERVICE_API_INTERNAL_BASE=http://localhost:8080 npm run dev`
 
 Docker Compose 一式: [`docs/guides/operations-docker.md`](docs/guides/operations-docker.md)
 
@@ -49,11 +49,11 @@ OpenAPI / Scalar: [`docs/reference/api-openapi.md`](docs/reference/api-openapi.m
 
 | 対象 | コマンド |
 | --- | --- |
-| engine | `cd core/engine && dotnet test statevia-engine.sln` |
-| Service API | `cd service/api && dotnet test statevia-api.sln` |
+| engine | `cd dotnet/core/engine && dotnet test statevia-engine.sln` |
+| Service API | `cd dotnet/service/api && dotnet test statevia-api.sln` |
 | Service API（シナリオのみ） | `./scripts/test-api.ps1 -ScenarioOnly`（Docker 必要） |
 | Service API（シナリオ除外） | `./scripts/test-api.ps1 -SkipScenario` または `STATEVIA_SKIP_SCENARIO_TESTS=true` |
-| ui | `cd ui/studio && npm run lint && npm run typecheck && npm run test:run` |
+| ui | `cd nodejs/studio && npm run lint && npm run typecheck && npm run test:run` |
 
 > **シナリオテスト（`Statevia.Service.Api.Scenario.Tests`）**は Testcontainers で PostgreSQL 16 を起動する。
 > Docker が利用できない環境では `Skipped`（Failed にならない）。フィルタ: `Category=Scenario`。
@@ -80,13 +80,13 @@ Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines
 
 ## 実装メモ（エージェント向け）
 
-- **IDE sln**: ルート `statevia.sln` は Cursor / VS Code の IntelliSense 用（`.vscode/settings.json` の `dotnet.defaultSolution`）。CI / テスト / Warning 0 / Sonar はコンポーネント別 6 sln。
+- **IDE sln**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用（`.vscode/settings.json` の `dotnet.defaultSolution`）。CI / テスト / Warning 0 / Sonar はコンポーネント別 6 sln。
 - **Read-model**: `GET /v1/executions` の一覧は `execution_branches.execution_id` に無いルートのみ（件数も同じ）。graph は DB projection 正本（[`data-integration.md`](docs/specifications/data-integration.md)）。Hosted 物理 Fork の親 graph / events は **GET 時合成**（一覧を含め UI は分割非認知。[`fork-join.md`](docs/specifications/execution/fork-join.md)）
 - **機微 IO 方針**: 既定で `input` / `output` を一覧 GET に含めない。ログは `LogRedaction`（[`io-log-masking.md`](docs/specifications/platform/io-log-masking.md)）
 - **Engine 境界**: `ExecutionEngine` は `IStateExecutor` のみ。Catalog / Policy / ModuleHost は Service API 側。Hosted Fork の親子協調は Application（`execution_branches`・予約 Resume）
-- **Execution Facade**: HTTP / Worker は `IExecutionService` のみ。実処理は `core/application` のドメインサービス（Query / Lifecycle / WaitEvent / Checkpoint / Ownership / Recovery / Projection）。境界は [`docs/architecture/domain-model-boundaries.md`](docs/architecture/domain-model-boundaries.md)
-- **Serena MCP**: C# は `serena-csharp`（リポジトリルート / `statevia.sln`）、UI は `serena-ui`。切替は UI トグル（同時 On は原則 1）。未起動時は停止して起動を促す。手順は [`.cursor/skills/serena-mcp-project-switch/SKILL.md`](.cursor/skills/serena-mcp-project-switch/SKILL.md)。
+- **Execution Facade**: HTTP / Worker は `IExecutionService` のみ。実処理は `dotnet/core/application` のドメインサービス（Query / Lifecycle / WaitEvent / Checkpoint / Ownership / Recovery / Projection）。境界は [`docs/architecture/domain-model-boundaries.md`](docs/architecture/domain-model-boundaries.md)
+- **Serena MCP**: C# は `serena-csharp`（`dotnet/` / `statevia.sln`）、UI は `serena-ui`。切替は UI トグル（同時 On は原則 1）。未起動時は停止して起動を促す。手順は [`.cursor/skills/serena-mcp-project-switch/SKILL.md`](.cursor/skills/serena-mcp-project-switch/SKILL.md)。
 
 ## .NET SDK
 
-.NET 10 SDK が必要（リポジトリルートの `global.json` で 10 系に限っている）。Cloud VM での置き場所は `/usr/local/share/dotnet`。PATH は `~/.bashrc` 参照。
+.NET 10 SDK が必要（`dotnet/global.json` で 10 系に限っている。SDK はカレントディレクトリから `global.json` を探すため、`dotnet/` の外で実行したコマンドには効かない）。Cloud VM での置き場所は `/usr/local/share/dotnet`。PATH は `~/.bashrc` 参照。

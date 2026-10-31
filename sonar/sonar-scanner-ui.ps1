@@ -1,17 +1,17 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  UI（ui/studio）向け SonarScanner を実行する。
+  UI（nodejs/studio）向け SonarScanner を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から ui/studio を解決し、
+  スクリプト配置（リポジトリの sonar/）から nodejs/studio を解決し、
   カバレッジ生成（vitest）のあと sonar-scanner を実行する。
   カレントディレクトリに依存しない。
 
 .NOTES
   環境変数 SONAR_TOKEN を事前に設定すること。
   送信先は SonarScanner.Common.ps1（既定は SonarQube Cloud）。
-  Node.js / npm が PATH にあり、ui/studio で依存関係がインストール済みであること。
+  Node.js / npm が PATH にあり、nodejs/studio で依存関係がインストール済みであること。
   プロジェクトキー: statevia_statevia_ui
 #>
 Set-StrictMode -Version Latest
@@ -25,11 +25,11 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$uiDir = Join-Path (Join-Path $repoRoot 'ui') 'studio'
+$uiDir = Join-Path (Join-Path $repoRoot 'nodejs') 'studio'
 $lcovPath = Join-Path $uiDir 'coverage\lcov.info'
 
 if (-not (Test-Path -LiteralPath $uiDir -PathType Container)) {
-    Write-Error "ui/studio ディレクトリが見つかりません: $uiDir"
+    Write-Error "nodejs/studio ディレクトリが見つかりません: $uiDir"
     exit 1
 }
 

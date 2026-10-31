@@ -30,7 +30,7 @@ Service API 起動後（Development または `STATEVIA_ENABLE_API_DOCS=true`）
 .\scripts\export-core-api-openapi.ps1
 ```
 
-出力: `service/api/openapi/core-api-v1.openapi.json`
+出力: `dotnet/service/api/openapi/core-api-v1.openapi.json`
 
 ## 本番での公開
 

@@ -5,7 +5,7 @@
     <AssemblyName>Statevia.Reference.Notification</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ReferenceModuleId>statevia.action.reference.notification</ReferenceModuleId>
-    <DefaultTenantModulesDir>$(MSBuildThisFileDirectory)..\..\..\modules\default\$(ReferenceModuleId)\</DefaultTenantModulesDir>
+    <DefaultTenantModulesDir>$(StateviaModulesOutputRoot)default\$(ReferenceModuleId)\</DefaultTenantModulesDir>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-# C# 横断 Serena プロジェクト（mcp.json の serena-csharp / --project はリポジトリルート）。
+# C# 横断 Serena プロジェクト（serena-csharp の --project は dotnet/）。
 # C# 言語サーバーは先頭の statevia.sln を開く。コンポーネント別 .serena/ は切り戻し用に残す。
 project_name: "csharp"
 

@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.7 |
+| Version | 1.8 |
 | 更新日 | 2026-10-31 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
@@ -28,7 +28,7 @@ Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を
 ## 前提
 
 - Docker / Docker Compose が使えること
-- .NET 10 SDK（マイグレーションをホストから実行する場合。リポジトリルートの `global.json` で 10 系に限っている）
+- .NET 10 SDK（マイグレーションをホストから実行する場合。`dotnet/` の中で実行するコマンドは、`dotnet/global.json` で 10 系に限っている）
 - リポジトリルートに `.env`（初回は `.env.example` をコピー）
 
 ## 1. データベースとマイグレーション
@@ -43,7 +43,7 @@ docker compose up -d postgres
 ```bash
 set -a && source .env && set +a
 export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}"
-cd service/api
+cd dotnet/service/api
 dotnet ef database update --project Statevia.Service.Api
 ```
 
@@ -51,7 +51,7 @@ PowerShell の例:
 
 ```powershell
 $env:DATABASE_URL = "postgres://statevia:statevia@localhost:5432/statevia"
-cd service/api
+cd dotnet/service/api
 dotnet ef database update --project Statevia.Service.Api
 ```
 
@@ -167,14 +167,14 @@ docker compose up -d postgres
 マイグレーションは §1 と同じ。続けて:
 
 ```bash
-cd service/api
+cd dotnet/service/api
 dotnet run --project Statevia.Service.Api --no-launch-profile
 ```
 
 `ASPNETCORE_URLS=http://0.0.0.0:8080` を推奨する。`launchSettings.json` は git 管理外で、開発環境がランダムポートを付けることがある。
 
 ```bash
-cd ui/studio
+cd nodejs/studio
 SERVICE_API_INTERNAL_BASE=http://localhost:8080 npm run dev
 ```
 

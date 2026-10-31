@@ -80,7 +80,7 @@ public sealed class ActionHostComposeMountTests
         {
             var candidate = Path.Combine(directory.FullName, fileName);
             if (File.Exists(candidate)
-                && File.Exists(Path.Combine(directory.FullName, "statevia.sln")))
+                && File.Exists(Path.Combine(directory.FullName, "dotnet", "statevia.sln")))
             {
                 return candidate;
             }

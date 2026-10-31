@@ -10,7 +10,7 @@
 
 Runtime API の **semantic permission key** の調べ物。Normative 契約は [api-http.md](../specifications/api-http.md) §4.1.2.1、[security-runtime.md](../specifications/platform/security-runtime.md) を正とする。
 
-正本実装: `WellKnownPermissionKeys` / `PermissionCatalog`（`core/application/Statevia.Core.Application.Contracts/Security/`）。
+正本実装: `WellKnownPermissionKeys` / `PermissionCatalog`（`dotnet/core/application/Statevia.Core.Application.Contracts/Security/`）。
 
 ## カタログ（初版）
 

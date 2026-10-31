@@ -6,7 +6,7 @@
 .DESCRIPTION
   push では 7 件すべてを選ぶ。
   pull_request では変更ファイルに対応するコンポーネントだけを選ぶ。
-  sonar/、build/、Directory.Build.*、Directory.Packages.props、global.json、.editorconfig の変更は全件を選ぶ。
+  sonar/ と、dotnet/ の build/・Directory.Build.*・Directory.Packages.props・global.json・.editorconfig の変更は全件を選ぶ。
   結果は GITHUB_OUTPUT の has_work と matrix（JSON 配列）へ書く。
   対象が 0 件のときは has_work=false とし、空配列でワークフローが落ちないようプレースホルダを matrix に入れる。
 
@@ -26,53 +26,53 @@ $projectCatalog = @(
         Id = 'engine'
         Script = './sonar/sonar-scanner-engine.ps1'
         Node = $false
-        Prefixes = @('core/engine/')
+        Prefixes = @('dotnet/core/engine/')
     }
     @{
         Id = 'api'
         Script = './sonar/sonar-scanner-api.ps1'
         Node = $false
-        Prefixes = @('service/api/', 'core/application/', 'core/actions/', 'infrastructure/')
+        Prefixes = @('dotnet/service/api/', 'dotnet/core/application/', 'dotnet/core/actions/', 'dotnet/infrastructure/')
     }
     @{
         Id = 'runtime'
         Script = './sonar/sonar-scanner-runtime.ps1'
         Node = $false
-        Prefixes = @('service/runtime/')
+        Prefixes = @('dotnet/service/runtime/')
     }
     @{
         Id = 'cli'
         Script = './sonar/sonar-scanner-cli.ps1'
         Node = $false
-        Prefixes = @('service/cli/')
+        Prefixes = @('dotnet/service/cli/')
     }
     @{
         Id = 'action-host'
         Script = './sonar/sonar-scanner-action-host.ps1'
         Node = $false
-        Prefixes = @('service/action-host/')
+        Prefixes = @('dotnet/service/action-host/')
     }
     @{
         Id = 'reference'
         Script = './sonar/sonar-scanner-reference.ps1'
         Node = $false
-        Prefixes = @('modules/reference/')
+        Prefixes = @('dotnet/modules/reference/')
     }
     @{
         Id = 'ui'
         Script = './sonar/sonar-scanner-ui.ps1'
         Node = $true
-        Prefixes = @('ui/studio/')
+        Prefixes = @('nodejs/studio/')
     }
 )
 
 $sharedPrefixes = @(
     'sonar/',
-    'build/',
-    'Directory.Build.',
-    'Directory.Packages.props',
-    'global.json',
-    '.editorconfig',
+    'dotnet/build/',
+    'dotnet/Directory.Build.',
+    'dotnet/Directory.Packages.props',
+    'dotnet/global.json',
+    'dotnet/.editorconfig',
     '.github/workflows/sonar.yml'
 )
 

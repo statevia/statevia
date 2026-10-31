@@ -106,12 +106,12 @@ $timeoutLadder = @(
 )
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$moduleProject = Join-Path $repoRoot "service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/TestActionModule.csproj"
+$moduleProject = Join-Path $repoRoot "dotnet/service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/TestActionModule.csproj"
 $workRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("statevia-sandbox-floor-" + [guid]::NewGuid().ToString("N"))
 $modulesRoot = Join-Path $workRoot "modules"
 # Action Host の discover はテナント配下ではなく modules 直下の module ディレクトリを見る
 $moduleDir = Join-Path $modulesRoot "TestActionModule"
-$protoPath = Join-Path $repoRoot "infrastructure/Statevia.Infrastructure.Actions.Grpc/Protos/action_execution.proto"
+$protoPath = Join-Path $repoRoot "dotnet/infrastructure/Statevia.Infrastructure.Actions.Grpc/Protos/action_execution.proto"
 $results = [System.Collections.Generic.List[object]]::new()
 
 function Write-Step([string] $Message) {
@@ -126,9 +126,9 @@ function Ensure-TestModuleLayout {
         throw "TestActionModule build failed."
     }
 
-    # 出力先の対象フレームワークは、ルートの Directory.Build.props の値をビルドシステムから読む（版を直書きしない）。
+    # 出力先の対象フレームワークは、dotnet/Directory.Build.props の値をビルドシステムから読む（版を直書きしない）。
     $targetFramework = (& dotnet msbuild $moduleProject -getProperty:TargetFramework).Trim()
-    $outDir = Join-Path $repoRoot "service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/bin/Release/$targetFramework"
+    $outDir = Join-Path $repoRoot "dotnet/service/api/Statevia.Service.Api.Tests/Fixtures/TestActionModule/bin/Release/$targetFramework"
     $entryDll = Join-Path $outDir "TestActionModule.dll"
     if (-not (Test-Path $entryDll)) {
         throw "Built assembly not found: $entryDll"

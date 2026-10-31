@@ -18,7 +18,7 @@
 
 ---
 
-CLI の `statevia module install` は `ModuleZipInstaller`（`infrastructure/Statevia.Infrastructure.Modules`）で zip を **modules ルート**配下へ展開する。  
+CLI の `statevia module install` は `ModuleZipInstaller`（`dotnet/infrastructure/Statevia.Infrastructure.Modules`）で zip を **modules ルート**配下へ展開する。  
 展開後のディレクトリ構成が Service API の filesystem scan（`FilesystemModuleSource`）と一致している必要がある。
 
 関連:
@@ -237,8 +237,8 @@ Windows で zip ツールが無い場合は、エクスプローラで `my.modul
 
 | 処理 | 実装 |
 |------|------|
-| zip 展開・ディレクトリ名決定 | `infrastructure/Statevia.Infrastructure.Modules/ModuleZipInstaller.cs` |
-| entry DLL 解決 | `infrastructure/Statevia.Infrastructure.Modules/FilesystemModuleSource.cs` |
-| ALC・共有アセンブリ | `infrastructure/Statevia.Infrastructure.Modules/ModuleAssemblyLoadContext.cs` |
-| 署名検証・Trust 判定 | `infrastructure/Statevia.Infrastructure.Modules/ModuleSignatureVerifier.cs` |
-| 単体テスト（展開パターン） | `infrastructure/Statevia.Infrastructure.Modules.Tests/ModuleZipInstallerTests.cs` |
+| zip 展開・ディレクトリ名決定 | `dotnet/infrastructure/Statevia.Infrastructure.Modules/ModuleZipInstaller.cs` |
+| entry DLL 解決 | `dotnet/infrastructure/Statevia.Infrastructure.Modules/FilesystemModuleSource.cs` |
+| ALC・共有アセンブリ | `dotnet/infrastructure/Statevia.Infrastructure.Modules/ModuleAssemblyLoadContext.cs` |
+| 署名検証・Trust 判定 | `dotnet/infrastructure/Statevia.Infrastructure.Modules/ModuleSignatureVerifier.cs` |
+| 単体テスト（展開パターン） | `dotnet/infrastructure/Statevia.Infrastructure.Modules.Tests/ModuleZipInstallerTests.cs` |

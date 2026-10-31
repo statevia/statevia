@@ -6,9 +6,9 @@
 .DESCRIPTION
   スクリプト配置（リポジトリの sonar/）から api とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
-  解析・カバレッジ除外は service/api/coverage.runsettings の意図（Engine / Program / Migrations）に合わせる。
-  誤ってリポジトリルート等から実行した場合に UI / engine / リファレンス Module が混ざらないよう、ui/studio・core/engine・modules/reference も除外する。
-  sonar.projectBaseDir がリポジトリルートのため、Scanner for .NET の scanAll（既定 true）が ui/studio を JS/TS 解析に混ぜる。scanAll はオフにする。
+  解析・カバレッジ除外は dotnet/service/api/coverage.runsettings の意図（Engine / Program / Migrations）に合わせる。
+  誤ってリポジトリルート等から実行した場合に UI / engine / リファレンス Module が混ざらないよう、nodejs/studio・core/engine・modules/reference も除外する。
+  sonar.projectBaseDir は dotnet/（ファイルのキーを集約前と同じに保つ）。Scanner for .NET の scanAll（既定 true）は、MSBuild のプロジェクト外のファイル（Dockerfile や設定）も解析に混ぜるため、オフにする。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=api を渡し SonarQubeExclude する。
   Program.cs は解析対象に残し、カバレッジ分母だけ除外する。
 
@@ -24,11 +24,11 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'SonarScanner.Common.ps1')
 
-# service/api/coverage.runsettings の Exclude / ExcludeByFile と整合
-# sonar.projectBaseDir をリポジトリルートに固定し、移動後パス（core/engine 等）でも除外が効くようにする
+# dotnet/service/api/coverage.runsettings の Exclude / ExcludeByFile と整合
+# sonar.projectBaseDir を dotnet/ に固定し、ファイルのキー（service/api/... 等）を集約前と同じに保つ
 # Program.cs を sonar.exclusions に入れると、コンパイル済み protobuf と analysis context が食い違う。
 $sonarAnalysisExclusions = @(
-    '**/ui/studio/**',
+    '**/nodejs/studio/**',
     '**/core/engine/**',
     '**/engine/**',
     '**/service/cli/**',
@@ -51,11 +51,12 @@ if (-not $env:SONAR_TOKEN) {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$apiDir = Join-Path $repoRoot 'service\api'
+$dotnetRoot = Join-Path $repoRoot 'dotnet'
+$apiDir = Join-Path $dotnetRoot 'service\api'
 $coverageXml = Join-Path $PSScriptRoot 'service-api-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $apiDir -PathType Container)) {
-    Write-Error "service/api ディレクトリが見つかりません: $apiDir"
+    Write-Error "dotnet/service/api ディレクトリが見つかりません: $apiDir"
     exit 1
 }
 
@@ -63,7 +64,7 @@ Push-Location -LiteralPath $apiDir
 try {
     $beginArguments = Get-StateviaSonarBeginArguments `
         -ProjectKey 'statevia_statevia_api' `
-        -RepositoryRoot $repoRoot `
+        -ProjectBaseDir $dotnetRoot `
         -CoverageReportPath $coverageXml `
         -AnalysisExclusions $sonarAnalysisExclusions `
         -CoverageExclusions $sonarCoverageExclusions `

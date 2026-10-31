@@ -21,7 +21,7 @@
 
 ## 1. 対象と責務
 
-本書は、`core/engine/Statevia.Core.Engine/ExecutionGraph` の**現行実装**が返す JSON 契約を定義する。
+本書は、`dotnet/core/engine/Statevia.Core.Engine/ExecutionGraph` の**現行実装**が返す JSON 契約を定義する。
 
 - 対象出力: `ExecutionEngine.ExportExecutionGraph(executionId)`
 - 用途: 実行可視化、デバッグ、API/UI 連携
@@ -209,7 +209,7 @@ JSON プロパティ名は **camelCase** のため、C# の `From` / `To` は **
 - 永続は `execution_graph_snapshots` の生グラフ。Hosted の親 execution で物理子がある場合、応答は **GET 時合成**後の論理 Fork/Join グラフになる（合成規則・Join 辺の `nodeId` 固定は [fork-join.md](fork-join.md)）。
 - API は実行グラフの `conditionRouting` を透過的に返却する。
 - UI は `conditionRouting` を再評価しない（表示専用データとして扱う）。物理子や `execution_branches` を意識しない。
-- UI が定義グラフ（`GET /v1/graphs/{graphId}`）と合成するときは、**実行ノードの `nodeId` と定義ノードの `nodeName`（状態名）が一致しない**前提で、実行側の `nodeName` やエッジの `from`/`to` を用いて対応付ける（`ui/studio/features/executions/lib/mergeGraph.ts`）。
+- UI が定義グラフ（`GET /v1/graphs/{graphId}`）と合成するときは、**実行ノードの `nodeId` と定義ノードの `nodeName`（状態名）が一致しない**前提で、実行側の `nodeName` やエッジの `from`/`to` を用いて対応付ける（`nodejs/studio/features/executions/lib/mergeGraph.ts`）。
 - Studio の実行キャンバスは、同一 `nodeName` の訪問が複数あっても定義上の 1 ノードに合成する。色に使う代表は待機中を優先する。ノード詳細は、その状態の訪問を attempt の昇順で辿れる。ノード一覧は状態名で 1 行にまとめ、状態が 21 件以上のときは 20 件ずつページを切る。再開は詳細で選んでいる訪問の `nodeId` を送る。選んでいた訪問がグラフから消えたときは、同じ状態が残っていればいちばん新しい訪問へ移し、残っていなければ選択を外す。
 
 詳細は `docs/specifications/api-http.md` を参照。

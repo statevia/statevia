@@ -1,6 +1,6 @@
 ---
 description: HTTP 境界の改修後は、起動中の Service API を作り直してから変更したエンドポイントを呼ぶ
-globs: service/api/**,core/application/**
+globs: dotnet/service/api/**,dotnet/core/application/**
 alwaysApply: false
 ---
 

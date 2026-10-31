@@ -12,6 +12,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!--
+    実行時の modules ルート（リポジトリルートの modules/。docker-compose.yml が /app/modules にマウントする）。
+    リファレンス Module のビルドが、DLL を default テナントの配下へコピーする。
+    API のイメージは、ビルドコンテキストの中へコピーさせるため Dockerfile で上書きする。
+  -->
+  <PropertyGroup>
+    <StateviaModulesOutputRoot Condition="'$(StateviaModulesOutputRoot)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'modules'))</StateviaModulesOutputRoot>
+  </PropertyGroup>
+
   <!-- Guid.NewGuid の禁止。テストと、StateviaAllowGuidNewGuid=true のプロジェクトは対象外。 -->
   <Import Project="$(MSBuildThisFileDirectory)build\BannedGuidNewGuid.props" />
   <Import Project="$(MSBuildThisFileDirectory)build\SonarQube.ComponentScope.props" />

@@ -1,35 +1,35 @@
 # 容量計測ハーネス
 
-Service API に対する **L1 / L1O / L2 / L3 / D1 / C1** 負荷クライアントです。本番 API / Engine の責務は変更しません。公開件数の正本は [`docs/reference/service-capacity.md`](../../docs/reference/service-capacity.md) です。手順は [`docs/guides/capacity-load-testing.md`](../../docs/guides/capacity-load-testing.md) です。
+Service API に対する **L1 / L1O / L2 / L3 / D1 / C1** 負荷クライアントです。本番 API / Engine の責務は変更しません。公開件数の正本は [`docs/reference/service-capacity.md`](../../../docs/reference/service-capacity.md) です。手順は [`docs/guides/capacity-load-testing.md`](../../../docs/guides/capacity-load-testing.md) です。
 
 CI の既定ジョブには載せません。
 
 ## 実行
 
 ```bash
-dotnet test tools/capacity/Statevia.Tools.Capacity.sln
+dotnet test dotnet/tools/capacity/Statevia.Tools.Capacity.sln
 
 export STATEVIA_CAPACITY_PASSWORD='admin123'
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L1 --output tools/capacity/results/l1.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L1O --output tools/capacity/results/l1o.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L2 --output tools/capacity/results/l2.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L3 --output tools/capacity/results/l3.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario D1 --output tools/capacity/results/d1.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario C1 --output tools/capacity/results/c1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L1 --output dotnet/tools/capacity/results/l1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L1O --output dotnet/tools/capacity/results/l1o.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L2 --output dotnet/tools/capacity/results/l2.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L3 --output dotnet/tools/capacity/results/l3.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario D1 --output dotnet/tools/capacity/results/d1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario C1 --output dotnet/tools/capacity/results/c1.json
 ```
 
 PowerShell の例:
 
 ```powershell
-dotnet test tools/capacity/Statevia.Tools.Capacity.sln
+dotnet test dotnet/tools/capacity/Statevia.Tools.Capacity.sln
 
 $env:STATEVIA_CAPACITY_PASSWORD = 'admin123'
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L1 --output tools/capacity/results/l1.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L1O --output tools/capacity/results/l1o.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L2 --output tools/capacity/results/l2.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario L3 --output tools/capacity/results/l3.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario D1 --output tools/capacity/results/d1.json
-dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario C1 --output tools/capacity/results/c1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L1 --output dotnet/tools/capacity/results/l1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L1O --output dotnet/tools/capacity/results/l1o.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L2 --output dotnet/tools/capacity/results/l2.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario L3 --output dotnet/tools/capacity/results/l3.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario D1 --output dotnet/tools/capacity/results/d1.json
+dotnet run --project dotnet/tools/capacity/Statevia.Tools.Capacity -- --scenario C1 --output dotnet/tools/capacity/results/c1.json
 ```
 
 認証は次のいずれかです。
@@ -44,7 +44,7 @@ dotnet run --project tools/capacity/Statevia.Tools.Capacity -- --scenario C1 --o
 
 Worker プロセス数 × スロットの縮小格子は `run-worker-grid.ps1` です（L1 16 セル + C1 角 16 セル。`ui-studio` は起動しません）。
 
-JSON の隣に同名 `.csv` を書き出します。`tools/capacity/results/` は gitignore です。
+JSON の隣に同名 `.csv` を書き出します。`dotnet/tools/capacity/results/` は gitignore です。
 
 ## シナリオ
 

@@ -12,15 +12,15 @@ statevia の Serena は **2 つ**。それぞれに **独立した MCP サーバ
 
 同時に On にする Serena は **原則 1 つ**（複数 On は非推奨）。
 
-- C# は **`serena-csharp`**（リポジトリルート / `statevia.sln`）
-- UI は **`serena-ui`**（`ui/studio/`）
+- C# は **`serena-csharp`**（`dotnet/` / `statevia.sln`）
+- UI は **`serena-ui`**（`nodejs/studio/`）
 
 ## いつ読むか
 
 次のときに、このスキルの手順で対象サーバーの起動を促す。
 
 - C#（プロダクトコード。複数コンポーネントを含む）→ **`serena-csharp`**
-- UI（`ui/studio/`）中心の調査や変更 → **`serena-ui`**
+- UI（`nodejs/studio/`）中心の調査や変更 → **`serena-ui`**
 
 横断変更でも、まず主戦場 1 つのサーバーだけを On にする。
 
@@ -40,17 +40,17 @@ statevia の Serena は **2 つ**。それぞれに **独立した MCP サーバ
 
 | Serena プロジェクト | mcp.json 名 | Cursor 上の識別子（目安） | パス（リポジトリ相対） | 用途 |
 | --- | --- | --- | --- | --- |
-| csharp | `serena-csharp` | `user-serena-csharp` | `.`（ルート、`statevia.sln`） | C# |
-| ui | `serena-ui` | `user-serena-ui` | `ui/studio/` | UI |
+| csharp | `serena-csharp` | `user-serena-csharp` | `dotnet/`（`statevia.sln`） | C# |
+| ui | `serena-ui` | `user-serena-ui` | `nodejs/studio/` | UI |
 
 Windows 絶対パス例（`mcp.json` の `--project`）:
 
 | キー | `--project` |
 | --- | --- |
-| csharp | `C:\Git\statevia` |
-| ui | `C:\Git\statevia\ui\studio` |
+| csharp | `C:\Git\statevia\dotnet` |
+| ui | `C:\Git\statevia\nodejs\studio` |
 
-`serena-csharp` の索引対象と除外はルート `.serena/project.yml`（`ls_workspace_folders` / `ignored_paths`）が正本。プロダクト C# 以外（`ui/`、`docs/`、サンプル、Fixture 等）は除外する。
+`serena-csharp` の索引対象と除外は `dotnet/.serena/project.yml`（`ls_workspace_folders` / `ignored_paths`）が正本。`dotnet/` の中でも、プロダクト C# 以外（サンプル、Fixture、生成物等）は除外する。
 
 ## 手順（エージェント）
 

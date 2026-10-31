@@ -32,21 +32,21 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 ## 3. コンポーネント別
 
-### 3.1 Service API（`service/api/`）と Application（`core/application/`）
+### 3.1 Service API（`dotnet/service/api/`）と Application（`dotnet/core/application/`）
 
 - **Controller**: ルーティング・バインディング・ヘッダ・HTTP ステータスのみ。ビジネスロジックは Application へ。
-- **ユースケース（`core/application/`）**: `IExecutionService` は薄い Facade でドメインサービスへ委譲する。コミット境界は `ICoreTransactionExecutor` / `IExecutionMutationPersistence`。Facade は Repository / Engine を直接持たない。`IDbContextFactory` をユースケースから直接使わない。境界の正本は [`architecture/domain-model-boundaries.md`](architecture/domain-model-boundaries.md)。
+- **ユースケース（`dotnet/core/application/`）**: `IExecutionService` は薄い Facade でドメインサービスへ委譲する。コミット境界は `ICoreTransactionExecutor` / `IExecutionMutationPersistence`。Facade は Repository / Engine を直接持たない。`IDbContextFactory` をユースケースから直接使わない。境界の正本は [`architecture/domain-model-boundaries.md`](architecture/domain-model-boundaries.md)。
 - **Repository**: 永続化のみ。書き込み API の第一引数は常に `ICoreUnitOfWork`。`SaveChanges` / `BeginTransaction` / `IDbContextFactory` を Repository 内に持たない。
 - **UoW**: `IDbContextFactory<CoreDbContext>` は `CoreUnitOfWork` 実装内に閉じる。
 - **例外**: `ApiExceptionFilter` と契約に沿ったエラー JSON（404 / 422 / 500）。
-- **OpenAPI / Scalar**: Development では `http://localhost:8080/scalar/v1`（起動 URL に依存）。JSON は `/swagger/v1/swagger.json`。コミット用 export はリポジトリルートから `.\scripts\export-core-api-openapi.ps1` → `service/api/openapi/core-api-v1.openapi.json`。本番は既定オフ、`STATEVIA_ENABLE_API_DOCS=true` で有効化可。手書き契約は `docs/specifications/api-http.md`（運用叙述は Markdown に残す）。
+- **OpenAPI / Scalar**: Development では `http://localhost:8080/scalar/v1`（起動 URL に依存）。JSON は `/swagger/v1/swagger.json`。コミット用 export はリポジトリルートから `.\scripts\export-core-api-openapi.ps1` → `dotnet/service/api/openapi/core-api-v1.openapi.json`。本番は既定オフ、`STATEVIA_ENABLE_API_DOCS=true` で有効化可。手書き契約は `docs/specifications/api-http.md`（運用叙述は Markdown に残す）。
 
-### 3.2 Engine（`core/engine/`）
+### 3.2 Engine（`dotnet/core/engine/`）
 
 - ワークフロー実行・FSM・グラフの責務に留める。HTTP や DB に直接触れない。
 - 公開 API の変更は、Service API や契約ドキュメントへの影響を確認する。
 
-### 3.3 UI（`ui/studio/`）
+### 3.3 UI（`nodejs/studio/`）
 
 - Service API へは Next.js の route handler 経由でプロキシ（CORS 回避）。環境変数は `AGENTS.md` の表を参照。
 - 内部構成は feature-first（薄い `app/` + `features/` + `shared/`）。正本: [`architecture/ui-studio-structure.md`](architecture/ui-studio-structure.md)。
@@ -73,8 +73,8 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 - **XML ドキュメント**: `public` / `internal` の型・メンバーに `/// <summary>` 等を付ける。`private` は意図が自明でない箇所のみ。
 - **テスト**: メソッドごとに日本語の `/// <summary>` と **`// Arrange` / `// Act` / `// Assert`** 区切り。1 テスト 1 シナリオ（AAA）。
 - **セキュリティ**: 外部入力の検証、認可・テナント境界、機密情報の非出力（ログ・エラー応答含む）。
-- **共通のビルド設定**: `TargetFramework` / `Nullable` / `ImplicitUsings` と `Guid.NewGuid` の禁止（`build/BannedGuidNewGuid.props`）は、ルートの `Directory.Build.props` で全プロジェクトに効かせる。csproj には書かない。禁止から外すプロジェクト（Engine など）は、csproj で `StateviaAllowGuidNewGuid` を `true` にする。C# のイメージのビルドはコンポーネント別の `Directory.Build.props` をコピーしないため、イメージのビルドにも効かせる例外はそこに書かない。
-- **パッケージ版**: ルートの `Directory.Packages.props`（Central Package Management）に `PackageVersion` で置く。csproj と props / targets の `PackageReference` には `Version` を書かない（書くと NU1008 になる）。同じパッケージの版は 1 つにし、EF Core（`Microsoft.EntityFrameworkCore.*`）は製品とテストで同じ版にする。
+- **共通のビルド設定**: `TargetFramework` / `Nullable` / `ImplicitUsings` と `Guid.NewGuid` の禁止（`dotnet/build/BannedGuidNewGuid.props`）は、`dotnet/Directory.Build.props` で全プロジェクトに効かせる。csproj には書かない。禁止から外すプロジェクト（Engine など）は、csproj で `StateviaAllowGuidNewGuid` を `true` にする。C# のイメージのビルドはコンポーネント別の `Directory.Build.props` をコピーしないため、イメージのビルドにも効かせる例外はそこに書かない。
+- **パッケージ版**: `dotnet/Directory.Packages.props`（Central Package Management）に `PackageVersion` で置く。csproj と props / targets の `PackageReference` には `Version` を書かない（書くと NU1008 になる）。同じパッケージの版は 1 つにし、EF Core（`Microsoft.EntityFrameworkCore.*`）は製品とテストで同じ版にする。
 - **構造化ログ**: `ILogger.Log*`（`LogWarning` / `LogError` 等）を直接呼ばない。`[LoggerMessage]` のソース生成 partial（例: `*LogMessages.cs`）経由で出す。キー命名と EventId の桁は [`reference/logging-property-keys.md`](reference/logging-property-keys.md)。
 - **Options 検証（Service API）**: `AddOptions<T>().Bind()` した設定は、次の分類で扱う。キー別の許容範囲・不正時挙動は [`reference/environment-variables.md`](reference/environment-variables.md) を参照する。
   - **A（起動失敗）**: 範囲外・矛盾など既定では安全に動けない値 → `.Validate()` + `ValidateOnStart()`。メッセージはキー名と制約のみ（値は出さない）。
@@ -108,21 +108,21 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 - **C#**: `dotnet build` / `dotnet test` で出る **コンパイラエラー・Analyzer 警告**は、自分の変更に起因するものは **解消してから** PR に出す。触れていないファイルの既存警告をまとめて直すのは必須ではないが、**新規コードで警告を増やさない**こと。
 - **.NET ソリューションの警告 0**: 次の 6 sln は通常の `dotnet build` で **Warning 0** を維持する。新規のソリューション全体 `NoWarn` や `TreatWarningsAsErrors` は導入しない。意図的な抑制（テストの CA1707 / CA1515、API/ActionHost の CA2007、CLI の CA1303 等）は既存の `.editorconfig` を維持する。Sonar の指摘を IDE で Warning として出す `SonarAnalyzer.CSharp` は、ルート `Directory.Build.targets` がコマンドラインビルドから外す。Scanner 実行中は Scanner が Analyzer を差し替える。
-  - `core/engine/statevia-engine.sln`
-  - `infrastructure/statevia-infrastructure.sln`
-  - `modules/reference/statevia-reference.sln`
-  - `service/cli/statevia-cli.sln`
-  - `service/action-host/statevia-action-host.sln`
-  - `service/api/statevia-api.sln`（`service/api/Directory.Build.props` の `AnalysisMode=AllEnabledByDefault` を含む）
-- **IDE 用包括ソリューション**: リポジトリ直下の `statevia.sln` は Cursor / VS Code の IntelliSense 用。CI・Warning 0・Sonar の正本ではない。`.vscode/settings.json` の `dotnet.defaultSolution` はこのファイルを指す。品質ゲートと `dotnet test` は上記 6 sln を使う。
-- **Service API テスト向け抑制**: ルート `.editorconfig` に加え、`service/api/Statevia.Service.Api.Tests/.editorconfig` で xUnit 向け CA（例: CA1812）を抑制している。テストの命名・`ConfigureAwait` 方針は Engine.Tests と同趣旨。
+  - `dotnet/core/engine/statevia-engine.sln`
+  - `dotnet/infrastructure/statevia-infrastructure.sln`
+  - `dotnet/modules/reference/statevia-reference.sln`
+  - `dotnet/service/cli/statevia-cli.sln`
+  - `dotnet/service/action-host/statevia-action-host.sln`
+  - `dotnet/service/api/statevia-api.sln`（`dotnet/service/api/Directory.Build.props` の `AnalysisMode=AllEnabledByDefault` を含む）
+- **IDE 用包括ソリューション**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用。CI・Warning 0・Sonar の正本ではない。`.vscode/settings.json` の `dotnet.defaultSolution` はこのファイルを指す。品質ゲートと `dotnet test` は上記 6 sln を使う。
+- **Service API テスト向け抑制**: `dotnet/.editorconfig` に加え、`dotnet/service/api/Statevia.Service.Api.Tests/.editorconfig` で xUnit 向け CA（例: CA1812）を抑制している。テストの命名・`ConfigureAwait` 方針は Engine.Tests と同趣旨。
 - **Markdown**: リポジトリ直下の **`.markdownlint.json`** に従う。編集した Markdown には例として次で確認できる。
 
   ```bash
   npx markdownlint-cli2 "path/to/edited.md"
   ```
 
-- **UI（TypeScript）**: **`npm run lint`**（エラーも警告も失敗。`--max-warnings 0`）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `ui/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`、`sonarjs`）。
+- **UI（TypeScript）**: **`npm run lint`**（エラーも警告も失敗。`--max-warnings 0`）、**`npm run typecheck`**、**`npm run test:run`** を PR 前の必須チェックとする。設定は `nodejs/studio/eslint.config.js`（`typescript-eslint` strict、`react-hooks`、`jsx-a11y`、`jsdoc`、`sonarjs`）。
   - **sonarjs**: SonarQube Cloud（`statevia_statevia_ui`）相当の指摘を編集時と `npm run lint` で検出するため、`eslint-plugin-sonarjs` の `recommended` を `app/**`・`features/**`・`shared/**`・`middleware.ts` に適用する（`sonar.sources` と同じ範囲。`tests/` は対象外）。次のルールは off にしている。
     - `sonarjs/different-types-comparison`: サーバー描画向けの実行時ガード（`globalThis.sessionStorage === undefined` など）を誤検知するため。
     - `sonarjs/function-return-type`: 意図的に複数の型を返す関数まで指摘するため。
@@ -137,14 +137,14 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 | 領域 | コマンド（例） |
 |------|----------------|
-| Engine | `cd core/engine && dotnet test statevia-engine.sln` |
-| Service API | `cd service/api && dotnet test statevia-api.sln` |
-| UI | `cd ui/studio && npm run lint && npm run typecheck && npm run test:run` |
-| UI（Sonar 前） | `cd ui/studio && npm run test:coverage` |
+| Engine | `cd dotnet/core/engine && dotnet test statevia-engine.sln` |
+| Service API | `cd dotnet/service/api && dotnet test statevia-api.sln` |
+| UI | `cd nodejs/studio && npm run lint && npm run typecheck && npm run test:run` |
+| UI（Sonar 前） | `cd nodejs/studio && npm run test:coverage` |
 | Sonar（一括） | `./sonar/sonar-scanner-all.ps1`（`-Projects engine,api` で複数指定可。[sonar/README.md](../sonar/README.md)） |
 | Sonar（CI） | `.github/workflows/sonar.yml`（`main` は全プロジェクト、`main` 向け PR は変更コンポーネント） |
 
-変更した領域に対応するテストを追加または更新し、ローカルで green を確認してから共有する。UI を Sonar に送る前はカバレッジ付きテストを実行する（**§5.2**）。C# の Scanner for .NET スクリプトはすべて `sonar.scanner.scanAll=false` とし、`ui/studio` は **`statevia_statevia_ui`** だけが解析する。
+変更した領域に対応するテストを追加または更新し、ローカルで green を確認してから共有する。UI を Sonar に送る前はカバレッジ付きテストを実行する（**§5.2**）。C# の Scanner for .NET スクリプトはすべて `sonar.scanner.scanAll=false` とし、`nodejs/studio` は **`statevia_statevia_ui`** だけが解析する。
 
 ### 5.1 Service API — カバレッジと Sonar（手動）
 
@@ -156,10 +156,10 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 **カバレッジ runsettings（単体テストのみ確認するとき）**
 
-`service/api/coverage.runsettings` では Engine アセンブリと `Program.cs` / `Migrations/` を cobertura から除外する。Api 本体の行が計測対象に含まれることを確認する。
+`dotnet/service/api/coverage.runsettings` では Engine アセンブリと `Program.cs` / `Migrations/` を cobertura から除外する。Api 本体の行が計測対象に含まれることを確認する。
 
 ```powershell
-cd service/api
+cd dotnet/service/api
 dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage"
 ```
 
@@ -177,15 +177,15 @@ dotnet build-server shutdown
 
 スクリプトは次を順に実行する。
 
-1. `dotnet sonarscanner begin`（キー `statevia_statevia_api`、除外は Engine / UI / Program / Migrations / `modules/reference` 等。`sonar.scanner.scanAll=false` で `ui/studio` を JS/TS 解析に混ぜない）
-2. `dotnet build service/api/statevia-api.sln`
+1. `dotnet sonarscanner begin`（キー `statevia_statevia_api`、除外は Engine / UI / Program / Migrations / `dotnet/modules/reference` 等。`sonar.scanner.scanAll=false` で `nodejs/studio` を JS/TS 解析に混ぜない）
+2. `dotnet build dotnet/service/api/statevia-api.sln`
 3. `dotnet-coverage collect "dotnet test"` → `sonar/service-api-coverage.xml`
 4. `dotnet sonarscanner end`
 
 **注意**
 
-- `service/api/sonar-project.properties` は **Scanner for .NET では使わない**（設定は `begin` の `/d:` で渡す）。
-- `sonar.exclusions` だけでは `scanAll` が `ui/studio/tsconfig.json` を拾う。UI は **`statevia_statevia_ui`**（§5.2）で解析する。
+- `dotnet/service/api/sonar-project.properties` は **Scanner for .NET では使わない**（設定は `begin` の `/d:` で渡す）。
+- `sonar.exclusions` だけでは `scanAll` が `nodejs/studio/tsconfig.json` を拾う。UI は **`statevia_statevia_ui`**（§5.2）で解析する。
 - `STATEVIA_SKIP_SCENARIO_TESTS=true` のとき、API のカバレッジ収集は `Category!=Scenario` でシナリオテストを除外する。CI はこの環境変数を付ける。
 - スキャン直後は Sonar UI の数値が遅れて反映されることがある。Quality Gate 判定は Sonar のプロジェクト画面を正とする。
 
@@ -195,17 +195,17 @@ dotnet build-server shutdown
 
 - 環境変数 **`SONAR_TOKEN`** を設定していること（SonarQube Cloud の個人アクセストークン）
 - 既定の送信先は SonarQube Cloud（`https://sonarcloud.io`、組織 `statevia`）。ローカル Community Build へ送るときは **`SONAR_HOST_URL=http://localhost:9000`** を指定する（`sonar/docker-compose.yaml`）
-- Node.js / npm が PATH にあり、`ui/studio` で `npm install` 済みであること
+- Node.js / npm が PATH にあり、`nodejs/studio` で `npm install` 済みであること
 - グローバルまたは `npx` で **`sonar-scanner`** が実行できること
 
 **カバレッジ（Vitest のみ確認するとき）**
 
 ```powershell
-cd ui/studio
+cd nodejs/studio
 npm run test:coverage
 ```
 
-`coverage/lcov.info` が生成される。除外方針は `ui/studio/sonar-project.properties` の `sonar.coverage.exclusions` と `vitest.config.ts` の `coverage.exclude` を揃える（本書 §5.2）。
+`coverage/lcov.info` が生成される。除外方針は `nodejs/studio/sonar-project.properties` の `sonar.coverage.exclusions` と `vitest.config.ts` の `coverage.exclude` を揃える（本書 §5.2）。
 
 **Sonar スキャン（正本スクリプト）**
 
@@ -218,13 +218,13 @@ npm run test:coverage
 
 スクリプトは次を順に実行する。
 
-1. `npm run test:coverage`（`ui/studio/coverage/lcov.info` を生成）
-2. `npx sonar-scanner`（キー **`statevia_statevia_ui`**、`ui/studio/sonar-project.properties` を読み込み。host と organization はスクリプトが渡す）
+1. `npm run test:coverage`（`nodejs/studio/coverage/lcov.info` を生成）
+2. `npx sonar-scanner`（キー **`statevia_statevia_ui`**、`nodejs/studio/sonar-project.properties` を読み込み。host と organization はスクリプトが渡す）
 
-**手動（`ui/studio` をカレントに）**
+**手動（`nodejs/studio` をカレントに）**
 
 ```powershell
-cd ui/studio
+cd nodejs/studio
 npm run test:coverage
 npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)" "-Dsonar.projectKey=statevia_statevia_ui" "-Dsonar.organization=statevia" "-Dsonar.host.url=https://sonarcloud.io"
 ```
@@ -238,14 +238,14 @@ npx --yes sonar-scanner "-Dsonar.token=$($env:SONAR_TOKEN)" "-Dsonar.projectKey=
 
 ### 5.3 リファレンス Module — Sonar（手動）
 
-first-party Module（`modules/reference/`）は **`statevia_statevia_reference`** で解析する。API スキャンには含めない。
+first-party Module（`dotnet/modules/reference/`）は **`statevia_statevia_reference`** で解析する。API スキャンには含めない。
 
 ```powershell
 dotnet build-server shutdown
 ./sonar/sonar-scanner-reference.ps1
 ```
 
-スクリプトは `modules/reference/statevia-reference.sln` を build / test し、プロダクションコードだけを当該キーへ送る。`sonar.scanner.scanAll=false` で `ui/studio` など MSBuild 対象外のファイルが CPD に混ざらないようにする。ActionPublication の JSON スキーマ定型は独立 Module 間の意図的な重複のため、`sonar.cpd.exclusions` で `*Publication.cs` を CPD 対象外にする。
+スクリプトは `dotnet/modules/reference/statevia-reference.sln` を build / test し、プロダクションコードだけを当該キーへ送る。`sonar.scanner.scanAll=false` で `nodejs/studio` など MSBuild 対象外のファイルが CPD に混ざらないようにする。ActionPublication の JSON スキーマ定型は独立 Module 間の意図的な重複のため、`sonar.cpd.exclusions` で `*Publication.cs` を CPD 対象外にする。
 
 ---
 
@@ -284,6 +284,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-10-31 | C# を `dotnet/`、Studio を `nodejs/studio/` へ移したのに合わせ、パス・コマンド・共通設定の置き場所を更新 |
 | 2026-10-30 | §4.1 に、ルートの `Directory.Build.props`（共通のビルド設定）と `Directory.Packages.props`（パッケージ版の一元管理）を追記 |
 | 2026-10-26 | §4.3 に UI ESLint の `sonarjs` 導入・off にしたルールと理由、`jsx-a11y/prefer-tag-over-role` を追記 |
 | 2026-10-04 | §4.2 に画面フックと UI の境界を追記 |
