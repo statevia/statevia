@@ -3985,6 +3985,15 @@
             }
           },
           {
+            "name": "projectId",
+            "in": "query",
+            "description": "指定時はその Project の実行だけ。未所属は 0 件。",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "name",
             "in": "query",
             "description": "表示 ID 部分一致または execution UUID 完全一致。",
@@ -5469,6 +5478,95 @@
         }
       }
     },
+    "/v1/projects/{projectId}/member-candidates": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "GET /v1/projects/{projectId}/member-candidates — 付与できるユーザーと API キー。",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "description": "テナント ID。未指定時は \"default\"。",
+            "schema": {
+              "type": "string",
+              "default": "default"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectGrantCandidateResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectGrantCandidateResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectGrantCandidateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{projectId}/members/{principalId}": {
       "put": {
         "tags": [
@@ -6688,6 +6786,14 @@
           "isTenantAdmin": {
             "type": "boolean",
             "description": "テナント管理者か。"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "所属グループから展開した semantic permission key（昇順）。テナント管理者は catalog の全キー。",
+            "nullable": true
           }
         },
         "additionalProperties": false,
@@ -7789,12 +7895,38 @@
         },
         "additionalProperties": { }
       },
+      "ProjectGrantCandidateResponse": {
+        "type": "object",
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ProjectMemberResponse": {
         "type": "object",
         "properties": {
           "principalId": {
             "type": "string",
             "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
           },
           "role": {
             "type": "string",
