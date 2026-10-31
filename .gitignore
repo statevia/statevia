@@ -78,9 +78,7 @@ docs/out/
 dotnet/tools/capacity/results/
 # API 単体 TAT の生結果（公開しない）
 dotnet/tools/api-tat/results/
-# ビルドで copy するリファレンス Module DLL（実行時配置）
-modules/default/statevia.action.reference.*/
-# 手元実験用 Module。ソースも default テナントへの配置もコミットしない。
-modules/local/
+# 実行時の modules ルート（ビルドが copy するリファレンス Module と、CLI が配置する Module）。ソースは dotnet/modules/。
+/modules/
+# 手元実験用 Module のソース
 dotnet/modules/local/
-modules/default/statevia.local.playground/
