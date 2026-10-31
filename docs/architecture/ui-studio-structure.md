@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.12 |
-| 更新日 | 2026-10-31 |
+| Version | 0.13 |
+| 更新日 | 2026-11-01 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.13（2026-11-01）**: Project の文脈・ロール判定・所属一覧を `shared/project/` へ、`isApiNotFound` を `shared/api/` へ移した。feature 間の依存は公開面（`features/<name>/index.ts`）だけにし、他 feature の内部への import と、`@/app/*`・`@/tests/*` をアプリのコードで使うことを ESLint で禁止した。
 
 **Version 0.12（2026-10-31）**: テストの配置の規則を追加した（`tests/` の下に、対象ソースの位置をそのまま映す）。テストが使うエイリアス `@/app/*`・`@/middleware`・`@/tests/*` を追加した。
 
@@ -47,12 +49,14 @@ nodejs/studio/
 │  ├─ definition-editor/     # ui, lib, actionSchema, types, i18n（巨大のため独立）
 │  ├─ admin/                 # ui, types, i18n
 │  ├─ auth/                  # ui, i18n
-│  └─ dashboard/             # ui, i18n
+│  ├─ dashboard/             # ui, i18n
+│  └─ projects/              # api, hooks, ui, types, i18n（Project 管理画面とメンバー）
 ├─ shared/
 │  ├─ api/                   # transport + 共通 query 型
 │  ├─ ui/                    # PageShell, Toast, AppHeader, GraphNodeShell, Button, TextField 等
 │  ├─ i18n/                  # Context・locale・横断辞書 + feature 切片の合成
 │  ├─ auth/                  # session / jwt ヘルパ
+│  ├─ project/               # 選択中 Project の文脈（ProjectProvider / useProject）、ロール判定、所属一覧
 │  └─ lib/                   # dateTime, errors, validation, theme, graphLayout
 ├─ tests/                    # 単体テスト。ソースの位置を映して置く（§5「テストの配置」）
 ├─ public/
@@ -89,9 +93,17 @@ flowchart LR
 | `app` → `features` | 許可 |
 | `features` → `shared` | 許可 |
 | `shared` → `features` | **禁止**（例外: `shared/i18n/uiText*.ts` が feature の i18n 切片を合成 import する） |
-| feature → 他 feature の内部 | **禁止**（共有が必要なら `shared` へ上げるか公開エントリを明示） |
+| feature → 他 feature の公開面（`features/<name>/index.ts`） | 許可（他 feature が使うものだけを index から export する） |
+| feature → 他 feature の内部 | **禁止**（アプリ全体で使うものは `shared` へ上げる。feature 固有の機能は公開面から使う） |
 
-機械チェック: `nodejs/studio/eslint.config.js` で `shared/**` からの `@/features` / `features` 参照を `no-restricted-imports` で error にする（`shared/i18n/uiText.ts` / `uiText.en.ts` のみ辞書合成のため除外）。feature 間内部参照はレビュー必須（下記チェックリスト）。
+機械チェック: `nodejs/studio/eslint.config.js` の `no-restricted-imports` で次を error にする。
+
+- `shared/**` から `@/features` / `features` への import（`shared/i18n/uiText.ts` / `uiText.en.ts` のみ辞書合成のため除外）。
+- `features/<a>/**` から他 feature の内部（`@/features/<b>/...`。`b ≠ a`）への import。公開面 `@/features/<b>` は許す。feature の一覧は `features/` 直下のディレクトリから作るため、feature を足すとルールも足される。
+- `features/**` で feature の外へ出る相対 import（2 段以上上る `../../`、feature 直下のファイルの `../`）。feature 内の相対 import は 1 段上まで、それより遠いものはエイリアスで書く。
+- アプリのコード（`app` / `features` / `shared` / `middleware.ts`）での `@/app/*` と `@/tests/*`（テスト専用のエイリアス）。
+
+`app` から `features` への import は、公開面に限らず許す（route が feature の画面を直接 import するため）。
 
 ## 4. feature 内の標準レイヤ
 
@@ -162,7 +174,7 @@ flowchart LR
 ### PR レビュー必須項目（依存方向）
 
 - [ ] `shared` から `features` への import が無い（ESLint で検知。i18n 合成の除外ファイル以外）
-- [ ] feature が他 feature の内部パスを import していない
+- [ ] feature が他 feature の内部パスを import していない（ESLint で検知。公開面 `index.ts` に足した export は、他 feature が使うものだけか）
 - [ ] `app/**/page.tsx` が肥大化していない（表示・ロジックは feature 側）
 - [ ] 一時 re-export を残す場合は同一 Phase 内で解消する方針が PR に書かれている
 - [ ] HTTP 契約・利用者向け振る舞いを意図せず変えていない
