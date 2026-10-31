@@ -504,7 +504,7 @@ $report = [ordered]@{
     Notes       = @(
         'Physical = 物理行数（空行・コメント含む）'
         'Code = 実効コード行数（空行・行コメント・ブロックコメントを除く）'
-        'dotnet/core/engine/samples・action-host/Fixtures は対象プロジェクト定義に含めない'
+        'dotnet/core/engine/samples・dotnet/tests/Fixtures は対象プロジェクト定義に含めない'
         'Migrations は dotnet/infrastructure/Statevia.Infrastructure.Persistence/Migrations'
         'ui テスト = tests/, *.test.*, *.spec.*, e2e/'
         'コメント判定は文字列リテラル内のスラッシュ連続を完全には除外しない近似'

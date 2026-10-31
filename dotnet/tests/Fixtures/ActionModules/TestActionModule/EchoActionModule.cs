@@ -2,7 +2,7 @@ using Statevia.Core.Actions.Abstractions.Modules;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Execution;
 
-namespace Statevia.Service.Api.Tests.Fixtures.TestActionModule;
+namespace Statevia.Tests.Fixtures.ActionModules.TestActionModule;
 
 /// <summary>Phase1 テスト用 Action Module。</summary>
 public sealed class EchoActionModule : IActionModule

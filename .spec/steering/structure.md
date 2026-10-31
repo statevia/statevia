@@ -7,7 +7,7 @@ dotnet/                # C# のすべて（sln・共通のビルド設定を含�
 ├─ core/               # ドメイン・契約（非デプロイ）
 ├─ infrastructure/     # 技術実装（差し替え可能・最外殻）
 ├─ service/            # デプロイ可能なインターフェイス（API / CLI / action-host / runtime）
-├─ tests/              # 横断テスト（Architecture.Tests）
+├─ tests/              # 横断テスト（Architecture.Tests）と横断フィクスチャ（Fixtures/）
 └─ tools/capacity/     # 容量計測ハーネス（CI 常時実行外）
 nodejs/studio/         # Web ダッシュボード（Next.js — @statevia/studio）
 docs/                  # 契約・運用・開発ガイド
@@ -60,6 +60,7 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 ## Tests（`dotnet/tests/`）
 
 - `dotnet/tests/Statevia.Architecture.Tests`: `NetArchTest.eNhancedEdition` で依存方向禁止ルールを機械的に検証。
+- `dotnet/tests/Fixtures/ActionModules/`: 複数のテストプロジェクト（Api.Tests / ActionHost.Tests）が読み込むテスト用 Module。テストプロジェクトは、他のテストプロジェクトのフォルダを参照しない。
 
 ## Module Boundaries
 
@@ -67,6 +68,7 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 - **Application ↔ Infrastructure**: `Application.Contracts` のポート越しのみ。Infrastructure が実装を提供。
 - **Service ↔ Core/Infrastructure**: DI で結合。Service は HTTP/gRPC 境界のみ担当。
 - **UI ↔ Service**: HTTP（プロキシ）のみ。DB に直接接続しない。
+- **Module ↔ Engine**: Module が使ってよい Engine は `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ（`docs/specifications/actions/module-zip-layout.md` §3）。
 
 ## Tools（`dotnet/tools/`）
 

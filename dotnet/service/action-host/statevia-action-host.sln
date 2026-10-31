@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Statevia.Service.ActionHost
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Statevia.Service.ActionHost.Tests", "Statevia.Service.ActionHost.Tests\Statevia.Service.ActionHost.Tests.csproj", "{472C0A06-5BC2-43FA-BFCE-A0C87DB9681A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestActionModule", "..\api\Statevia.Service.Api.Tests\Fixtures\TestActionModule\TestActionModule.csproj", "{82D6AF3E-8061-4959-9D1E-37CE9525A009}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestActionModule", "..\..\tests\Fixtures\ActionModules\TestActionModule\TestActionModule.csproj", "{82D6AF3E-8061-4959-9D1E-37CE9525A009}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Statevia.Core.Actions.Abstractions", "..\..\core\actions\Statevia.Core.Actions.Abstractions\Statevia.Core.Actions.Abstractions.csproj", "{373B15DC-C6D7-4AC5-BC4A-930C9E7AB7F3}"
 EndProject
@@ -15,9 +15,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Statevia.Core.Engine", "..\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Fixtures", "Fixtures", "{7A31CED4-1678-4AF3-8F73-6A118B9DA039}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MalformedActionModule", "Fixtures\MalformedActionModule\MalformedActionModule.csproj", "{D51A3798-773E-4C43-9AA7-067700BB52D8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MalformedActionModule", "..\..\tests\Fixtures\ActionModules\MalformedActionModule\MalformedActionModule.csproj", "{D51A3798-773E-4C43-9AA7-067700BB52D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateCtorActionModule", "Fixtures\PrivateCtorActionModule\PrivateCtorActionModule.csproj", "{F5DC3424-24AA-4439-95D9-8B48F0B8EFD7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateCtorActionModule", "..\..\tests\Fixtures\ActionModules\PrivateCtorActionModule\PrivateCtorActionModule.csproj", "{F5DC3424-24AA-4439-95D9-8B48F0B8EFD7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -120,5 +120,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{D51A3798-773E-4C43-9AA7-067700BB52D8} = {7A31CED4-1678-4AF3-8F73-6A118B9DA039}
 		{F5DC3424-24AA-4439-95D9-8B48F0B8EFD7} = {7A31CED4-1678-4AF3-8F73-6A118B9DA039}
+		{82D6AF3E-8061-4959-9D1E-37CE9525A009} = {7A31CED4-1678-4AF3-8F73-6A118B9DA039}
 	EndGlobalSection
 EndGlobal
