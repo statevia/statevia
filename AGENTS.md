@@ -25,7 +25,11 @@ Cursor Cloud / エージェント向けの**薄い索引**。詳細は [`docs/RE
 | worker（Generic Host・任意） | `dotnet/service/runtime/Statevia.Service.Runtime.Worker/` |
 | action-host（gRPC） | `dotnet/service/action-host/` |
 | cli | `dotnet/service/cli/` |
+| リファレンス Module（ソース） | `dotnet/modules/reference/`（実行時の modules ルートはリポジトリルートの `modules/`） |
+| 横断テスト（依存方向） | `dotnet/tests/Statevia.Architecture.Tests/` |
 | ui（Next.js） | `nodejs/studio/` |
+
+C# は `dotnet/`、Node は `nodejs/` に置き、ルートには言語ごとのビルド設定を置かない。配置の規則と全体のツリーは [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md)。
 
 PostgreSQL 16 + EF Core。UI は `/api/core/*` で Service API にプロキシ。
 
@@ -51,6 +55,7 @@ OpenAPI / Scalar: [`docs/reference/api-openapi.md`](docs/reference/api-openapi.m
 | --- | --- |
 | engine | `cd dotnet/core/engine && dotnet test statevia-engine.sln` |
 | Service API | `cd dotnet/service/api && dotnet test statevia-api.sln` |
+| 依存方向（Architecture tests） | `cd dotnet && dotnet test tests/Statevia.Architecture.Tests/Statevia.Architecture.Tests.csproj` |
 | Service API（シナリオのみ） | `./scripts/test-api.ps1 -ScenarioOnly`（Docker 必要） |
 | Service API（シナリオ除外） | `./scripts/test-api.ps1 -SkipScenario` または `STATEVIA_SKIP_SCENARIO_TESTS=true` |
 | ui | `cd nodejs/studio && npm run lint && npm run typecheck && npm run test:run` |

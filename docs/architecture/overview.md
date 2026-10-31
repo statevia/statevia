@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.5 |
-| 更新日 | 2026-10-31 |
+| Version | 2.6 |
+| 更新日 | 2026-11-01 |
 | 関連 | [domain-model-boundaries.md](domain-model-boundaries.md), [repository-layout.md](repository-layout.md) |
 
 Project: Statevia — Definition Driven Execution Platform
+
+**Version 2.6（2026-11-01）**: 依存方向テストが対象にする Infrastructure のプロジェクトを明記し、既知の負債（Worker / Scheduler → Service.Api、Application → EF Core）を理由とともに書いた（§3.1）。
 
 **Version 2.5（2026-10-31）**: 依存方向テストに、リファレンス Module が使ってよい範囲の外の Engine の型に依存しないルールを足した（§3）。
 
@@ -172,8 +174,19 @@ ui                                       → service/api（HTTP のみ）
 
 - `core/*` → `infrastructure/*`
 - `core/*` → `service/*`
-- `infrastructure/*` → `service/*`
+- `infrastructure/*` → `service/*`（対象は Persistence・Security・Notification・Modules・Common。`Statevia.Infrastructure.Actions.Grpc` はまだテストに入っていない）
 - `modules/reference/*` → Module が使ってよい範囲の外の Engine の型（使ってよいのは `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ。[module-zip-layout.md](../specifications/actions/module-zip-layout.md) §3）
+
+テストは CI の Architecture tests（`dotnet test dotnet/tests/Statevia.Architecture.Tests`）で毎回実行する。
+
+### 3.1 既知の負債
+
+次の 2 つは上の依存方向から外れているが、Spec `action-runtime-composition` で直すまで残している。テストでは禁止していない。
+
+| 依存 | 理由 | 解消の方針 |
+| --- | --- | --- |
+| `service/runtime` の Worker / Scheduler（`Statevia.Service.Runtime.Worker` / `.Scheduler`）→ `service/api`（`Statevia.Service.Api`） | 実行ランタイムの組み立て（`AddStateviaExecutionRuntime`。Module ホスト・Docker・各 Backend の登録）と、Action の Catalog / Policy / Backend の型が `Statevia.Service.Api` の中にある。分離した Worker / Scheduler はこれを使うため API のアセンブリを参照している | Catalog / Policy / Backend を HTTP のプロジェクトの外へ出し、Worker は Service.Api を参照しない（同 Spec の要件 1・2） |
+| `core/application`（`Statevia.Core.Application`）→ EF Core（`Microsoft.EntityFrameworkCore` のパッケージ） | 一意制約違反（重複キー）を見分けるため、ユースケースが `DbUpdateException` を捕捉している（`DefinitionService`、`ExecutionIdempotencyService`、`ExecutionScheduleDispatchService`、`SystemScheduleProvisioner`、`EventDeliveryRetryPolicy` の 5 ファイル）。Application.Contracts の行型も EF のエンティティと同じ形である | Contracts からテーブル行型をなくし、`DbUpdateException` の変換を Infrastructure（DbContext の `SaveChangesAsync`）へ移して、Application が EF の型を参照しないようにする（同 Spec の要件 6） |
 
 ---
 
