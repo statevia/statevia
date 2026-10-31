@@ -19,16 +19,16 @@
   先頭の `dotnet build-server shutdown` を省略する。
 
 .EXAMPLE
-  .\sonar\sonar-scanner-all.ps1
+  .\scripts\sonar\sonar-scanner-all.ps1
 
 .EXAMPLE
-  .\sonar\sonar-scanner-all.ps1 -Projects engine,api,ui
+  .\scripts\sonar\sonar-scanner-all.ps1 -Projects engine,api,ui
 
 .EXAMPLE
-  .\sonar\sonar-scanner-all.ps1 -Projects statevia_statevia_engine,statevia_statevia_api
+  .\scripts\sonar\sonar-scanner-all.ps1 -Projects statevia_statevia_engine,statevia_statevia_api
 
 .EXAMPLE
-  .\sonar\sonar-scanner-all.ps1 -List
+  .\scripts\sonar\sonar-scanner-all.ps1 -List
 #>
 [CmdletBinding()]
 param(

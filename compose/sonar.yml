@@ -1,3 +1,7 @@
+# ローカル SonarQube（Community Build）と PostgreSQL。通常の解析の送信先は SonarQube Cloud（scripts/sonar/README.md）。
+# 使い方: docker compose -f compose/sonar.yml up -d
+# プロジェクト名を固定し、起動するディレクトリによらず volume の名前（sonar_*）が変わらないようにする。
+name: sonar
 version: "3"
 services:
   sonarqube:

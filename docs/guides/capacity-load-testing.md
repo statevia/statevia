@@ -25,7 +25,7 @@
 
 ## 前提
 
-- `docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml` で PostgreSQL・Service API・Worker・Scheduler が動いていること（[operations-docker.md](operations-docker.md)）
+- `docker compose -f docker-compose.yml -f compose/split-runtime.yml` で PostgreSQL・Service API・Worker・Scheduler が動いていること（[operations-docker.md](operations-docker.md)）
 - Runtime API を叩ける Principal（Development なら `POST /v1/auth/login`。例は [http-request-examples.md](http-request-examples.md)）
 - 検証用テナントだけを使うこと。本番秘密をリポジトリやハーネス引数の履歴に残さないこと
 
@@ -46,7 +46,7 @@ UI は計測対象外です。実行系以外の API を 1 本ずつ叩いて TA
 起動:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d postgres service-api action-host scheduler worker
+docker compose -f docker-compose.yml -f compose/split-runtime.yml up -d postgres service-api action-host scheduler worker
 ```
 
 ヘルス確認:
@@ -120,7 +120,7 @@ C1 は L2 と同じ Wait 定義を Start し、`--settle-ms`（既定 3000）の
 
 L3 は DelayWait を HTTP から定義できるかを確認します。現行の Definition では `wait.timeout` は未使用で、投影の wait_kind は EventWait です。期限到達による TimerFire は起きません。観測窓のあと、残った実行は Cancel します。クライアント側タイマーで EventWait を擬似完了させないでください（L3 のラベルを誤ります）。
 
-D1 は git ルートで `docker compose restart service-api` します（`--restart-service` でサービス名を変えられます。既定タイムアウト 300 秒）。split-runtime では Worker / Scheduler は再起動しません。再起動後に `/v1/health` と再ログインし、GET execution / graph / waits が壊れず Resume で `Completed` になれば合格です。compose を起こすときは `-f docker-compose.yml -f docker-compose.split-runtime.yml` を使ってください。`restart` 自体は既存コンテナの環境を保ちます。
+D1 は git ルートで `docker compose restart service-api` します（`--restart-service` でサービス名を変えられます。既定タイムアウト 300 秒）。split-runtime では Worker / Scheduler は再起動しません。再起動後に `/v1/health` と再ログインし、GET execution / graph / waits が壊れず Resume で `Completed` になれば合格です。compose を起こすときは `-f docker-compose.yml -f compose/split-runtime.yml` を使ってください。`restart` 自体は既存コンテナの環境を保ちます。
 
 JWT または `X-Api-Key` を使う場合は `--token` / `--api-key` を渡します。パスワードをコマンド履歴に残さないでください。
 

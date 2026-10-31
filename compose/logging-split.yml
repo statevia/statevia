@@ -1,7 +1,7 @@
-# docker-compose.logging.yml の Worker / Scheduler 向け追記。
+# compose/logging.yml の Worker / Scheduler 向け追記。
 # 単独では使わない。split-runtime と同時に指定する。
-#   docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
-#     -f docker-compose.logging.yml -f docker-compose.logging-split.yml up -d
+#   docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+#     -f compose/logging.yml -f compose/logging-split.yml up -d
 
 x-fluentd-logging: &fluentd-logging
   driver: fluentd

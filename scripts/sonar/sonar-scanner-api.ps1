@@ -4,7 +4,7 @@
   api 向け SonarScanner（begin → build → coverage → end）を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から api とカバレッジ出力パスを解決する。
+  スクリプト配置（リポジトリの scripts/sonar/）から api とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   解析・カバレッジ除外は dotnet/service/api/coverage.runsettings の意図（Engine / Program / Migrations）に合わせる。
   誤ってリポジトリルート等から実行した場合に UI / engine / リファレンス Module が混ざらないよう、nodejs/studio・core/engine・modules/reference も除外する。
@@ -50,10 +50,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $apiDir = Join-Path $dotnetRoot 'service\api'
-$coverageXml = Join-Path $PSScriptRoot 'service-api-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'service-api-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $apiDir -PathType Container)) {
     Write-Error "dotnet/service/api ディレクトリが見つかりません: $apiDir"

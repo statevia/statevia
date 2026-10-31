@@ -4,7 +4,7 @@
   UI（nodejs/studio）向け SonarScanner を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から nodejs/studio を解決し、
+  スクリプト配置（リポジトリの scripts/sonar/）から nodejs/studio を解決し、
   カバレッジ生成（vitest）のあと sonar-scanner を実行する。
   カレントディレクトリに依存しない。
 
@@ -24,7 +24,7 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $uiDir = Join-Path (Join-Path $repoRoot 'nodejs') 'studio'
 $lcovPath = Join-Path $uiDir 'coverage\lcov.info'
 

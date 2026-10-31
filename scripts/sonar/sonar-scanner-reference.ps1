@@ -4,7 +4,7 @@
   リファレンス Module（Http / Notification）向け SonarScanner（begin → build → coverage → end）を実行する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から modules/reference とカバレッジ出力パスを解決する。
+  スクリプト配置（リポジトリの scripts/sonar/）から modules/reference とカバレッジ出力パスを解決する。
   カレントディレクトリに依存しない。
   公式提供 Module を statevia_statevia_reference として解析し、API / Engine / UI と二重計上しない。
   依存プロジェクトの Roslyn protobuf は sonar.exclusions では消えないため、build / test に /p:StateviaSonarScope=reference を渡し SonarQubeExclude する。
@@ -42,10 +42,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $referenceDir = Join-Path $dotnetRoot 'modules\reference'
-$coverageXml = Join-Path $PSScriptRoot 'modules-reference-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'modules-reference-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $referenceDir -PathType Container)) {
     Write-Error "modules/reference ディレクトリが見つかりません: $referenceDir"

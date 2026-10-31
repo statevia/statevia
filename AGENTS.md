@@ -34,7 +34,7 @@ PostgreSQL 16 + EF Core。UI は `/api/core/*` で Service API にプロキシ�
 1. **PostgreSQL** — Docker 例: `docker compose up -d postgres`、または [`docs/guides/getting-started.md`](docs/guides/getting-started.md)
 2. **マイグレーション** — `cd dotnet/service/api && dotnet ef database update --project Statevia.Service.Api`
 3. **Service API** — `cd dotnet/service/api && dotnet run --project Statevia.Service.Api --no-launch-profile`（`ASPNETCORE_URLS=http://0.0.0.0:8080` 推奨。`launchSettings.json` は git 管理外で、VS がランダムポートを付ける）
-4. **（任意）Scheduler / Worker 分離** — `docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d`（API 内 HostedService Off と scheduler/worker 起動を同時に適用。手順: [`docs/guides/operations-docker.md`](docs/guides/operations-docker.md)）
+4. **（任意）Scheduler / Worker 分離** — `docker compose -f docker-compose.yml -f compose/split-runtime.yml up -d`（API 内 HostedService Off と scheduler/worker 起動を同時に適用。手順: [`docs/guides/operations-docker.md`](docs/guides/operations-docker.md)）
 5. **UI** — `cd nodejs/studio && SERVICE_API_INTERNAL_BASE=http://localhost:8080 npm run dev`
 
 Docker Compose 一式: [`docs/guides/operations-docker.md`](docs/guides/operations-docker.md)

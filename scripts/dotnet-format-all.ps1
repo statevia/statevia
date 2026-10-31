@@ -4,7 +4,7 @@
   リポジトリ内の .NET コードに、インデント・空白・不要な using のクリーンアップを適用する。
 
 .DESCRIPTION
-  スクリプト配置（リポジトリの sonar/）から dotnet/ と各 sln のパスを解決する。
+  スクリプト配置（リポジトリの scripts/）から dotnet/ と各 sln のパスを解決する。
   カレントディレクトリに依存しない。
   `whitespace` と `style --diagnostics IDE0005 IDE0065` を実行し、
   インデント・空白・不要な using の削除、using 配置の整理に限定する。
@@ -37,13 +37,13 @@
   dotnet/ からの相対パス、またはファイル名（例: statevia-api.sln）。未指定時は dotnet/ 全体。
 
 .EXAMPLE
-  .\sonar\dotnet-format-all.ps1
+  .\scripts\dotnet-format-all.ps1
 
 .EXAMPLE
-  .\sonar\dotnet-format-all.ps1 -VerifyNoChanges
+  .\scripts\dotnet-format-all.ps1 -VerifyNoChanges
 
 .EXAMPLE
-  .\sonar\dotnet-format-all.ps1 -Solution statevia-api.sln
+  .\scripts\dotnet-format-all.ps1 -Solution statevia-api.sln
 #>
 [CmdletBinding()]
 param(

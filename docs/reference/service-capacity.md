@@ -37,7 +37,7 @@
 | 計測日（UTC） | 2026-09-09（split-runtime 再計測） |
 | git | `fdb57c2`（ハーネスが読んだ HEAD。計測時の Scheduler イメージは再ビルド済み） |
 | HW ラベル | `ref-dev`（Windows、論理プロセッサ 16、メモリ約 80 GiB） |
-| トポロジ | `split-runtime`（`docker-compose.split-runtime.yml`。Worker / Scheduler は別プロセス。Worker `MaxConcurrency` は v0.5 計測時 compose **4**。現行既定は **16**） |
+| トポロジ | `split-runtime`（`compose/split-runtime.yml`。Worker / Scheduler は別プロセス。Worker `MaxConcurrency` は v0.5 計測時 compose **4**。現行既定は **16**） |
 | p95 ベースライン倍率 N | **3**（L1 ベースラインはウォームアップ後 count=8 の Start 受理 p95） |
 
 `ref-cloud-small` は未計測です。

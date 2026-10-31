@@ -1,11 +1,11 @@
 # 任意: JSON stdout と Fluent Bit / Loki / Grafana を別コンテナで起動する。
 # 使い方:
-#   docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+#   docker compose -f docker-compose.yml -f compose/logging.yml up -d
 # ランタイム分離と併用（Worker / Scheduler にも JsonConsole と fluentd を付ける）:
-#   docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml \
-#     -f docker-compose.logging.yml -f docker-compose.logging-split.yml up -d
+#   docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+#     -f compose/logging.yml -f compose/logging-split.yml up -d
 # 戻すとき:
-#   docker compose -f docker-compose.yml -f docker-compose.logging.yml down
+#   docker compose -f docker-compose.yml -f compose/logging.yml down
 #   docker compose up -d
 #
 # 既定の docker-compose.yml には Loki / Grafana / Fluent Bit を埋め込まない。

@@ -1,8 +1,8 @@
 # ランタイム分離: API 内 HostedService を Off し、scheduler / worker を起動する。
 # 使い方:
-#   docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml up -d
+#   docker compose -f docker-compose.yml -f compose/split-runtime.yml up -d
 # 戻すとき:
-#   docker compose -f docker-compose.yml -f docker-compose.split-runtime.yml down
+#   docker compose -f docker-compose.yml -f compose/split-runtime.yml down
 #   docker compose up -d
 services:
   service-api:

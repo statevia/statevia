@@ -52,7 +52,7 @@ jobs:
 
       - name: Verify C# format
         shell: pwsh
-        run: ./sonar/dotnet-format-all.ps1 -VerifyNoChanges -Verbosity minimal
+        run: ./scripts/dotnet-format-all.ps1 -VerifyNoChanges -Verbosity minimal
 
   ui-lint-typecheck:
     name: UI lint and typecheck

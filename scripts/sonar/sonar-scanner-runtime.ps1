@@ -40,11 +40,11 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $runtimeDir = Join-Path $dotnetRoot 'service\runtime'
 $apiDir = Join-Path $dotnetRoot 'service\api'
-$coverageXml = Join-Path $PSScriptRoot 'core-runtime-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'core-runtime-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $runtimeDir -PathType Container)) {
     Write-Error "dotnet/service/runtime ディレクトリが見つかりません: $runtimeDir"
