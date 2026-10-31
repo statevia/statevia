@@ -30,6 +30,8 @@ public sealed class DependencyDirectionTests
         "Statevia.Service.Api",
         "Statevia.Service.ActionHost",
         "Statevia.Service.Cli",
+        // service/runtime の HostedService（Statevia.Runtime）。分離した Worker / Scheduler の Generic Host もここを使う。
+        "Statevia.Runtime",
     ];
 
     private static Assembly CoreEngineAssembly =>
@@ -155,6 +157,9 @@ public sealed class DependencyDirectionTests
     private static Assembly InfraCommonAssembly =>
         typeof(Infrastructure.Common.DefaultIdGenerator).Assembly;
 
+    private static Assembly InfraActionsGrpcAssembly =>
+        typeof(Infrastructure.Actions.Grpc.ActionExecutionContractMapper).Assembly;
+
     /// <summary>Infrastructure.Persistence は Service に依存しない。</summary>
     [Fact]
     public void InfraPersistence_ShouldNotDependOn_Service()
@@ -213,6 +218,18 @@ public sealed class DependencyDirectionTests
             .GetResult();
 
         Assert.True(result.IsSuccessful, FormatFailure("Infrastructure.Common → Service", result));
+    }
+
+    /// <summary>Infrastructure.Actions.Grpc（gRPC の Action Backend）は Service に依存しない。</summary>
+    [Fact]
+    public void InfraActionsGrpc_ShouldNotDependOn_Service()
+    {
+        var result = Types.InAssembly(InfraActionsGrpcAssembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(ServiceNamespaces)
+            .GetResult();
+
+        Assert.True(result.IsSuccessful, FormatFailure("Infrastructure.Actions.Grpc → Service", result));
     }
 
     private static Assembly ReferenceHttpAssembly =>
