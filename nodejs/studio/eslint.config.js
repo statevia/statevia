@@ -29,36 +29,36 @@ const exportJsdocContexts = [
 const japaneseCharClassInLiteral = String.raw `[value=/[\u3040-\u309F\u30A0-\u30FF]/]`;
 
 /**
- * \u30A2\u30D7\u30EA\u306E\u30B3\u30FC\u30C9\uFF08app / features / shared / middleware\uFF09\u3067\u4F7F\u308F\u306A\u3044\u30A8\u30A4\u30EA\u30A2\u30B9\u3002
- * `@/tests/*` \u3068 `@/app/*` \u306F\u30C6\u30B9\u30C8\u304C import \u3059\u308B\u305F\u3081\u306B\u7F6E\u3044\u3066\u3044\u308B\uFF08docs/architecture/ui-studio-structure.md \u00A72\uFF09\u3002
+ * アプリのコード（app / features / shared / middleware）で使わないエイリアス。
+ * `@/tests/*` と `@/app/*` はテストが import するために置いている（docs/architecture/ui-studio-structure.md §2）。
  */
 const testOnlyAliasPatterns = [{
     group: ["@/tests", "@/tests/*", "@/app", "@/app/*"],
-    message: "@/tests/* \u3068 @/app/* \u306F\u30C6\u30B9\u30C8\u5C02\u7528\u306E\u30A8\u30A4\u30EA\u30A2\u30B9\u3067\u3059\u3002\u30A2\u30D7\u30EA\u306E\u30B3\u30FC\u30C9\u3067\u306F\u4F7F\u308F\u306A\u3044\u3067\u304F\u3060\u3055\u3044\uFF08route \u304B\u3089 feature \u3092\u53C2\u7167\u3059\u308B\uFF09\u3002",
+    message: "@/tests/* と @/app/* はテスト専用のエイリアスです。アプリのコードでは使わないでください（route から feature を参照する）。",
 }];
 
-/** feature \u306E\u540D\u524D\uFF08features/ \u76F4\u4E0B\u306E\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\uFF09\u3002feature \u3092\u8DB3\u3059\u3068\u3001\u5883\u754C\u306E\u30EB\u30FC\u30EB\u3082\u81EA\u52D5\u3067\u8DB3\u3055\u308C\u308B\u3002 */
+/** feature の名前（features/ 直下のディレクトリ）。feature を足すと、境界のルールも自動で足される。 */
 const featureNames = fs.readdirSync(path.join(tsconfigRootDir, "features"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
 /**
- * feature \u5185\u306E\u30D5\u30A1\u30A4\u30EB\u304C\u5B88\u308B import \u306E\u5236\u7D04\uFF08ui-studio-structure.md \u00A73\uFF09\u3002
- * \u4ED6\u306E feature \u306F\u516C\u958B\u9762\uFF08features/<name>/index.ts\uFF09\u3060\u3051\u3092\u4F7F\u3044\u3001\u76F8\u5BFE import \u3067 feature \u306E\u5916\u3078\u51FA\u306A\u3044\u3002
- * @param {string} featureName \u5BFE\u8C61\u306E feature\u3002
- * @param {boolean} topLevel feature \u76F4\u4E0B\u306E\u30D5\u30A1\u30A4\u30EB\u304B\uFF08\u76F4\u4E0B\u3067\u306F `../` \u304C\u3059\u3067\u306B feature \u306E\u5916\u3092\u6307\u3059\uFF09\u3002
- * @returns {import("eslint").Linter.RuleEntry} no-restricted-imports \u306E\u8A2D\u5B9A\u3002
+ * feature 内のファイルが守る import の制約（ui-studio-structure.md §3）。
+ * 他の feature は公開面（features/<name>/index.ts）だけを使い、相対 import で feature の外へ出ない。
+ * @param {string} featureName 対象の feature。
+ * @param {boolean} topLevel feature 直下のファイルか（直下では `../` がすでに feature の外を指す）。
+ * @returns {import("eslint").Linter.RuleEntry} no-restricted-imports の設定。
  */
 const featureImportRestrictions = (featureName, topLevel) => ["error", {
     patterns: [
         ...testOnlyAliasPatterns,
         {
             regex: `^@/features/(?!${featureName}/)[^/]+/`,
-            message: "\u4ED6\u306E feature \u306E\u5185\u90E8\u306F import \u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u516C\u958B\u9762 @/features/<name>\uFF08features/<name>/index.ts\uFF09\u304B\u3089 import \u3057\u307E\u3059\u3002",
+            message: "他の feature の内部は import しないでください。公開面 @/features/<name>（features/<name>/index.ts）から import します。",
         },
         {
             regex: topLevel ? String.raw `^\.\./` : String.raw `^\.\./\.\./`,
-            message: "\u76F8\u5BFE import \u3067 feature \u306E\u5916\u3078\u51FA\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002feature \u5185\u306E\u76F8\u5BFE import \u306F 1 \u6BB5\u4E0A\u307E\u3067\u3001\u305D\u308C\u3088\u308A\u9060\u3044\u3082\u306E\u306F @/ \u306E\u30A8\u30A4\u30EA\u30A2\u30B9\u3067\u66F8\u304D\u307E\u3059\u3002",
+            message: "相対 import で feature の外へ出ないでください。feature 内の相対 import は 1 段上まで、それより遠いものは @/ のエイリアスで書きます。",
         },
     ],
 }];
