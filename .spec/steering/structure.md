@@ -7,13 +7,19 @@ dotnet/                # C# のすべて（sln・共通のビルド設定を含�
 ├─ core/               # ドメイン・契約（非デプロイ）
 ├─ infrastructure/     # 技術実装（差し替え可能・最外殻）
 ├─ service/            # デプロイ可能なインターフェイス（API / CLI / action-host / runtime）
+├─ modules/            # Action Module のソース（reference/。手元実験用の local/ は gitignore）
 ├─ tests/              # 横断テスト（Architecture.Tests）と横断フィクスチャ（Fixtures/）
-└─ tools/capacity/     # 容量計測ハーネス（CI 常時実行外）
+├─ tools/capacity/     # 容量計測ハーネス（CI 常時実行外）
+└─ build/              # MSBuild の共有設定
 nodejs/studio/         # Web ダッシュボード（Next.js — @statevia/studio）
 docs/                  # 契約・運用・開発ガイド
 compose/               # Compose の重ね合わせ定義（split-runtime / logging / sonar）。入口はルートの docker-compose.yml
 scripts/               # 運用スクリプト（dotnet-format-all.ps1・measure-loc.ps1、Sonar は scripts/sonar/）
+modules/               # 実行時の modules ルート（gitignore。compose が /app/modules にマウント）
+artifacts/             # ビルド・スキャンの出力（gitignore）
 ```
+
+配置の正本は `docs/architecture/repository-layout.md`（ルート直下に置いてよいファイル、フォルダの役割、ツールチェーンの境界）。ルートには言語ごとのビルド設定を置かない。
 
 ## Core（`dotnet/core/`）
 
@@ -57,6 +63,7 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 
 - Next.js の route handler で Service API にプロキシし、ブラウザからは同一オリジンの `/api/core/...` 等を利用。
 - 環境変数 `SERVICE_API_INTERNAL_BASE` でバックエンド基底 URL を指定（`AGENTS.md` の表）。
+- 内部は `app` → `features` → `shared`。feature 間は公開面（`features/<name>/index.ts`）だけを通し、他 feature の内部への import は ESLint で error にする。単体テストは `tests/` の下にソースの位置を映して置く。正本は `docs/architecture/ui-studio-structure.md`。
 
 ## Tests（`dotnet/tests/`）
 
@@ -70,6 +77,7 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 - **Service ↔ Core/Infrastructure**: DI で結合。Service は HTTP/gRPC 境界のみ担当。
 - **UI ↔ Service**: HTTP（プロキシ）のみ。DB に直接接続しない。
 - **Module ↔ Engine**: Module が使ってよい Engine は `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ（`docs/specifications/actions/module-zip-layout.md` §3）。リファレンス Module については Architecture.Tests で固定。
+- **既知の負債**: Worker / Scheduler → `Statevia.Service.Api` と、Application → EF Core（`DbUpdateException`）は、Spec `action-runtime-composition` で直すまで残す（理由は `docs/architecture/overview.md` §3.1）。
 
 ## Tools（`dotnet/tools/`）
 
