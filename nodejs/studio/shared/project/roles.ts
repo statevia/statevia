@@ -1,8 +1,7 @@
-import { PROJECT_MEMBER_KINDS, PROJECT_ROLES, type ProjectMemberKind, type ProjectRole } from "./types";
+import { PROJECT_ROLES, type ProjectRole } from "./types";
 
 // includes は要素型の string を受け取る。リテラル配列のままでは string を渡せない。
 const projectRoleValues: readonly string[] = PROJECT_ROLES;
-const projectMemberKindValues: readonly string[] = PROJECT_MEMBER_KINDS;
 
 /**
  * storage 文字列が Project ロールか。
@@ -14,12 +13,12 @@ export function isProjectRole(value: unknown): value is ProjectRole {
 }
 
 /**
- * メンバー種別か。
- * @param value API の kind。文字列以外は false。
- * @returns user / serviceAccount / system なら true。
+ * 既知の Project ロールへ狭める。
+ * @param value API の role。
+ * @returns 一致したロール。それ以外は null。
  */
-export function isProjectMemberKind(value: unknown): value is ProjectMemberKind {
-  return typeof value === "string" && projectMemberKindValues.includes(value);
+export function readProjectRole(value: unknown): ProjectRole | null {
+  return PROJECT_ROLES.find((role) => role === value) ?? null;
 }
 
 /**

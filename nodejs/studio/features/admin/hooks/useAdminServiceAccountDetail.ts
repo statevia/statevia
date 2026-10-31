@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { isApiNotFound } from "@/features/projects/httpStatus";
+import { isApiNotFound } from "@/shared/api/httpStatus";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { buildUpdateServiceAccountBody, type ServiceAccountFieldErrors } from "../serviceAccounts";

@@ -4,8 +4,8 @@ import { useCallback } from "react";
 import { PROJECTS_CREATE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { PageShell } from "@/shared/ui/PageShell";
-import { useProject } from "../projectContext";
-import type { ProjectSummary } from "../types";
+import { useProject } from "@/shared/project/projectContext";
+import type { ProjectSummary } from "@/shared/project/types";
 import { ProjectCreateForm } from "./ProjectCreateForm";
 
 /**

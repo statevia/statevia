@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DefinitionEditorPageClient } from "@/features/definition-editor/ui/DefinitionEditorPageClient";
 import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultDefinitionYaml";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
-import { ProjectProvider } from "@/features/projects/projectContext";
+import { ProjectProvider } from "@/shared/project/projectContext";
 import { PermissionsProvider } from "@/shared/auth/permissionsContext";
 import { defaultTestPermissions, defaultTestProjects, renderWithUiText } from "@/tests/testUtils";
 

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrincipalResourceGrants } from "@/features/admin/resourceGrants";
 import { ResourceGrantsForm } from "@/features/admin/ui/ResourceGrantsForm";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary } from "@/shared/project/types";
 import * as api from "@/shared/api";
 import { renderWithUiText } from "@/tests/testUtils";
 

@@ -10,8 +10,8 @@ import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { useDefinitionEditorPage } from "../hooks/useDefinitionEditorPage";
-import { useProject } from "@/features/projects/projectContext";
-import { canPublish } from "@/features/projects/roles";
+import { useProject } from "@/shared/project/projectContext";
+import { canPublish } from "@/shared/project/roles";
 import { DEFINITIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 
 type DefinitionEditorPageClientProps = {

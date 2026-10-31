@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { useProject } from "@/features/projects/projectContext";
+import { useProject } from "@/shared/project/projectContext";
 import { apiGet } from "@/shared/api";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { useI18n } from "@/shared/i18n/uiTextContext";

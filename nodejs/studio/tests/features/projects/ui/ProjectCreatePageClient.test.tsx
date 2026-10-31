@@ -7,14 +7,14 @@ vi.mock("@/features/projects/api", async (importOriginal) => {
   return { ...actual, createProject: vi.fn() };
 });
 
-vi.mock("@/features/projects/projectContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/projects/projectContext")>();
+vi.mock("@/shared/project/projectContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/project/projectContext")>();
   return { ...actual, useProject: vi.fn(actual.useProject) };
 });
 
 import { createProject } from "@/features/projects/api";
-import { useProject, type ProjectContextValue } from "@/features/projects/projectContext";
-import type { ProjectSummary } from "@/features/projects/types";
+import { useProject, type ProjectContextValue } from "@/shared/project/projectContext";
+import type { ProjectSummary } from "@/shared/project/types";
 import { ProjectCreatePageClient } from "@/features/projects/ui/ProjectCreatePageClient";
 
 /** 作成応答の Project。 */

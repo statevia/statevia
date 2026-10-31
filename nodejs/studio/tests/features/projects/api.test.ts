@@ -16,12 +16,11 @@ import {
   createProject,
   listAdminProjects,
   listGrantCandidates,
-  listMembershipProjects,
   listProjectMembers,
   removeProjectMember,
   upsertProjectMember,
 } from "@/features/projects/api";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary } from "@/shared/project/types";
 
 /**
  * 一覧用の Project。
@@ -54,15 +53,6 @@ describe("project api", () => {
 
     expect(apiPost).toHaveBeenCalledWith("/projects", { slug: "default", displayName: "Default" });
     expect(created.role).toBe("admin");
-  });
-
-  it("所属一覧は未知の role を null にする", async () => {
-    vi.mocked(apiGet).mockResolvedValue([project("owner" as ProjectSummary["role"])]);
-
-    const rows = await listMembershipProjects();
-
-    expect(apiGet).toHaveBeenCalledWith("/projects");
-    expect(rows[0]?.role).toBeNull();
   });
 
   it("管理一覧は既知の role を残す", async () => {

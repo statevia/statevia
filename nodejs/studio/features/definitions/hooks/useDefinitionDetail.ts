@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useDelayedVisibility } from "@/shared/lib/useDelayedVisibility";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getDefinition, softDeleteDefinition } from "../api";
-import { isApiNotFound } from "@/features/projects/httpStatus";
+import { isApiNotFound } from "@/shared/api/httpStatus";
 import type { DefinitionDTO } from "../types";
 
 /** useDefinitionDetail のオプション。 */

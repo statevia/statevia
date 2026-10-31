@@ -8,7 +8,7 @@ import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { PageShell } from "@/shared/ui/PageShell";
 import { Toast } from "@/shared/ui/Toast";
 import { listAdminProjects } from "../api";
-import type { ProjectSummary } from "../types";
+import type { ProjectSummary } from "@/shared/project/types";
 import { ProjectMembersPanel } from "./ProjectMembersPanel";
 
 /**

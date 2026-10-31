@@ -40,14 +40,14 @@ vi.mock("@/features/executions/api", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/projects/projectContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/projects/projectContext")>();
+vi.mock("@/shared/project/projectContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/project/projectContext")>();
   return { ...actual, useProject: vi.fn(actual.useProject) };
 });
 
 import { apiGet, apiPost } from "@/shared/api";
 import { buildExecutionsListPath } from "@/features/executions/api";
-import { useProject } from "@/features/projects/projectContext";
+import { useProject } from "@/shared/project/projectContext";
 import { testProjectId } from "@/tests/testUtils";
 
 describe("ExecutionsPageClient", () => {

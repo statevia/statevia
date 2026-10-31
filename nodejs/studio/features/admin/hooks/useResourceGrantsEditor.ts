@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { listAdminProjects } from "@/features/projects/api";
-import { isApiNotFound } from "@/features/projects/httpStatus";
-import type { ProjectSummary } from "@/features/projects/types";
+import { listAdminProjects } from "@/features/projects";
+import { isApiNotFound } from "@/shared/api/httpStatus";
+import type { ProjectSummary } from "@/shared/project/types";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import {

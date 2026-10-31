@@ -13,7 +13,7 @@ vi.mock("@/shared/api", async (importOriginal) => {
 
 import { useResourceGrantsEditor } from "@/features/admin/hooks/useResourceGrantsEditor";
 import type { PrincipalResourceGrants } from "@/features/admin/resourceGrants";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary } from "@/shared/project/types";
 import { apiGet, apiPut } from "@/shared/api";
 
 const subject = { kind: "user", userId: "u-1" } as const;

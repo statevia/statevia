@@ -9,7 +9,7 @@ import {
   isSlugConflictError,
   type ProjectCreateFieldErrors,
 } from "../projectCreate";
-import type { ProjectSummary } from "../types";
+import type { ProjectSummary } from "@/shared/project/types";
 
 /**
  * 作成成功後に呼び出し側が行う後処理（所属の再取得と選択など）。

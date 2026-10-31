@@ -1,16 +1,16 @@
 import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/api";
+import { normalizeProject } from "@/shared/project/api";
+import { readProjectRole } from "@/shared/project/roles";
+import type { ProjectRole, ProjectSummary } from "@/shared/project/types";
 import type { CreateProjectBody } from "./projectCreate";
 import {
   PROJECT_MEMBER_KINDS,
-  PROJECT_ROLES,
   type ProjectGrantCandidate,
   type ProjectMember,
   type ProjectMemberKind,
-  type ProjectRole,
-  type ProjectSummary,
 } from "./types";
 
-export type { ProjectGrantCandidate, ProjectMember, ProjectRole, ProjectSummary } from "./types";
+export type { ProjectGrantCandidate, ProjectMember } from "./types";
 
 type MemberWire = {
   principalId?: unknown;
@@ -25,15 +25,6 @@ type CandidateWire = {
   displayName?: unknown;
   kind?: unknown;
 };
-
-/**
- * 既知の Project ロールへ狭める。
- * @param value API の role。
- * @returns 一致したロール。それ以外は null。
- */
-function readProjectRole(value: unknown): ProjectRole | null {
-  return PROJECT_ROLES.find((role) => role === value) ?? null;
-}
 
 /**
  * 既知のメンバー種別へ狭める。
@@ -77,27 +68,6 @@ function toGrantCandidate(row: CandidateWire): ProjectGrantCandidate | null {
     displayName: typeof row.displayName === "string" ? row.displayName : "",
     kind,
   };
-}
-
-/**
- * 応答の role を既知のロールへ狭める。未知値は null。
- * @param row API の Project。
- * @returns 画面で使う Project。
- */
-function normalizeProject(row: ProjectSummary): ProjectSummary {
-  return {
-    ...row,
-    role: readProjectRole(row.role),
-  };
-}
-
-/**
- * 所属 Project 一覧。
- * @returns 呼び出し元がメンバーの Project。
- */
-export async function listMembershipProjects(): Promise<ProjectSummary[]> {
-  const rows = await apiGet<ProjectSummary[]>("/projects");
-  return rows.map(normalizeProject);
 }
 
 /**

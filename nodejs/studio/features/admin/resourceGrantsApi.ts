@@ -1,5 +1,5 @@
 import { apiGet, apiPut } from "@/shared/api";
-import { listDefinitions } from "@/features/definitions/api";
+import { listDefinitions } from "@/features/definitions";
 import {
   DEFINITION_CANDIDATES_PAGE_LIMIT,
   resourceGrantsPath,
