@@ -62,7 +62,8 @@ if (ShouldSkipBecauseRecentlyFormatted -lockPath $lockPath -minSecondsBetweenRun
 # Touch the lock so rapid consecutive edits debounce correctly.
 Set-Content -LiteralPath $lockPath -Value ("{0:o}" -f (Get-Date)) -Encoding UTF8
 
-$solutions = Try-ExtractSolutionsFromRawPayload -rawPayload $rawPayload
+# Wrap in @() because PowerShell unrolls a single-element array into a string, which has no Count under StrictMode.
+$solutions = @(Try-ExtractSolutionsFromRawPayload -rawPayload $rawPayload)
 if ($solutions.Count -eq 0) {
   # If payload does not include edited paths (or we cannot extract them), skip to avoid wasteful formatting.
   return
