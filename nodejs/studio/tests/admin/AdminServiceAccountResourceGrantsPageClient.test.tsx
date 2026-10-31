@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminServiceAccountResourceGrantsPageClient } from "@/features/admin/ui/AdminServiceAccountResourceGrantsPageClient";
 import * as api from "@/shared/api";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/shared/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/api")>();

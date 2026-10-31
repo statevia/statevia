@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import AdminLayout from "../../app/admin/layout";
+import AdminLayout from "@/app/admin/layout";
 import { fetchAuthMeServer } from "@/shared/auth/serverAuthMe";
 import { redirect } from "next/navigation";
 

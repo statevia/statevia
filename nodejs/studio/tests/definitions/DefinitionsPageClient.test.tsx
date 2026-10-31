@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { DefinitionsPageClient } from "../../features/definitions/ui/DefinitionsPageClient";
-import { renderWithUiText, testProjectId } from "../testUtils";
+import { DefinitionsPageClient } from "@/features/definitions/ui/DefinitionsPageClient";
+import { renderWithUiText, testProjectId } from "@/tests/testUtils";
 
 const replaceMock = vi.fn();
 const pushMock = vi.fn();

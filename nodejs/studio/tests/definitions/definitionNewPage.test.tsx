@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import DefinitionNewPage from "../../app/definitions/new/page";
-import { renderWithUiText } from "../testUtils";
+import DefinitionNewPage from "@/app/definitions/new/page";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() })

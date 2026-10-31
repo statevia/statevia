@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DashboardPageClient } from "@/features/dashboard/ui/DashboardPageClient";
-import { renderWithUiText, testProjectId } from "../testUtils";
+import { renderWithUiText, testProjectId } from "@/tests/testUtils";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() })

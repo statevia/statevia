@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { GraphLegend } from "../../../features/executions/ui/GraphLegend";
+import { GraphLegend } from "@/features/executions/ui/GraphLegend";
 import { uiText } from "@/shared/i18n/uiText";
 
 describe("GraphLegend", () => {

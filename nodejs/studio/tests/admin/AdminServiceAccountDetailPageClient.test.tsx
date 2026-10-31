@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminServiceAccountDetailPageClient } from "@/features/admin/ui/AdminServiceAccountDetailPageClient";
 import type { AdminGroupListItem, AdminServiceAccount } from "@/features/admin/types";
 import * as api from "@/shared/api";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/shared/api", () => ({
   apiGet: vi.fn(),

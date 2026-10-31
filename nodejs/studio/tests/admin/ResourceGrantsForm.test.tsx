@@ -4,7 +4,7 @@ import type { PrincipalResourceGrants } from "@/features/admin/resourceGrants";
 import { ResourceGrantsForm } from "@/features/admin/ui/ResourceGrantsForm";
 import type { ProjectSummary } from "@/features/projects/types";
 import * as api from "@/shared/api";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/shared/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/api")>();

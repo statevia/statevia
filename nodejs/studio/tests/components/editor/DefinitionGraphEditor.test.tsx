@@ -10,7 +10,7 @@ import { useDefinitionGraphEditor } from "@/features/definition-editor/hooks/use
 import { useGraphActionSchemas } from "@/features/definition-editor/hooks/useGraphActionSchemas";
 import type { Connection, Node } from "reactflow";
 import type { DefinitionGraphNodeData } from "@/features/definition-editor/lib/definitionGraphCanvas";
-import { renderWithUiText } from "../../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 import { definitionGraphEditorTestLabels } from "./definitionGraphEditorLabels";
 
 vi.mock("@/shared/api", async (importOriginal) => {

@@ -3,7 +3,7 @@ import {
   isAccessTokenSessionValid,
   readJwtExpiryUnixSeconds
 } from "@/shared/auth/authTokenValidation";
-import { testJwt } from "../helpers/testJwt";
+import { testJwt } from "@/tests/helpers/testJwt";
 
 describe("authTokenValidation", () => {
   it("exp が未来の JWT は有効", () => {

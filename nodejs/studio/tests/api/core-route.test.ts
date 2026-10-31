@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { DELETE, GET, POST, PUT } from "../../app/api/core/[...path]/route";
+import { DELETE, GET, POST, PUT } from "@/app/api/core/[...path]/route";
 
 describe("api/core route GET", () => {
   const originalBase = process.env.SERVICE_API_INTERNAL_BASE;

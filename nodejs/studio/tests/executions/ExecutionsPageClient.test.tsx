@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { ExecutionsPageClient } from "../../features/executions/ui/ExecutionsPageClient";
-import { renderWithUiText } from "../testUtils";
+import { ExecutionsPageClient } from "@/features/executions/ui/ExecutionsPageClient";
+import { renderWithUiText } from "@/tests/testUtils";
 
 const push = vi.fn();
 const replace = vi.fn();
@@ -48,7 +48,7 @@ vi.mock("@/features/projects/projectContext", async (importOriginal) => {
 import { apiGet, apiPost } from "@/shared/api";
 import { buildExecutionsListPath } from "@/features/executions/api";
 import { useProject } from "@/features/projects/projectContext";
-import { testProjectId } from "../testUtils";
+import { testProjectId } from "@/tests/testUtils";
 
 describe("ExecutionsPageClient", () => {
   beforeEach(() => {

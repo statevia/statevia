@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickPreferredRuntimeNode } from "../../features/executions/lib/pickPreferredRuntimeNode";
+import { pickPreferredRuntimeNode } from "@/features/executions/lib/pickPreferredRuntimeNode";
 import type { ExecutionNodeDTO } from "@/features/executions/types";
 
 function node(

@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 
 describe("RootPage", () => {
   it("/ から /dashboard へリダイレクトする", async () => {
-    const { default: RootPage } = await import("../../app/page");
+    const { default: RootPage } = await import("@/app/page");
     RootPage();
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });

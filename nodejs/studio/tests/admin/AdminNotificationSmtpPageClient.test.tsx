@@ -2,7 +2,7 @@ import type { TenantNotificationSmtp } from "@/features/admin/notificationSmtp";
 import { AdminNotificationSmtpPageClient } from "@/features/admin/ui/AdminNotificationSmtpPageClient";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/shared/api/client", () => ({
   apiGet: vi.fn(),

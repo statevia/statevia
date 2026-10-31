@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useExecutionDashboard } from "../../../features/executions/hooks/useExecutionDashboard";
+import { useExecutionDashboard } from "@/features/executions/hooks/useExecutionDashboard";
 import type { ExecutionDTO, ExecutionGraphDTO } from "@/features/executions/types";
 import * as api from "@/shared/api";
 import type { ReactNode } from "react";

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { DEFAULT_LOADING_INDICATOR_DELAY_MS } from "@/shared/lib/useDelayedVisibility";
-import { ExecutionTimeline } from "../../../features/executions/ui/ExecutionTimeline";
-import { renderWithUiText } from "../../testUtils";
+import { ExecutionTimeline } from "@/features/executions/ui/ExecutionTimeline";
+import { renderWithUiText } from "@/tests/testUtils";
 import type { ExecutionEventWithSeq } from "@/features/executions/types";
 
 const baseEvents: ExecutionEventWithSeq[] = [

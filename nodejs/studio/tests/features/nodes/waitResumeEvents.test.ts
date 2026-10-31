@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublishEventAvailable, resolveWaitResumeEvents } from "../../../features/executions/lib/waitResumeEvents";
+import { isPublishEventAvailable, resolveWaitResumeEvents } from "@/features/executions/lib/waitResumeEvents";
 
 describe("resolveWaitResumeEvents", () => {
   it("allowedEvents を優先して返す", () => {

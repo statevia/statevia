@@ -9,6 +9,10 @@ export default defineConfig({
     alias: {
       "@/features": path.join(studioRoot, "features"),
       "@/shared": path.join(studioRoot, "shared"),
+      // テストは tests/ の外のソースとテスト用ヘルパーをエイリアスで import する（置き場所を変えても import を書き換えずに済むように）。
+      "@/app": path.join(studioRoot, "app"),
+      "@/middleware": path.join(studioRoot, "middleware.ts"),
+      "@/tests": path.join(studioRoot, "tests"),
     },
   },
   test: {

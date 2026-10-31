@@ -2,7 +2,7 @@ import type { TenantActionBinding } from "@/features/admin/actionBindings";
 import { AdminActionBindingsPageClient } from "@/features/admin/ui/AdminActionBindingsPageClient";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/shared/api/client", () => ({
   apiGet: vi.fn(),

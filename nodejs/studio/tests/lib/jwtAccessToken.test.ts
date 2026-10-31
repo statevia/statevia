@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JwtAccessToken, JwtSegment } from "@/shared/auth/jwtAccessToken";
-import { testJwt } from "../helpers/testJwt";
+import { testJwt } from "@/tests/helpers/testJwt";
 
 function encodeJsonSegment(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");

@@ -3,7 +3,7 @@ import {
   buildNodeListGroups,
   nodeListPageForNode,
   pageNodeListGroups
-} from "../../features/executions/lib/nodeListGroups";
+} from "@/features/executions/lib/nodeListGroups";
 import type { ExecutionNodeDTO } from "@/features/executions/types";
 
 /**

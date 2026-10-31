@@ -6,7 +6,7 @@ import {
   resolveInitialSelectionNodeId,
   resolveResumeTargetNodeId,
   resolveVisitAfterRefresh
-} from "../../features/executions/lib/nodeVisits";
+} from "@/features/executions/lib/nodeVisits";
 import type { ExecutionNodeDTO } from "@/features/executions/types";
 
 /**

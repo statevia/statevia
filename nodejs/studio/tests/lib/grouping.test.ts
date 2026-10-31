@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGroups, resolveGroupBounds } from "../../features/executions/lib/grouping";
+import { buildGroups, resolveGroupBounds } from "@/features/executions/lib/grouping";
 import type { ExecutionNodeDTO } from "@/features/executions/types";
 import type { LayoutEdgeInput, PositionedNode } from "@/shared/lib/graphLayout";
 import type { GraphGroupDef } from "@/features/executions/graphs/types";

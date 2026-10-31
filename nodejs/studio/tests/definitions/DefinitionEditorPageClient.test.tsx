@@ -5,7 +5,7 @@ import { defaultDefinitionYaml } from "@/features/definition-editor/lib/defaultD
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 import { ProjectProvider } from "@/features/projects/projectContext";
 import { PermissionsProvider } from "@/shared/auth/permissionsContext";
-import { defaultTestPermissions, defaultTestProjects, renderWithUiText } from "../testUtils";
+import { defaultTestPermissions, defaultTestProjects, renderWithUiText } from "@/tests/testUtils";
 
 const push = vi.fn();
 

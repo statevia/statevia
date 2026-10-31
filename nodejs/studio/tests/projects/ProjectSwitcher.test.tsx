@@ -1,6 +1,6 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 import type { ProjectSummary } from "@/features/projects/types";
 import { ProjectSwitcher } from "@/features/projects/ui/ProjectSwitcher";

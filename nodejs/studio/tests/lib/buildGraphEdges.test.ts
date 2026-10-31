@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGraphEdges } from "../../features/executions/lib/buildGraphEdges";
+import { buildGraphEdges } from "@/features/executions/lib/buildGraphEdges";
 import type { LayoutEdgeInput } from "@/shared/lib/graphLayout";
 
 function edge(overrides: Partial<LayoutEdgeInput> & { id: string; from: string; to: string }): LayoutEdgeInput {

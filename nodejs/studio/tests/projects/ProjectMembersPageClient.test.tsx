@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/features/projects/ui/ProjectMembersPanel", () => ({
   ProjectMembersPanel: ({ projectId }: { projectId: string }) => <p>members-panel:{projectId}</p>,

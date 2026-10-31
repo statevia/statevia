@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
-import { ReplayBanner } from "../../../features/executions/ui/ReplayBanner";
-import { renderWithUiText } from "../../testUtils";
+import { ReplayBanner } from "@/features/executions/ui/ReplayBanner";
+import { renderWithUiText } from "@/tests/testUtils";
 
 describe("ReplayBanner", () => {
   it("現在に戻るボタンでコールバックを呼ぶ", () => {

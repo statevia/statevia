@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AdminUsersPageClient } from "@/features/admin/ui/AdminUsersPageClient";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 import { uiText } from "@/shared/i18n/uiText";
 
 vi.mock("@/shared/api", async (importOriginal) => {

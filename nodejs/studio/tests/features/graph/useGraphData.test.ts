@@ -5,7 +5,7 @@ import {
   getNodeWithFallback,
   useGraphData,
   WAITING_RESUME_LAYOUT_HEIGHT
-} from "../../../features/executions/hooks/useGraphData";
+} from "@/features/executions/hooks/useGraphData";
 import { layoutGraph } from "@/shared/lib/graphLayout";
 import type { ExecutionNodeDTO, ExecutionView } from "@/features/executions/types";
 import { getGraphDefinition } from "@/features/executions/graphs/registry";

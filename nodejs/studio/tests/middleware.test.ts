@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { AUTH_COOKIE_ACCESS } from "@/shared/auth/authSession";
-import { middleware } from "../middleware";
-import { testJwt } from "./helpers/testJwt";
+import { middleware } from "@/middleware";
+import { testJwt } from "@/tests/helpers/testJwt";
 
 function requestWithCookie(path: string, accessToken?: string): NextRequest {
   const headers: Record<string, string> = {};

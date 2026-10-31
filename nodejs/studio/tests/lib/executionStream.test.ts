@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseExecutionStreamEvent } from "../../features/executions/lib/executionStream";
+import { parseExecutionStreamEvent } from "@/features/executions/lib/executionStream";
 
 describe("parseExecutionStreamEvent", () => {
   it("GraphUpdated イベントをパースする", () => {

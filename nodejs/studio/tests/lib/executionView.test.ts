@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExecutionView } from "../../features/executions/lib/executionView";
+import { buildExecutionView } from "@/features/executions/lib/executionView";
 import type { ExecutionDTO, ExecutionGraphDTO } from "@/features/executions/types";
 
 describe("buildExecutionView", () => {

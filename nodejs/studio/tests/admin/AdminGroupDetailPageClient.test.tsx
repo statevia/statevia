@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { AdminGroupDetailPageClient } from "@/features/admin/ui/AdminGroupDetailPageClient";
-import { renderWithUiText } from "../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 import { uiText } from "@/shared/i18n/uiText";
 
 vi.mock("next/link", () => ({

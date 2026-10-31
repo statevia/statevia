@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { SubscribeIngressDialog } from "@/features/executions/ui/SubscribeIngressDialog";
-import { renderWithUiText } from "../../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("@/features/executions/api", () => ({
   listEventSubscriptions: vi.fn(),

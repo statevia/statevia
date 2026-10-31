@@ -1,8 +1,8 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { GET } from "../../app/api/auth/session/route";
+import { GET } from "@/app/api/auth/session/route";
 import { AUTH_COOKIE_ACCESS, AUTH_COOKIE_TENANT_KEY } from "@/shared/auth/authSession";
-import { testJwt } from "../helpers/testJwt";
+import { testJwt } from "@/tests/helpers/testJwt";
 
 describe("GET /api/auth/session", () => {
   const originalAuthToken = process.env.SERVICE_API_AUTH_TOKEN;

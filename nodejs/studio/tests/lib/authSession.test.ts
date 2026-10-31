@@ -5,7 +5,7 @@ import {
   isAccessTokenSessionValid,
   readJwtExpiryUnixSeconds
 } from "@/shared/auth/authSession";
-import { testJwt } from "../helpers/testJwt";
+import { testJwt } from "@/tests/helpers/testJwt";
 
 describe("cookieMaxAgeSeconds", () => {
   it("有効期限までの秒数を返す（最低 60 秒）", () => {

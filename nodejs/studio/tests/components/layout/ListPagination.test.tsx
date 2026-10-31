@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { ListPagination } from "@/shared/ui/ListPagination";
-import { renderWithUiText } from "../../testUtils";
+import { renderWithUiText } from "@/tests/testUtils";
 
 describe("ListPagination", () => {
   it("前後ページ操作を発火する", () => {

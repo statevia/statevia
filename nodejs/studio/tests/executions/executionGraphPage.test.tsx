@@ -1,23 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import ExecutionGraphPage from "../../app/executions/[executionId]/graph/page";
-import { buildUseExecutionMock } from "../mocks/useExecutionMock";
-import { renderWithUiText } from "../testUtils";
+import ExecutionGraphPage from "@/app/executions/[executionId]/graph/page";
+import { buildUseExecutionMock } from "@/tests/mocks/useExecutionMock";
+import { renderWithUiText } from "@/tests/testUtils";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ executionId: "ex-1" }),
   useRouter: () => ({ push: vi.fn() })
 }));
 
-vi.mock("../../features/executions/hooks/useExecution", () => ({
+vi.mock("@/features/executions/hooks/useExecution", () => ({
   useExecution: vi.fn()
 }));
 
-vi.mock("../../features/executions/hooks/useExecutionEvents", () => ({
+vi.mock("@/features/executions/hooks/useExecutionEvents", () => ({
   useExecutionEvents: () => ({ events: [], loading: false, error: null, loadMore: vi.fn(), hasMore: false })
 }));
 
-vi.mock("../../features/executions/hooks/useExecutionStateAtSeq", () => ({
+vi.mock("@/features/executions/hooks/useExecutionStateAtSeq", () => ({
   useExecutionStateAtSeq: () => ({
     replayExecution: null,
     replayLoading: false,
@@ -27,11 +27,11 @@ vi.mock("../../features/executions/hooks/useExecutionStateAtSeq", () => ({
   })
 }));
 
-vi.mock("../../features/executions/hooks/useGraphDefinition", () => ({
+vi.mock("@/features/executions/hooks/useGraphDefinition", () => ({
   useGraphDefinition: () => ({ definition: null, loading: false, error: null })
 }));
 
-vi.mock("../../features/executions/hooks/useGraphData", () => ({
+vi.mock("@/features/executions/hooks/useGraphData", () => ({
   useGraphData: () => ({
     nodes: [
       {
@@ -60,7 +60,7 @@ vi.mock("../../features/executions/hooks/useGraphData", () => ({
   getNodeWithFallback: vi.fn()
 }));
 
-vi.mock("../../features/executions/hooks/useNodeCommands", () => ({
+vi.mock("@/features/executions/hooks/useNodeCommands", () => ({
   useNodeCommands: () => ({ resumeNode: vi.fn(), cancelNode: vi.fn(), publishEvent: vi.fn() }),
   getResumeDisabledReason: () => null
 }));
@@ -70,7 +70,7 @@ vi.mock("@/shared/api", async (importOriginal) => {
   return { ...actual, apiGet: vi.fn() };
 });
 
-import { useExecution } from "../../features/executions/hooks/useExecution";
+import { useExecution } from "@/features/executions/hooks/useExecution";
 
 describe("ExecutionGraphPage", () => {
   beforeEach(() => {

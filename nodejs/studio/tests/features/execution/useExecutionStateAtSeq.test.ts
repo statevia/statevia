@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import { useExecutionStateAtSeq } from "../../../features/executions/hooks/useExecutionStateAtSeq";
+import { useExecutionStateAtSeq } from "@/features/executions/hooks/useExecutionStateAtSeq";
 import * as api from "@/shared/api";
 import type { ExecutionView } from "@/features/executions/types";
 
