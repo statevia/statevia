@@ -23,10 +23,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $engineDir = Join-Path $dotnetRoot 'core\engine'
-$coverageXml = Join-Path $PSScriptRoot 'core-engine-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'core-engine-coverage.xml'
 
 # Engine sln 内の *.Tests と他コンポーネントを除外
 $sonarAnalysisExclusions = @(

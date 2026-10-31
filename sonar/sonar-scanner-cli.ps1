@@ -42,10 +42,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $cliDir = Join-Path $dotnetRoot 'service\cli'
-$coverageXml = Join-Path $PSScriptRoot 'service-cli-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'service-cli-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $cliDir -PathType Container)) {
     Write-Error "dotnet/service/cli ディレクトリが見つかりません: $cliDir"

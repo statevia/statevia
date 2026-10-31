@@ -14,6 +14,25 @@
   ファイル先頭の実行コードは置かない。ドットソース時に解析が走らないようにする。
 #>
 
+function Get-StateviaRepositoryRoot {
+    <#
+    .SYNOPSIS
+      リポジトリルートの絶対パスを返す。
+    .DESCRIPTION
+      本ファイルの置き場所から求める（関数内の $PSScriptRoot は、呼び出し元ではなく本ファイルのディレクトリを指す）。
+      各スキャナはこの関数でルートを求めるため、スクリプトの置き場所を変えるときは本関数だけを直す。
+    #>
+    return Split-Path -Parent $PSScriptRoot
+}
+
+function Get-StateviaSonarOutputDirectory {
+    <#
+    .SYNOPSIS
+      カバレッジ XML などスキャンの生成物を置くディレクトリを返す。
+    #>
+    return $PSScriptRoot
+}
+
 function Get-StateviaSonarHostUrl {
     <#
     .SYNOPSIS

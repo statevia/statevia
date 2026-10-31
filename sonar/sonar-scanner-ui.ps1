@@ -24,7 +24,7 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $uiDir = Join-Path (Join-Path $repoRoot 'nodejs') 'studio'
 $lcovPath = Join-Path $uiDir 'coverage\lcov.info'
 

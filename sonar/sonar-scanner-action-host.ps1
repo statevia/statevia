@@ -54,10 +54,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $actionHostDir = Join-Path $dotnetRoot 'service\action-host'
-$coverageXml = Join-Path $PSScriptRoot 'service-action-host-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'service-action-host-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $actionHostDir -PathType Container)) {
     Write-Error "dotnet/service/action-host ディレクトリが見つかりません: $actionHostDir"

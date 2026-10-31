@@ -42,10 +42,10 @@ if (-not $env:SONAR_TOKEN) {
     exit 1
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Get-StateviaRepositoryRoot
 $dotnetRoot = Join-Path $repoRoot 'dotnet'
 $referenceDir = Join-Path $dotnetRoot 'modules\reference'
-$coverageXml = Join-Path $PSScriptRoot 'modules-reference-coverage.xml'
+$coverageXml = Join-Path (Get-StateviaSonarOutputDirectory) 'modules-reference-coverage.xml'
 
 if (-not (Test-Path -LiteralPath $referenceDir -PathType Container)) {
     Write-Error "modules/reference ディレクトリが見つかりません: $referenceDir"
