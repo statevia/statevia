@@ -68,7 +68,7 @@ HTTP / gRPC / CLI のアダプタ。Composition Root として全層を DI で�
 - **Application ↔ Infrastructure**: `Application.Contracts` のポート越しのみ。Infrastructure が実装を提供。
 - **Service ↔ Core/Infrastructure**: DI で結合。Service は HTTP/gRPC 境界のみ担当。
 - **UI ↔ Service**: HTTP（プロキシ）のみ。DB に直接接続しない。
-- **Module ↔ Engine**: Module が使ってよい Engine は `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ（`docs/specifications/actions/module-zip-layout.md` §3）。
+- **Module ↔ Engine**: Module が使ってよい Engine は `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ（`docs/specifications/actions/module-zip-layout.md` §3）。リファレンス Module については Architecture.Tests で固定。
 
 ## Tools（`dotnet/tools/`）
 

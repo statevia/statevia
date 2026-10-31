@@ -156,7 +156,7 @@ modules/bad.module/alpha/alpha.dll   # 直下に entry DLL なし → skip
 | `Statevia.Core.Engine.Execution.DefaultStateExecutor` | `DefaultStateExecutor.Create(state)` | `IState<,>` の実装を `IStateExecutor` に包む |
 
 - 上記以外の Engine の型（`Statevia.Core.Engine.Engine`、`Statevia.Core.Engine.FSM`、`Statevia.Core.Engine.Execution` の `DefaultStateExecutor` 以外など）は、Engine の内部変更で予告なく変わります。Module から参照しないでください。
-- Module からは、Action の契約（`Statevia.Core.Actions.Abstractions`）と上記の範囲を使います。リファレンス Module（`statevia.action.reference.http` / `statevia.action.reference.notification`）も、この範囲だけを使っています。
+- Module からは、Action の契約（`Statevia.Core.Actions.Abstractions`）と上記の範囲を使います。リファレンス Module（`statevia.action.reference.http` / `statevia.action.reference.notification`）も、この範囲だけを使っています（CI の依存方向テストで確かめています）。
 
 ---
 

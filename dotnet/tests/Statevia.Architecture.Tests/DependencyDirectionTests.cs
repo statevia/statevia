@@ -10,6 +10,7 @@ namespace Statevia.Architecture.Tests;
 /// <item><c>core/*</c> → <c>infrastructure/*</c> 禁止</item>
 /// <item><c>core/*</c> → <c>service/*</c> 禁止</item>
 /// <item><c>infrastructure/*</c> → <c>service/*</c> 禁止</item>
+/// <item><c>modules/reference/*</c> → Module が使ってよい範囲の外の Engine の型 禁止</item>
 /// </list>
 /// </summary>
 public sealed class DependencyDirectionTests
@@ -212,6 +213,67 @@ public sealed class DependencyDirectionTests
             .GetResult();
 
         Assert.True(result.IsSuccessful, FormatFailure("Infrastructure.Common → Service", result));
+    }
+
+    private static Assembly ReferenceHttpAssembly =>
+        typeof(Reference.Http.HttpReferenceModule).Assembly;
+
+    private static Assembly ReferenceNotificationAssembly =>
+        typeof(Reference.Notification.NotificationReferenceModule).Assembly;
+
+    /// <summary>Module が使ってよい Engine の名前空間（このほかに <c>DefaultStateExecutor</c> だけを使ってよい）。</summary>
+    private const string ModuleEngineSurfaceNamespace = "Statevia.Core.Engine.Abstractions";
+
+    /// <summary>
+    /// Module が使ってよい範囲（<c>docs/specifications/actions/module-zip-layout.md</c> §3）の外にある Engine の型の完全名。
+    /// </summary>
+    /// <remarks>
+    /// NetArchTest は依存名を名前空間・型名の単位で照合し、名前空間を渡すと下位の名前空間も含める。
+    /// <c>Statevia.Core.Engine</c> を渡すと使ってよい <c>Abstractions</c> まで含むため、範囲の外の型を完全名で列挙する。
+    /// 入れ子の型は外側の型と同じ範囲に属するものとし、外側の型だけを挙げる（2026-10-31 時点で、Engine に外から参照できる入れ子の型は無い）。
+    /// </remarks>
+    private static readonly string[] EngineTypesOutsideModuleSurface = CoreEngineAssembly
+        .GetTypes()
+        .Where(type => !type.IsNested
+            && type.Namespace is { } typeNamespace
+            && typeNamespace.StartsWith("Statevia.Core.Engine", StringComparison.Ordinal)
+            && typeNamespace != ModuleEngineSurfaceNamespace
+            && type != typeof(Core.Engine.Execution.DefaultStateExecutor))
+        .Select(type => type.FullName!)
+        .Order(StringComparer.Ordinal)
+        .ToArray();
+
+    /// <summary>範囲の外の型の一覧が、Engine の内部の型を含み、使ってよい型を含まない（ルールが空にならない）。</summary>
+    [Fact]
+    public void EngineTypesOutsideModuleSurface_ExcludesOnlyModuleSurface()
+    {
+        Assert.Contains(typeof(Core.Engine.Engine.ExecutionEngine).FullName, EngineTypesOutsideModuleSurface);
+        Assert.DoesNotContain(typeof(Core.Engine.Execution.DefaultStateExecutor).FullName, EngineTypesOutsideModuleSurface);
+        Assert.DoesNotContain(EngineTypesOutsideModuleSurface, name => name.StartsWith(ModuleEngineSurfaceNamespace + ".", StringComparison.Ordinal));
+    }
+
+    /// <summary>リファレンス Module（Http）は、Module が使ってよい範囲の外の Engine の型に依存しない。</summary>
+    [Fact]
+    public void ReferenceHttp_ShouldNotDependOn_EngineOutsideModuleSurface()
+    {
+        var result = Types.InAssembly(ReferenceHttpAssembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(EngineTypesOutsideModuleSurface)
+            .GetResult();
+
+        Assert.True(result.IsSuccessful, FormatFailure("Reference.Http → Engine（Module が使ってよい範囲の外）", result));
+    }
+
+    /// <summary>リファレンス Module（Notification）は、Module が使ってよい範囲の外の Engine の型に依存しない。</summary>
+    [Fact]
+    public void ReferenceNotification_ShouldNotDependOn_EngineOutsideModuleSurface()
+    {
+        var result = Types.InAssembly(ReferenceNotificationAssembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(EngineTypesOutsideModuleSurface)
+            .GetResult();
+
+        Assert.True(result.IsSuccessful, FormatFailure("Reference.Notification → Engine（Module が使ってよい範囲の外）", result));
     }
 
     private static string FormatFailure(string rule, TestResult result)

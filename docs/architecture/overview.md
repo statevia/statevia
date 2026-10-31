@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 2.4 |
-| 更新日 | 2026-09-27 |
+| Version | 2.5 |
+| 更新日 | 2026-10-31 |
 | 関連 | [domain-model-boundaries.md](domain-model-boundaries.md), [repository-layout.md](repository-layout.md) |
 
 Project: Statevia — Definition Driven Execution Platform
+
+**Version 2.5（2026-10-31）**: 依存方向テストに、リファレンス Module が使ってよい範囲の外の Engine の型に依存しないルールを足した（§3）。
 
 **Version 2.4（2026-09-27）**: 定期実行は `v1/schedules` と Runtime の Dispatcher。Start は `IExecutionService`。Engine のスケジューラレイヤー（§4.5）とは別。
 
@@ -171,6 +173,7 @@ ui                                       → service/api（HTTP のみ）
 - `core/*` → `infrastructure/*`
 - `core/*` → `service/*`
 - `infrastructure/*` → `service/*`
+- `modules/reference/*` → Module が使ってよい範囲の外の Engine の型（使ってよいのは `Statevia.Core.Engine.Abstractions` と `DefaultStateExecutor` だけ。[module-zip-layout.md](../specifications/actions/module-zip-layout.md) §3）
 
 ---
 
