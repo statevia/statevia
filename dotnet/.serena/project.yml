@@ -12,34 +12,18 @@ ignore_all_files_in_gitignore: true
 
 ls_specific_settings: {}
 
-# プロダクト C# に関連しないパスを除外する。
-# UI は serena-ui、ドキュメント・運用スクリプト・サンプル・Fixture・生成物は対象外。
+# プロダクト C# に関連しないパスを除外する（パスは dotnet/ からの相対）。
+# サンプル・Fixture・生成物は対象外。UI・ドキュメント・運用スクリプト・実行時の modules ルートは dotnet/ の外にあるため書かない。
 # テスト本体（*.Tests、tests/）はプロダクト契約の検証なので残す。
 ignored_paths:
-  - "ui/**"
-  - "docs/**"
-  - "sonar/**"
-  - "scripts/**"
-  - ".spec/**"
-  - ".cursor/**"
-  - ".claude/**"
-  - ".vscode/**"
-  - ".github/**"
-  - ".local/**"
   - ".sonarqube/**"
-  - ".sonarlint/**"
-  - ".scannerwork/**"
-  - "docker-compose*.yml"
   - "**/Dockerfile"
   - "core/engine/samples/**"
   - "**/Fixtures/**"
-  - "modules/default/**"
   - "service/api/openapi/**"
   - "**/bin/**"
   - "**/obj/**"
   - "**/node_modules/**"
-  - "coverage/**"
-  - "docs/out/**"
 
 read_only: false
 

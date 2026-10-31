@@ -46,7 +46,7 @@
 `-Solution` 未指定時（CI もこのモード）は、`dotnet/` 全体を一括で処理する。
 
 - whitespace: `dotnet format whitespace --folder` で `dotnet/` の `.cs` をまとめて処理する。
-  gitignore 対象の `modules/local/`、`bin` / `obj` は除外する。
+  gitignore 対象の `dotnet/modules/local/`（手元実験用 Module）、`bin` / `obj` は除外する。
 - using の整理: IDE 用 `statevia.sln` と、`statevia.sln` に含まれない
   `Statevia.Service.Api.Scenario.Tests.csproj` を処理する。
 

@@ -29,7 +29,6 @@ $sonarAnalysisExclusions = @(
     '**/nodejs/studio/**',
     '**/ui/**',
     '**/tests/**',
-    '**/modules/default/**',
     '**/*.Tests/**',
     '**/Dockerfile'
 ) -join ','
