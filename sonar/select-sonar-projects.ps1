@@ -91,7 +91,8 @@ function Test-PathMatch {
     )
 
     foreach ($path in $Paths) {
-        $normalized = ($path -replace '\\', '/').TrimStart('./')
+        # TrimStart('./') は '.' と '/' を文字単位で削り '.github/' を壊すため、先頭の './' だけを外す。
+        $normalized = ($path -replace '\\', '/') -replace '^\./', ''
         foreach ($prefix in $Prefixes) {
             if ($normalized.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
                 return $true
