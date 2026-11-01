@@ -3,11 +3,13 @@ using Statevia.Core.Actions.Abstractions.Visibility;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Definition;
 using Statevia.Core.Engine.Definition.Validation;
+using Statevia.Service.Api.Application.Actions.Builtins;
 using Statevia.Service.Api.Application.Actions.Catalog;
 using Statevia.Service.Api.Application.Actions.Resolution;
 using Statevia.Service.Api.Application.Actions.Validation;
 using Statevia.Service.Api.Application.Actions.Versioning;
 using Statevia.Service.Api.Application.Definition;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Statevia.Service.Api.Hosting;
 
@@ -66,7 +68,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             throw new DefinitionValidationException(validation);
         }
 
-        ValidateRegisteredActions(compileBindings.StateActionBindings, tenantId);
+        ValidateRegisteredActions(compileBindings.StateActionBindings, tenantId, allowRetired: false);
         ValidateActionInputs(def, compileBindings.StateActionBindings);
 
         var factory = new ActionExecutorFactory(
@@ -105,7 +107,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
         var def = loaded.Definition;
         var compileBindings = StoredDefinitionBindingResolver.Resolve(def, compiledJson, _actionCatalog);
         def = ResolveActionNames(def);
-        ValidateRegisteredActions(compileBindings.StateActionBindings, tenantId: null);
+        ValidateRegisteredActions(compileBindings.StateActionBindings, tenantId: null, allowRetired: true);
         ValidateActionInputs(def, compileBindings.StateActionBindings);
         var factory = new ActionExecutorFactory(
             def,
@@ -124,26 +126,36 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
     private static WorkflowDefinition ResolveActionNames(WorkflowDefinition def) =>
         ActionNameResolver.Resolve(def);
 
+    /// <summary>
+    /// 状態が参照する Action が Catalog に登録済みで、テナントから使えることを確かめる。
+    /// </summary>
+    /// <param name="bindings">状態名 → Action の束縛。</param>
+    /// <param name="tenantId">可視性を確かめるテナント。null なら確かめない（保存済みの版の読み込み）。</param>
+    /// <param name="allowRetired">
+    /// 退役した Action を許すか。新しい定義の保存・更新・検証では false、保存済みの版の読み込みでは true。
+    /// </param>
+    /// <exception cref="ArgumentException">未登録、退役（許さないとき）、または不可視の Action を参照している。</exception>
     private void ValidateRegisteredActions(
         IReadOnlyDictionary<string, Statevia.Core.Engine.Definition.StateActionBinding> bindings,
-        Guid? tenantId)
+        Guid? tenantId,
+        bool allowRetired)
     {
         foreach (var (stateName, binding) in bindings)
         {
-            ActionDescriptor? descriptor = null;
-            if (!TryGetVersionedDescriptor(binding, out descriptor)
-                && !_actionCatalog.TryGetDescriptor(binding.LogicalActionId, out descriptor))
+            if (!TryGetVersionedRegistration(binding, out var registration)
+                && !_actionCatalog.TryGetRegistration(binding.LogicalActionId, out registration))
             {
                 throw new ArgumentException(
                     $"Unknown action '{binding.LogicalActionId}' in state '{stateName}'.");
             }
 
-            if (descriptor is null)
+            if (!allowRetired && registration.Entry.IsRetired)
             {
                 throw new ArgumentException(
-                    $"Unknown action '{binding.LogicalActionId}' in state '{stateName}'.");
+                    RetiredBuiltinActions.FormatRejection(binding.LogicalActionId, stateName));
             }
 
+            var descriptor = registration.Descriptor;
             if (tenantId is not null
                 && !_visibilityResolver.CanUse(tenantId.Value.ToString("D"), descriptor))
             {
@@ -153,11 +165,11 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
         }
     }
 
-    private bool TryGetVersionedDescriptor(
+    private bool TryGetVersionedRegistration(
         Statevia.Core.Engine.Definition.StateActionBinding binding,
-        out ActionDescriptor? descriptor)
+        [NotNullWhen(true)] out ActionRegistration? registration)
     {
-        descriptor = null;
+        registration = null;
         if (binding.ResolvedModuleVersion is not { Length: > 0 } version
             || binding.ModuleId is not { Length: > 0 } moduleId
             || binding.ActionName is not { Length: > 0 } actionName)
@@ -165,7 +177,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             return false;
         }
 
-        return _actionCatalog.TryGetDescriptor(moduleId, version, actionName, out descriptor);
+        return _actionCatalog.TryGetRegistration(moduleId, version, actionName, out registration);
     }
 
     private void ValidateActionInputs(

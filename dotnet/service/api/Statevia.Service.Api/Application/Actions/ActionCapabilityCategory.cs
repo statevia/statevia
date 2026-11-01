@@ -9,9 +9,6 @@ internal enum ActionCapabilityCategory
     /// <summary>時間待機（execution.sleep）。</summary>
     Timing,
 
-    /// <summary>実行スコープ内シグナル（execution.signal）。</summary>
-    Signal,
-
     /// <summary>システムイベント発行（event.publish）。</summary>
     Event,
 

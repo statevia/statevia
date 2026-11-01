@@ -2,15 +2,12 @@ namespace Statevia.Core.Engine.Abstractions;
 
 /// <summary>
 /// Wait / Resume のセマンティクスを提供します。
-/// Wait は指定イベントが発行されるまで状態実行を一時停止し、
-/// Resume（ノードスコープ）または Signal / PublishEvent で同一の状態実行を継続します。
+/// Wait は指定ノードでイベントが届くまで状態実行を一時停止し、
+/// ノードスコープの Resume で同一の状態実行を継続します。
 /// 各 Wait は一度だけ再開できます。
 /// </summary>
 public interface IEventProvider
 {
-    /// <summary>指定イベントが発行されるか、キャンセルされるまで待機します。</summary>
-    Task WaitAsync(string eventName, CancellationToken ct);
-
     /// <summary>
     /// 指定ノードでいずれかのイベントが発行されるまで待機し、受信したイベント名を返す。
     /// </summary>
@@ -20,14 +17,6 @@ public interface IEventProvider
     /// <returns>実際に Resume されたイベント名。</returns>
     /// <remarks>1 ノードにつき同時に 1 待機のみ。Resume 成功時に当該ノードの waiter を除去する。</remarks>
     Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct);
-
-    /// <summary>
-    /// 実行スコープ内シグナルを待機します（<see cref="WaitAsync"/> のエイリアス）。
-    /// </summary>
-    Task WaitForSignalAsync(string signalName, CancellationToken ct) => WaitAsync(signalName, ct);
-
-    /// <summary>実行スコープ内の待機中シグナルを再開します。</summary>
-    void Signal(string signalName);
 
     /// <summary>
     /// 待機中ノードを指定イベントで再開する。該当 waiter が無い、またはイベントが許可外のときは何もしない。

@@ -38,9 +38,9 @@ public class DefaultStateExecutorTests
         Assert.Equal(42, result);
     }
 
-    /// <summary>状態が IEventProvider.WaitAsync を呼ぶ経路を検証する。</summary>
+    /// <summary>状態が IEventProvider.WaitForEventAsync を呼ぶ経路を検証する。</summary>
     [Fact]
-    public async Task ExecuteAsync_StateCanCallWaitAsync()
+    public async Task ExecuteAsync_StateCanCallWaitForEventAsync()
     {
         // Arrange
         var state = new StateThatWaits();
@@ -90,12 +90,8 @@ public class DefaultStateExecutorTests
 
     private sealed class NullEventProvider : IEventProvider
     {
-        public Task WaitAsync(string eventName, CancellationToken ct) => Task.CompletedTask;
-
         public Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct) =>
             Task.FromResult(eventNames[0]);
-
-        public void Signal(string signalName) { }
 
         public void Resume(string nodeId, string eventName) { }
 
@@ -111,7 +107,7 @@ public class DefaultStateExecutorTests
     {
         public async Task<string> ExecuteAsync(StateContext ctx, Unit _, CancellationToken ct)
         {
-            await ctx.Events.WaitAsync("ev", ct);
+            await ctx.Events.WaitForEventAsync("node", ["ev"], ct);
             return "waited";
         }
     }

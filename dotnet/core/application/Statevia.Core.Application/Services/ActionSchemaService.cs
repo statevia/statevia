@@ -5,6 +5,9 @@ using PublicationActionDescriptor = Statevia.Core.Actions.Abstractions.Publicati
 namespace Statevia.Core.Application.Services;
 
 /// <summary><see cref="IActionCatalog"/> から Action Schema API 応答を組み立てる。</summary>
+/// <remarks>
+/// 退役した Action（<see cref="ActionCatalogEntry.IsRetired"/>）は一覧に出さず、個別取得は未登録と同じ 404 にする。
+/// </remarks>
 internal sealed class ActionSchemaService : IActionSchemaService
 {
     private readonly IActionCatalog _catalog;
@@ -21,7 +24,7 @@ internal sealed class ActionSchemaService : IActionSchemaService
     /// <inheritdoc />
     public ActionSchemaListResponse GetList()
     {
-        var items = _catalog.GetRegisteredActionIds()
+        var items = GetListedActionIds()
             .Select(BuildListItem)
             .ToList();
         return new ActionSchemaListResponse { Items = items };
@@ -30,7 +33,7 @@ internal sealed class ActionSchemaService : IActionSchemaService
     /// <inheritdoc />
     public ActionSchemaIndexResponse GetIndex()
     {
-        var items = _catalog.GetRegisteredActionIds()
+        var items = GetListedActionIds()
             .Select(BuildIndexItem)
             .Where(static item => item is not null)
             .Cast<ActionSchemaIndexItemDto>()
@@ -41,7 +44,7 @@ internal sealed class ActionSchemaService : IActionSchemaService
     /// <inheritdoc />
     public ActionSchemaDetailResponse GetDetail(string actionId)
     {
-        if (!_catalog.Exists(actionId))
+        if (!_catalog.Exists(actionId) || IsRetired(actionId))
         {
             throw new NotFoundException($"Action '{actionId}' was not found.");
         }
@@ -53,6 +56,15 @@ internal sealed class ActionSchemaService : IActionSchemaService
 
         return MapDetail(publication);
     }
+
+    /// <summary>一覧に出す actionId（退役した Action を除く）。</summary>
+    private IEnumerable<string> GetListedActionIds() =>
+        _catalog.GetRegisteredActionIds().Where(actionId => !IsRetired(actionId));
+
+    /// <summary>退役した Action か。版が複数ロードされた Module の Action は退役させないので false。</summary>
+    /// <param name="actionId">参照 actionId。</param>
+    private bool IsRetired(string actionId) =>
+        _catalog.TryGetRegistration(actionId, out var registration) && registration.Entry.IsRetired;
 
     private ActionSchemaListItemDto BuildListItem(string canonicalActionId)
     {

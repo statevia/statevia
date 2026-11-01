@@ -109,7 +109,7 @@ internal static class BuiltinActionSchemas
             fields: fields);
     }
 
-    /// <summary>signal action の Publication。</summary>
+    /// <summary>退役した signal action の Publication（保存済みの版の input 検証にだけ使う）。</summary>
     public static ActionPublication Signal(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>
