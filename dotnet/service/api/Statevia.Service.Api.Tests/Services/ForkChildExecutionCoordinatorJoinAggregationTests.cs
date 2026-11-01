@@ -110,6 +110,56 @@ public sealed class ForkChildExecutionCoordinatorJoinAggregationTests
         Assert.Null(evaluation.CandidateInputs);
     }
 
+    /// <summary>
+    /// 先に並ぶ枝が Cancelled、後の枝が Failed のときも、親へ伝える状態は Failed を優先する
+    /// （兄弟の取り消しで失敗が取り消しに見えないこと）。
+    /// </summary>
+    [Fact]
+    public async Task EvaluateJoinAsync_WhenCancelledListedBeforeFailed_ReturnsFailedStatus()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var parentId = Guid.NewGuid();
+        var childA = Guid.NewGuid();
+        var childB = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await SeedParentAndBranchesAsync(db.Options, parentId, childA, childB, now);
+        await MarkBranchAsync(db.Options, parentId, "A", ExecutionBranchStatuses.Cancelled, null, null, null, now);
+        await MarkBranchAsync(db.Options, parentId, "B", ExecutionBranchStatuses.Failed, null, null, null, now.AddSeconds(1));
+
+        var sut = CreateSut(db, new CapturingWorkQueue());
+
+        // Act
+        var evaluation = await sut.EvaluateJoinAsync(parentId, "fork-node-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(ForkJoinEvaluationKind.Failed, evaluation.Kind);
+        Assert.Equal(ExecutionBranchStatuses.Failed, evaluation.FailureStatus);
+    }
+
+    /// <summary>枝が Cancelled だけのときは Cancelled を親へ伝える。</summary>
+    [Fact]
+    public async Task EvaluateJoinAsync_WhenOnlyCancelled_ReturnsCancelledStatus()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var parentId = Guid.NewGuid();
+        var childA = Guid.NewGuid();
+        var childB = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await SeedParentAndBranchesAsync(db.Options, parentId, childA, childB, now);
+        await MarkBranchAsync(db.Options, parentId, "A", ExecutionBranchStatuses.Cancelled, null, null, null, now);
+
+        var sut = CreateSut(db, new CapturingWorkQueue());
+
+        // Act
+        var evaluation = await sut.EvaluateJoinAsync(parentId, "fork-node-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(ForkJoinEvaluationKind.Failed, evaluation.Kind);
+        Assert.Equal(ExecutionBranchStatuses.Cancelled, evaluation.FailureStatus);
+    }
+
     /// <summary>未終端子が残るあいだは Waiting。</summary>
     [Fact]
     public async Task EvaluateJoinAsync_WhenStillRunning_ReturnsWaiting()

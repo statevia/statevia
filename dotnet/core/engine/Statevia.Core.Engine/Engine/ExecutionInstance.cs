@@ -117,23 +117,34 @@ public sealed class ExecutionInstance : IDisposable
         IsCompleted = true;
     }
 
-    /// <summary>協調的キャンセルにより停止したとマークする。</summary>
     /// <summary>協調的キャンセルにより停止したとマークし、実行中 Action の CT をキャンセルする。</summary>
     public void MarkCancelled()
     {
         IsCancelled = true;
+        HaltActiveActions();
+    }
+
+    /// <summary>失敗により停止したとマークする。</summary>
+    public void MarkFailed() => IsFailed = true;
+
+    /// <summary>
+    /// 実行中 Action の CT をキャンセルし、並行する状態を止める。<see cref="IsCancelled"/> は変えない。
+    /// </summary>
+    /// <remarks>
+    /// 終端失敗では並行する状態を止めつつ、利用者による取り消しとは記録しない（Cancelled と Failed を区別する）。
+    /// Unload 後に呼ばれたときは何もしない。
+    /// </remarks>
+    public void HaltActiveActions()
+    {
         try
         {
             _actionCts.Cancel();
         }
         catch (ObjectDisposedException)
         {
-            // Unload 後の二重 Cancel はフラグのみ
+            // Unload 後の二重停止は無視する
         }
     }
-
-    /// <summary>失敗により停止したとマークする。</summary>
-    public void MarkFailed() => IsFailed = true;
 
     /// <summary>
     /// Unload 時に Action 用 <see cref="CancellationTokenSource"/> をキャンセルして破棄する。

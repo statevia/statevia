@@ -78,6 +78,7 @@ internal sealed class ExecutionForkJoinCoordinator(
 
             case ForkJoinEvaluationKind.Failed:
                 await FailParentFromJoinAsync(
+                        forkChildCoordinator,
                         parentExecutionId,
                         forkNodeId,
                         evaluation.FailureStatus ?? ExecutionProjectionStatuses.Failed,
@@ -208,13 +209,21 @@ internal sealed class ExecutionForkJoinCoordinator(
         }
     }
 
-    /// <summary>Join 失敗／キャンセルを親投影へ伝播する（残子 Cancel は親 Cancel カスケードと分岐 Wait の子配送）。</summary>
+    /// <summary>Join 失敗／キャンセルを親投影へ伝播し、未終端（Running）の兄弟の子実行を取り消す。</summary>
+    /// <remarks>
+    /// <para>兄弟の取り消しは親 Cancel と同じカスケード（Cancel work item の enqueue）を使う。取り消された兄弟の終端通知で
+    /// 親の Join が再評価されても、親は既に終端なので <see cref="HandleChildCompletedResumeAsync"/> の入口で何もしない。</para>
+    /// <para>取り消しを親の更新より先に行う。親の更新が失敗しても再試行で再評価され、取り残しが起きない
+    /// （Cancel の enqueue は重複しても害がない）。</para>
+    /// </remarks>
+    /// <param name="childCoordinator">兄弟の取り消しに使う Fork 子協調。</param>
     /// <param name="parentExecutionId">親 execution。</param>
     /// <param name="forkNodeId">Fork ノード ID。</param>
     /// <param name="failureStatus">親へ載せる失敗 status。</param>
     /// <param name="tenantId">親実行のテナント UUID（ログ用。既に手元にある値）。</param>
     /// <param name="ct">キャンセル。</param>
     private async Task FailParentFromJoinAsync(
+        IForkChildExecutionCoordinator childCoordinator,
         Guid parentExecutionId,
         string forkNodeId,
         string failureStatus,
@@ -222,6 +231,10 @@ internal sealed class ExecutionForkJoinCoordinator(
         CancellationToken ct)
     {
         logger.ForkJoinFailedPropagated(parentExecutionId, forkNodeId, failureStatus, tenantId);
+
+        await childCoordinator
+            .CascadeCancelToRunningChildrenAsync(parentExecutionId, ct)
+            .ConfigureAwait(false);
 
         var snapshot = await executor.ExecuteReadOnlyAsync(
                 (uow, innerCt) => executions.GetSnapshotByExecutionIdAsync(uow, parentExecutionId, innerCt),

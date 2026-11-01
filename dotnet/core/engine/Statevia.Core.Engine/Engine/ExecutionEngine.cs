@@ -718,27 +718,37 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         }
     }
 
+    /// <summary>
+    /// 状態の完了事実から次の遷移を決める。
+    /// </summary>
+    /// <remarks>
+    /// <para>順序: 終端失敗の後なら抑止 → Cancelled は取消として終端（明示 Cancel 後も終端ログを出す） →
+    /// 取消の後なら抑止 → Join の記録と充足 → Completed / Failed は同じ遷移評価（<c>on.Failed</c> / Nodes の <c>error</c> を含む）。</para>
+    /// <para>Join への記録は、実行が続く事実だけに行う。記録を読むのは Join の充足判定と入力の組み立てだけで、
+    /// 抑止した事実や取消で終える事実を記録しても使われないため。</para>
+    /// <para>Failed で遷移が無いときは終端失敗とし、並行する状態を止めるが <see cref="ExecutionInstance.IsCancelled"/> は立てない。
+    /// 止めた状態が返す Cancelled 事実は終端失敗の後として抑止されるため、実行は Failed のまま残る。</para>
+    /// </remarks>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="eventProvider">実行のイベントプロバイダ。</param>
+    /// <param name="stateName">完了した状態名。</param>
+    /// <param name="fact">完了事実（<see cref="Fact"/>）。</param>
+    /// <param name="output">状態の output（失敗・取消では null）。</param>
+    /// <param name="nodeId">完了したノード ID。</param>
     private void ProcessFact(ExecutionInstance instance, EventProvider eventProvider, string stateName, string fact, object? output, string nodeId)
     {
-        var readyJoin = instance.JoinTracker.RecordFact(stateName, fact, output, nodeId);
-        if (readyJoin != null)
+        if (instance.IsFailed)
         {
-            if (instance.IsCancelled)
-            {
-                _executionLog.LogExecutionCancelSuppressedTransition(
-                    instance.ExecutionId,
-                    instance.Definition.Name,
-                    stateName,
-                    fact);
-                return;
-            }
-
-            _ = RunJoinStateAsync(instance, eventProvider, readyJoin, nodeId, EdgeType.Join);
+            _executionLog.LogExecutionFailureSuppressedTransition(
+                instance.ExecutionId,
+                instance.Definition.Name,
+                stateName,
+                fact);
             return;
         }
-        if (fact is Fact.Failed or Fact.Cancelled)
+
+        if (fact is Fact.Cancelled)
         {
-            instance.MarkFailed();
             instance.MarkCancelled();
             LogTerminalFact(instance, stateName, fact);
             return;
@@ -751,6 +761,13 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                 instance.Definition.Name,
                 stateName,
                 fact);
+            return;
+        }
+
+        var readyJoin = instance.JoinTracker.RecordFact(stateName, fact, output, nodeId);
+        if (readyJoin is not null)
+        {
+            _ = RunJoinStateAsync(instance, eventProvider, readyJoin, nodeId, EdgeType.Join);
             return;
         }
 
@@ -772,6 +789,14 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 
         if (!transition.HasTransition)
         {
+            if (fact is Fact.Failed)
+            {
+                instance.MarkFailed();
+                instance.HaltActiveActions();
+                LogTerminalFact(instance, stateName, fact);
+                return;
+            }
+
             if (!transition.End)
             {
                 _executionLog.LogWarningNoTransition(instance.ExecutionId, stateName, fact);

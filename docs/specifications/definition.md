@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.12 |
-| 更新日 | 2026-10-16 |
+| Version | 1.5.13 |
+| 更新日 | 2026-11-01 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.13（2026-11-01）**: 状態が失敗したとき、実行時に `on.Failed`（Nodes の `error`）を辿る。無ければ実行は Failed で終わり、Cancelled とは記録しない（§2.3.2、[execution/fsm.md](execution/fsm.md)）。
 
 **Version 1.5.10（2026-10-12）**: `notification.send` の接続は実行テナントの保存済み SMTP をホストが渡す。モジュールは `STATEVIA_SMTP_*` を読まない。
 
@@ -789,6 +791,12 @@ states:
       Failed:
         next: handleFailed
 ```
+
+実行時の扱い（[execution/fsm.md](execution/fsm.md)「失敗事実と on.Failed」）:
+
+- `runMain` が例外で失敗すると、ノードは事実 `Failed` で記録され、`handleFailed` へ進む。実行は続く。失敗したノードの output は null。
+- `on.Failed` は `cases` / `default` / `end` も `Completed` と同じ規則で評価する。`end: true` なら実行は Completed で終わる（失敗を処理済みとして扱う）。
+- `error`（`on.Failed`）が無い状態が失敗すると、実行は Failed で終わる。並行する状態は止めるが、実行は Cancelled とは記録しない。
 
 - **label**, **description**, **tags**, **ui** は UI/エディタ用。エンジンは無視してよい。
 - **metadata** をルートに置く場合もエンジンは無視してよい。

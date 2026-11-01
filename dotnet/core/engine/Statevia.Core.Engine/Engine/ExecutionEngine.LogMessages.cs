@@ -63,5 +63,8 @@ public sealed partial class ExecutionEngine
 
         [LoggerMessage(EventId = 50017, Level = LogLevel.Error, Message = "Fork expansion handler failed ExecutionId={ExecutionId}")]
         public static partial void ForkExpansionHandlerFailed(ILogger logger, Exception exception, string executionId);
+
+        [LoggerMessage(EventId = 50018, Level = LogLevel.Information, Message = "Execution failure suppressed transition ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} Fact={Fact}")]
+        public static partial void ExecutionFailureSuppressedTransition(ILogger logger, string executionId, string definitionName, string stateName, string fact);
     }
 }

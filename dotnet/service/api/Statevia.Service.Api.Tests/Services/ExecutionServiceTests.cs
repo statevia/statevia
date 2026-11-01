@@ -5278,8 +5278,14 @@ public sealed class ExecutionServiceTests
         public Task<bool> HasPendingPhysicalJoinBranchesAsync(Guid parentExecutionId, CancellationToken ct) =>
             Task.FromResult(false);
 
-        public Task CascadeCancelToRunningChildrenAsync(Guid parentExecutionId, CancellationToken ct) =>
-            Task.CompletedTask;
+        /// <summary><see cref="CascadeCancelToRunningChildrenAsync"/> に渡された親 execution ID（呼び出し順）。</summary>
+        public List<Guid> CascadeCancelParentIds { get; } = [];
+
+        public Task CascadeCancelToRunningChildrenAsync(Guid parentExecutionId, CancellationToken ct)
+        {
+            CascadeCancelParentIds.Add(parentExecutionId);
+            return Task.CompletedTask;
+        }
 
         public Task<ForkWaitDeliveryTarget?> TryResolveChildWaitDeliveryAsync(
             Guid requestedExecutionId,
@@ -5712,6 +5718,76 @@ public sealed class ExecutionServiceTests
         Assert.Equal(1, coordinator.EvaluateJoinCalls);
         Assert.Contains(executionRepo.Updates, u => u.Status == ExecutionProjectionStatuses.Failed);
         Assert.Equal(1, engine.UnloadCalls);
+    }
+
+    /// <summary>
+    /// ChildCompleted Resume で Join Failed なら、未終端の兄弟の子実行へ Cancel をカスケードし、
+    /// 親は Failed（cancel_requested = false）のまま更新する。
+    /// </summary>
+    [Fact]
+    public async Task ResumeNodeAsync_ChildCompleted_WhenJoinFailed_CascadesCancelToRunningSiblings()
+    {
+        // Arrange
+        var executionId = Guid.Parse("b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3");
+        var coordinator = new FakeForkChildCoordinator
+        {
+            EvaluateJoinResult = new ForkJoinEvaluation(
+                ForkJoinEvaluationKind.Failed,
+                "Join1",
+                FailureStatus: ExecutionProjectionStatuses.Failed)
+        };
+        var engine = new FakeExecutionEngine();
+        var executionRepo = new FakeExecutionRepository
+        {
+            ByIdResult = new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.T1TenantId,
+                DefinitionId = Guid.NewGuid(),
+                DefinitionVersionId = Guid.NewGuid(),
+                Status = ExecutionProjectionStatuses.Running,
+                StartedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            SnapshotByExecutionId = new ExecutionGraphSnapshotRow
+            {
+                ExecutionId = executionId,
+                GraphJson = """{"nodes":[],"edges":[]}""",
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService { ResolveResultExecution = executionId },
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(Guid.NewGuid()),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = executionRepo,
+                Definitions = StubDefinitionRepositoryFactory.ForDefinition(Guid.NewGuid(), TestTenantIds.T1TenantId, "def"),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                ForkChildCoordinator = coordinator,
+            });
+
+        // Act
+        await sut.ResumeNodeAsync(
+            executionId.ToString("D"),
+            "fork-1",
+            ExecutionWaitEventNames.ChildCompleted,
+            idempotencyKey: null,
+            new CommandRequestContext("WORKER", "/internal"),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal([executionId], coordinator.CascadeCancelParentIds);
+        var update = Assert.Single(executionRepo.Updates, u => u.ExecutionId == executionId);
+        Assert.Equal(ExecutionProjectionStatuses.Failed, update.Status);
+        Assert.False(update.CancelRequested);
     }
 
     /// <summary>ChildCompleted Resume で Join Satisfied なら物理 Join 完了を呼ぶ。</summary>
