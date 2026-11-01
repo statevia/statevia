@@ -21,7 +21,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
             CompiledWorkflowDefinition definition,
             string? executionId = null,
             object? input = null,
-            string? initialState = null) =>
+            string? initialState = null,
+            ForkBranchStart? forkBranch = null) =>
             throw new NotSupportedException();
 
         public void ResumeWaitNode(string executionId, string nodeId, string eventName) =>
@@ -124,7 +125,7 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
 
         public Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct) => Task.CompletedTask;
         public Task RecoverExecutionAsync(Guid executionId, CommandRequestContext requestContext, CancellationToken ct) => Task.CompletedTask;
-        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
+        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, ForkBranchStartPayload? forkBranch, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
         public Task PersistCheckpointKeepLoadedAsync(string engineExecutionId, CancellationToken ct) => Task.CompletedTask;
         public Task<long?> BeginOwnedSessionAsync(Guid executionId, string workerId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult<long?>(1);
         public Task<bool> RenewOwnedSessionLeaseAsync(Guid executionId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult(true);
@@ -201,7 +202,7 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
 
         public Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct) => Task.CompletedTask;
         public Task RecoverExecutionAsync(Guid executionId, CommandRequestContext requestContext, CancellationToken ct) => Task.CompletedTask;
-        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
+        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, ForkBranchStartPayload? forkBranch, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
         public Task PersistCheckpointKeepLoadedAsync(string engineExecutionId, CancellationToken ct) => Task.CompletedTask;
         public Task<long?> BeginOwnedSessionAsync(Guid executionId, string workerId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult<long?>(1);
         public Task<bool> RenewOwnedSessionLeaseAsync(Guid executionId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult(true);
@@ -270,7 +271,7 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
 
         public Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct) => Task.CompletedTask;
         public Task RecoverExecutionAsync(Guid executionId, CommandRequestContext requestContext, CancellationToken ct) => Task.CompletedTask;
-        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
+        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, ForkBranchStartPayload? forkBranch, CancellationToken ct) => Task.FromResult(new ExecutionResponse());
         public Task PersistCheckpointKeepLoadedAsync(string engineExecutionId, CancellationToken ct) => Task.CompletedTask;
         public Task<long?> BeginOwnedSessionAsync(Guid executionId, string workerId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult<long?>(1);
         public Task<bool> RenewOwnedSessionLeaseAsync(Guid executionId, TimeSpan leaseDuration, CancellationToken ct) => Task.FromResult(true);
@@ -802,7 +803,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 executionId.ToString("D"),
                 "fork1",
                 "n1",
-                [new ForkBranchExpansionPlan("branchA", null)]));
+                [new ForkBranchExpansionPlan("branchA", null)],
+                WorkflowInput: null));
 
             // Assert
             Assert.Equal(1, forkHandler.HandleCallCount);
@@ -839,7 +841,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 "bad-id",
                 "fork1",
                 "n1",
-                [new ForkBranchExpansionPlan("branchA", null)]));
+                [new ForkBranchExpansionPlan("branchA", null)],
+                WorkflowInput: null));
 
             // Assert
             Assert.Equal(0, forkHandler.HandleCallCount);
@@ -882,7 +885,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 executionId.ToString("D"),
                 "fork1",
                 "n1",
-                [new ForkBranchExpansionPlan("branchA", null)]));
+                [new ForkBranchExpansionPlan("branchA", null)],
+                WorkflowInput: null));
 
             // Assert
             Assert.Equal(0, forkHandler.HandleCallCount);

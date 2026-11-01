@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3.3 |
+| Version | 1.3.4 |
 | 更新日 | 2026-11-01 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [wait-cancel.md](wait-cancel.md), [execution-graph.md](execution-graph.md), [../../concepts/durability.md](../../concepts/durability.md), [../../reference/database-schema.md](../../reference/database-schema.md) |
 
@@ -35,7 +35,7 @@ Hosted（Service API / Runtime Worker）では、親が Fork に到達すると 
 
 1. 各分岐先頭に対し子 `executionId` を作成し、親子リンクを **`execution_branches`** に永続化する。
 2. 親の `ExecutionSecuritySnapshot` を子へ**継承**する（初版は再評価しない）。
-3. 各子へ `Start` work item を enqueue する（`InitialState` = 分岐先頭、input は定義の写像）。
+3. 各子へ `Start` work item を enqueue する（`InitialState` = 分岐先頭、input は親の Context で評価済みの写像）。
 4. 親は分岐本体を自インスタンスでは走らず、Join 待ちに入る（Unload 可）。
 
 #### 識別子: `forkNodeId`（DB: `fork_node_id`）
@@ -110,6 +110,7 @@ Join は複数の状態からの事実を待ってから次に進みます。
 
 | 時点 | 契約 |
 | --- | --- |
+| 子の開始 | 枝の先頭の input 写像は Fork 到達時に親の Context で 1 回だけ評価し、子では評価し直さない。子の `$.input` は親のワークフロー開始 input |
 | Join 前 | 兄弟分岐間の `$.states…` / `$.vars…` / Context 参照は**不可**。使えるのは Fork 時の親→子 input 写像のみ |
 | Join 後（成功） | 各子の完了 `states` と終端 `vars` を親 Context へマージ。後続の `input.path: $.states.A.output` 等は親上で解決する。同一キー衝突は適用順の**後勝ち** |
 | Join 失敗／Cancel 伝播 | 不完全な Context マージは必須としない |

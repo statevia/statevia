@@ -347,7 +347,7 @@ internal sealed class ExecutionLifecycleCommandService(
         var compiled = RestoreCompiledDefinitionFromVersion(args.VersionRow);
         var resolvedExecutionId = args.ExecutionId ?? idGenerator.NewSequentialGuid();
         var engineId = resolvedExecutionId.ToString();
-        engine.Start(compiled, engineId, args.Request.Input, args.Request.InitialState);
+        engine.Start(compiled, engineId, args.Request.Input, args.Request.InitialState, args.ForkBranch);
 
         var graphId = await displayIds.GetDisplayIdAsync(DisplayIdResourceTypes.Definition, args.DefinitionId.ToString("D"), ct).ConfigureAwait(false)
             ?? args.DefinitionId.ToString("D");
@@ -528,12 +528,14 @@ internal sealed class ExecutionLifecycleCommandService(
     /// </summary>
     /// <param name="executionId">受理済み実行 ID。</param>
     /// <param name="request">開始時の入力（定義解決済み行と整合）。</param>
+    /// <param name="forkBranch">Hosted Fork の枝の開始のときの指定。通常の開始では null。</param>
     /// <param name="ct">キャンセル。</param>
     /// <returns>投影反映後の実行応答。</returns>
     /// <exception cref="NotFoundException">実行または定義バージョンが見つからないとき。</exception>
     public async Task<ExecutionResponse> ExecuteQueuedStartAsync(
         Guid executionId,
         StartExecutionRequest request,
+        ForkBranchStartPayload? forkBranch,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -567,7 +569,10 @@ internal sealed class ExecutionLifecycleCommandService(
                     tenantId,
                     execution.DefinitionId,
                     versionRow,
-                    executionId),
+                    executionId)
+                {
+                    ForkBranch = forkBranch is { } branch ? new ForkBranchStart(branch.WorkflowInput) : null
+                },
                 ct)
             .ConfigureAwait(false);
     }
@@ -1345,6 +1350,9 @@ internal sealed class ExecutionLifecycleCommandService(
 
         /// <summary>WorkflowStarted の actor_id。スケジュール発火ではスケジュール ID。</summary>
         public string? ActorId { get; init; }
+
+        /// <summary>Hosted Fork の枝の開始のときの指定。Worker の子 Start だけ設定する。</summary>
+        public ForkBranchStart? ForkBranch { get; init; }
     }
 
     /// <summary>キュー受理 Start の入力束。</summary>

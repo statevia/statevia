@@ -86,6 +86,46 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
         Assert.Equal(1, queue.CompleteCallCount);
     }
 
+    /// <summary>Fork の枝の Start work item では、payload の枝の開始指定を ExecuteQueuedStart へ渡す。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenForkBranchStartClaimed_PassesForkBranchToQueuedStart()
+    {
+        // Arrange
+        var executionId = Guid.Parse("10101010-1010-1010-1010-101010101011");
+        using var inputDoc = JsonDocument.Parse("""{"url":"https://pay.example"}""");
+        using var workflowInputDoc = JsonDocument.Parse("""{"orderId":"o-1"}""");
+        var payload = JsonSerializer.Serialize(
+            new ExecutionStartWorkItemPayload(
+                executionId,
+                new StartExecutionRequest { DefinitionId = "d1", Input = inputDoc.RootElement, InitialState = "A" },
+                new ForkBranchStartPayload(workflowInputDoc.RootElement)),
+            ExecutionWorkItemPayloadJson.Options);
+        var item = new ExecutionWorkItemRow
+        {
+            WorkItemId = Guid.Parse("20202020-2020-2020-2020-202020202021"),
+            ExecutionId = executionId,
+            Kind = ExecutionWorkItemKinds.Start,
+            Payload = payload,
+            AvailableAt = DateTime.UtcNow,
+            Attempts = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        var queue = new FakeWorkerQueue { ItemsToClaim = [item] };
+        var executions = new RecordingExecutionService { BeginGenerationToReturn = 3 };
+        await using var provider = BuildProvider(queue, executions, new StubPlatformDataAccess());
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var sut = CreateSut(provider);
+
+        // Act
+        await sut.StartAsync(cts.Token);
+        await WaitUntilAsync(() => queue.CompleteCallCount > 0, TimeSpan.FromSeconds(1.5));
+        await sut.StopAsync(CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(executions.LastQueuedStartForkBranch);
+        Assert.Equal("o-1", executions.LastQueuedStartForkBranch.WorkflowInput!.Value.GetProperty("orderId").GetString());
+    }
+
     /// <summary>テナントが無い work item は Complete してスキップする。</summary>
     [Fact]
     public async Task ExecuteAsync_WhenTenantMissing_CompletesWithoutSession()
@@ -1525,11 +1565,16 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             }
         }
 
+        /// <summary>直近の ExecuteQueuedStartAsync に渡された枝の開始指定。</summary>
+        public ForkBranchStartPayload? LastQueuedStartForkBranch { get; private set; }
+
         public Task<ExecutionResponse> ExecuteQueuedStartAsync(
             Guid executionId,
             StartExecutionRequest request,
+            ForkBranchStartPayload? forkBranch,
             CancellationToken ct)
         {
+            LastQueuedStartForkBranch = forkBranch;
             var call = Interlocked.Increment(ref _executeQueuedStartCalls);
             if (ExecuteQueuedStartException is { } startEx
                 && (!ExecuteQueuedStartFailOnce || call == 1))

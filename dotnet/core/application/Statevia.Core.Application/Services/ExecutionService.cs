@@ -35,8 +35,9 @@ internal sealed class ExecutionService(
     public Task<ExecutionResponse> ExecuteQueuedStartAsync(
         Guid executionId,
         StartExecutionRequest request,
+        ForkBranchStartPayload? forkBranch,
         CancellationToken ct) =>
-        lifecycle.ExecuteQueuedStartAsync(executionId, request, ct);
+        lifecycle.ExecuteQueuedStartAsync(executionId, request, forkBranch, ct);
 
     /// <inheritdoc />
     public Task MarkUnstartedPermanentFailureAsync(Guid executionId, CancellationToken ct) =>

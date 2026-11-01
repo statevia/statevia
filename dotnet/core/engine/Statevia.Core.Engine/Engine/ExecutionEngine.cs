@@ -66,7 +66,8 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         CompiledWorkflowDefinition definition,
         string? executionId = null,
         object? input = null,
-        string? initialState = null)
+        string? initialState = null,
+        ForkBranchStart? forkBranch = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         executionId ??= _executionIdGenerator.NewExecutionId();
@@ -78,7 +79,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         _instances[executionId] = instance;
         _eventProviders[executionId] = eventProvider;
         _executionLog.LogExecutionStarted(executionId, definition.Name, startState);
-        _ = RunExecutionAsync(instance, eventProvider, input, startState);
+        _ = RunExecutionAsync(instance, eventProvider, input, startState, forkBranch);
         return executionId;
     }
 
@@ -121,13 +122,14 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         string executionId,
         string forkState,
         string sourceNodeId,
-        IReadOnlyList<ForkBranchExpansionPlan> branches)
+        IReadOnlyList<ForkBranchExpansionPlan> branches,
+        object? workflowInput)
     {
         var handler = _forkExpansionHandler;
         if (handler is null)
             return;
 
-        var evt = new ForkExpansionEvent(executionId, forkState, sourceNodeId, branches);
+        var evt = new ForkExpansionEvent(executionId, forkState, sourceNodeId, branches, workflowInput);
         _ = NotifyForkExpansionAsync(handler, evt);
     }
 
@@ -486,10 +488,12 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         ExecutionInstance instance,
         EventProvider eventProvider,
         object? input,
-        string startState)
+        string startState,
+        ForkBranchStart? forkBranch)
     {
-        instance.InitializeContext(input);
-        var initialInput = ApplyStateInput(instance, startState, input);
+        instance.InitializeContext(forkBranch is { } branch ? branch.WorkflowInput : input);
+        // Fork の枝の input は親の Context で評価済み。子の Context で再評価すると値を失う。
+        var initialInput = forkBranch is null ? ApplyStateInput(instance, startState, input) : input;
         try
         {
             await ScheduleStateAsync(instance, eventProvider, startState, null, null, initialInput).ConfigureAwait(false);
@@ -836,7 +840,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             if (_forkExpansionHandler is not null)
             {
                 // Hosted: 物理子展開。同一インスタンス上では分岐を走らせない。
-                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans);
+                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans, instance.Context.Input);
                 return;
             }
 

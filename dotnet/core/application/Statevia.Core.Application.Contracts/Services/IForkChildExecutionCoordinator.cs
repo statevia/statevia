@@ -23,6 +23,7 @@ public sealed record ForkBranchExpansion(
 /// Join の <c>nodeId</c> や定義の状態名ではない。
 /// </param>
 /// <param name="Branches">分岐先頭と写像済み input。</param>
+/// <param name="WorkflowInput">親のワークフロー開始 input。各子 execution の <c>$.input</c> になる。</param>
 public sealed record ForkExpansionRequest(
     Guid ParentExecutionId,
     Guid TenantId,
@@ -33,7 +34,8 @@ public sealed record ForkExpansionRequest(
     string SecuritySnapshotJson,
     CompiledWorkflowDefinition CompiledDefinition,
     string ForkNodeId,
-    IReadOnlyList<ForkBranchExpansion> Branches);
+    IReadOnlyList<ForkBranchExpansion> Branches,
+    object? WorkflowInput);
 
 /// <summary>Fork 物理子展開の結果。</summary>
 /// <param name="Succeeded">展開が完了したとき true。上限超過で親 Failed にしたとき false。</param>

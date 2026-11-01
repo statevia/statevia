@@ -584,6 +584,6 @@ public sealed class ExecutionWorkItemWorkerHostedService(
                 ExecutionWorkItemPayloadJson.Options)
             ?? throw new InvalidOperationException("Start work item payload is invalid.");
         ArgumentNullException.ThrowIfNull(payload.Request);
-        return executions.ExecuteQueuedStartAsync(payload.ExecutionId, payload.Request, ct);
+        return executions.ExecuteQueuedStartAsync(payload.ExecutionId, payload.Request, payload.ForkBranch, ct);
     }
 }

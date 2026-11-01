@@ -69,7 +69,8 @@ public sealed class ForkExpansionHostHandler(
             SecuritySnapshotJson: parent.SecuritySnapshotJson,
             CompiledDefinition: compiled,
             ForkNodeId: evt.SourceNodeId,
-            Branches: branches);
+            Branches: branches,
+            WorkflowInput: evt.WorkflowInput);
 
         var result = await coordinator.ExpandForkAsync(request, ct).ConfigureAwait(false);
         if (!result.Succeeded)
