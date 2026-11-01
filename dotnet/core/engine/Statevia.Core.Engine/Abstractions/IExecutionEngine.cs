@@ -11,11 +11,16 @@ public interface IExecutionEngine
     /// <param name="executionId">使用する実行インスタンス ID。省略時はエンジンが生成する。</param>
     /// <param name="input">初期状態の <see cref="IStateExecutor.ExecuteAsync"/> に渡す入力（省略時は <c>null</c>）。</param>
     /// <param name="initialState">開始状態名。省略時は <see cref="CompiledWorkflowDefinition.InitialState"/>。</param>
+    /// <param name="forkBranch">
+    /// Hosted Fork の枝として開始するときの指定。指定時は <paramref name="input"/> を評価済みとして開始状態の input 写像を適用せず、
+    /// <c>$.input</c> を <see cref="ForkBranchStart.WorkflowInput"/> にする。省略時は通常の開始。
+    /// </param>
     string Start(
         CompiledWorkflowDefinition definition,
         string? executionId = null,
         object? input = null,
-        string? initialState = null);
+        string? initialState = null,
+        ForkBranchStart? forkBranch = null);
 
     /// <summary>
     /// 待機中 Wait ノードを指定イベントで再開する（ランタイム正本）。

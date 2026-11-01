@@ -67,6 +67,24 @@ public sealed class ForkExpansionHostHandlerTests
         Assert.Equal("Start", executions.LastNodeId);
     }
 
+    /// <summary>Engine の展開通知に載った親の開始 input を、展開要求へそのまま渡す。</summary>
+    [Fact]
+    public async Task HandleAsync_PassesParentWorkflowInputToExpansionRequest()
+    {
+        // Arrange
+        var parentId = Guid.NewGuid();
+        var coordinator = new RecordingCoordinator();
+        var sut = CreateSut(coordinator, new RecordingExecutionService(), CreateParent(parentId));
+        var evt = CreateEvent(parentId.ToString("D"));
+
+        // Act
+        await sut.HandleAsync(evt, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(coordinator.LastRequest);
+        Assert.Same(evt.WorkflowInput, coordinator.LastRequest.WorkflowInput);
+    }
+
     /// <summary>展開失敗時も親を Unload する。</summary>
     [Fact]
     public async Task HandleAsync_ExpandFailed_StillUnloadsParent()
@@ -147,7 +165,8 @@ public sealed class ForkExpansionHostHandlerTests
             [
                 new ForkBranchExpansionPlan("A", null),
                 new ForkBranchExpansionPlan("B", null)
-            ]);
+            ],
+            WorkflowInput: new { orderId = "o-1" });
 
     private static ExecutionRow CreateParent(Guid parentId) =>
         new()
@@ -358,11 +377,13 @@ public sealed class ForkExpansionHostHandlerTests
     private sealed class RecordingCoordinator : IForkChildExecutionCoordinator
     {
         public bool Called { get; private set; }
+        public ForkExpansionRequest? LastRequest { get; private set; }
         public ForkExpansionResult Result { get; set; } = new(true, [], "Join1");
 
         public Task<ForkExpansionResult> ExpandForkAsync(ForkExpansionRequest request, CancellationToken ct)
         {
             Called = true;
+            LastRequest = request;
             return Task.FromResult(Result);
         }
 
@@ -423,7 +444,7 @@ public sealed class ForkExpansionHostHandlerTests
         public Task<ExecutionResponse> StartAsync(
             StartExecutionRequest request, string? idempotencyKey, CommandRequestContext requestContext, CancellationToken ct) =>
             throw new NotImplementedException();
-        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, CancellationToken ct) =>
+        public Task<ExecutionResponse> ExecuteQueuedStartAsync(Guid executionId, StartExecutionRequest request, ForkBranchStartPayload? forkBranch, CancellationToken ct) =>
             throw new NotImplementedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotImplementedException();

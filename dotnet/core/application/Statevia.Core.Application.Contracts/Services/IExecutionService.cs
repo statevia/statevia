@@ -17,9 +17,14 @@ public interface IExecutionService
     /// <summary>
     /// 受理済み実行の Start work item を同一プロセスで実行する（Worker 用）。
     /// </summary>
+    /// <param name="executionId">受理済み実行 ID。</param>
+    /// <param name="request">開始リクエスト。</param>
+    /// <param name="forkBranch">Hosted Fork の枝の開始のときの指定。通常の開始では null。</param>
+    /// <param name="ct">キャンセル。</param>
     Task<ExecutionResponse> ExecuteQueuedStartAsync(
         Guid executionId,
         StartExecutionRequest request,
+        ForkBranchStartPayload? forkBranch,
         CancellationToken ct);
 
     /// <summary>

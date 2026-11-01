@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.13 |
+| Version | 1.5.14 |
 | 更新日 | 2026-11-01 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.14（2026-11-01）**: Hosted Fork の枝の中でも `$.input` はワークフロー開始 input を指す。枝の先頭の input 写像は親の Context で 1 回だけ評価し、子では評価し直さない（§1.6、[execution/fork-join.md](execution/fork-join.md)）。
 
 **Version 1.5.13（2026-11-01）**: 状態が失敗したとき、実行時に `on.Failed`（Nodes の `error`）を辿る。無ければ実行は Failed で終わり、Cancelled とは記録しない（§2.3.2、[execution/fsm.md](execution/fsm.md)）。
 
@@ -373,6 +375,8 @@ Context のトップレベルは次の固定キーである。
 | `states` | 完了済み State 名 → `{ output: … }`（履歴・監査） | 読み取り専用（Engine のみ更新） |
 | `vars` | 現在の共有コンテキスト | 読み書き可（`output: $.vars…` で代入） |
 | `sys` | Engine 保証のランタイム情報 | 読み取り専用 |
+
+Hosted Fork の枝（子 execution）でも `input` はワークフロー開始時の input である。枝の input にはならない。枝の先頭の状態の `input` 写像は Fork 到達時に親の Context で 1 回だけ評価し、その結果を枝の先頭へ渡す。子では評価し直さない。詳細は [execution/fork-join.md](execution/fork-join.md) の「Context マージと兄弟参照」。
 
 #### `$.sys` キー（本実装）
 

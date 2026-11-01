@@ -671,6 +671,7 @@ public sealed class ExecutionScheduleDispatchServiceTests
         public Task<ExecutionResponse> ExecuteQueuedStartAsync(
             Guid executionId,
             StartExecutionRequest request,
+            ForkBranchStartPayload? forkBranch,
             CancellationToken ct) =>
             throw new NotSupportedException();
 

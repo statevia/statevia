@@ -92,6 +92,7 @@ public sealed class ExecutionServiceTests
         public string GraphJsonToReturn { get; set; } = "{\"nodes\":[]}";
         public bool StartCalled { get; private set; }
         public object? LastInput { get; private set; }
+        public ForkBranchStart? LastForkBranch { get; private set; }
         public string? LastEngineId { get; private set; }
         public CompiledWorkflowDefinition? LastDefinition { get; private set; }
 
@@ -115,11 +116,13 @@ public sealed class ExecutionServiceTests
             CompiledWorkflowDefinition definition,
             string? executionId = null,
             object? input = null,
-            string? initialState = null)
+            string? initialState = null,
+            ForkBranchStart? forkBranch = null)
         {
             StartCalled = true;
             LastDefinition = definition;
             LastInput = input;
+            LastForkBranch = forkBranch;
             var resolvedId = executionId ?? "generated";
             LastEngineId = resolvedId;
             // 実 Engine 同様、Start 後は投影可能な Running スナップショットを返す。
@@ -6954,9 +6957,59 @@ public sealed class ExecutionServiceTests
     public async Task ExecuteQueuedStartAsync_WhenExecutionExists_StartsEngineInProcess()
     {
         // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var engine = new FakeExecutionEngine();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildQueuedStartService(sqlite, engine, executionId);
+        using var inputDoc = JsonDocument.Parse("{}");
+        var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
+
+        // Act
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
+
+        // Assert
+        Assert.True(engine.StartCalled);
+        Assert.Null(engine.LastForkBranch);
+        Assert.Equal(executionId, response.ResourceId);
+    }
+
+    /// <summary>Fork の枝の Queued Start では、親の開始 input を枝の開始指定として Engine へ渡す。</summary>
+    [Fact]
+    public async Task ExecuteQueuedStartAsync_WithForkBranch_PassesWorkflowInputToEngine()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeef");
+        var engine = new FakeExecutionEngine();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildQueuedStartService(sqlite, engine, executionId);
+        using var inputDoc = JsonDocument.Parse("""{"url":"https://pay.example"}""");
+        using var workflowInputDoc = JsonDocument.Parse("""{"orderId":"o-1"}""");
+        var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement, InitialState = "A" };
+
+        // Act
+        await sut.ExecuteQueuedStartAsync(
+            executionId,
+            request,
+            new ForkBranchStartPayload(workflowInputDoc.RootElement),
+            CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(engine.LastForkBranch);
+        var workflowInput = Assert.IsType<JsonElement>(engine.LastForkBranch.WorkflowInput);
+        Assert.Equal("o-1", workflowInput.GetProperty("orderId").GetString());
+    }
+
+    /// <summary>受理済みの実行行と定義版を持つ、Queued Start 用の ExecutionService を作る。</summary>
+    /// <param name="sqlite">テスト用 DB。</param>
+    /// <param name="engine">記録用 Engine。</param>
+    /// <param name="executionId">受理済み実行 ID。</param>
+    private static ExecutionService BuildQueuedStartService(
+        SqliteTestDatabase sqlite,
+        FakeExecutionEngine engine,
+        Guid executionId)
+    {
         var defUuid = Guid.Parse("88888888-8888-8888-8888-888888888888");
         var versionId = Guid.Parse("99999999-9999-9999-9999-999999999999");
-        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var now = DateTime.UtcNow;
         var version = new DefinitionVersionRow
         {
@@ -6987,7 +7040,6 @@ public sealed class ExecutionServiceTests
             VersionById = version,
             VersionByNumber = version
         };
-        var engine = new FakeExecutionEngine();
         var executionRepo = new FakeExecutionRepository
         {
             ByIdResult = new ExecutionRow
@@ -7002,8 +7054,7 @@ public sealed class ExecutionServiceTests
             }
         };
 
-        using var sqlite = new SqliteTestDatabase();
-        var sut = BuildExecutionService(
+        return BuildExecutionService(
             sqlite,
             new ExecutionServiceTestDeps
             {
@@ -7018,16 +7069,6 @@ public sealed class ExecutionServiceTests
                 EventStore = new FakeEventStoreRepository(),
                 EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
             });
-
-        using var inputDoc = JsonDocument.Parse("{}");
-        var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
-
-        // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
-
-        // Assert
-        Assert.True(engine.StartCalled);
-        Assert.Equal(executionId, response.ResourceId);
     }
 
     /// <summary>cancelRequested の Queued Start は engine.Start しない。</summary>
@@ -7076,7 +7117,7 @@ public sealed class ExecutionServiceTests
         var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
 
         // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
 
         // Assert
         Assert.False(engine.StartCalled);
@@ -7136,7 +7177,7 @@ public sealed class ExecutionServiceTests
         var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
 
         // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
 
         // Assert
         Assert.False(engine.StartCalled);
@@ -7230,7 +7271,7 @@ public sealed class ExecutionServiceTests
         var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
 
         // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
 
         // Assert
         Assert.True(engine.StartCalled);
@@ -7302,7 +7343,7 @@ public sealed class ExecutionServiceTests
         var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
 
         // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
 
         // Assert
         Assert.False(engine.StartCalled);
@@ -7371,7 +7412,7 @@ public sealed class ExecutionServiceTests
         var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement };
 
         // Act
-        var response = await sut.ExecuteQueuedStartAsync(executionId, request, CancellationToken.None);
+        var response = await sut.ExecuteQueuedStartAsync(executionId, request, forkBranch: null, CancellationToken.None);
 
         // Assert
         Assert.False(engine.StartCalled);
@@ -7562,6 +7603,7 @@ public sealed class ExecutionServiceTests
             sut.ExecuteQueuedStartAsync(
                 Guid.NewGuid(),
                 new StartExecutionRequest { DefinitionId = "x", Input = inputDoc.RootElement },
+                forkBranch: null,
                 CancellationToken.None));
     }
 

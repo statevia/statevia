@@ -14,8 +14,9 @@ internal sealed class SchedulerHostRejectedExecutionEngine : IExecutionEngine
         CompiledWorkflowDefinition definition,
         string? executionId = null,
         object? input = null,
-        string? initialState = null) =>
-        throw Rejected(definition, executionId, input, initialState);
+        string? initialState = null,
+        ForkBranchStart? forkBranch = null) =>
+        throw Rejected(definition, executionId, input, initialState, forkBranch);
 
     /// <inheritdoc />
     public void ResumeWaitNode(string executionId, string nodeId, string eventName) =>

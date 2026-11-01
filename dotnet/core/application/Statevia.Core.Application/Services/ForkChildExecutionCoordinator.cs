@@ -451,6 +451,7 @@ public sealed class ForkChildExecutionCoordinator(
                     var createdBranches = new List<ExecutionBranchRow>(request.Branches.Count);
                     var startItems = new List<ExecutionWorkItemRow>(request.Branches.Count);
                     const string emptyGraphJson = """{"nodes":[],"edges":[]}""";
+                    var forkBranchStart = new ForkBranchStartPayload(ToJsonElement(request.WorkflowInput));
 
                     foreach (var branch in request.Branches)
                     {
@@ -524,7 +525,7 @@ public sealed class ForkChildExecutionCoordinator(
                             ExecutionId = childId,
                             Kind = ExecutionWorkItemKinds.Start,
                             Payload = JsonSerializer.Serialize(
-                                new ExecutionStartWorkItemPayload(childId, startRequest),
+                                new ExecutionStartWorkItemPayload(childId, startRequest, forkBranchStart),
                                 ExecutionWorkItemPayloadJson.Options),
                             AvailableAt = now,
                             Attempts = 0,

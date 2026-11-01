@@ -7,6 +7,7 @@ using Statevia.Core.Engine.Definition;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
+using System.Text.Json;
 
 namespace Statevia.Service.Api.Tests.Services;
 
@@ -49,6 +50,39 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
         Assert.Equal("B", branches[1].BranchState);
         Assert.Equal(2, await verify.Executions.CountAsync(x => x.ExecutionId != parentId));
         Assert.Equal(2, await verify.EventStore.CountAsync(x => x.Type == EventStoreEventType.WorkflowStarted.ToPersistedString()));
+    }
+
+    /// <summary>
+    /// 子の Start work item に、枝の写像済み input と、子の <c>$.input</c> にする親の開始 input を載せる。
+    /// </summary>
+    [Fact]
+    public async Task ExpandForkAsync_StartPayloadCarriesMappedInputAndParentWorkflowInput()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var parentId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var definitionVersionId = Guid.NewGuid();
+        await SeedParentAsync(db.Options, parentId, definitionId, definitionVersionId, DateTime.UtcNow);
+        var workQueue = new CapturingWorkQueue();
+        var sut = CreateSut(db.Factory, workQueue, new ForkChildExpansionOptions { MaxAttempts = 2, BaseDelayMs = 0 });
+        var request = CreateRequest(parentId, definitionId, definitionVersionId);
+
+        // Act
+        await sut.ExpandForkAsync(request, CancellationToken.None);
+
+        // Assert
+        var payloads = workQueue.Items
+            .Select(item => JsonSerializer.Deserialize<ExecutionStartWorkItemPayload>(item.Payload, ExecutionWorkItemPayloadJson.Options)!)
+            .OrderBy(payload => payload.Request.InitialState, StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(["A", "B"], payloads.Select(payload => payload.Request.InitialState));
+        Assert.Equal([1, 2], payloads.Select(payload => payload.Request.Input!.Value.GetProperty("n").GetInt32()));
+        Assert.All(payloads, payload =>
+        {
+            Assert.NotNull(payload.ForkBranch);
+            Assert.Equal("o-1", payload.ForkBranch.WorkflowInput!.Value.GetProperty("orderId").GetString());
+        });
     }
 
     /// <summary>同数の branches が既にある再入では Start を二重 enqueue しない。</summary>
@@ -143,7 +177,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
             SecuritySnapshotJson: "{}",
             CompiledDefinition: CreateDefinition(),
             ForkNodeId: "fork-node-1",
-            Branches: Array.Empty<ForkBranchExpansion>());
+            Branches: Array.Empty<ForkBranchExpansion>(),
+            WorkflowInput: null);
 
         // Act
         var act = () => sut.ExpandForkAsync(request, CancellationToken.None);
@@ -212,7 +247,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
             [
                 new ForkBranchExpansion("A", new { n = 1 }),
                 new ForkBranchExpansion("B", new { n = 2 })
-            ]);
+            ],
+            WorkflowInput: new { orderId = "o-1" });
 
     private static CompiledWorkflowDefinition CreateDefinition() =>
         new()
