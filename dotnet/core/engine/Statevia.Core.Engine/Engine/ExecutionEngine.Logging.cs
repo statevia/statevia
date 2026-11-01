@@ -102,6 +102,20 @@ public sealed partial class ExecutionEngine
                     definitionName,
                     stateName,
                     fact));
+
+        /// <summary>終端失敗の後に、並行していた状態の事実で次遷移しない。</summary>
+        public void LogExecutionFailureSuppressedTransition(
+            string executionId,
+            string definitionName,
+            string stateName,
+            string fact) =>
+            SafeLog(() =>
+                ExecutionLog.ExecutionFailureSuppressedTransition(
+                    _logger,
+                    executionId,
+                    definitionName,
+                    stateName,
+                    fact));
     }
 
     /// <summary>

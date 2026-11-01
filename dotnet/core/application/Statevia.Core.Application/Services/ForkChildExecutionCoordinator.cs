@@ -196,16 +196,21 @@ public sealed class ForkChildExecutionCoordinator(
 
         var joinState = rows[0].JoinState;
 
-        var failed = rows.FirstOrDefault(r =>
-            string.Equals(r.Status, ExecutionBranchStatuses.Failed, StringComparison.Ordinal)
-            || string.Equals(r.Status, ExecutionBranchStatuses.Cancelled, StringComparison.Ordinal));
-        if (failed is not null)
+        // 枝に Failed があれば Failed を、無ければ Cancelled を親へ伝える。
+        // 兄弟の取り消しが先に記録されても、失敗が取り消しとして見えないようにする。
+        var failureStatus = rows.Select(r => r.Status).ToHashSet(StringComparer.Ordinal) switch
+        {
+            var statuses when statuses.Contains(ExecutionBranchStatuses.Failed) => ExecutionBranchStatuses.Failed,
+            var statuses when statuses.Contains(ExecutionBranchStatuses.Cancelled) => ExecutionBranchStatuses.Cancelled,
+            _ => null,
+        };
+        if (failureStatus is not null)
         {
             // 論理 Join と同様、一文失敗は未終端の兄弟を待たずに親へ伝播する。
             return new ForkJoinEvaluation(
                 ForkJoinEvaluationKind.Failed,
                 joinState,
-                FailureStatus: failed.Status);
+                FailureStatus: failureStatus);
         }
 
         if (rows.Any(r => string.Equals(r.Status, ExecutionBranchStatuses.Running, StringComparison.Ordinal)))

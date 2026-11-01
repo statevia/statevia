@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3.2 |
-| 更新日 | 2026-10-07 |
+| Version | 1.3.3 |
+| 更新日 | 2026-11-01 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [wait-cancel.md](wait-cancel.md), [execution-graph.md](execution-graph.md), [../../concepts/durability.md](../../concepts/durability.md), [../../reference/database-schema.md](../../reference/database-schema.md) |
 
 ---
@@ -93,7 +93,8 @@ Join は複数の状態からの事実を待ってから次に進みます。
 - Join 充足の正本は **`execution_branches`**（親を Engine の durable Wait に載せない）。
 - 子が終端すると、親向け `Resume`（`mode=event`）に予約イベント名 **`statevia.event.child.completed`** を載せて enqueue する。
 - Worker は当該予約イベントを Engine の通常 Wait Resume ではなく **Join 再評価**へ振る。
-- 全必須分岐が Completed → Join 充足。いずれかが Failed / Cancelled → 親へ失敗／キャンセル伝播。
+- 全必須分岐が Completed → Join 充足。いずれかが Failed / Cancelled → 親へ失敗／キャンセル伝播。伝える状態は、Failed の枝があれば Failed、無ければ Cancelled（兄弟の取り消しで失敗が取り消しに見えないようにする）。
+- Join が失敗したら、当該親の未終端（Running）の子へ Cancel をカスケードしてから親を終端にする（親 Cancel と同じ経路）。取り消された兄弟の終端通知は、親が終端済みなので Join 再評価をしない。
 - 物理 Join 待ち中の親は Engine の durable Wait を持たないため、runtime checkpoint の内容保持は寿命表の **`PendingPhysicalJoin`**（未終端 `execution_branches`）による。`PendingWaits` とあわせた内容寿命の正本は [durability.md](../../concepts/durability.md)。Worker 所有 lease は保持理由と同列にしない。
 - hydrate 入力として欠落・`{}`・必須プロパティ欠落は不正とし、構造化ログのうえ一時失敗とする（lease 用 seed `{}` を Import しない）。
 - 循環で同一 Join 状態名へ戻るとき、`CompletePhysicalJoin` は前回訪問の `startedJoins` / 観測事実をクリアしてから再実行する（残ると Join が無動作のまま Unload され停滞する）。
@@ -124,7 +125,8 @@ Join は複数の状態からの事実を待ってから次に進みます。
 - 必須状態のいずれかが失敗またはキャンセルされた場合、Join は失敗します。
 - **定義時の領域**: 枝は単一 Definition。Join 後の Again で同じ Fork に戻る循環は合法。枝内から Join 以外へ出る遷移、領域外からの侵入、兄弟 Body の共有は拒否する。`error` は枝内または当該 Join へ戻し、領域外へ出してはならない。
 - Fork は実行順序を保証しません。
-- 親 Cancel は未終端の物理子へ Cancel をカスケードする（[wait-cancel.md](wait-cancel.md)）。
+- 親 Cancel は未終端の物理子へ Cancel をカスケードする（[wait-cancel.md](wait-cancel.md)）。Join の失敗でも同じく未終端の兄弟を取り消す。
+- 枝の中の状態が失敗しても、`error`（`on.Failed`）で枝内または当該 Join へ進めば子は Completed で終わり、Join は充足し得る（[fsm.md](fsm.md)「失敗事実と on.Failed」）。Engine 単体（プロセス内 Fork）で `join.all` の状態に `on.Failed` を付けた組み合わせは保証しない。
 - 分岐上の Wait へのイベント配送は**子 execution** を正とする（親 ID への誤配送を解決または拒否する）。
 
 ---

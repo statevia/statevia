@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.1 |
-| 更新日 | 2026-07-29 |
+| Version | 1.2 |
+| 更新日 | 2026-11-01 |
 | 関連 | [concepts/execution-model.md](../../concepts/execution-model.md), [wait-cancel.md](wait-cancel.md) |
 
 ---
@@ -15,6 +15,7 @@
 - **MUST**: reducer は Event のみを適用し、Command を直接状態に適用してはならない。
 - **MUST**: 許可された事実語彙（`Completed` / `Failed` / `Cancelled` / `Joined` 等）以外で遷移してはならない。
 - **SHOULD**: Wait 解消後の正常終了は FSM 上 `Completed` 事実として扱う。
+- **MUST**: `Failed` 事実でも `on.Failed` を `Completed` と同じ規則で評価する。遷移が無いときだけ実行を終端失敗とし、`Cancelled` とは記録しない（下記「失敗事実と on.Failed」）。
 
 背景は [execution-model](../../concepts/execution-model.md) を参照。
 
@@ -48,6 +49,19 @@ YAML の **`wait.events`**（例: `approve` → `Approved`）は、外部から 
 - **公開 DSL** では遷移先を `wait.events` に書く（複数イベント可）。
 - **`on.<イベント名>` は評価されない**（イベント名と FSM の事実名を混同しないこと）。
 - 旧 `wait.event` + `on.Completed.next` は Loader が `events` へ正規化する。
+
+### 失敗事実と on.Failed
+
+状態の `ExecuteAsync` が例外を投げると、ノードは事実 `Failed` で記録される。エンジンは状態の事実を次の順で扱う（`ExecutionEngine.ProcessFact`）。
+
+1. 実行が終端失敗していれば、遷移しない（並行していた状態が停止して返す `Cancelled` も含む）。
+2. 事実が `Cancelled`（明示 Cancel や Action の取り消し）なら、実行を Cancelled で終える。
+3. 実行が取り消されていれば、遷移しない。
+4. Join の依存状態なら事実を Join に記録し、Join が充足すれば Join を実行する。
+5. `Completed` と `Failed` は同じ遷移評価を通る。`on.Failed` の `next` / `cases` / `default` / `end` を辿る（Nodes の `error` は `on.Failed.next`）。
+6. `Failed` で遷移が無いときだけ、実行を終端失敗にする。並行する状態の Action は止めるが、実行は Cancelled とは記録しない。投影の状態は FAILED、`cancel_requested` は false。
+
+Hosted Fork の枝の中で `on.Failed` を辿り当該 Join へ着いた子は Completed で終わる。Engine 単体（プロセス内 Fork）で、`join.all` に含まれる状態に `on.Failed` を付けた組み合わせは保証しない（[fork-join.md](fork-join.md)）。
 
 ## FSM の特性
 
