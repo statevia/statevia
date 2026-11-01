@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.15 |
-| 更新日 | 2026-11-01 |
+| Version | 1.5.16 |
+| 更新日 | 2026-11-02 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.16（2026-11-02）**: Builtin `statevia.action.builtin.execution.signal` を退役した。新しい定義の保存・更新・検証は 422 になり、Action 一覧と Schema API にも出ない。退役前に保存した版は実行でき、signal ノードに到達するとそのノードが失敗する（§1.1.4）。
 
 **Version 1.5.15（2026-11-01）**: `$.sys.now("format")` / `$.sys.utcNow("format")` を書ける場所を明記する（States / Nodes の `input` と条件遷移の `when.path`、Action の input でパスを受け付ける項目）。許可されていない呼び出しは登録時に 422 で、許可一覧を返す（§1.6）。
 
@@ -95,11 +97,12 @@ YAML 上の `action` 参照は syntax parse のあと、Service API Compiler（`
 | --- | --- | --- |
 | execution.noop | `statevia.action.builtin.execution.noop` | 即時完了（入力をそのまま出力）。省略時もこれ |
 | execution.sleep | `statevia.action.builtin.execution.sleep` | `input.duration` で待機 |
-| execution.signal | `statevia.action.builtin.execution.signal` | 実行スコープ内シグナル発行 |
 | event.publish | `statevia.action.builtin.event.publish` | システムトピック発行（`POST /v1/events` と同じ購読照合） |
 | workflow.invoke | `statevia.action.builtin.workflow.invoke` | 子ワークフロー起動（開始直後に status を返す。子終端は親 wait を自動再開しない） |
 
 Builtin の Catalog `ModuleId` は `statevia.action.builtin`。旧 canonical（例: `statevia.action.builtin.sleep`）と短名は解決しない。
+
+退役した Builtin `statevia.action.builtin.execution.signal` は新しい定義では使えない（下の「signal（退役）」を参照）。
 
 first-party リファレンス Module（ソースは `dotnet/modules/reference/`。ビルド時に、実行時の modules ルート（リポジトリルートの `modules/`）の `default/` へ copy。未署名は Community）:
 
@@ -215,10 +218,13 @@ states:
 - **output**: `{ channel, messageId? }`
 - **接続設定（SMTP）**: workflow `input` には含めない。実行テナントの保存済み SMTP をホストが `notification.send` の実行にだけ渡す。モジュールは `STATEVIA_SMTP_*` を読まない。未設定、パスワードを復元できない、差出人が決まらないときは失敗し、運用者の SMTP には寄せない。ホストの `Infrastructure.Notification` には依存しない。未署名リファレンスの TrustLevel は Community。
 
-#### signal（`statevia.action.builtin.execution.signal`）
+#### signal（退役、`statevia.action.builtin.execution.signal`）
 
-- **input**: `{ signal, target? }` — `signal` 必須。`target` は MVP で `current` のみ（省略時 `current`）
-- **output**: 意味のない完了（`Unit`）。同一実行内の wait 再開用に `IEventProvider.Signal` を発行する（許可イベント名と一致させる）
+signal は Wait を再開できなかったため退役した。
+
+- **新しい定義**: この Action を使う定義の保存・更新・検証は 422（`VALIDATION_ERROR`）。メッセージに代わりの手段を示す。Action 一覧（`GET /v1/actions/schema/index` など）に出ず、`GET /v1/actions/schema/{actionId}` は 404
+- **保存済みの版**: 退役前に保存した版は、実行の開始・再開・Fork 展開で読み込める。signal ノードに到達すると、そのノードは事実 `Failed` になる。`error`（`on.Failed`）があれば遷移先へ進み、無ければ実行が `Failed` で終わる。ログには退役の理由を残し、ノードの入力値は出さない
+- **代わりの手段**: `wait.events` の Wait は HTTP Resume（`POST /v1/executions/{id}/nodes/{nodeId}/resume`）で再開する。実行の中から再開したいときは `wait.subscribe` と `event.publish` を組み合わせる
 
 #### publish（`statevia.action.builtin.event.publish`）
 
@@ -282,11 +288,10 @@ states:
         end: true
 ```
 
-#### Execution Semantics（signal / publish / wait）
+#### Execution Semantics（publish / wait）
 
 | 概念 | スコープ | Builtin / ノード |
 | --- | --- | --- |
-| signal | execution-scoped | `signal` action → wait の許可イベント再開 |
 | publish | system-scoped | `event.publish` → `IEventIngressService`（`POST /v1/events` と同じ） |
 | wait | execution-scoped（ノード単位） | `wait.events` は `ResumeWaitNode`（HTTP Resume）。`wait.subscribe` は `POST /v1/events`（1:N ありうる） |
 

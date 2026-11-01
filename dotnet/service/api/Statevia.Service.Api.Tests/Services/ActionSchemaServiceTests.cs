@@ -2,6 +2,7 @@ using Statevia.Core.Actions.Abstractions.Catalog;
 using Statevia.Core.Actions.Abstractions.Publication;
 using Statevia.Core.Application.Services;
 using Statevia.Core.Engine.Execution;
+using Statevia.Service.Api.Application.Actions;
 using Statevia.Service.Api.Application.Actions.Builtins;
 using Statevia.Service.Api.Application.Actions.Catalog;
 using System.Text.Json;
@@ -95,6 +96,38 @@ public sealed class ActionSchemaServiceTests
 
         // Act / Assert
         Assert.Throws<NotFoundException>(() => service.GetDetail(TestActionId));
+    }
+
+    /// <summary>退役した signal は一覧と index に出ない。</summary>
+    [Fact]
+    public void GetListAndIndex_ExcludeRetiredSignal()
+    {
+        // Arrange
+        var catalog = new InMemoryActionCatalog();
+        BuiltinActionRegistrar.Register(catalog);
+        var service = new ActionSchemaService(catalog);
+
+        // Act
+        var list = service.GetList();
+        var index = service.GetIndex();
+
+        // Assert
+        Assert.DoesNotContain(list.Items, item => item.ActionId == WellKnownActionIds.Signal);
+        Assert.DoesNotContain(index.Items, item => item.ActionId == WellKnownActionIds.Signal);
+        Assert.Contains(index.Items, item => item.ActionId == WellKnownActionIds.Sleep);
+    }
+
+    /// <summary>退役した signal の詳細は、未登録と同じ NotFoundException。</summary>
+    [Fact]
+    public void GetDetail_RetiredSignal_ThrowsNotFound()
+    {
+        // Arrange
+        var catalog = new InMemoryActionCatalog();
+        BuiltinActionRegistrar.Register(catalog);
+        var service = new ActionSchemaService(catalog);
+
+        // Act / Assert
+        Assert.Throws<NotFoundException>(() => service.GetDetail(WellKnownActionIds.Signal));
     }
 
     private static InMemoryActionCatalog CreateCatalogWithPublication()

@@ -41,6 +41,24 @@ public sealed class BuiltinActionRegistrarTests
         Assert.True(workflowMetadata!.IsExperimental);
     }
 
+    /// <summary>signal は退役エントリとして登録し、Capability メタデータは持たない。</summary>
+    [Fact]
+    public void Register_RegistersSignalAsRetired()
+    {
+        // Arrange
+        var catalog = new InMemoryActionCatalog();
+
+        // Act
+        BuiltinActionRegistrar.Register(catalog);
+
+        // Assert
+        Assert.True(catalog.TryGetRegistration(WellKnownActionIds.Signal, out var signal));
+        Assert.True(signal.Entry.IsRetired);
+        Assert.False(catalog.TryGetCapabilityMetadata(WellKnownActionIds.Signal, out _));
+        Assert.True(catalog.TryGetRegistration(WellKnownActionIds.Sleep, out var sleep));
+        Assert.False(sleep.Entry.IsRetired);
+    }
+
     /// <summary>null Catalog は ArgumentNullException。</summary>
     [Fact]
     public void Register_NullCatalog_Throws()

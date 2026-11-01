@@ -53,13 +53,20 @@ internal static class BuiltinActionRegistrar
             BuiltinActionSchemas.Sleep(actionId));
     }
 
+    /// <summary>
+    /// 退役した signal を登録する。保存済みの版を読み込めるようにエントリだけ残し、実行するとノードを失敗させる。
+    /// </summary>
+    /// <remarks>
+    /// Publication は保存済みの版の input 検証に使うため残す。Action 一覧と Schema API には出さない。
+    /// </remarks>
     private static void RegisterSignal(InMemoryActionCatalog catalog)
     {
         var actionId = WellKnownActionIds.Signal;
+        var retiredState = new RetiredActionState(actionId, RetiredBuiltinActions.SignalReplacementHint);
         catalog.Register(
             CreateBuiltinDescriptor(actionId),
-            new ActionCatalogEntry(InProcessFactory: CreateFactory(new SignalActionState())),
-            new ActionCapabilityMetadata(ActionCapabilityCategory.Signal, "Signal", IsExperimental: false),
+            new ActionCatalogEntry(InProcessFactory: CreateFactory(retiredState), IsRetired: true),
+            capabilityMetadata: null,
             BuiltinActionSchemas.Signal(actionId));
     }
 

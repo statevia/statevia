@@ -16,7 +16,7 @@ internal static class WellKnownActionIds
     /// <summary>時間待機 builtin。</summary>
     public const string Sleep = BuiltinPrefix + "execution.sleep";
 
-    /// <summary>実行スコープ内シグナル builtin。</summary>
+    /// <summary>退役した signal builtin（保存済みの版の読み込み用に Catalog へ残す）。</summary>
     public const string Signal = BuiltinPrefix + "execution.signal";
 
     /// <summary>システムイベント発行 builtin。</summary>

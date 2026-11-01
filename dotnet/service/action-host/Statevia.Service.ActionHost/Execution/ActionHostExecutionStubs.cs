@@ -2,23 +2,13 @@ using Statevia.Core.Engine.Abstractions;
 
 namespace Statevia.Service.ActionHost.Execution;
 
-/// <summary>OutOfProcess 実行用の空 <see cref="IEventProvider"/>（Wait / Signal は未サポート）。</summary>
+/// <summary>OutOfProcess 実行用の空 <see cref="IEventProvider"/>（Wait / Resume / Topic 公開は未サポート）。</summary>
 internal sealed class EmptyEventProvider : IEventProvider
 {
-    /// <inheritdoc />
-    public Task WaitAsync(string eventName, CancellationToken ct) =>
-        Task.FromException(new NotSupportedException(
-            "Event wait is not supported in Action Host OutOfProcess execution."));
-
     /// <inheritdoc />
     public Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct) =>
         Task.FromException<string>(new NotSupportedException(
             "Event wait is not supported in Action Host OutOfProcess execution."));
-
-    /// <inheritdoc />
-    public void Signal(string signalName) =>
-        throw new NotSupportedException(
-            "Event signal is not supported in Action Host OutOfProcess execution.");
 
     /// <inheritdoc />
     public void Resume(string nodeId, string eventName) =>

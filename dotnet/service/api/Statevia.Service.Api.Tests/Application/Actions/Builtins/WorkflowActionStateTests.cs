@@ -96,10 +96,8 @@ public sealed class WorkflowActionStateTests
 
     private sealed class NoopEvents : IEventProvider
     {
-        public Task WaitAsync(string eventName, CancellationToken ct) => Task.CompletedTask;
         public Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct) =>
             Task.FromResult(eventNames[0]);
-        public void Signal(string signalName) { }
         public void Resume(string nodeId, string eventName) { }
         public void PublishTopic(string topic, object? payloadSummary) { }
     }

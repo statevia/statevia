@@ -184,14 +184,8 @@ public sealed class NotificationSmtpDispatchScopeTests
 
     private sealed class StubEventProvider : IEventProvider
     {
-        public Task WaitAsync(string eventName, CancellationToken ct) => Task.CompletedTask;
-
         public Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct) =>
             Task.FromResult(eventNames[0]);
-
-        public void Signal(string signalName)
-        {
-        }
 
         public void Resume(string nodeId, string eventName)
         {

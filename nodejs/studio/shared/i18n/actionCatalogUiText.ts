@@ -31,14 +31,6 @@ export const actionCatalogUiTextJa: ActionCatalogUiText = {
       },
     },
   },
-  [`${builtinPrefix}execution.signal`]: {
-    ui: {
-      fields: {
-        target: { label: "ターゲット" },
-        signal: { label: "シグナル名" },
-      },
-    },
-  },
   [`${builtinPrefix}event.publish`]: {
     ui: {
       fields: {
@@ -63,14 +55,6 @@ export const actionCatalogUiTextEnOverrides: ActionCatalogUiText = {
     ui: {
       fields: {
         duration: { label: "Duration" },
-      },
-    },
-  },
-  [`${builtinPrefix}execution.signal`]: {
-    ui: {
-      fields: {
-        target: { label: "Target" },
-        signal: { label: "Signal name" },
       },
     },
   },

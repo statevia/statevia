@@ -8,14 +8,7 @@ public sealed class BuiltinActionStatesTests
     private sealed class FakeEventProvider : IEventProvider
     {
         public string? LastEventName { get; private set; }
-        public string? LastSignalName { get; private set; }
         public string? LastTopic { get; private set; }
-
-        public Task WaitAsync(string eventName, CancellationToken ct)
-        {
-            LastEventName = eventName;
-            return Task.CompletedTask;
-        }
 
         public string? LastNodeId { get; private set; }
 
@@ -28,8 +21,6 @@ public sealed class BuiltinActionStatesTests
             LastEventName = eventNames[0];
             return Task.FromResult(eventNames[0]);
         }
-
-        public void Signal(string signalName) => LastSignalName = signalName;
 
         public void Resume(string nodeId, string eventName) { }
 

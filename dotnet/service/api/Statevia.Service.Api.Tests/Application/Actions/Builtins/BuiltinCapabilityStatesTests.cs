@@ -8,14 +8,8 @@ public sealed class BuiltinCapabilityStatesTests
 {
     private sealed class FakeEventProvider : IEventProvider
     {
-        public string? LastSignal { get; private set; }
-
-        public Task WaitAsync(string eventName, CancellationToken ct) => Task.CompletedTask;
-
         public Task<string> WaitForEventAsync(string nodeId, IReadOnlyList<string> eventNames, CancellationToken ct) =>
             Task.FromResult(eventNames[0]);
-
-        public void Signal(string signalName) => LastSignal = signalName;
 
         public void Resume(string nodeId, string eventName) { }
 
@@ -53,38 +47,5 @@ public sealed class BuiltinCapabilityStatesTests
 
         // Assert
         Assert.Equal(Unit.Value, result);
-    }
-
-    /// <summary>signal は指定シグナルを発行する。</summary>
-    [Fact]
-    public async Task SignalActionState_PublishesSignal()
-    {
-        // Arrange
-        var events = new FakeEventProvider();
-        var state = new SignalActionState();
-        var input = new Dictionary<string, object?> { ["signal"] = "approval" };
-
-        // Act
-        await state.ExecuteAsync(MakeContext(events), input, CancellationToken.None);
-
-        // Assert
-        Assert.Equal("approval", events.LastSignal);
-    }
-
-    /// <summary>signal は current 以外の target を拒否する。</summary>
-    [Fact]
-    public async Task SignalActionState_InvalidTarget_Throws()
-    {
-        // Arrange
-        var state = new SignalActionState();
-        var input = new Dictionary<string, object?>
-        {
-            ["signal"] = "approval",
-            ["target"] = "other",
-        };
-
-        // Act / Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            state.ExecuteAsync(MakeContext(new FakeEventProvider()), input, CancellationToken.None));
     }
 }

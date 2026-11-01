@@ -6,12 +6,11 @@ namespace Statevia.Core.Engine.Engine;
 
 /// <summary>
 /// <see cref="IEventProvider"/> の実装。Wait/Resume のセマンティクスを提供します。
-/// 各 Wait は一度だけ Resume（ノードスコープ / Signal / Publish）で再開できます。
+/// 各 Wait は一度だけ Resume（ノードスコープ）で再開できます。
 /// </summary>
 public sealed partial class EventProvider : IEventProvider
 {
     private readonly string _executionId;
-    private readonly Dictionary<string, List<TaskCompletionSource<bool>>> _waiters = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, NodeWaitRegistration> _nodeWaiters = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Wait 登録前に届いた Resume（nodeId → eventName）。ImportCheckpoint 直後の競合を吸収する。</summary>
     private readonly Dictionary<string, string> _pendingNodeResumes = new(StringComparer.OrdinalIgnoreCase);
@@ -33,29 +32,6 @@ public sealed partial class EventProvider : IEventProvider
         ArgumentException.ThrowIfNullOrWhiteSpace(executionId);
         _executionId = executionId;
         _logger = logger ?? NullLogger.Instance;
-    }
-
-    /// <inheritdoc />
-    public Task WaitAsync(string eventName, CancellationToken ct)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-        lock (_lock)
-        {
-            if (!_waiters.TryGetValue(eventName, out var list))
-            {
-                list = [];
-                _waiters[eventName] = list;
-            }
-
-            list.Add(tcs);
-        }
-
-        if (ct.CanBeCanceled)
-        {
-            ct.Register(() => tcs.TrySetCanceled(ct));
-        }
-
-        return tcs.Task;
     }
 
     /// <inheritdoc />
@@ -156,13 +132,6 @@ public sealed partial class EventProvider : IEventProvider
     }
 
     /// <inheritdoc />
-    public Task WaitForSignalAsync(string signalName, CancellationToken ct) =>
-        WaitAsync(signalName, ct);
-
-    /// <inheritdoc />
-    public void Signal(string signalName) => Publish(signalName);
-
-    /// <inheritdoc />
     public void Resume(string nodeId, string eventName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
@@ -198,16 +167,9 @@ public sealed partial class EventProvider : IEventProvider
     /// </summary>
     public void AbortForUnload()
     {
-        List<TaskCompletionSource<bool>> legacy = [];
         List<TaskCompletionSource<string>> nodeCompletions = [];
         lock (_lock)
         {
-            foreach (var list in _waiters.Values)
-            {
-                legacy.AddRange(list);
-            }
-
-            _waiters.Clear();
             foreach (var registration in _nodeWaiters.Values)
             {
                 nodeCompletions.Add(registration.Completion);
@@ -218,11 +180,6 @@ public sealed partial class EventProvider : IEventProvider
         }
 
         var unload = new ExecutionUnloadException();
-        foreach (var tcs in legacy)
-        {
-            tcs.TrySetException(unload);
-        }
-
         foreach (var tcs in nodeCompletions)
         {
             tcs.TrySetException(unload);
@@ -238,23 +195,6 @@ public sealed partial class EventProvider : IEventProvider
             _executionId,
             topic,
             payloadSummary?.GetType().Name ?? "null");
-    }
-
-    /// <summary>指定イベントで待機中の Wait を全て再開します。</summary>
-    public void Publish(string eventName)
-    {
-        lock (_lock)
-        {
-            if (_waiters.TryGetValue(eventName, out var list))
-            {
-                foreach (var tcs in list)
-                {
-                    tcs.TrySetResult(true);
-                }
-
-                _waiters.Remove(eventName);
-            }
-        }
     }
 
     /// <summary>ノード単位のイベント待機登録。</summary>
