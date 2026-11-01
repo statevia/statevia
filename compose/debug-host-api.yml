@@ -1,0 +1,22 @@
+# Service API をホスト（VS Code のデバッガ）で動かし、ほかはコンテナのままにする。
+# service-api コンテナは起動しない。ui-studio はホストの API（8080）へつなぐ。
+# 使い方（リポジトリルートで。最後に重ねる）:
+#   docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+#     -f compose/logging.yml -f compose/logging-split.yml \
+#     -f compose/debug-host-api.yml up -d --build
+# 既に動いている service-api コンテナは up では止まらない。先に docker compose stop service-api で止める。
+# 手順と launch.json の例は docs/guides/operations-docker.md の「VS Code でデバッグする」。
+services:
+  service-api:
+    # 有効にしない profile へ移し、up で起動させない（ホストの API と 8080 を取り合わないため）。
+    profiles:
+      - container-api
+
+  ui-studio:
+    environment:
+      SERVICE_API_INTERNAL_BASE: "http://host.docker.internal:8080"
+    # Docker Desktop 以外（Linux の Docker Engine）でも host.docker.internal を引けるようにする。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # 起動しない service-api への依存を外す。ホストの API より先に起動してよい。
+    depends_on: !reset {}
