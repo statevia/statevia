@@ -114,7 +114,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   - `dotnet/service/cli/statevia-cli.sln`
   - `dotnet/service/action-host/statevia-action-host.sln`
   - `dotnet/service/api/statevia-api.sln`（`dotnet/service/api/Directory.Build.props` の `AnalysisMode=AllEnabledByDefault` を含む）
-- **IDE 用包括ソリューション**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用。CI・Warning 0・Sonar の正本ではない。`.vscode/settings.json` の `dotnet.defaultSolution` はこのファイルを指す。品質ゲートと `dotnet test` は上記 6 sln を使う。
+- **IDE 用包括ソリューション**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用。CI・Warning 0・Sonar の正本ではない。VS Code では各自の `.vscode/settings.json`（git 対象外）の `dotnet.defaultSolution` にこのファイルを指定する。品質ゲートと `dotnet test` は上記 6 sln を使う。
 - **Service API テスト向け抑制**: `dotnet/.editorconfig` に加え、`dotnet/service/api/Statevia.Service.Api.Tests/.editorconfig` で xUnit 向け CA（例: CA1812）を抑制している。テストの命名・`ConfigureAwait` 方針は Engine.Tests と同趣旨。
 - **Markdown**: リポジトリ直下の **`.markdownlint.json`** に従う。編集した Markdown には例として次で確認できる。
 

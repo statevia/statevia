@@ -49,7 +49,6 @@ statevia/
 ├─ .cursor/                      # Cursor のルール・コマンド・スキル・フック（エージェント設定の正本）
 ├─ .github/workflows/            # CI（ci.yml）と Sonar（sonar.yml）
 ├─ .spec/                        # Spec の Steering とテンプレート（specs/ は gitignore）
-├─ .vscode/settings.json         # C# Dev Kit が開く sln など
 │
 ├─ compose/                      # Compose の重ね合わせ定義と、その設定ファイル
 │  ├─ split-runtime.yml          # Scheduler / Worker を別プロセスにする
@@ -214,7 +213,7 @@ statevia/
 | 支援 | `compose/` | Compose の重ね合わせ定義と、その設定ファイル（logging、Sonar サーバ）。入口の `docker-compose.yml` だけはルートに置く |
 | 支援 | `scripts/` | 言語をまたぐ、またはリポジトリ全体の運用スクリプト（`scripts/sonar/` を含む） |
 | 文書 | `docs/` | 利用者・開発者向け文書 |
-| エージェント・CI | `.claude/`, `.cursor/`, `.github/`, `.spec/`, `.vscode/` | 各ツールの設定と Spec |
+| エージェント・CI | `.claude/`, `.cursor/`, `.github/`, `.spec/` | 各ツールの設定と Spec |
 | 生成物（gitignore） | `artifacts/` | ビルド・スキャンの出力 |
 | 実行時データ（gitignore） | `modules/` | 実行時の modules ルート（§2.5） |
 | ローカルデータ（gitignore） | `.local/` | 手元の秘密情報・実験データ |
