@@ -279,6 +279,62 @@ public sealed class ActionInputSchemaValidatorTests
         Assert.Equal("$.input.url", errors[0].JsonPath);
     }
 
+    /// <summary>literalOrPath フィールドに許可された $.sys の CallPath を指定すると受理する。</summary>
+    [Fact]
+    public void Validate_LiteralOrPathField_WithSysCallPath_Passes()
+    {
+        // Arrange
+        var schema = ParseSchema(
+            """
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "x-statevia-valueKind": "literalOrPath"
+                }
+              }
+            }
+            """);
+        var input = CreateValuesInput(("day", "$.sys.now(\"yyyyMMdd\")"));
+
+        // Act
+        var errors = ActionInputSchemaValidator.Validate(StateName, ActionId, input, schema);
+
+        // Assert
+        Assert.Empty(errors);
+    }
+
+    /// <summary>許可されていない $.sys の CallPath は、許可一覧を添えてエラーにする。</summary>
+    [Fact]
+    public void Validate_LiteralOrPathField_WithInvalidSysCallPath_ReturnsErrorWithAllowedHint()
+    {
+        // Arrange
+        var schema = ParseSchema(
+            """
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "x-statevia-valueKind": "literalOrPath"
+                }
+              }
+            }
+            """);
+        var input = CreateValuesInput(("day", "$.sys.today(\"yyyyMMdd\")"));
+
+        // Act
+        var errors = ActionInputSchemaValidator.Validate(StateName, ActionId, input, schema);
+
+        // Assert
+        var error = Assert.Single(errors);
+        Assert.Equal("$.input.day", error.JsonPath);
+        Assert.Contains("allowed call paths are", error.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>headers オブジェクトリテラルを受理する。</summary>
     [Fact]
     public void Validate_ObjectLiteralHeaders_Passes()
