@@ -28,9 +28,8 @@ coverage/
 # Sdk.Web を開くと Properties/launchSettings.json が自動生成される。
 # 起動 URL の正本は docs / docker / `dotnet run --no-launch-profile`。
 **/Properties/launchSettings.json
-# Cursor / VS Code: 個人設定は除外。チーム共有は settings.json のみ。
-.vscode/*
-!.vscode/settings.json
+# Cursor / VS Code: エディタ設定は各自のローカルで管理する。
+.vscode/
 
 # --- エージェント / ローカルツール ---
 # Cursor / Claude Code のルール・コマンド・スキル・フックは共有する。

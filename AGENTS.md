@@ -85,7 +85,7 @@ Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines
 
 ## 実装メモ（エージェント向け）
 
-- **IDE sln**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用（`.vscode/settings.json` の `dotnet.defaultSolution`）。CI / テスト / Warning 0 / Sonar はコンポーネント別 6 sln。
+- **IDE sln**: `dotnet/statevia.sln` は Cursor / VS Code の IntelliSense 用（VS Code では各自の `.vscode/settings.json`（git 対象外）の `dotnet.defaultSolution` に指定する）。CI / テスト / Warning 0 / Sonar はコンポーネント別 6 sln。
 - **Read-model**: `GET /v1/executions` の一覧は `execution_branches.execution_id` に無いルートのみ（件数も同じ）。graph は DB projection 正本（[`data-integration.md`](docs/specifications/data-integration.md)）。Hosted 物理 Fork の親 graph / events は **GET 時合成**（一覧を含め UI は分割非認知。[`fork-join.md`](docs/specifications/execution/fork-join.md)）
 - **機微 IO 方針**: 既定で `input` / `output` を一覧 GET に含めない。ログは `LogRedaction`（[`io-log-masking.md`](docs/specifications/platform/io-log-masking.md)）
 - **Engine 境界**: `ExecutionEngine` は `IStateExecutor` のみ。Catalog / Policy / ModuleHost は Service API 側。Hosted Fork の親子協調は Application（`execution_branches`・予約 Resume）
