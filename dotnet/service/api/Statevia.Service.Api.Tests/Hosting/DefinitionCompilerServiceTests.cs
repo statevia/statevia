@@ -1307,6 +1307,106 @@ public sealed class DefinitionCompilerServiceTests
     }
 
     /// <summary>
+    /// states 形式で action を持つ状態の <c>output</c> が、compiledJson の <c>stateOutputs</c> に状態名 → パスとして載ること。
+    /// Action 名の正規化で <c>output</c> が落ちていた不具合の回帰。
+    /// </summary>
+    [Fact]
+    public void ValidateAndCompile_StatesActionWithOutput_WritesStateOutputs()
+    {
+        // Arrange
+        var svc = CreateSut();
+        var yaml = """
+            workflow:
+              name: W
+            states:
+              A:
+                action: statevia.action.builtin.execution.noop
+                output: $.vars.order
+                on:
+                  Completed:
+                    next: B
+              B:
+                input:
+                  orderId: $.vars.order.orderId
+                on:
+                  Completed:
+                    end: true
+            """;
+
+        // Act
+        var (compiled, json) = svc.ValidateAndCompile("W", yaml);
+
+        // Assert
+        Assert.Equal("$.vars.order", compiled.StateOutputs["A"]);
+        Assert.False(compiled.StateOutputs.ContainsKey("B"));
+        using var doc = JsonDocument.Parse(json);
+        var stateOutputs = doc.RootElement.GetProperty("stateOutputs");
+        Assert.Equal("$.vars.order", stateOutputs.GetProperty("A").GetString());
+    }
+
+    /// <summary>
+    /// nodes 形式の action ノードの <c>output</c> が、compiledJson の <c>stateOutputs</c> にノード名 → パスとして載ること。
+    /// </summary>
+    [Fact]
+    public void ValidateAndCompile_NodesActionWithOutput_WritesStateOutputs()
+    {
+        // Arrange
+        var svc = CreateSut();
+        var yaml = """
+            version: 1
+            workflow:
+              name: NodesOutput
+            nodes:
+              - name: start
+                type: start
+                next: order.receive
+              - name: order.receive
+                type: action
+                action: statevia.action.builtin.execution.noop
+                output: $.vars.order
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var (compiled, json) = svc.ValidateAndCompile("NodesOutput", yaml);
+
+        // Assert
+        Assert.Equal("$.vars.order", compiled.StateOutputs["order.receive"]);
+        using var doc = JsonDocument.Parse(json);
+        var stateOutputs = doc.RootElement.GetProperty("stateOutputs");
+        Assert.Equal("$.vars.order", stateOutputs.GetProperty("order.receive").GetString());
+    }
+
+    /// <summary>
+    /// <c>$.vars</c> 以外を指す <c>output</c> は、Action 名の正規化を経ても Level 1 検証で拒否されること。
+    /// </summary>
+    [Fact]
+    public void ValidateAndCompile_ActionOutputOutsideVars_ThrowsLevel1ValidationFailed()
+    {
+        // Arrange
+        var svc = CreateSut();
+        var yaml = """
+            workflow:
+              name: W
+            states:
+              A:
+                action: statevia.action.builtin.execution.noop
+                output: $.states.A
+                on:
+                  Completed:
+                    end: true
+            """;
+
+        // Act & Assert
+        var ex = Assert.ThrowsAny<ArgumentException>(() => svc.ValidateAndCompile("W", yaml));
+
+        Assert.Contains("Level 1 validation failed", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("output", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// nodes の noop で Start 時の <c>input</c> が伝播するとき、<c>$.eligible eq true</c> がマッチすること（公式サンプル相当）。
     /// </summary>
     [Fact]

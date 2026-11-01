@@ -53,6 +53,7 @@ internal static class ActionNameResolver
             Wait = state.Wait,
             Join = state.Join,
             Input = state.Input,
+            Output = state.Output,
             Retry = state.Retry,
         };
     }
