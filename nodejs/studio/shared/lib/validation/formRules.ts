@@ -43,6 +43,7 @@ export const START_INPUT_MAX_BYTES = 65536;
 
 /**
  * Definition YAML の最大 UTF-8 バイト数（256KB）。
+ * Service API の `DefinitionYamlConstraints.MaxUtf8Bytes` と同値（サーバー側でも同じ上限で 422 を返す）。
  */
 export const DEFINITION_YAML_MAX_BYTES = 256 * 1024;
 
