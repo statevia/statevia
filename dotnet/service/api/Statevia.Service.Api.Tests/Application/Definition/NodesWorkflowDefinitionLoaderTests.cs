@@ -730,6 +730,117 @@ public sealed class NodesWorkflowDefinitionLoaderTests
         Assert.Equal("low", onCompleted.Default!.Next);
     }
 
+    /// <summary>action ノードの input マップと input.path に書いた $.sys の CallPath を path として読み込む。</summary>
+    [Fact]
+    public void Load_ActionInputWithSysCallPath_ParsesAsPath()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: SysCallPathInput
+            nodes:
+              - name: start
+                type: start
+                next: a
+              - name: a
+                type: action
+                action: noop
+                input:
+                  d: $.sys.now("yyyyMMdd")
+                next: b
+              - name: b
+                type: action
+                action: noop
+                input:
+                  path: $.sys.utcNow("HHmm")
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var definition = _loader.Load(yaml);
+
+        // Assert
+        Assert.Equal("$.sys.now(\"yyyyMMdd\")", definition.States["a"].Input!.Values!["d"].Path);
+        Assert.Equal("$.sys.utcNow(\"HHmm\")", definition.States["b"].Input!.Path);
+    }
+
+    /// <summary>edges の when.path に書いた $.sys の CallPath を条件のパスとして読み込む。</summary>
+    [Fact]
+    public void Load_ConditionalEdgeWithSysCallPath_ParsesWhenPath()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: SysCallPathWhen
+            nodes:
+              - name: start
+                type: start
+                next: a
+              - name: a
+                type: action
+                action: noop
+                edges:
+                  - to: high
+                    when:
+                      path: $.sys.now("yyyyMMdd")
+                      op: eq
+                      value: "20261101"
+                  - to: low
+              - name: high
+                type: action
+                action: noop
+                next: endNode
+              - name: low
+                type: action
+                action: noop
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var definition = _loader.Load(yaml);
+
+        // Assert
+        var onCompleted = definition.States["a"].On![Fact.Completed];
+        Assert.Equal("$.sys.now(\"yyyyMMdd\")", Assert.Single(onCompleted.Cases!).When.Path);
+    }
+
+    /// <summary>許可されていない $.sys の CallPath は、ノード名と許可一覧を添えて拒否する。</summary>
+    [Fact]
+    public void Load_ActionInputWithInvalidSysCallPath_ThrowsWithAllowedHint()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: SysCallPathInvalid
+            nodes:
+              - name: start
+                type: start
+                next: a
+              - name: a
+                type: action
+                action: noop
+                input:
+                  d: $.sys.today("yyyyMMdd")
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var ex = Assert.Throws<ArgumentException>(() => _loader.Load(yaml));
+
+        // Assert
+        Assert.Contains("Node 'a': invalid input path for key 'd'", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("allowed call paths are", ex.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>start が edges のみでも読み込める。</summary>
     [Fact]
     public void Load_StartWithEdgesOnly_Succeeds()

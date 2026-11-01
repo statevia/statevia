@@ -805,6 +805,94 @@ public sealed class DefinitionCompilerServiceTests
         Assert.Equal("start", compiled.InitialState, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Nodes 形式の action input と edges の when.path に書いた $.sys の CallPath が、
+    /// Loader・Level1・Action の input スキーマ検証を通り、compiledJson にそのまま残ること。
+    /// </summary>
+    [Fact]
+    public void ValidateAndCompile_NodesWithSysCallPath_KeepsCallPathInCompiledJson()
+    {
+        // Arrange
+        var catalog = ActionExecutionTestSupport.CreateCatalogWithBuiltins();
+        RegisterHttpRequestReferenceAction(catalog);
+        var svc = CreateSut(catalog);
+        var yaml = """
+            version: 1
+            workflow:
+              name: SysCallPath
+            nodes:
+              - name: start
+                type: start
+                next: call
+              - name: call
+                type: action
+                action: statevia.action.reference.http.request
+                input:
+                  url: https://example.com/orders
+                  method: GET
+                  idempotencyKey: $.sys.now("yyyyMMddHHmmss")
+                edges:
+                  - to: today
+                    when:
+                      path: $.sys.utcNow("yyyyMMdd")
+                      op: eq
+                      value: "20261101"
+                  - to: other
+              - name: today
+                type: action
+                action: statevia.action.builtin.execution.noop
+                next: endNode
+              - name: other
+                type: action
+                action: statevia.action.builtin.execution.noop
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var (compiled, json) = svc.ValidateAndCompile("SysCallPath", yaml);
+
+        // Assert
+        Assert.Equal("$.sys.now(\"yyyyMMddHHmmss\")", compiled.StateInputs["call"].Values!["idempotencyKey"].Path);
+        Assert.Equal("$.sys.utcNow(\"yyyyMMdd\")", Assert.Single(compiled.ConditionalTransitions["call"]["Completed"].Cases).When.Path);
+        using var doc = JsonDocument.Parse(json);
+        var storedPath = doc.RootElement
+            .GetProperty("stateInputs")
+            .GetProperty("call")
+            .GetProperty("values")
+            .GetProperty("idempotencyKey")
+            .GetProperty("path")
+            .GetString();
+        Assert.Equal("$.sys.now(\"yyyyMMddHHmmss\")", storedPath);
+    }
+
+    /// <summary>許可されていない $.sys の CallPath を input に書くと、許可一覧を添えて登録を拒否する。</summary>
+    [Fact]
+    public void ValidateAndCompile_StatesInputWithInvalidSysCallPath_ThrowsWithAllowedHint()
+    {
+        // Arrange
+        var svc = CreateSut();
+        var yaml = """
+            workflow:
+              name: W
+            states:
+              A:
+                input:
+                  d: $.sys.today("yyyyMMdd")
+                on:
+                  Completed:
+                    end: true
+            """;
+
+        // Act
+        var ex = Assert.ThrowsAny<ArgumentException>(() => svc.ValidateAndCompile("W", yaml));
+
+        // Assert
+        Assert.Contains("invalid input path for key 'd'", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("allowed call paths are", ex.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>Nodes の整数 <c>timeout</c> は <c>http.request</c> の整数スキーマを通過する。</summary>
     [Fact]
     public void ValidateAndCompile_NodesHttpRequestIntegerTimeout_Succeeds()

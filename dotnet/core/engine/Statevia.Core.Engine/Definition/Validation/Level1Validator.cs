@@ -446,9 +446,18 @@ public static class Level1Validator
         ConditionExpressionDefinition condition,
         List<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(condition.Path) || !SimpleJsonPath.IsValid(condition.Path))
+        var whenPathError = string.IsNullOrWhiteSpace(condition.Path)
+            ? $"Transition '{transitionPath}.cases[{caseIndex}]' has invalid when.path: {condition.Path}"
+            : ExecutionContextReadPath.Classify(condition.Path) switch
+            {
+                ReadPathValidity.Valid => null,
+                ReadPathValidity.InvalidCallPath =>
+                    $"Transition '{transitionPath}.cases[{caseIndex}]' has invalid when.path: {condition.Path} ({ExecutionContextReadPath.FormatAllowedCallPathsHint()})",
+                _ => $"Transition '{transitionPath}.cases[{caseIndex}]' has invalid when.path: {condition.Path}"
+            };
+        if (whenPathError is not null)
         {
-            errors.Add($"Transition '{transitionPath}.cases[{caseIndex}]' has invalid when.path: {condition.Path}");
+            errors.Add(whenPathError);
         }
 
         if (string.IsNullOrWhiteSpace(condition.Op))
@@ -576,26 +585,18 @@ public static class Level1Validator
         string? key,
         List<string> errors)
     {
-        if (SysPathCall.IsValidCallPath(path))
+        var validity = ExecutionContextReadPath.Classify(path);
+        if (validity is ReadPathValidity.Valid)
         {
             return;
         }
 
-        if (SysPathCall.IsCallPathCandidate(path))
-        {
-            var detail = SysPathCall.FormatAllowedCallPathsHint();
-            errors.Add(key is null
-                ? $"input.path is invalid for state '{stateName}': {path} ({detail})"
-                : $"input.path is invalid for state '{stateName}' key '{key}': {path} ({detail})");
-            return;
-        }
-
-        if (!SimpleJsonPath.IsValid(path))
-        {
-            errors.Add(key is null
-                ? $"input.path is invalid for state '{stateName}': {path}"
-                : $"input.path is invalid for state '{stateName}' key '{key}': {path}");
-        }
+        var message = key is null
+            ? $"input.path is invalid for state '{stateName}': {path}"
+            : $"input.path is invalid for state '{stateName}' key '{key}': {path}";
+        errors.Add(validity is ReadPathValidity.InvalidCallPath
+            ? $"{message} ({ExecutionContextReadPath.FormatAllowedCallPathsHint()})"
+            : message);
     }
 
     private static void ValidateStateOutput(string stateName, StateDefinition stateDef, List<string> errors)

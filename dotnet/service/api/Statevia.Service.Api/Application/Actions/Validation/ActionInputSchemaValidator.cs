@@ -145,9 +145,17 @@ internal static class ActionInputSchemaValidator
             return;
         }
 
-        if (!SimpleJsonPath.IsValid(path))
+        // 定義の Loader・Level1 と同じ読み取りパスの判定（許可された $.sys の CallPath も受理する）。
+        switch (ExecutionContextReadPath.Classify(path))
         {
-            context.Add(jsonPath, $"Invalid JSONPath expression '{path}'.");
+            case ReadPathValidity.Valid:
+                break;
+            case ReadPathValidity.InvalidCallPath:
+                context.Add(jsonPath, $"Invalid JSONPath expression '{path}' ({ExecutionContextReadPath.FormatAllowedCallPathsHint()}).");
+                break;
+            case ReadPathValidity.InvalidPath:
+                context.Add(jsonPath, $"Invalid JSONPath expression '{path}'.");
+                break;
         }
     }
 

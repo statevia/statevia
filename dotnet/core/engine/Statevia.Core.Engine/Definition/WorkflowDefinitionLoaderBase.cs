@@ -83,11 +83,7 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
         RejectTemplate(ownerLabel, s);
         if (IsPathExpression(s))
         {
-            if (!SimpleJsonPath.IsValid(s))
-            {
-                throw new ArgumentException(Format(ownerLabel, $"invalid input path: '{s}'."));
-            }
-
+            EnsureReadPath(s, ownerLabel, $"invalid input path: '{s}'");
             return new StateInputDefinition { Path = s };
         }
 
@@ -121,11 +117,7 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
             return null;
         }
 
-        if (!SimpleJsonPath.IsValid(onlyPath))
-        {
-            throw new ArgumentException(Format(ownerLabel, $"invalid input.path: '{onlyPath}'."));
-        }
-
+        EnsureReadPath(onlyPath, ownerLabel, $"invalid input.path: '{onlyPath}'");
         return new StateInputDefinition { Path = onlyPath };
     }
 
@@ -252,17 +244,34 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
             return new StateInputValueDefinition { Literal = str };
         }
 
-        if (!SimpleJsonPath.IsValid(str))
-        {
-            throw new ArgumentException(Format(ownerLabel, $"invalid input path for key '{key}': '{str}'."));
-        }
-
+        EnsureReadPath(str, ownerLabel, $"invalid input path for key '{key}': '{str}'");
         return new StateInputValueDefinition { Path = str };
     }
 
     /// <summary>
+    /// <paramref name="path"/> が読み取りパス（許可された CallPath、または SimpleJsonPath）でなければ例外を投げる。
+    /// </summary>
+    /// <param name="path">パス式。</param>
+    /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
+    /// <param name="message">末尾の句点を除いたエラーメッセージ。CallPath の誤りには許可一覧を添える。</param>
+    /// <exception cref="ArgumentException">読み取りパスとして受理できないとき。</exception>
+    private static void EnsureReadPath(string path, string? ownerLabel, string message)
+    {
+        var detail = ExecutionContextReadPath.Classify(path) switch
+        {
+            ReadPathValidity.Valid => null,
+            ReadPathValidity.InvalidCallPath => $"{message} ({ExecutionContextReadPath.FormatAllowedCallPathsHint()}).",
+            _ => $"{message}."
+        };
+        if (detail is not null)
+        {
+            throw new ArgumentException(Format(ownerLabel, detail));
+        }
+    }
+
+    /// <summary>
     /// YAML の <c>when</c> オブジェクト（<c>path</c> / <c>op</c> / <c>value</c>）から条件式を構築する。
-    /// <c>path</c> は <see cref="SimpleJsonPath.IsValid"/> で検証する。
+    /// <c>path</c> は <see cref="ExecutionContextReadPath.Classify"/> で検証する（許可された CallPath も受理する）。
     /// </summary>
     /// <param name="whenDict"><c>when</c> の辞書。</param>
     /// <param name="ownerLabel">エラーメッセージ用（例: nodes のノード id）。省略時はメッセージのみ。</param>
@@ -281,10 +290,7 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
             throw new ArgumentException(Format(ownerLabel, "when requires non-empty 'path'."));
         }
 
-        if (!SimpleJsonPath.IsValid(path))
-        {
-            throw new ArgumentException(Format(ownerLabel, $"invalid when.path: '{path}'."));
-        }
+        EnsureReadPath(path, ownerLabel, $"invalid when.path: '{path}'");
 
         if (string.IsNullOrWhiteSpace(op))
         {

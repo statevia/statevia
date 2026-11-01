@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.14 |
+| Version | 1.5.15 |
 | 更新日 | 2026-11-01 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.15（2026-11-01）**: `$.sys.now("format")` / `$.sys.utcNow("format")` を書ける場所を明記する（States / Nodes の `input` と条件遷移の `when.path`、Action の input でパスを受け付ける項目）。許可されていない呼び出しは登録時に 422 で、許可一覧を返す（§1.6）。
 
 **Version 1.5.14（2026-11-01）**: Hosted Fork の枝の中でも `$.input` はワークフロー開始 input を指す。枝の先頭の input 写像は親の Context で 1 回だけ評価し、子では評価し直さない（§1.6、[execution/fork-join.md](execution/fork-join.md)）。
 
@@ -390,7 +392,7 @@ Hosted Fork の枝（子 execution）でも `input` はワークフロー開始�
 
 #### `$.sys` 関数呼び出し（許可リスト）
 
-SimpleJsonPath のプロパティ参照に加え、次の**完全一致**の関数呼び出しを `input` パス（および同じ評価根の読み取りパス）で許可する。
+SimpleJsonPath のプロパティ参照に加え、次の**完全一致**の関数呼び出しを、Execution Context を根とする読み取りパスで許可する。
 
 | 式 | 意味 |
 | --- | --- |
@@ -402,9 +404,31 @@ SimpleJsonPath のプロパティ参照に加え、次の**完全一致**の関�
 - `$.sys.now` → ISO-8601（引数なしプロパティ）
 - `$.sys.now("yyyyMMdd")` → 例: `20260726`（8 桁）
 
+書ける場所（States 形式・Nodes 形式で同じ）:
+
+- 状態の `input`: マップの値、ドットキーの値、`input.path`、スカラーの `input`
+- 条件遷移の `when.path`: States 形式の `on.<Fact>.cases[].when`、Nodes 形式の `edges[].when`
+- Action の input のうち、パスを受け付ける項目（スキーマの値の種類が `literalOrPath` / `path` のもの）
+
+```yaml
+states:
+  Route:
+    input:
+      day: $.sys.now("yyyyMMdd")
+    on:
+      Completed:
+        cases:
+          - when:
+              path: $.sys.now("MMdd")
+              op: eq
+              value: "0101"
+            next: NewYear
+        default: Normal
+```
+
 制約:
 
-- `format` は二重引用符で囲む（1〜64 文字）。単引用符のみ・空呼び出し・複数引数は Level1 error
+- `format` は二重引用符で囲む（1〜64 文字）。単引用符のみ・空呼び出し・複数引数は登録時に 422。メッセージに許可された呼び出しの一覧が入る
 - `IFormatProvider` は `CultureInfo.InvariantCulture` 固定
 - 書式の意味妥当性は実行時（無効なら値 `null` + 警告）。Level1 は構文・許可リスト・長さのみ
 - **未対応**: `$.sys.today("…")`、未登録関数、呼び出し後のドット連結（例: `$.sys.now("yyyy").length`）
