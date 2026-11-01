@@ -52,4 +52,11 @@ public static class ApiErrorResult
     public static ObjectResult Conflict(string code, string message, object? details = null)
         => new(new ErrorResponse { Error = new ApiError { Code = code, Message = message, Details = details } })
         { StatusCode = StatusCodes.Status409Conflict };
+
+    /// <summary>413 Payload Too Large の <see cref="ObjectResult"/> を生成する。</summary>
+    /// <param name="message">説明メッセージ。上限値など内部構成に依存しない文言にする。</param>
+    /// <returns>PAYLOAD_TOO_LARGE のエラーボディ。</returns>
+    public static ObjectResult PayloadTooLarge(string message = "Request body too large")
+        => new(new ErrorResponse { Error = new ApiError { Code = "PAYLOAD_TOO_LARGE", Message = message } })
+        { StatusCode = StatusCodes.Status413PayloadTooLarge };
 }

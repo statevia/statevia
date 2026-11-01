@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Statevia.Core.Application.Contracts.Validation;
 using Statevia.Infrastructure.Persistence;
 using System.Net;
 using System.Net.Http.Headers;
@@ -103,6 +104,29 @@ public sealed class DefinitionsValidateApiIntegrationTests : IClassFixture<Secur
             "VALIDATION_ERROR",
             document.RootElement.GetProperty("error").GetProperty("code").GetString());
         Assert.Equal(0, await CountDefinitionsAsync());
+    }
+
+    /// <summary>yaml が UTF-8 上限を超えると、ボディ上限内でも 422 VALIDATION_ERROR（field=yaml）になる。</summary>
+    [Fact]
+    public async Task PostValidate_YamlExceedsMaxBytes_ReturnsValidationError()
+    {
+        // Arrange
+        using var client = await CreateWriterClientAsync("validate-yaml-too-large@example.com");
+        var yaml = new string('a', DefinitionYamlConstraints.MaxUtf8Bytes + 1);
+
+        // Act
+        using var response = await client.PostAsJsonAsync(
+            new Uri("/v1/definitions/validate", UriKind.Relative),
+            new { yaml });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        Assert.Equal(
+            "VALIDATION_ERROR",
+            document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Contains(DefinitionYamlConstraints.TooLargeErrorMessage, body, StringComparison.Ordinal);
     }
 
     private async Task<HttpClient> CreateWriterClientAsync(string loginIdentifier)

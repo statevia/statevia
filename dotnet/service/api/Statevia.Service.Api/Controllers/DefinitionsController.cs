@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Statevia.Core.Application.Contracts.Validation;
 using Statevia.Service.Api.Contracts;
 
 namespace Statevia.Service.Api.Controllers;
@@ -6,6 +7,9 @@ namespace Statevia.Service.Api.Controllers;
 /// <summary>
 /// ワークフロー定義 REST API（<c>/v1/definitions</c>）。
 /// </summary>
+/// <remarks>
+/// 定義 YAML を受け取る作成・検証・publish は <see cref="DefinitionYamlConstraints.MaxRequestBodyBytes"/> でボディを打ち切る（超過は 413）。
+/// </remarks>
 [ApiController]
 [Route("v1/definitions")]
 public class DefinitionsController : ControllerBase
@@ -24,6 +28,7 @@ public class DefinitionsController : ControllerBase
 
     /// <summary>POST /v1/definitions — 定義を登録。name + yaml + projectId を受け取り、検証・コンパイルして保存。</summary>
     [HttpPost]
+    [RequestSizeLimit(DefinitionYamlConstraints.MaxRequestBodyBytes)]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<DefinitionResponse>> Create(
         [FromBody] CreateDefinitionRequest request,
@@ -35,6 +40,7 @@ public class DefinitionsController : ControllerBase
 
     /// <summary>POST /v1/definitions/validate — 定義 YAML を検証する。catalog へは保存しない。</summary>
     [HttpPost("validate")]
+    [RequestSizeLimit(DefinitionYamlConstraints.MaxRequestBodyBytes)]
     [ProducesResponseType(typeof(ValidateDefinitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ValidateDefinitionResponse>> Validate(
         [FromBody] ValidateDefinitionRequest request,
@@ -46,6 +52,7 @@ public class DefinitionsController : ControllerBase
 
     /// <summary>PUT /v1/definitions/{id} — 定義を更新。name + yaml を受け取り、検証・コンパイルして保存。</summary>
     [HttpPut("{id}")]
+    [RequestSizeLimit(DefinitionYamlConstraints.MaxRequestBodyBytes)]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<DefinitionResponse>> Update(
         string id,
