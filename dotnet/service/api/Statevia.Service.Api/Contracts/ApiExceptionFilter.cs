@@ -7,7 +7,7 @@ using Statevia.Service.Api.Hosting;
 namespace Statevia.Service.Api.Contracts;
 
 /// <summary>
-/// 例外から契約エラー（404 / 422 / 500）への写像を一箇所に集約するためのフィルター。
+/// 例外から契約エラー（404 / 413 / 422 / 500）への写像を一箇所に集約するためのフィルター。
 /// </summary>
 public sealed class ApiExceptionFilter : IExceptionFilter
 {
@@ -57,6 +57,8 @@ public sealed class ApiExceptionFilter : IExceptionFilter
                 "MODULE_VERSION_RESOLUTION_FAILED",
                 versionResolution.Message),
             ArgumentException arg => ApiErrorResult.ValidationError(arg.Message),
+            // [RequestSizeLimit] 超過時に Kestrel がボディ読み込み（モデルバインド）で投げる。想定内のため 500 にしない。
+            BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } => ApiErrorResult.PayloadTooLarge(),
             _ => LogInternalError(context.HttpContext, ex)
         };
 

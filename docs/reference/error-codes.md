@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.3 |
-| 更新日 | 2026-10-25 |
+| Version | 1.4 |
+| 更新日 | 2026-11-01 |
 | 関連 | [api-http.md](../specifications/api-http.md), [data-integration.md](../specifications/data-integration.md) |
 
 ---
 
 Service API が返す `error.code` の**調べ物**一覧。Normative 契約は [api-http.md](../specifications/api-http.md) §4.3、[data-integration.md](../specifications/data-integration.md) §7 を正とする。
+
+**Version 1.4（2026-11-01）**: リクエストボディ上限超過の `PAYLOAD_TOO_LARGE`（413）を載せる。
 
 **Version 1.3（2026-10-25）**: `RESOURCE_GRANT_DENIED` は閲覧・開始・再開・取消にも使う。
 
@@ -68,6 +70,12 @@ Service API が返す `error.code` の**調べ物**一覧。Normative 契約は 
 | --- | --- | --- |
 | `IDEMPOTENCY_KEY_CONFLICT` | 同一 `X-Idempotency-Key` で本文が異なる | `POST /v1/executions` のみ |
 | `STATE_CONFLICT` | 状態競合（例: 未削除定義の復元） | catalog restore |
+
+### 413 Payload Too Large
+
+| `error.code` | 典型状況 | 備考 |
+| --- | --- | --- |
+| `PAYLOAD_TOO_LARGE` | リクエストボディが `[RequestSizeLimit]` の上限を超えた | 定義の作成・検証・publish（2MiB）。YAML 自体の上限超過は 422 |
 
 ### 422 Unprocessable Entity
 

@@ -187,11 +187,11 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 **POST /v1/definitions** — リクエスト / 応答スキーマは OpenAPI の `CreateDefinitionRequest` / `DefinitionResponse`（`201 Created`）を参照。
 
-- `name` / `yaml` / `projectId` 必須。`projectId` の省略と空 GUID は **422**（`field=projectId`）。`default` へは落とさない。未所属または当該テナントに無い Project は **404**。Publisher 未満は **403**（`PROJECT_ACCESS_DENIED`）。`name` は ASCII 識別子（1〜100。先頭英字）。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
+- `name` / `yaml` / `projectId` 必須。`yaml` は UTF-8 で **262144 バイト（256KB）以内**。超過は **422**（`field=yaml`。Studio の上限と同値）。リクエストボディ全体が 2MiB（2097152 バイト）を超えると、モデルバインド前に打ち切って **413**（`PAYLOAD_TOO_LARGE`）。2MiB は JSON エスケープで膨らんでも上限内の YAML が必ず収まる大きさ。`projectId` の省略と空 GUID は **422**（`field=projectId`）。`default` へは落とさない。未所属または当該テナントに無い Project は **404**。Publisher 未満は **403**（`PROJECT_ACCESS_DENIED`）。`name` は ASCII 識別子（1〜100。先頭英字）。検証・コンパイルして **初版（version=1）** を `definition_versions` に保存し、`definitions` 行を作成。新規行では `updatedAt` は `createdAt` と同一。`latestVersion` は `1`。不正時は 422（`error.details` に field/message を含む）。
 
 ### 2.1.0 定義検証（dry-run）
 
-**POST /v1/definitions/validate** — リクエストは OpenAPI の `ValidateDefinitionRequest`（`yaml` 必須、`name` 任意）。応答は `ValidateDefinitionResponse`（**200 OK**）。
+**POST /v1/definitions/validate** — リクエストは OpenAPI の `ValidateDefinitionRequest`（`yaml` 必須、`name` 任意）。`yaml` のサイズ上限は create と同じ（UTF-8 で 262144 バイト以内。超過は **422**。ボディ 2MiB 超過は **413**）。応答は `ValidateDefinitionResponse`（**200 OK**）。
 
 - create / publish と同じ `ValidateAndCompile`（states / nodes）。`definitions` / `definition_versions` は増やさない。プロジェクト行も作らない。
 - 権限は **`definitions.write`**。認証なしは **401**、権限不足は **403**（`PERMISSION_DENIED`）。
@@ -205,7 +205,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 **PUT /v1/definitions/{id}**
 
 - `id`: displayId または UUID
-- Request: `POST` と同形（`name`, `yaml` 必須）
+- Request: `POST` と同形（`name`, `yaml` 必須）。`yaml` のサイズ上限も `POST` と同じ（ボディ 2MiB 超過の 413 も同じ）
 - 既存版は変更せず **新版を append** する（mutable 上書きではない）。
 - Response: **200 OK**、`DefinitionResponse`（`latestVersion` が増加。`GET` と同様に **最新版**の `yaml` を含む）。
 - 存在しない／他テナント: **404**。検証・コンパイル失敗: **422**（`POST` と同様の `error.details`）。
@@ -741,7 +741,7 @@ Principal 解決後、サービス層で **semantic permission key** を評価�
 
 | レイヤー | 責務 | 代表例 |
 | --- | --- | --- |
-| Data Annotations + `[ApiController]` | **形式検証**（必須・範囲・空白のみ拒否）。失敗時はアクション未実行で 422 | `limit` 1–500、`name` 非空白、`LoginRequest` |
+| Data Annotations + `[ApiController]` | **形式検証**（必須・範囲・空白のみ拒否・UTF-8 バイト上限）。失敗時はアクション未実行で 422 | `limit` 1–500、`name` 非空白、`LoginRequest` |
 | サービス層 | **ドメイン検証**（YAML コンパイル、Engine 不在、slug 競合等） | `ApiValidationException` → `ApiExceptionFilter` |
 | ミドルウェア | 認証・テナント境界 | JWT / API キー、`X-Tenant-Id` |
 

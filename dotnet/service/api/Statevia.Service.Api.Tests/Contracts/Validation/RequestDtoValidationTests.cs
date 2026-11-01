@@ -38,6 +38,77 @@ public sealed class RequestDtoValidationTests
         Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(ValidateDefinitionRequest.Name)));
     }
 
+    /// <summary>定義作成で yaml が上限ちょうどのバイト数なら yaml の検証は成功する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenYamlAtMaxBytes_PassesYamlValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest
+        {
+            Name = "order",
+            Yaml = new string('a', DefinitionYamlConstraints.MaxUtf8Bytes),
+            ProjectId = Guid.NewGuid(),
+        };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
+    /// <summary>定義作成で yaml が上限を 1 バイト超えると検証失敗する。</summary>
+    [Fact]
+    public void CreateDefinitionRequest_WhenYamlExceedsMaxBytes_FailsValidation()
+    {
+        // Arrange
+        var request = new CreateDefinitionRequest
+        {
+            Name = "order",
+            Yaml = new string('a', DefinitionYamlConstraints.MaxUtf8Bytes + 1),
+            ProjectId = Guid.NewGuid(),
+        };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        var yamlError = Assert.Single(results, r => r.MemberNames.Contains(nameof(CreateDefinitionRequest.Yaml)));
+        Assert.Equal(DefinitionYamlConstraints.TooLargeErrorMessage, yamlError.ErrorMessage);
+    }
+
+    /// <summary>定義 publish で yaml が上限を超えると検証失敗する。</summary>
+    [Fact]
+    public void UpdateDefinitionRequest_WhenYamlExceedsMaxBytes_FailsValidation()
+    {
+        // Arrange
+        var request = new UpdateDefinitionRequest
+        {
+            Name = "order",
+            Yaml = new string('a', DefinitionYamlConstraints.MaxUtf8Bytes + 1),
+        };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(UpdateDefinitionRequest.Yaml)));
+    }
+
+    /// <summary>定義検証（dry-run）でも yaml が上限を超えると検証失敗する。</summary>
+    [Fact]
+    public void ValidateDefinitionRequest_WhenYamlExceedsMaxBytes_FailsValidation()
+    {
+        // Arrange
+        var request = new ValidateDefinitionRequest { Yaml = new string('a', DefinitionYamlConstraints.MaxUtf8Bytes + 1) };
+
+        // Act
+        var results = Validate(request);
+
+        // Assert
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(ValidateDefinitionRequest.Yaml)));
+    }
+
     /// <summary>ログイン空入力は検証失敗する。</summary>
     [Fact]
     public void LoginRequest_WhenFieldsEmpty_FailsValidation()

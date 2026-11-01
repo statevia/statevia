@@ -14,9 +14,10 @@ public sealed class CreateDefinitionRequest : IValidatableObject
     [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string Name { get; set; } = "";
 
-    /// <summary>定義ソース YAML。</summary>
+    /// <summary>定義ソース YAML。UTF-8 で <see cref="DefinitionYamlConstraints.MaxUtf8Bytes"/> バイト以内。</summary>
     [Required(ErrorMessage = "Definition YAML is required.")]
     [NotWhitespace(ErrorMessage = "Definition YAML is required.")]
+    [MaxUtf8Bytes(DefinitionYamlConstraints.MaxUtf8Bytes, ErrorMessage = DefinitionYamlConstraints.TooLargeErrorMessage)]
     public string Yaml { get; set; } = "";
 
     /// <summary>所属先 Project。省略と空 GUID は検証失敗。未所属は 404。</summary>
@@ -38,9 +39,10 @@ public sealed class ValidateDefinitionRequest : IValidatableObject
     [MaxLength(IdentifierConstraints.DefinitionNameMaxLength)]
     public string? Name { get; set; }
 
-    /// <summary>定義ソース YAML。</summary>
+    /// <summary>定義ソース YAML。UTF-8 で <see cref="DefinitionYamlConstraints.MaxUtf8Bytes"/> バイト以内。</summary>
     [Required(ErrorMessage = "Definition YAML is required.")]
     [NotWhitespace(ErrorMessage = "Definition YAML is required.")]
+    [MaxUtf8Bytes(DefinitionYamlConstraints.MaxUtf8Bytes, ErrorMessage = DefinitionYamlConstraints.TooLargeErrorMessage)]
     public string Yaml { get; set; } = "";
 
     /// <inheritdoc />
@@ -77,9 +79,10 @@ public sealed class UpdateDefinitionRequest
     [RegularExpression(IdentifierConstraints.AllowedPattern, ErrorMessage = IdentifierConstraints.FormatErrorMessage)]
     public string Name { get; set; } = "";
 
-    /// <summary>定義ソース YAML。</summary>
+    /// <summary>定義ソース YAML。UTF-8 で <see cref="DefinitionYamlConstraints.MaxUtf8Bytes"/> バイト以内。</summary>
     [Required(ErrorMessage = "Definition YAML is required.")]
     [NotWhitespace(ErrorMessage = "Definition YAML is required.")]
+    [MaxUtf8Bytes(DefinitionYamlConstraints.MaxUtf8Bytes, ErrorMessage = DefinitionYamlConstraints.TooLargeErrorMessage)]
     public string Yaml { get; set; } = "";
 }
 
