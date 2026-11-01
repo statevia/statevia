@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.17 |
-| 更新日 | 2026-10-31 |
+| Version | 1.18 |
+| 更新日 | 2026-11-01 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
+
+**Version 1.18（2026-11-01）**: Service API / Worker をホストの VS Code で動かし、ほかをコンテナのままにするデバッグ手順と `compose/debug-host-api.yml` を追加。
 
 **Version 1.17（2026-10-31）**: Action Module のソース（`dotnet/modules/`）と、実行時の modules ルート（リポジトリルートの `modules/`）の分担を追記。
 
@@ -115,6 +117,41 @@ COMPOSE_FILE=docker-compose.yml;compose/split-runtime.yml;compose/logging.yml;co
 ```
 
 `compose/` の中のファイルの相対パス（`./dotnet`、`./modules`、`./compose/logging/...`）は、最初に指定する `docker-compose.yml` の場所（リポジトリルート）を基準に解決されます。`docker compose` はリポジトリルートで実行してください。
+
+## VS Code でデバッグする（任意）
+
+コンテナのイメージは Release ビルドで、デバッガも入っていません。ブレークポイントで止めたいサービスだけをホストの VS Code で動かし、ほかはコンテナのままにします。ランタイム分離の構成では、ワークフローの実行（Engine）は worker が担います。API の処理を追うなら Service API、実行を追うなら Worker をホストで動かします。
+
+| 動かすもの | compose 側の操作 | ホストのプロセスの待受・接続先 |
+| ---------- | ---------------- | ------------------------------ |
+| Service API | `compose/debug-host-api.yml` を最後に重ねる。`service-api` コンテナを起動せず、`ui-studio` は `http://host.docker.internal:8080` へつなぐ | `http://localhost:8080` で待ち受ける |
+| Worker | `--scale worker=0` を付けて起動する | — |
+
+Service API をホストで動かすときは次のように起動します。既に動いている `service-api` コンテナは、この `up` では止まりません。先に `docker compose stop service-api` で止めます。
+
+```bash
+docker compose -f docker-compose.yml -f compose/split-runtime.yml \
+  -f compose/logging.yml -f compose/logging-split.yml \
+  -f compose/debug-host-api.yml up -d --build
+```
+
+Worker をホストで動かすときは、いつもの重ね合わせに `--scale worker=0` を付けます。
+
+ホストのプロセスには、コンテナと同じ設定を `localhost` 宛てで渡します（VS Code では `launch.json` の `env`）。
+
+| 変数 | 値 |
+| ---- | -- |
+| `DATABASE_URL` | `postgres://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/<POSTGRES_DB>` |
+| `STATEVIA_MODULES_PATH` | リポジトリルートの `modules/`（コンテナがマウントする場所と同じ） |
+| `Statevia__ActionHost__BaseUrl` | `http://localhost:5001`。`Endpoints` は付けない。Windows では値が空の環境変数が渡らず、appsettings の `BaseUrl` が残って併記の起動時検証で落ちる |
+| `ASPNETCORE_ENVIRONMENT`（Worker は `DOTNET_ENVIRONMENT` も） | `Development` |
+| `ASPNETCORE_URLS`（Service API のみ） | `http://localhost:8080` |
+| `Statevia__Runtime__EnableInProcess*`（Service API のみ） | 分離構成では 4 つとも `false`。`true` のままだと worker コンテナと二重に実行する |
+
+注意点:
+
+- ホストで動かしたプロセスのログは VS Code のコンソールに出ます。fluentd ドライバを通らないので、Grafana には届きません。
+- 元に戻すときは、`compose/debug-host-api.yml` と `--scale worker=0` を外して `up -d` します。
 
 ## ヘルス
 
