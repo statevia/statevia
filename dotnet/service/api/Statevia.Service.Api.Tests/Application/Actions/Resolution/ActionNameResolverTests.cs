@@ -1,6 +1,7 @@
 using Statevia.Core.Engine.Definition;
 using Statevia.Service.Api.Application.Actions;
 using Statevia.Service.Api.Application.Actions.Resolution;
+using System.Reflection;
 
 namespace Statevia.Service.Api.Tests.Application.Actions.Resolution;
 
@@ -208,5 +209,77 @@ public sealed class ActionNameResolverTests
 
         // Assert
         Assert.Null(resolved.States["W"].Action);
+    }
+
+    /// <summary>action を解決する状態でも、output（vars への書き込み先）を保持する。</summary>
+    [Fact]
+    public void Resolve_ActionStateWithOutput_KeepsOutput()
+    {
+        // Arrange
+        var def = new WorkflowDefinition
+        {
+            Name = "W",
+            States = new Dictionary<string, StateDefinition>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["A"] = new StateDefinition
+                {
+                    Action = WellKnownActionIds.NoOpCanonical,
+                    Output = "$.vars.order",
+                    On = new Dictionary<string, TransitionDefinition>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Completed"] = new TransitionDefinition { End = true },
+                    },
+                },
+            },
+        };
+
+        // Act
+        var resolved = ActionNameResolver.Resolve(def);
+
+        // Assert
+        Assert.Equal("$.vars.order", resolved.States["A"].Output);
+    }
+
+    /// <summary>
+    /// action を解決する状態は、Action 以外の初期化可能なプロパティをすべて元の値のまま引き継ぐ。
+    /// StateDefinition に項目を足したとき、Resolver の写し漏れをこのテストで検出する。
+    /// </summary>
+    [Fact]
+    public void Resolve_ActionState_CopiesEveryInitPropertyExceptAction()
+    {
+        // Arrange
+        var original = new StateDefinition
+        {
+            Action = WellKnownActionIds.NoOpCanonical,
+            On = new Dictionary<string, TransitionDefinition>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Completed"] = new TransitionDefinition { End = true },
+            },
+            Input = new StateInputDefinition { Path = "$.input.orderId" },
+            Output = "$.vars.order",
+            Retry = new RetryDefinition { Limit = 3 },
+        };
+        var def = new WorkflowDefinition
+        {
+            Name = "W",
+            States = new Dictionary<string, StateDefinition>(StringComparer.OrdinalIgnoreCase) { ["A"] = original },
+        };
+        var copiedProperties = typeof(StateDefinition)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(property => property.SetMethod is not null && property.Name != nameof(StateDefinition.Action))
+            .ToList();
+
+        // Wait / Join を持つ状態は解決対象外なので、ここでは null のまま比べる。
+        // それ以外の項目は、写し漏れを検出できるよう元の値を必ず埋める（新しい項目を足したらここで失敗する）。
+        var propertiesRequiringValue = copiedProperties
+            .Where(property => property.Name is not (nameof(StateDefinition.Wait) or nameof(StateDefinition.Join)))
+            .ToList();
+
+        // Act
+        var resolved = ActionNameResolver.Resolve(def).States["A"];
+
+        // Assert
+        Assert.All(propertiesRequiringValue, property => Assert.NotNull(property.GetValue(original)));
+        Assert.All(copiedProperties, property => Assert.Same(property.GetValue(original), property.GetValue(resolved)));
     }
 }
