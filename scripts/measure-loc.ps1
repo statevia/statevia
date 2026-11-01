@@ -236,6 +236,51 @@ function Measure-PathGroup {
     }
 }
 
+function Measure-GitChurn {
+    <#
+    .SYNOPSIS
+      HEAD から辿れる全コミットの追加・削除行数の累計を git log --numstat で集計する。
+    .OUTPUTS
+      Added / Deleted / Net / BinaryEntries / Commits / NonMergeCommits を持つ ordered hashtable。
+    .NOTES
+      対象はコード以外の文書も含む全ファイル。マージコミットは --numstat が差分を出さないため行数に含まれない
+      （取り込まれた変更は元のコミット側で数えるので二重計上にはならない）。
+      バイナリファイルは行数が "-" になるため除外し、件数だけ BinaryEntries に数える。
+      git が使えない、またはリポジトリでない場合は例外を投げる。
+    #>
+    $numstatLines = & git -C $RepoRoot log --numstat --pretty=tformat:
+    if ($LASTEXITCODE -ne 0) {
+        throw "git log の実行に失敗しました (exit code $LASTEXITCODE)。"
+    }
+
+    $churn = [ordered]@{
+        Added           = [long]0
+        Deleted         = [long]0
+        Net             = [long]0
+        BinaryEntries   = 0
+        Commits         = [int](& git -C $RepoRoot rev-list --count HEAD)
+        NonMergeCommits = [int](& git -C $RepoRoot rev-list --count --no-merges HEAD)
+    }
+
+    foreach ($line in $numstatLines) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            continue
+        }
+
+        $columns = $line -split "`t", 3
+        if ($columns[0] -eq '-') {
+            $churn.BinaryEntries++
+            continue
+        }
+
+        $churn.Added += [long]$columns[0]
+        $churn.Deleted += [long]$columns[1]
+    }
+
+    $churn.Net = $churn.Added - $churn.Deleted
+    return $churn
+}
+
 function Write-SummaryTable {
     param([array]$Rows)
 
@@ -498,10 +543,13 @@ foreach ($component in $measuredComponents) {
     }
 }
 
+$gitChurn = Measure-GitChurn
+
 $report = [ordered]@{
     GeneratedAt = (Get-Date).ToString('o')
     RepoRoot    = $RepoRoot
     Notes       = @(
+        'GitChurn = HEAD から辿れる全コミットの追加・削除行数の累計（全ファイル対象、マージコミットとバイナリは行数に含めない、未コミットの変更は対象外）'
         'Physical = 物理行数（空行・コメント含む）'
         'Code = 実効コード行数（空行・行コメント・ブロックコメントを除く）'
         'dotnet/core/engine/samples・dotnet/tests/Fixtures は対象プロジェクト定義に含めない'
@@ -522,6 +570,7 @@ $report = [ordered]@{
             }.Invoke())
         }
     }
+    GitChurn = $gitChurn
     Components = [ordered]@{
         engine = [ordered]@{
             product = $engineProduct
@@ -582,6 +631,10 @@ Write-Output ''
 Write-Output ('Product total : Physical {0}, Code {1}, Files {2}' -f $grandProduct.Physical, $grandProduct.Code, $grandProduct.Files)
 Write-Output ('Test total    : Physical {0}, Code {1}, Files {2}' -f $grandTest.Physical, $grandTest.Code, $grandTest.Files)
 Write-Output ('Grand total   : Physical {0}, Code {1}, Files {2}' -f $report.Summary.Totals.All.Physical, $report.Summary.Totals.All.Code, $report.Summary.Totals.All.Files)
+Write-Output ''
+Write-Output '=== Git churn (全コミット累計・全ファイル) ==='
+Write-Output ('Added {0}, Deleted {1}, Net {2}' -f $gitChurn.Added, $gitChurn.Deleted, $gitChurn.Net)
+Write-Output ('Commits {0} (non-merge {1}), Binary entries {2}' -f $gitChurn.Commits, $gitChurn.NonMergeCommits, $gitChurn.BinaryEntries)
 
 if (-not $Detailed) {
     Write-Output ''
