@@ -122,9 +122,20 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
     }
 
     /// <summary>複数キーの input マップを <c>values</c> 付き <see cref="StateInputDefinition"/> に解釈する。</summary>
+    /// <remarks>
+    /// <para>
+    /// 空でないネスト map は <c>親.子</c> のドットキーへ展開する（<see cref="FlattenStrictInputEntry"/>）。
+    /// 例: <c>body: { orderId: $.x, currency: JPY }</c> は <c>body.orderId</c>（path）と <c>body.currency</c>（literal）になる。
+    /// ドットキーで書いた場合と同じフラットな <c>values</c> になり、実行時は同じ論理ツリーに組み上がる。
+    /// </para>
+    /// <para>
+    /// 展開後の論理キーは、大文字小文字を区別せずに重複と競合（あるキーが別キーのドット区切りの親になる。例: <c>ship</c> と <c>ship.address</c>）を検査し、どちらも拒否する。
+    /// </para>
+    /// </remarks>
     /// <param name="map">キーと値の input 辞書。</param>
     /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
-    /// <returns>各キーを path または literal として解釈した定義。</returns>
+    /// <returns>各論理キーを path または literal として解釈した定義。</returns>
+    /// <exception cref="ArgumentException">不正なパス・テンプレート・空キー・配列の中のパス式・論理キーの重複や競合があるとき。</exception>
     private static StateInputDefinition ParseStrictInputFromMap(
         Dictionary<string, object?> map,
         string? ownerLabel)
@@ -135,13 +146,121 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
         }
 
         var values = new Dictionary<string, StateInputValueDefinition>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, raw) in map)
+        foreach (var (logicalKey, value) in map.SelectMany(entry => FlattenStrictInputEntry(entry.Key, entry.Value, ownerLabel)))
         {
-            values[key] = ParseStrictInputValue(raw, key, ownerLabel);
+            if (!values.TryAdd(logicalKey, value))
+            {
+                throw new ArgumentException(Format(ownerLabel, $"duplicate input key '{logicalKey}'."));
+            }
         }
 
+        RejectConflictingInputKeys(values.Keys, ownerLabel);
         return new StateInputDefinition { Values = values };
     }
+
+    /// <summary>
+    /// input マップの 1 エントリを、論理キー（ドットキー）と値定義の組へ展開する。
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item><description>文字列: <see cref="ParseStrictInputValue"/> で path または literal にする。</description></item>
+    /// <item><description>空でない map: 子キーごとに <c>論理キー.子キー</c> で再帰する。子キーにドットがあれば、そのままネストの区切りになる。</description></item>
+    /// <item><description>配列: 中（入れ子の map・配列を含む）にパス式の形の文字列があれば拒否し、無ければ配列ごと literal にする。</description></item>
+    /// <item><description>空の map・数値・真偽値・null: literal にする。</description></item>
+    /// </list>
+    /// </remarks>
+    /// <param name="logicalKey">このエントリの論理キー（トップレベルではマップのキー）。</param>
+    /// <param name="raw">YAML/JSON 由来の値。</param>
+    /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
+    /// <returns>論理キーと値定義の組の列。</returns>
+    /// <exception cref="ArgumentException">不正なパス・テンプレート・空の子キー・配列の中のパス式があるとき。</exception>
+    private static IEnumerable<KeyValuePair<string, StateInputValueDefinition>> FlattenStrictInputEntry(
+        string logicalKey,
+        object? raw,
+        string? ownerLabel) =>
+        raw switch
+        {
+            string => [new(logicalKey, ParseStrictInputValue(raw, logicalKey, ownerLabel))],
+            IDictionary { Count: > 0 } nested => ToStringDict(nested).SelectMany(child =>
+                FlattenStrictInputEntry(JoinChildKey(logicalKey, child.Key, ownerLabel), child.Value, ownerLabel)),
+            IEnumerable sequence and not IDictionary => [new(logicalKey, ParseStrictInputArray(sequence, logicalKey, ownerLabel))],
+            _ => [new(logicalKey, new StateInputValueDefinition { Literal = raw })]
+        };
+
+    /// <summary>ネスト map の子キーを親の論理キーへ連結する。</summary>
+    /// <param name="parentKey">親の論理キー。</param>
+    /// <param name="childKey">子キー。</param>
+    /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
+    /// <returns><c>親.子</c> の論理キー。</returns>
+    /// <exception cref="ArgumentException">子キーが空または空白だけのとき。</exception>
+    private static string JoinChildKey(string parentKey, string childKey, string? ownerLabel) =>
+        string.IsNullOrWhiteSpace(childKey)
+            ? throw new ArgumentException(Format(ownerLabel, $"input key '{parentKey}' contains an empty child key."))
+            : $"{parentKey}.{childKey}";
+
+    /// <summary>
+    /// 配列の input 値を literal にする。配列の中のパス式は評価できないため拒否する。
+    /// </summary>
+    /// <param name="sequence">配列の値。</param>
+    /// <param name="logicalKey">配列の論理キー。</param>
+    /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
+    /// <returns>配列をそのまま持つ literal の値定義。</returns>
+    /// <exception cref="ArgumentException">配列の中にパス式の形の文字列があるとき（メッセージに <c>items[0]</c> の形の論理パスを示す）。</exception>
+    private static StateInputValueDefinition ParseStrictInputArray(IEnumerable sequence, string logicalKey, string? ownerLabel)
+    {
+        if (FindPathExpressionInArray(sequence, logicalKey) is { } location)
+        {
+            throw new ArgumentException(Format(
+                ownerLabel,
+                $"input key '{location}': path expressions are not allowed inside arrays."));
+        }
+
+        return new StateInputValueDefinition { Literal = sequence };
+    }
+
+    /// <summary>配列（入れ子の map・配列を含む）の中で最初に見つかったパス式の論理パスを返す。</summary>
+    /// <param name="value">走査する値。</param>
+    /// <param name="location">この値の論理パス（例: <c>lines[0].sku</c>）。</param>
+    /// <returns>パス式があればその論理パス。無ければ null。</returns>
+    private static string? FindPathExpressionInArray(object? value, string location) =>
+        value switch
+        {
+            string text => IsPathExpression(text) ? location : null,
+            IDictionary map => ToStringDict(map)
+                .Select(child => FindPathExpressionInArray(child.Value, $"{location}.{child.Key}"))
+                .FirstOrDefault(found => found is not null),
+            IEnumerable sequence => sequence.Cast<object?>()
+                .Select((item, index) => FindPathExpressionInArray(item, $"{location}[{index}]"))
+                .FirstOrDefault(found => found is not null),
+            _ => null
+        };
+
+    /// <summary>
+    /// あるキーが別キーのドット区切りの親になっている組（例: <c>ship</c> と <c>ship.address</c>）を拒否する。
+    /// </summary>
+    /// <remarks>セグメント単位で比べるので、<c>ship</c> と <c>shipping.x</c> は競合としない。</remarks>
+    /// <param name="keys">展開後の論理キー（重複は除去済み）。</param>
+    /// <param name="ownerLabel">エラーメッセージ用のオーナー文脈。省略可。</param>
+    /// <exception cref="ArgumentException">競合する組があるとき。</exception>
+    private static void RejectConflictingInputKeys(IEnumerable<string> keys, string? ownerLabel)
+    {
+        var keySet = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var conflict = keySet
+            .SelectMany(key => EnumerateDottedParents(key).Select(parent => (Parent: parent, Child: key)))
+            .FirstOrDefault(pair => keySet.Contains(pair.Parent));
+        if (conflict.Parent is not null)
+        {
+            throw new ArgumentException(Format(ownerLabel, $"input key '{conflict.Parent}' conflicts with '{conflict.Child}'."));
+        }
+    }
+
+    /// <summary>ドットキーの親キーを列挙する（<c>a.b.c</c> なら <c>a</c>、<c>a.b</c>）。</summary>
+    /// <param name="key">論理キー。</param>
+    /// <returns>親キーの列。</returns>
+    private static IEnumerable<string> EnumerateDottedParents(string key) =>
+        key.Select((character, index) => (character, index))
+            .Where(pair => pair.character == '.' && pair.index > 0)
+            .Select(pair => key[..pair.index]);
 
     /// <summary><c>workflow.modules</c> を syntax parse する（semantic resolution は行わない）。</summary>
     /// <param name="workflowDict"><c>workflow</c> ブロックの辞書。</param>
