@@ -767,6 +767,72 @@ public sealed class NodesWorkflowDefinitionLoaderTests
         Assert.Equal("$.sys.utcNow(\"HHmm\")", definition.States["b"].Input!.Path);
     }
 
+    /// <summary>action ノードの input のネスト map は、中のパス式を path のドットキーへ展開して読み込む。</summary>
+    [Fact]
+    public void Load_ActionInputNestedMap_FlattensToDottedPath()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: NestedInput
+            nodes:
+              - name: start
+                type: start
+                next: a
+              - name: a
+                type: action
+                action: noop
+                input:
+                  body:
+                    orderId: $.input.orderId
+                    currency: JPY
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var definition = _loader.Load(yaml);
+
+        // Assert
+        var values = definition.States["a"].Input!.Values!;
+        Assert.Equal("$.input.orderId", values["body.orderId"].Path);
+        Assert.Equal("JPY", values["body.currency"].Literal);
+        Assert.False(values.ContainsKey("body"));
+    }
+
+    /// <summary>action ノードの input で配列の中にパス式を書くと、ノード名と論理パスを示して拒否する。</summary>
+    [Fact]
+    public void Load_ActionInputPathInsideArray_Throws()
+    {
+        // Arrange
+        var yaml = """
+            version: 1
+            workflow:
+              name: ArrayInput
+            nodes:
+              - name: start
+                type: start
+                next: a
+              - name: a
+                type: action
+                action: noop
+                input:
+                  items:
+                    - $.input.a
+                next: endNode
+              - name: endNode
+                type: end
+            """;
+
+        // Act
+        var ex = Assert.Throws<ArgumentException>(() => _loader.Load(yaml));
+
+        // Assert
+        Assert.Contains("Node 'a': input key 'items[0]': path expressions are not allowed inside arrays.", ex.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>edges の when.path に書いた $.sys の CallPath を条件のパスとして読み込む。</summary>
     [Fact]
     public void Load_ConditionalEdgeWithSysCallPath_ParsesWhenPath()

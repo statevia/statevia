@@ -8,12 +8,10 @@ namespace Statevia.Service.Api.Application.Actions.Validation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Loader は YAML をフラットな <c>Values</c> 辞書として保持する。キーの表記は次の 2 系統がある。
+/// Loader は YAML をフラットな <c>Values</c> 辞書として保持する。ドットキー（<c>ship.address</c>）も
+/// ネスト map（<c>ship: { address: "x" }</c>）も、Loader が <c>Values["ship.address"]</c> のドットキーへ展開する。
+/// そのため、ここに来るリテラルの map は空の map（<c>ship: {}</c>）だけである。
 /// </para>
-/// <list type="bullet">
-/// <item><description>ドットキー — <c>ship.address</c> → <c>Values["ship.address"]</c></description></item>
-/// <item><description>ネスト map — <c>ship: { address: "x" }</c> → <c>Values["ship"].Literal</c> が子 map</description></item>
-/// </list>
 /// <para>
 /// 実行時は <see cref="StateInputEvaluator"/> が <c>SetByDottedKey</c> で同一ツリーに組み立てる。
 /// Compiler の schema 検証も同じ論理ツリーに揃えてから <c>ActionInputSchemaValidator</c> が再帰検証する（フェーズ F2）。
@@ -35,7 +33,10 @@ namespace Statevia.Service.Api.Application.Actions.Validation;
 ///     contact:
 ///       email: "a@example.com"
 /// </code>
-/// <para>はマージ後に同じツリーになる。一方、<c>ship: "scalar"</c> と <c>ship.address: "x"</c> の併記は衝突する。</para>
+/// <para>
+/// はマージ後に同じツリーになる。一方、<c>ship: "scalar"</c> と <c>ship.address: "x"</c> の併記は衝突する
+/// （Loader が先に拒否するので、ここでの衝突検出は Loader を通らない <c>Values</c> に対する防御になる）。
+/// </para>
 /// </remarks>
 internal static class ActionInputTreeNormalizer
 {
@@ -122,7 +123,7 @@ internal static class ActionInputTreeNormalizer
     /// <remarks>
     /// <list type="number">
     /// <item><description><see cref="StateInputValueDefinition.Path"/> あり → リーフ（実行時評価対象の path 式）</description></item>
-    /// <item><description><see cref="StateInputValueDefinition.Literal"/> が map → オブジェクトノード（ネスト YAML）。子キーも再帰的に処理し、子にドットキーがあれば同階層でマージする</description></item>
+    /// <item><description><see cref="StateInputValueDefinition.Literal"/> が map → オブジェクトノード。子キーも再帰的に処理し、子にドットキーがあれば同階層でマージする（Loader はネスト map を展開するので、YAML 由来では空の map だけがここを通る）</description></item>
     /// <item><description>上記以外 → スカラーリテラルのリーフ</description></item>
     /// </list>
     /// </remarks>

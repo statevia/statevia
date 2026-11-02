@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.16 |
+| Version | 1.5.17 |
 | 更新日 | 2026-11-02 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.17（2026-11-02）**: 状態 `input` のネスト map の中の `$` 文字列もパス式として評価し、トップレベルと同じ検証を掛ける。論理キーの重複と、スカラーと子の競合は action の有無によらず 422。配列の中ではパス式を使えず 422（§1.6.1）。
 
 **Version 1.5.16（2026-11-02）**: Builtin `statevia.action.builtin.execution.signal` を退役した。新しい定義の保存・更新・検証は 422 になり、Action 一覧と Schema API にも出ない。退役前に保存した版は実行でき、signal ノードに到達するとそのノードが失敗する（§1.1.4）。
 
@@ -523,10 +525,12 @@ states:
 states:
   B:
     input:
-      foo: $.states.A.output.a
       foo.bar: $.states.A.output.a.b
+      body:
+        orderId: $.states.A.output.orderId
+        currency: JPY
       title: "my song"
-      retry: 2
+      count: 2
       enabled: true
       note: null
 ```
@@ -534,8 +538,13 @@ states:
 - `$` または `$.` で始まる文字列はパス式（評価根は Execution Context）
 - それ以外はリテラル
 - `foo.bar` はネストオブジェクトとして構築される（`StateInputEvaluator.SetByDottedKey` と同等）
-- ネスト map（`ship: { address: "x" }`）とドットキー（`ship.address: "x"`）は実行時・Compiler schema 検証のいずれでも同等の論理ツリーになる（§1.1.2）
-- 同一ブランチでスカラーとドットキー子が競合する正規化は 422
+- ネスト map（`ship: { address: "x" }`）とドットキー（`ship.address: "x"`）は実行時・Compiler schema 検証のいずれでも同等の論理ツリーになる（§1.1.2）。上の例の `body` は `body.orderId`（パス式）と `body.currency`（リテラル）の 2 つのドットキーと同じ
+- ネスト map の中の値もトップレベルと同じ規則で扱う。`$` で始まる文字列はパス式として評価し、`${...}` の拒否とパス構文の検証もかける。422 のメッセージのキーは論理パス（例: `body.orderId`）で示す
+- ネスト map のキーにドットがあれば、ドットキーと同じくネストの区切りとして扱う（`headers: { X.Trace: … }` は `headers.X.Trace`）
+- 空の map（`body: {}`）は空のオブジェクトとして渡る。ネスト map の中の空のキーは 422
+- 同じ論理キーを 2 回書く（例: `body: { orderId: … }` と `body.orderId: …`）と 422。キーの大文字小文字は区別しない
+- 同じ論理位置にスカラーと子を書く（例: `ship: "x"` と `ship.address: …`）と 422。action の有無によらない
+- 配列の中ではパス式を使えない。配列の要素や、配列の中の map の値に `$` で始まる文字列を書くと 422（キーは `items[0]` / `lines[0].sku` の形）。リテラルだけの配列はそのまま渡る（`$100` のように `$` / `$.` / `$[` で始まらない文字列はリテラル）
 - パス式は `Level1Validator` と同じ単純 JSONPath（SimpleJsonPath）制約に従う。
 
 | 構文 | 意味 | 例 |

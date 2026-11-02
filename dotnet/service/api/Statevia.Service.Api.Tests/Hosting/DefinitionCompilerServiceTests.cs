@@ -1842,6 +1842,113 @@ public sealed class DefinitionCompilerServiceTests
         Assert.NotNull(compiled.StateExecutorFactory.GetExecutor("Ship"));
     }
 
+    /// <summary>
+    /// ネスト map の中のパス式は schema 検証を通り、compiled JSON の stateInputs にフラットな path エントリとして残る。
+    /// </summary>
+    [Fact]
+    public void ValidateAndCompile_NestedMapWithPath_StoresFlatPathEntry()
+    {
+        // Arrange
+        var svc = CreateSutWithCatalog(out var catalog);
+        RegisterNestedShipTestAction(catalog);
+        var yaml = """
+            workflow:
+              name: W
+            states:
+              Ship:
+                action: test.module.nestedship
+                input:
+                  ship:
+                    address: $.input.address
+                on:
+                  Completed:
+                    end: true
+            """;
+
+        // Act
+        var (_, json) = svc.ValidateAndCompile("W", yaml);
+
+        // Assert
+        using var doc = JsonDocument.Parse(json);
+        var values = doc.RootElement.GetProperty("stateInputs").GetProperty("Ship").GetProperty("values");
+        Assert.Equal("$.input.address", values.GetProperty("ship.address").GetProperty("path").GetString());
+        Assert.False(values.TryGetProperty("ship", out _));
+    }
+
+    /// <summary>
+    /// 同じ論理ツリーをネスト map とドットキーで書いた定義は、実行時に Action へ同じ input を渡し、パスも評価される。
+    /// </summary>
+    [Fact]
+    public async Task Start_NestedMapAndDottedKeys_PassSameEvaluatedInput()
+    {
+        // Arrange
+        const string nestedYaml = """
+            workflow:
+              name: W
+            states:
+              A:
+                action: my.custom.capture
+                input:
+                  body:
+                    orderId: $.input.orderId
+                    currency: JPY
+                    meta:
+                      day: $.input.day
+                on:
+                  Completed:
+                    end: true
+            """;
+        const string dottedYaml = """
+            workflow:
+              name: W
+            states:
+              A:
+                action: my.custom.capture
+                input:
+                  body.orderId: $.input.orderId
+                  body.currency: JPY
+                  body.meta.day: $.input.day
+                on:
+                  Completed:
+                    end: true
+            """;
+        var workflowInput = new Dictionary<string, object?> { ["orderId"] = "ORD-1", ["day"] = "20261102" };
+
+        // Act
+        var nestedInput = await RunAndCaptureInputJsonAsync(nestedYaml, workflowInput);
+        var dottedInput = await RunAndCaptureInputJsonAsync(dottedYaml, workflowInput);
+
+        // Assert
+        Assert.Equal(dottedInput, nestedInput);
+        using var doc = JsonDocument.Parse(nestedInput);
+        var body = doc.RootElement.GetProperty("body");
+        Assert.Equal("ORD-1", body.GetProperty("orderId").GetString());
+        Assert.Equal("JPY", body.GetProperty("currency").GetString());
+        Assert.Equal("20261102", body.GetProperty("meta").GetProperty("day").GetString());
+    }
+
+    /// <summary>input を JSON にして記録する Action で YAML を実行し、記録した input を返す。</summary>
+    /// <param name="yaml">状態 A が <c>my.custom.capture</c> を使う定義。</param>
+    /// <param name="workflowInput">ワークフロー開始 input。</param>
+    /// <returns>状態 A に渡った input の JSON。</returns>
+    private static async Task<string> RunAndCaptureInputJsonAsync(string yaml, object workflowInput)
+    {
+        var captured = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var compiler = CreateSutWithCatalog(out var catalog);
+        RegisterCustomInProcessAction(
+            catalog,
+            "my.custom.capture",
+            (_, input, _) =>
+            {
+                captured.TrySetResult(JsonSerializer.Serialize(input));
+                return Task.FromResult<object?>(null);
+            });
+        var (definition, _) = compiler.ValidateAndCompile("W", yaml, TestTenantId);
+        var engine = CreateTestEngine();
+        engine.Start(definition, input: workflowInput);
+        return await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
     /// <summary>ネスト schema にネスト map input を指定すると compile 成功する。</summary>
     [Fact]
     public void ValidateAndCompile_NestedInputWithNestedMap_Succeeds()
@@ -1899,9 +2006,9 @@ public sealed class DefinitionCompilerServiceTests
         Assert.Contains(ex.Errors, error => error.JsonPath == "$.input.ship.address");
     }
 
-    /// <summary>オブジェクトリテラルとドットキー子の競合は schema 検証で失敗する。</summary>
+    /// <summary>スカラーとドットキー子の競合は、schema 検証の前に Loader が拒否する。</summary>
     [Fact]
-    public void ValidateAndCompile_NestedInputNormalizationConflict_ThrowsSchemaValidationException()
+    public void ValidateAndCompile_NestedInputNormalizationConflict_ThrowsOnLoad()
     {
         // Arrange
         var svc = CreateSutWithCatalog(out var catalog);
@@ -1921,13 +2028,10 @@ public sealed class DefinitionCompilerServiceTests
             """;
 
         // Act
-        var ex = Assert.Throws<ActionInputSchemaValidationException>(() => svc.ValidateAndCompile("W", yaml));
+        var ex = Assert.Throws<ArgumentException>(() => svc.ValidateAndCompile("W", yaml));
 
         // Assert
-        Assert.Contains(
-            ex.Errors,
-            error => error.JsonPath == "$.input.ship"
-                && error.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("input key 'ship' conflicts with 'ship.address'.", ex.Message, StringComparison.Ordinal);
     }
 
     private static void RegisterNestedShipTestAction(IActionCatalog catalog)
