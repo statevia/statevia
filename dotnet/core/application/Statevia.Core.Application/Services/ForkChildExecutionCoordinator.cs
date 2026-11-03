@@ -230,7 +230,7 @@ public sealed class ForkChildExecutionCoordinator(
             candidateInputs[row.BranchState] = ParseOutputJson(row.OutputJson);
             contextMerges.Add(new ForkJoinChildContextMerge(
                 ParseStatesJson(row.StatesJson),
-                ParseOutputJson(row.VarsJson)));
+                ParseVarWritesJson(row.VarsJson)));
         }
 
         return new ForkJoinEvaluation(
@@ -451,7 +451,11 @@ public sealed class ForkChildExecutionCoordinator(
                     var createdBranches = new List<ExecutionBranchRow>(request.Branches.Count);
                     var startItems = new List<ExecutionWorkItemRow>(request.Branches.Count);
                     const string emptyGraphJson = """{"nodes":[],"edges":[]}""";
-                    var forkBranchStart = new ForkBranchStartPayload(ToJsonElement(request.WorkflowInput));
+                    var forkBranchStart = new ForkBranchStartPayload(
+                        ToJsonElement(request.WorkflowInput),
+                        ToJsonElement(request.ParentContext.Vars),
+                        ToJsonElement(request.ParentContext.States),
+                        request.ParentContext.LogicalExecutionId);
 
                     foreach (var branch in request.Branches)
                     {
@@ -671,6 +675,34 @@ public sealed class ForkChildExecutionCoordinator(
 
         using var document = JsonDocument.Parse(outputJson);
         return document.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// 枝が書いた <c>vars</c> のパスと値（<c>[{ "path": [...], "value": ... }]</c>）を読む。
+    /// </summary>
+    /// <remarks>
+    /// オブジェクトは、書いたパスを記録する前に終端した枝の <c>vars</c> 全体。その枝は親の値を引き継いでいないため、
+    /// 全トップレベルキーを書いたものとして扱う（値を落とさない安全側）。
+    /// </remarks>
+    private static List<ContextVarWrite> ParseVarWritesJson(string? varsJson)
+    {
+        if (string.IsNullOrWhiteSpace(varsJson))
+            return [];
+
+        using var document = JsonDocument.Parse(varsJson);
+        var root = document.RootElement;
+        return root.ValueKind switch
+        {
+            JsonValueKind.Array => root.EnumerateArray()
+                .Select(item => new ContextVarWrite(
+                    item.GetProperty("path").EnumerateArray().Select(segment => segment.GetString() ?? string.Empty).ToList(),
+                    item.TryGetProperty("value", out var value) ? value.Clone() : null))
+                .ToList(),
+            JsonValueKind.Object => root.EnumerateObject()
+                .Select(prop => new ContextVarWrite([prop.Name], prop.Value.Clone()))
+                .ToList(),
+            _ => []
+        };
     }
 
     private static Dictionary<string, object?> ParseStatesJson(string? statesJson)

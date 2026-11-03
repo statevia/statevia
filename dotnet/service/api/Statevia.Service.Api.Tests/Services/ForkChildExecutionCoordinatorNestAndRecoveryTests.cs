@@ -262,7 +262,8 @@ public sealed class ForkChildExecutionCoordinatorNestAndRecoveryTests
                 new ForkBranchExpansion("A", new { n = 1 }),
                 new ForkBranchExpansion("B", new { n = 2 })
             ],
-            WorkflowInput: null);
+            WorkflowInput: null,
+            ParentContext: new ForkParentContext(null, null, parentId.ToString("D")));
 
     private static CompiledWorkflowDefinition CreateFlatDefinition() =>
         new()

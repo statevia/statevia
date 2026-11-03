@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3.4 |
-| 更新日 | 2026-11-01 |
+| Version | 1.4.0 |
+| 更新日 | 2026-11-02 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [wait-cancel.md](wait-cancel.md), [execution-graph.md](execution-graph.md), [../../concepts/durability.md](../../concepts/durability.md), [../../reference/database-schema.md](../../reference/database-schema.md) |
 
 ---
@@ -15,8 +15,10 @@
 - **MUST**: Fork / Join は**制御ノード**であり、通常の状態（State）ではない。
 - **MUST**: Join は依存する全分岐から所定の事実が揃うまで次へ進んではならない。
 - **MUST**: **Hosted Runtime** では Fork 到達時に各分岐を**物理子 execution** として展開する（論理 Fork 互換フラグは設けない）。
-- **MUST**: **Join 前**は同一 Fork の兄弟分岐同士が互いの `$.states…` / `$.vars…` / Context を参照してはならない。
-- **MUST**: **Join 後（成功）**は子の `states` / `vars` を親 Execution Context へマージし、親の後続から `$.states.<Name>.output` 等を解決できること。キー衝突は子完了信号の**適用順で後勝ち**（Failed にしない）。
+- **MUST**: Hosted の子は、Fork 到達時点の親の `$.vars` / `$.states` を引き継ぐ。枝のどのノードからでも、Fork 前の値を親と同じパスで読める。
+- **MUST**: **Join 前**は同一 Fork の兄弟分岐同士が互いの `$.states…` / `$.vars…` / Context を参照してはならない（兄弟が Join 前に書いた値は見えない）。
+- **MUST**: **Join 後（成功）**は、各子が**書いた** `vars` のパスと**完了した**状態だけを親 Execution Context へマージし、親の後続から `$.states.<Name>.output` 等を解決できること。引き継いだだけの値は戻さない。同じパス・重なるパスは**枝の完了順で後勝ち**（Failed にしない）。
+- **MUST**: Hosted の子の中の `$.sys.execution.id` は親（論理実行）の ID である。
 - **MUST**: 親の `GET …/graph` / `GET …/events` は、UI が物理分割を意識しないよう **GET 時に論理 1 実行へ合成**する（永続への二重書き込みはしない）。
 - **MUST**: `GET /v1/executions` の `items` と件数は、`execution_branches.execution_id` に無いルート execution のみとする。
 - **SHOULD**: Fork は定義上で並列開始する状態集合を明示する。
@@ -110,10 +112,18 @@ Join は複数の状態からの事実を待ってから次に進みます。
 
 | 時点 | 契約 |
 | --- | --- |
-| 子の開始 | 枝の先頭の input 写像は Fork 到達時に親の Context で 1 回だけ評価し、子では評価し直さない。子の `$.input` は親のワークフロー開始 input |
-| Join 前 | 兄弟分岐間の `$.states…` / `$.vars…` / Context 参照は**不可**。使えるのは Fork 時の親→子 input 写像のみ |
-| Join 後（成功） | 各子の完了 `states` と終端 `vars` を親 Context へマージ。後続の `input.path: $.states.A.output` 等は親上で解決する。同一キー衝突は適用順の**後勝ち** |
+| 子の開始 | 枝の先頭の input 写像は Fork 到達時に親の Context で 1 回だけ評価し、子では評価し直さない。子の `$.input` は親のワークフロー開始 input。子の `$.vars` / `$.states` は Fork 到達時点の親の値の写しから始まる。子の `$.sys.execution.id` は親（論理実行）の ID |
+| Join 前 | 兄弟分岐間の `$.states…` / `$.vars…` / Context 参照は**不可**。各枝は Fork 到達時点の同じ写しから始まり、以後は独立する |
+| Join 後（成功） | 各子が書いた `vars` のパス（`output: $.vars.order.status` なら `order.status`）と、子で完了した状態だけを親 Context へマージする。引き継いだだけの値は戻さない。後続の `input.path: $.states.A.output` 等は親上で解決する。同じパス・重なるパスは枝の完了順の**後勝ち** |
 | Join 失敗／Cancel 伝播 | 不完全な Context マージは必須としない |
+
+- 引き継いだ値は Start work item の payload に保存する。Worker が再起動しても、同じ値で子を開始する。子が Unload され checkpoint から再開しても、引き継いだ値と「書いたパス」の記録は残る。
+- 引き継いだだけの値を戻さないのは、他の枝の結果を古い値で消さないためである。例: Fork 前の親の `$.vars.order` が `{ status: "new" }`。枝 A が `order` を `{ status: "charged" }` に書き換え、後に完了した枝 B は `order` に触れない。Join 後の親の `order` は A の値になる。
+- パス単位でマージするので、枝 A の `order.status` と枝 B の `order.total` は両方残る。
+- マージはパスの部分木の置き換えである。枝 A が `order.status`、後に完了した枝 B が `order` 全体を書くと、B の `order` が A の `order.status` を含めて上書きする。
+- ネストした Fork では、孫は内側の Fork 到達時点の子の値（親から引き継いだ値を含む）を引き継ぐ。内側の Join で取り込んだ値は、子が書いた値として外側の Join へ戻る。`$.sys.execution.id` は根の論理実行の ID のままである。
+- 引き継ぎを始める前に作られた子（work item に引き継ぎ値が無い、または checkpoint に「書いたパス」の記録が無い）は、引き継ぎ無しで開始し、`vars` の全トップレベルキーと全状態を書いたものとして親へ戻す。
+- 親の `vars` / `states` は枝の数だけ複製して保存する。大きな output を持つ定義では、work item と checkpoint が大きくなる。
 
 定義 DSL 上の候補 input 辞書（分岐キー → 子 output）の形は従来どおり維持する。詳細の記述例は [definition.md](../definition.md) の Fork/Join と input 節を参照。
 

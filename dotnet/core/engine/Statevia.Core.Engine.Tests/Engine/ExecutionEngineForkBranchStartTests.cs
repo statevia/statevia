@@ -34,7 +34,7 @@ public sealed class ExecutionEngineForkBranchStartTests
             def,
             input: mappedInput,
             initialState: "Charge",
-            forkBranch: new ForkBranchStart(CreateWorkflowInput()));
+            forkBranch: new ForkBranchStart(CreateWorkflowInput(), new ForkParentContext(null, null, "parent-1")));
         await WaitUntilCompletedAsync(engine, id);
 
         // Assert
@@ -63,7 +63,7 @@ public sealed class ExecutionEngineForkBranchStartTests
             def,
             input: new Dictionary<string, object?> { ["url"] = "https://pay.example" },
             initialState: "Charge",
-            forkBranch: new ForkBranchStart(CreateWorkflowInput()));
+            forkBranch: new ForkBranchStart(CreateWorkflowInput(), new ForkParentContext(null, null, "parent-1")));
         await WaitUntilCompletedAsync(engine, id);
 
         // Assert
@@ -119,6 +119,109 @@ public sealed class ExecutionEngineForkBranchStartTests
         Assert.Same(workflowInput, evt.WorkflowInput);
     }
 
+    /// <summary>
+    /// 枝の 2 番目以降の状態でも、Fork 到達時点の親の <c>$.vars</c> / <c>$.states</c> を同じパスで読める（payload 経由の JSON を想定）。
+    /// </summary>
+    [Fact]
+    public async Task Start_WithForkBranch_LaterStateReadsInheritedVarsAndStates()
+    {
+        // Arrange
+        object? laterInput = "unset";
+        var def = CreateInheritingBranchDefinition(
+            new Dictionary<string, StateInputValueDefinition>
+            {
+                ["orderId"] = new() { Path = "$.vars.order.orderId" },
+                ["received"] = new() { Path = "$.states.Receive.output.x" }
+            },
+            input => laterInput = input);
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 1);
+        using var vars = System.Text.Json.JsonDocument.Parse("""{"order":{"orderId":"o-1"}}""");
+        using var states = System.Text.Json.JsonDocument.Parse("""{"Receive":{"output":{"x":"r-1"}}}""");
+
+        // Act
+        var id = engine.Start(
+            def,
+            input: null,
+            initialState: "Charge",
+            forkBranch: new ForkBranchStart(null, new ForkParentContext(vars.RootElement, states.RootElement, "parent-1")));
+        await WaitUntilCompletedAsync(engine, id);
+
+        // Assert
+        var dict = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(laterInput);
+        Assert.Equal("o-1", dict["orderId"]);
+        Assert.Equal("r-1", dict["received"]);
+    }
+
+    /// <summary>枝の中の <c>$.sys.execution.id</c> は、子実行自身の ID ではなく親の論理実行 ID になる。</summary>
+    [Fact]
+    public async Task Start_WithForkBranch_SysExecutionIdIsLogicalExecutionId()
+    {
+        // Arrange
+        object? laterInput = "unset";
+        var def = CreateInheritingBranchDefinition(
+            new Dictionary<string, StateInputValueDefinition> { ["id"] = new() { Path = "$.sys.execution.id" } },
+            input => laterInput = input);
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 1);
+
+        // Act
+        var id = engine.Start(
+            def,
+            executionId: "child-1",
+            initialState: "Charge",
+            forkBranch: new ForkBranchStart(null, new ForkParentContext(null, null, "parent-1")));
+        await WaitUntilCompletedAsync(engine, id);
+
+        // Assert
+        var dict = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(laterInput);
+        Assert.Equal("parent-1", dict["id"]);
+    }
+
+    /// <summary>展開通知に、Fork 到達時点の親の vars / states と論理実行 ID が載る。</summary>
+    [Fact]
+    public async Task ForkExpansion_CarriesParentVarsStatesAndLogicalExecutionId()
+    {
+        // Arrange
+        var def = CreateForkDefinition(
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Start"] = "$.vars.seed" });
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 1);
+        var expanded = new TaskCompletionSource<ForkExpansionEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
+        engine.SetForkExpansionHandler(evt =>
+        {
+            expanded.TrySetResult(evt);
+            return Task.CompletedTask;
+        });
+
+        // Act
+        var parentId = engine.Start(def, executionId: "parent-1");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var evt = await expanded.Task.WaitAsync(timeout.Token);
+
+        // Assert
+        Assert.Equal(parentId, evt.ParentContext.LogicalExecutionId);
+        var vars = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(evt.ParentContext.Vars);
+        Assert.True(vars.ContainsKey("seed"));
+        var states = Assert.IsAssignableFrom<IReadOnlyDictionary<string, object?>>(evt.ParentContext.States);
+        Assert.True(states.ContainsKey("Start"));
+    }
+
+    /// <summary>
+    /// 枝の先頭 <c>Charge</c> から <c>Notify</c>（指定した input 写像）へ進む定義。<c>Notify</c> は受け取った input を記録する。
+    /// </summary>
+    private static CompiledWorkflowDefinition CreateInheritingBranchDefinition(
+        Dictionary<string, StateInputValueDefinition> notifyInput,
+        Action<object?> captureNotifyInput) =>
+        CreateBranchDefinition(
+            DefaultStateExecutor.Create(new ImmediateState()),
+            DefaultStateExecutor.Create(new DelegateState((_, input, _) =>
+            {
+                captureNotifyInput(input);
+                return Task.FromResult<object?>(null);
+            })),
+            new Dictionary<string, StateInputDefinition>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Notify"] = new StateInputDefinition { Values = notifyInput }
+            });
+
     private static Dictionary<string, object?> CreateWorkflowInput() => new()
     {
         ["billingUrl"] = "https://pay.example",
@@ -128,45 +231,54 @@ public sealed class ExecutionEngineForkBranchStartTests
     /// <summary>
     /// 枝の先頭 <c>Charge</c>（<c>url: $.input.billingUrl</c>）から <c>Notify</c>（<c>orderId: $.input.orderId</c>）へ進む定義。
     /// </summary>
-    private static CompiledWorkflowDefinition CreateBranchDefinition(IStateExecutor charge, IStateExecutor notify) => new()
-    {
-        Name = "ForkBranchStart",
-        Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
+    /// <param name="charge">Charge の実行器。</param>
+    /// <param name="notify">Notify の実行器。</param>
+    /// <param name="stateInputs">input 写像。省略時は上記の既定。</param>
+    private static CompiledWorkflowDefinition CreateBranchDefinition(
+        IStateExecutor charge,
+        IStateExecutor notify,
+        Dictionary<string, StateInputDefinition>? stateInputs = null) => new()
         {
-            ["Charge"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Notify" } },
-            ["Notify"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
-        },
-        ForkTable = new Dictionary<string, IReadOnlyList<string>>(),
-        JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
-        WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
-        StateInputs = new Dictionary<string, StateInputDefinition>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Charge"] = new StateInputDefinition
+            Name = "ForkBranchStart",
+            Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
             {
-                Values = new Dictionary<string, StateInputValueDefinition>
+                ["Charge"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Notify" } },
+                ["Notify"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
+            },
+            ForkTable = new Dictionary<string, IReadOnlyList<string>>(),
+            JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
+            WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
+            StateInputs = stateInputs ?? new Dictionary<string, StateInputDefinition>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Charge"] = new StateInputDefinition
                 {
-                    ["url"] = new StateInputValueDefinition { Path = "$.input.billingUrl" }
+                    Values = new Dictionary<string, StateInputValueDefinition>
+                    {
+                        ["url"] = new StateInputValueDefinition { Path = "$.input.billingUrl" }
+                    }
+                },
+                ["Notify"] = new StateInputDefinition
+                {
+                    Values = new Dictionary<string, StateInputValueDefinition>
+                    {
+                        ["orderId"] = new StateInputValueDefinition { Path = "$.input.orderId" }
+                    }
                 }
             },
-            ["Notify"] = new StateInputDefinition
+            InitialState = "Charge",
+            StateExecutorFactory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>
             {
-                Values = new Dictionary<string, StateInputValueDefinition>
-                {
-                    ["orderId"] = new StateInputValueDefinition { Path = "$.input.orderId" }
-                }
-            }
-        },
-        InitialState = "Charge",
-        StateExecutorFactory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>
-        {
-            ["Charge"] = charge,
-            ["Notify"] = notify
-        })
-    };
+                ["Charge"] = charge,
+                ["Notify"] = notify
+            })
+        };
 
-    private static CompiledWorkflowDefinition CreateForkDefinition() => new()
+    /// <summary>Start から A / B へ Fork し、Join1 で合流する親の定義。</summary>
+    /// <param name="stateOutputs">状態の output を書く vars のパス。省略時は無し。</param>
+    private static CompiledWorkflowDefinition CreateForkDefinition(Dictionary<string, string>? stateOutputs = null) => new()
     {
         Name = "ForkBranchStartParent",
+        StateOutputs = stateOutputs ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
         Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
         {
             ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Fork = ["A", "B"] } },

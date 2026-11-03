@@ -24,6 +24,7 @@ public sealed record ForkBranchExpansion(
 /// </param>
 /// <param name="Branches">分岐先頭と写像済み input。</param>
 /// <param name="WorkflowInput">親のワークフロー開始 input。各子 execution の <c>$.input</c> になる。</param>
+/// <param name="ParentContext">Fork 到達時点の親の <c>vars</c> / <c>states</c> の写しと論理実行 ID。各子が引き継ぐ。</param>
 public sealed record ForkExpansionRequest(
     Guid ParentExecutionId,
     Guid TenantId,
@@ -35,7 +36,8 @@ public sealed record ForkExpansionRequest(
     CompiledWorkflowDefinition CompiledDefinition,
     string ForkNodeId,
     IReadOnlyList<ForkBranchExpansion> Branches,
-    object? WorkflowInput);
+    object? WorkflowInput,
+    ForkParentContext ParentContext);
 
 /// <summary>Fork 物理子展開の結果。</summary>
 /// <param name="Succeeded">展開が完了したとき true。上限超過で親 Failed にしたとき false。</param>
@@ -62,12 +64,15 @@ public enum ForkJoinEvaluationKind
 /// <summary>
 /// Join 充足時に親 Context へ投影する子 1 件分の Context 断片。
 /// </summary>
-/// <remarks>リスト順が適用順。同一キーは後勝ち。</remarks>
-/// <param name="States">子の完了済み State エントリ（nodeName → `{ output: … }`）。</param>
-/// <param name="Vars">子終端時点の vars オブジェクト。</param>
+/// <remarks>
+/// <para>リスト順が適用順（枝の完了順）。同一の状態名・同一または重なる <c>vars</c> パスは後勝ち。</para>
+/// <para>その枝が書いた値だけを持つ。Fork 到達時に親から引き継いだだけの値は含めない。</para>
+/// </remarks>
+/// <param name="States">枝で完了した State エントリ（nodeName → `{ output: … }`）。</param>
+/// <param name="VarWrites">枝で書いた <c>vars</c> のパスと、子終端時点の値。</param>
 public sealed record ForkJoinChildContextMerge(
     IReadOnlyDictionary<string, object?> States,
-    object? Vars);
+    IReadOnlyList<ContextVarWrite> VarWrites);
 
 /// <summary>親 Join 再評価の結果。</summary>
 /// <param name="Kind">評価結果。</param>
@@ -126,8 +131,8 @@ public interface IForkChildExecutionCoordinator
     /// <param name="childExecutionId">終端した子 execution。</param>
     /// <param name="status">子の投影 status（Completed / Failed / Cancelled）。</param>
     /// <param name="outputJson">子終端 output の JSON（任意）。</param>
-    /// <param name="statesJson">子終端 <c>states</c> の JSON（任意）。</param>
-    /// <param name="varsJson">子終端 <c>vars</c> の JSON（任意）。</param>
+    /// <param name="statesJson">子が完了した <c>states</c> の JSON（任意）。引き継いだだけの状態は含めない。</param>
+    /// <param name="varsJson">子が書いた <c>vars</c> のパスと値の JSON 配列（任意）。引き継いだだけの値は含めない。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>分岐行があり信号を処理したとき true。非子のとき false。</returns>
     Task<bool> NotifyChildTerminalAsync(

@@ -70,7 +70,8 @@ public sealed class ForkExpansionHostHandler(
             CompiledDefinition: compiled,
             ForkNodeId: evt.SourceNodeId,
             Branches: branches,
-            WorkflowInput: evt.WorkflowInput);
+            WorkflowInput: evt.WorkflowInput,
+            ParentContext: evt.ParentContext);
 
         var result = await coordinator.ExpandForkAsync(request, ct).ConfigureAwait(false);
         if (!result.Succeeded)

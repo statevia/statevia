@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.17 |
+| Version | 1.5.18 |
 | 更新日 | 2026-11-02 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.18（2026-11-02）**: Hosted Fork の枝は Fork 到達時点の親の `$.vars` / `$.states` を引き継ぎ、枝のどのノードからでも読める。Join では各枝が書いた `vars` のパスと完了した状態だけを、枝の完了順に後勝ちで親へ戻す。枝の中の `$.sys.execution.id` は親の ID（§1.4、§1.6、[execution/fork-join.md](execution/fork-join.md)）。
 
 **Version 1.5.17（2026-11-02）**: 状態 `input` のネスト map の中の `$` 文字列もパス式として評価し、トップレベルと同じ検証を掛ける。論理キーの重複と、スカラーと子の競合は action の有無によらず 422。配列の中ではパス式を使えず 422（§1.6.1）。
 
@@ -328,7 +330,8 @@ Wait は **Signal**（`events`）と **Subscribe**（`subscribe`）の二モー�
 - **join.all**: 完了を待つ状態名のリスト。すべてが完了すると `Joined` 事実が発生し、`on.Joined` で次へ遷移できる。
 - Join 状態は合成ノードとして実行され、**`action` は指定しない**（`wait` と同様に `action` 併記は Level 1 検証エラー）。
 - **Hosted Runtime**: Fork は物理子 execution に展開される。定義語彙（`fork` / `join.all` / `$.states…`）は維持する。実行時契約（兄弟参照不可・Join 後の親 Context マージ・読みモデル合成）は [execution/fork-join.md](execution/fork-join.md) を正とする。
-- **兄弟参照**: Join 前に同一 Fork の兄弟の `$.states…` / `$.vars…` を参照してはならない。Join 後は親へマージされた結果のみ参照できる（キー衝突は後勝ち）。
+- **引き継ぎ**: 枝は Fork 到達時点の親の `$.vars` / `$.states` を引き継ぎ、枝のどのノードからでも同じパスで読める。
+- **兄弟参照**: Join 前に同一 Fork の兄弟の `$.states…` / `$.vars…` を参照してはならない（兄弟が書いた値は見えない）。Join 後は、各枝が書いた `vars` のパスと完了した状態が親へマージされる。引き継いだだけの値は戻さない。同じパス・重なるパスは枝の完了順で後勝ち。
 
 ### 1.5 例（States 形式）
 
@@ -385,7 +388,9 @@ Context のトップレベルは次の固定キーである。
 | `vars` | 現在の共有コンテキスト | 読み書き可（`output: $.vars…` で代入） |
 | `sys` | Engine 保証のランタイム情報 | 読み取り専用 |
 
-Hosted Fork の枝（子 execution）でも `input` はワークフロー開始時の input である。枝の input にはならない。枝の先頭の状態の `input` 写像は Fork 到達時に親の Context で 1 回だけ評価し、その結果を枝の先頭へ渡す。子では評価し直さない。詳細は [execution/fork-join.md](execution/fork-join.md) の「Context マージと兄弟参照」。
+Hosted Fork の枝（子 execution）でも `input` はワークフロー開始時の input である。枝の input にはならない。枝の先頭の状態の `input` 写像は Fork 到達時に親の Context で 1 回だけ評価し、その結果を枝の先頭へ渡す。子では評価し直さない。
+
+枝の `vars` / `states` は、Fork 到達時点の親の値から始まる。枝の 2 番目以降のノードでも、Fork 前に親が書いた `$.vars.order.orderId` や `$.states.receive.output` を読める。兄弟の枝が書いた値は Join まで見えない。枝の中の `$.sys.execution.id` は親（論理実行）の ID である。詳細は [execution/fork-join.md](execution/fork-join.md) の「Context マージと兄弟参照」。
 
 #### `$.sys` キー（本実装）
 
@@ -394,7 +399,7 @@ Hosted Fork の枝（子 execution）でも `input` はワークフロー開始�
 | `$.sys.now` | ホスト TZ の現在時刻（ISO-8601） |
 | `$.sys.today` | ホストローカル日付 `yyyy-MM-dd` |
 | `$.sys.utcNow` | UTC 現在時刻（ISO-8601） |
-| `$.sys.execution.id` | 実行インスタンス ID |
+| `$.sys.execution.id` | 実行インスタンス ID（Hosted Fork の枝では親の論理実行 ID） |
 | `$.sys.definition.name` | コンパイル済み定義名 |
 
 #### `$.sys` 関数呼び出し（許可リスト）

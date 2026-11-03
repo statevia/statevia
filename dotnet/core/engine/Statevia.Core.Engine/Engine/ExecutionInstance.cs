@@ -59,6 +59,13 @@ public sealed class ExecutionInstance : IDisposable
         Context = WorkflowExecutionContext.Create(input, ExecutionId, Definition.Name);
     }
 
+    /// <summary>Hosted Fork の枝として Context を初期化する（実行開始時に 1 回）。</summary>
+    /// <param name="branch">枝の開始指定。親から引き継ぐ vars / states と論理実行 ID を含む。</param>
+    public void InitializeForkBranchContext(ForkBranchStart branch)
+    {
+        Context = WorkflowExecutionContext.CreateForkBranch(branch, Definition.Name);
+    }
+
     /// <summary>
     /// 状態完了時の出力を記録し、Context の <c>states</c> を更新する。
     /// <see cref="CompiledWorkflowDefinition.StateOutputs"/> があれば <c>vars</c> にも代入する。

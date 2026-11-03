@@ -98,7 +98,7 @@ public sealed class ExecutionWorkItemWorkerHostedServiceTests
             new ExecutionStartWorkItemPayload(
                 executionId,
                 new StartExecutionRequest { DefinitionId = "d1", Input = inputDoc.RootElement, InitialState = "A" },
-                new ForkBranchStartPayload(workflowInputDoc.RootElement)),
+                new ForkBranchStartPayload(workflowInputDoc.RootElement, null, null, null)),
             ExecutionWorkItemPayloadJson.Options);
         var item = new ExecutionWorkItemRow
         {

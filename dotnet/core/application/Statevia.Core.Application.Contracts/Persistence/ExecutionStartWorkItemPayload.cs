@@ -27,6 +27,17 @@ public sealed record ExecutionStartWorkItemPayload(
 /// <remarks>
 /// Worker はこれを <see cref="Statevia.Core.Engine.Abstractions.ForkBranchStart"/> にして Engine を開始する。
 /// 枝の先頭の input（<see cref="StartExecutionRequest.Input"/>）は親で評価済みとして扱われる。
+/// 親から引き継ぐ値を payload に永続化し、Worker の再起動後も同じ値で開始できるようにする。
 /// </remarks>
 /// <param name="WorkflowInput">親のワークフロー開始 input。子の <c>$.input</c> になる。</param>
-public sealed record ForkBranchStartPayload(JsonElement? WorkflowInput);
+/// <param name="Vars">Fork 到達時点の親の <c>vars</c>。子の <c>vars</c> の初期値になる。</param>
+/// <param name="States">Fork 到達時点の親の <c>states</c>（状態名 → <c>{ output }</c>）。子の <c>states</c> の初期値になる。</param>
+/// <param name="LogicalExecutionId">
+/// 論理実行 ID（親の <c>$.sys.execution.id</c>）。子の <c>$.sys.execution.id</c> になる。
+/// null（引き継ぎを運ぶ前に enqueue した payload）のときは子実行自身の ID。
+/// </param>
+public sealed record ForkBranchStartPayload(
+    JsonElement? WorkflowInput,
+    JsonElement? Vars,
+    JsonElement? States,
+    string? LogicalExecutionId);

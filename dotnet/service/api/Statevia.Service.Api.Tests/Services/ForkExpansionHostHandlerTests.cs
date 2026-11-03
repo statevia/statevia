@@ -166,7 +166,8 @@ public sealed class ForkExpansionHostHandlerTests
                 new ForkBranchExpansionPlan("A", null),
                 new ForkBranchExpansionPlan("B", null)
             ],
-            WorkflowInput: new { orderId = "o-1" });
+            WorkflowInput: new { orderId = "o-1" },
+            ParentContext: new ForkParentContext(null, null, executionId));
 
     private static ExecutionRow CreateParent(Guid parentId) =>
         new()

@@ -804,7 +804,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 "fork1",
                 "n1",
                 [new ForkBranchExpansionPlan("branchA", null)],
-                WorkflowInput: null));
+                WorkflowInput: null,
+                ParentContext: new ForkParentContext(null, null, executionId.ToString("D"))));
 
             // Assert
             Assert.Equal(1, forkHandler.HandleCallCount);
@@ -842,7 +843,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 "fork1",
                 "n1",
                 [new ForkBranchExpansionPlan("branchA", null)],
-                WorkflowInput: null));
+                WorkflowInput: null,
+                ParentContext: new ForkParentContext(null, null, "bad-id")));
 
             // Assert
             Assert.Equal(0, forkHandler.HandleCallCount);
@@ -886,7 +888,8 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
                 "fork1",
                 "n1",
                 [new ForkBranchExpansionPlan("branchA", null)],
-                WorkflowInput: null));
+                WorkflowInput: null,
+                ParentContext: new ForkParentContext(null, null, executionId.ToString("D"))));
 
             // Assert
             Assert.Equal(0, forkHandler.HandleCallCount);
