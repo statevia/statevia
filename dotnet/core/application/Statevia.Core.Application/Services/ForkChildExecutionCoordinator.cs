@@ -681,8 +681,7 @@ public sealed class ForkChildExecutionCoordinator(
     /// 枝が書いた <c>vars</c> のパスと値（<c>[{ "path": [...], "value": ... }]</c>）を読む。
     /// </summary>
     /// <remarks>
-    /// オブジェクトは、書いたパスを記録する前に終端した枝の <c>vars</c> 全体。その枝は親の値を引き継いでいないため、
-    /// 全トップレベルキーを書いたものとして扱う（値を落とさない安全側）。
+    /// 配列以外は書き込みなしとして扱う（<see cref="ParseStatesJson"/> がオブジェクト以外を空にするのと同じ）。
     /// </remarks>
     private static List<ContextVarWrite> ParseVarWritesJson(string? varsJson)
     {
@@ -691,18 +690,14 @@ public sealed class ForkChildExecutionCoordinator(
 
         using var document = JsonDocument.Parse(varsJson);
         var root = document.RootElement;
-        return root.ValueKind switch
-        {
-            JsonValueKind.Array => root.EnumerateArray()
-                .Select(item => new ContextVarWrite(
-                    item.GetProperty("path").EnumerateArray().Select(segment => segment.GetString() ?? string.Empty).ToList(),
-                    item.TryGetProperty("value", out var value) ? value.Clone() : null))
-                .ToList(),
-            JsonValueKind.Object => root.EnumerateObject()
-                .Select(prop => new ContextVarWrite([prop.Name], prop.Value.Clone()))
-                .ToList(),
-            _ => []
-        };
+        if (root.ValueKind != JsonValueKind.Array)
+            return [];
+
+        return root.EnumerateArray()
+            .Select(item => new ContextVarWrite(
+                item.GetProperty("path").EnumerateArray().Select(segment => segment.GetString() ?? string.Empty).ToList(),
+                item.TryGetProperty("value", out var value) ? value.Clone() : null))
+            .ToList();
     }
 
     private static Dictionary<string, object?> ParseStatesJson(string? statesJson)
