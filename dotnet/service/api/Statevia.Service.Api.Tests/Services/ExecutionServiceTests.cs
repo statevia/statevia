@@ -6,6 +6,7 @@ using Npgsql;
 using Statevia.Core.Application.Configuration;
 using Statevia.Core.Application.Services;
 using Statevia.Core.Engine.Abstractions;
+using Statevia.Core.Engine.Engine;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Hosting;
@@ -2478,6 +2479,149 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.True(engine.CancelCalled);
     }
+
+    /// <summary>
+    /// 終端した子の投影では、子が書いた vars のパスと値・完了した状態・終端 output を Fork の子コーディネータへ渡す。引き継いだだけの値は含めない。
+    /// </summary>
+    [Fact]
+    public async Task UpdateProjectionFromEngineAsync_WhenTerminal_NotifiesForkChildWithBranchWritesOnly()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeef2");
+        var parent = WorkflowExecutionContext.Create(null, "root-1");
+        parent.SetVar("$.vars.customer", "c-1");
+        parent.SetStateOutput("Receive", "r-1");
+        var branch = WorkflowExecutionContext.CreateForkBranch(
+            new ForkBranchStart(null, parent.ExportForkParentContext()),
+            "def");
+        branch.SetVar("$.vars.order.status", "charged");
+        branch.SetStateOutput("Charge", "ok");
+        branch.SetWorkflowOutput(new Dictionary<string, object?> { ["done"] = true });
+        var checkpointContext = branch.ExportCheckpoint();
+        var coordinator = new FakeForkChildCoordinator();
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = new ExecutionSnapshot
+            {
+                ExecutionId = executionId.ToString(),
+                WorkflowName = "wf",
+                ActiveStates = Array.Empty<string>(),
+                IsCompleted = true,
+                IsCancelled = false,
+                IsFailed = false
+            },
+            GraphJsonToReturn = "{\"nodes\":[]}",
+            CheckpointToExport = new ExecutionRuntimeCheckpoint
+            {
+                ExecutionId = executionId.ToString(),
+                DefinitionName = "def",
+                ActiveStates = Array.Empty<string>(),
+                StateAttempts = new Dictionary<string, int>(),
+                StateOutputs = new Dictionary<string, JsonElement?>(),
+                AppliedPublishClientEventIds = Array.Empty<Guid>(),
+                AppliedCancelClientEventIds = Array.Empty<Guid>(),
+                Context = checkpointContext,
+                Graph = new CheckpointGraphData { Nodes = [], Edges = [] },
+                Join = new CheckpointJoinData
+                {
+                    JoinStateResults = new Dictionary<string, IReadOnlyDictionary<string, CheckpointJoinObserved>>(),
+                    JoinSourceNodeIds = new Dictionary<string, IReadOnlyDictionary<string, string>>(),
+                    StartedJoins = Array.Empty<string>()
+                },
+                PendingWaits = Array.Empty<CheckpointPendingWait>()
+            }
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildTerminalProjectionService(sqlite, engine, coordinator, executionId);
+
+        // Act
+        await sut.UpdateProjectionFromEngineAsync(executionId, CancellationToken.None);
+
+        // Assert
+        var notified = Assert.Single(coordinator.ChildTerminalNotifications);
+        Assert.Equal(executionId, notified.ChildExecutionId);
+        Assert.Equal(ExecutionProjectionStatuses.Completed, notified.Status);
+        Assert.True(JsonDocument.Parse(notified.OutputJson!).RootElement.GetProperty("done").GetBoolean());
+        using var states = JsonDocument.Parse(notified.StatesJson!);
+        Assert.Equal(["Charge"], states.RootElement.EnumerateObject().Select(prop => prop.Name));
+        using var vars = JsonDocument.Parse(notified.VarsJson!);
+        var write = Assert.Single(vars.RootElement.EnumerateArray().ToList());
+        Assert.Equal(["order", "status"], write.GetProperty("path").EnumerateArray().Select(segment => segment.GetString()));
+        Assert.Equal("charged", write.GetProperty("value").GetString());
+    }
+
+    /// <summary>
+    /// 何も書かずに終端した子の投影では、states / vars / output を null で Fork の子コーディネータへ渡す。
+    /// </summary>
+    [Fact]
+    public async Task UpdateProjectionFromEngineAsync_WhenTerminalWithoutWrites_NotifiesForkChildWithNulls()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeef3");
+
+        var coordinator = new FakeForkChildCoordinator();
+        var engine = new FakeExecutionEngine
+        {
+            SnapshotToReturn = new ExecutionSnapshot
+            {
+                ExecutionId = executionId.ToString(),
+                WorkflowName = "wf",
+                ActiveStates = Array.Empty<string>(),
+                IsCompleted = true,
+                IsCancelled = false,
+                IsFailed = false
+            },
+            GraphJsonToReturn = "{\"nodes\":[]}",
+            CheckpointToExport = CreateMinimalCheckpoint(executionId.ToString())
+        };
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildTerminalProjectionService(sqlite, engine, coordinator, executionId);
+
+        // Act
+        await sut.UpdateProjectionFromEngineAsync(executionId, CancellationToken.None);
+
+        // Assert
+        var notified = Assert.Single(coordinator.ChildTerminalNotifications);
+        Assert.Null(notified.OutputJson);
+        Assert.Null(notified.StatesJson);
+        Assert.Null(notified.VarsJson);
+    }
+
+    /// <summary>終端投影の Fork 子通知テスト用に、Running の実行行と Fork の子コーディネータを持つ ExecutionService を作る。</summary>
+    private static ExecutionService BuildTerminalProjectionService(
+        SqliteTestDatabase sqlite,
+        FakeExecutionEngine engine,
+        FakeForkChildCoordinator coordinator,
+        Guid executionId) =>
+        BuildExecutionService(
+            sqlite,
+            new ExecutionServiceTestDeps
+            {
+                Engine = engine,
+                DisplayIds = new FakeDisplayIdService(),
+                Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+                IdGenerator = new FixedIdGenerator(executionId),
+                DedupService = new FakeCommandDedupService(null),
+                Executions = new FakeExecutionRepository
+                {
+                    ByIdResult = new ExecutionRow
+                    {
+                        ExecutionId = executionId,
+                        TenantId = TestTenantIds.T1TenantId,
+                        DefinitionId = Guid.NewGuid(),
+                        Status = "Running",
+                        StartedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        CancelRequested = false,
+                        RestartLost = false
+                    }
+                },
+                Definitions = new StubDefinitionRepository(),
+                Dedup = new FakeCommandDedupRepository(),
+                EventStore = new FakeEventStoreRepository(),
+                EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+                ForkChildCoordinator = coordinator,
+            });
 
     /// <summary>非公開投影更新処理が実行行とスナップショットを更新する。</summary>
     [Fact]
@@ -5260,14 +5404,20 @@ public sealed class ExecutionServiceTests
         public Task<ForkExpansionResult> ExpandForkAsync(ForkExpansionRequest request, CancellationToken ct) =>
             throw new NotSupportedException();
 
+        /// <summary><see cref="NotifyChildTerminalAsync"/> に渡された引数（呼び出し順）。</summary>
+        public List<(Guid ChildExecutionId, string Status, string? OutputJson, string? StatesJson, string? VarsJson)> ChildTerminalNotifications { get; } = [];
+
         public Task<bool> NotifyChildTerminalAsync(
             Guid childExecutionId,
             string status,
             string? outputJson,
             string? statesJson,
             string? varsJson,
-            CancellationToken ct) =>
-            throw new NotSupportedException();
+            CancellationToken ct)
+        {
+            ChildTerminalNotifications.Add((childExecutionId, status, outputJson, statesJson, varsJson));
+            return Task.FromResult(true);
+        }
 
         public Task<ForkJoinEvaluation> EvaluateJoinAsync(
             Guid parentExecutionId,

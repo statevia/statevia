@@ -684,7 +684,7 @@ public sealed class ForkChildExecutionCoordinator(
     /// オブジェクトは、書いたパスを記録する前に終端した枝の <c>vars</c> 全体。その枝は親の値を引き継いでいないため、
     /// 全トップレベルキーを書いたものとして扱う（値を落とさない安全側）。
     /// </remarks>
-    private static IReadOnlyList<ContextVarWrite> ParseVarWritesJson(string? varsJson)
+    private static List<ContextVarWrite> ParseVarWritesJson(string? varsJson)
     {
         if (string.IsNullOrWhiteSpace(varsJson))
             return [];
