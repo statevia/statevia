@@ -571,11 +571,21 @@ internal sealed class ExecutionLifecycleCommandService(
                     versionRow,
                     executionId)
                 {
-                    ForkBranch = forkBranch is { } branch ? new ForkBranchStart(branch.WorkflowInput) : null
+                    ForkBranch = forkBranch is { } branch ? ToForkBranchStart(branch, executionId) : null
                 },
                 ct)
             .ConfigureAwait(false);
     }
+
+    /// <summary>work item の枝の開始指定を Engine の開始指定にする。</summary>
+    /// <remarks>引き継ぎを運ぶ前に enqueue した payload（論理実行 ID が無い）では、子実行自身の ID を論理実行 ID にする。</remarks>
+    private static ForkBranchStart ToForkBranchStart(ForkBranchStartPayload branch, Guid executionId) =>
+        new(
+            branch.WorkflowInput,
+            new ForkParentContext(
+                branch.Vars,
+                branch.States,
+                branch.LogicalExecutionId ?? executionId.ToString()));
 
     /// <summary>
     /// Engine から runtime checkpoint を export し永続化する。

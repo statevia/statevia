@@ -123,13 +123,20 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         string forkState,
         string sourceNodeId,
         IReadOnlyList<ForkBranchExpansionPlan> branches,
-        object? workflowInput)
+        WorkflowExecutionContext parentContext)
     {
         var handler = _forkExpansionHandler;
         if (handler is null)
             return;
 
-        var evt = new ForkExpansionEvent(executionId, forkState, sourceNodeId, branches, workflowInput);
+        // 各枝は Fork 到達時点の親の vars / states を引き継ぐ。以後の親の書き込みは写しに影響しない。
+        var evt = new ForkExpansionEvent(
+            executionId,
+            forkState,
+            sourceNodeId,
+            branches,
+            parentContext.Input,
+            parentContext.ExportForkParentContext());
         _ = NotifyForkExpansionAsync(handler, evt);
     }
 
@@ -491,7 +498,10 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         string startState,
         ForkBranchStart? forkBranch)
     {
-        instance.InitializeContext(forkBranch is { } branch ? branch.WorkflowInput : input);
+        if (forkBranch is { } branch)
+            instance.InitializeForkBranchContext(branch);
+        else
+            instance.InitializeContext(input);
         // Fork の枝の input は親の Context で評価済み。子の Context で再評価すると値を失う。
         var initialInput = forkBranch is null ? ApplyStateInput(instance, startState, input) : input;
         try
@@ -840,7 +850,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             if (_forkExpansionHandler is not null)
             {
                 // Hosted: 物理子展開。同一インスタンス上では分岐を走らせない。
-                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans, instance.Context.Input);
+                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans, instance.Context);
                 return;
             }
 
@@ -905,8 +915,8 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             {
                 if (fragment.States is { Count: > 0 })
                     instance.Context.MergeStateEntries(fragment.States);
-                if (fragment.Vars is not null)
-                    instance.Context.MergeVars(fragment.Vars);
+                if (fragment.VarWrites is { Count: > 0 })
+                    instance.Context.ApplyVarWrites(fragment.VarWrites);
             }
         }
 

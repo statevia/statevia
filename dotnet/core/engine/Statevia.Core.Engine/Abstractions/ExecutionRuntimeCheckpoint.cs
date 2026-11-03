@@ -77,6 +77,22 @@ public sealed class CheckpointContextData
 
     /// <summary>states（stateName → { output }）。</summary>
     public required IReadOnlyDictionary<string, JsonElement?> States { get; init; }
+
+    /// <summary>
+    /// <c>$.sys.execution.id</c> に見せる論理実行 ID。null のときは実行インスタンス ID。
+    /// </summary>
+    /// <remarks>Hosted Fork の枝（子 execution）では親の論理実行 ID になる。</remarks>
+    public string? SysExecutionId { get; init; }
+
+    /// <summary>
+    /// この実行で書いた <c>vars</c> のパス（<c>$.vars</c> 以下のプロパティ名の並び）。祖先のパスがあれば子孫は持たない。
+    /// </summary>
+    /// <remarks>Hosted Fork の Join で親へ戻す範囲に使う。null は記録の無い checkpoint で、<c>vars</c> の全トップレベルキーを書いたものとして扱う。</remarks>
+    public IReadOnlyList<IReadOnlyList<string>>? WrittenVarPaths { get; init; }
+
+    /// <summary>この実行で完了した状態名。</summary>
+    /// <remarks>Hosted Fork の Join で親へ戻す範囲に使う。null は記録の無い checkpoint で、全状態を書いたものとして扱う。</remarks>
+    public IReadOnlyList<string>? WrittenStates { get; init; }
 }
 
 /// <summary>チェックポイント内の実行グラフ。</summary>

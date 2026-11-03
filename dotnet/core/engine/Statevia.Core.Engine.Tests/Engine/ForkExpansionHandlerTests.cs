@@ -200,14 +200,14 @@ public sealed class ForkExpansionHandlerTests
                     {
                         ["A"] = new Dictionary<string, object?> { ["output"] = "first-a" }
                     },
-                    new Dictionary<string, object?> { ["shared"] = "first" }),
+                    [new ContextVarWrite(["shared"], "first")]),
                 new PhysicalJoinContextFragment(
                     new Dictionary<string, object?>
                     {
                         ["A"] = new Dictionary<string, object?> { ["output"] = "second-a" },
                         ["B"] = new Dictionary<string, object?> { ["output"] = "b-val" }
                     },
-                    new Dictionary<string, object?> { ["shared"] = "second" })
+                    [new ContextVarWrite(["shared"], "second")])
             ]);
         await Task.Delay(400);
         var checkpoint = engine.ExportCheckpoint(parentId);

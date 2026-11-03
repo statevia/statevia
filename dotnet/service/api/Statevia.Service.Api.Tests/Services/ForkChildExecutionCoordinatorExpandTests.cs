@@ -85,6 +85,39 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
         });
     }
 
+    /// <summary>
+    /// 子の Start work item に、Fork 到達時点の親の vars / states と論理実行 ID を載せる（Worker の再起動後も同じ値で開始できる）。
+    /// </summary>
+    [Fact]
+    public async Task ExpandForkAsync_StartPayloadCarriesParentVarsStatesAndLogicalExecutionId()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var parentId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var definitionVersionId = Guid.NewGuid();
+        await SeedParentAsync(db.Options, parentId, definitionId, definitionVersionId, DateTime.UtcNow);
+        var workQueue = new CapturingWorkQueue();
+        var sut = CreateSut(db.Factory, workQueue, new ForkChildExpansionOptions { MaxAttempts = 2, BaseDelayMs = 0 });
+        var request = CreateRequest(parentId, definitionId, definitionVersionId);
+
+        // Act
+        await sut.ExpandForkAsync(request, CancellationToken.None);
+
+        // Assert
+        var payloads = workQueue.Items
+            .Select(item => JsonSerializer.Deserialize<ExecutionStartWorkItemPayload>(item.Payload, ExecutionWorkItemPayloadJson.Options)!)
+            .ToList();
+        Assert.Equal(2, payloads.Count);
+        Assert.All(payloads, payload =>
+        {
+            Assert.NotNull(payload.ForkBranch);
+            Assert.Equal("new", payload.ForkBranch.Vars!.Value.GetProperty("order").GetProperty("status").GetString());
+            Assert.Equal("r-1", payload.ForkBranch.States!.Value.GetProperty("Receive").GetProperty("output").GetString());
+            Assert.Equal("root-1", payload.ForkBranch.LogicalExecutionId);
+        });
+    }
+
     /// <summary>同数の branches が既にある再入では Start を二重 enqueue しない。</summary>
     [Fact]
     public async Task ExpandForkAsync_WhenAlreadyExpanded_DoesNotReEnqueueStarts()
@@ -178,7 +211,8 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
             CompiledDefinition: CreateDefinition(),
             ForkNodeId: "fork-node-1",
             Branches: Array.Empty<ForkBranchExpansion>(),
-            WorkflowInput: null);
+            WorkflowInput: null,
+            ParentContext: new ForkParentContext(null, null, parentId.ToString("D")));
 
         // Act
         var act = () => sut.ExpandForkAsync(request, CancellationToken.None);
@@ -248,7 +282,11 @@ public sealed class ForkChildExecutionCoordinatorExpandTests
                 new ForkBranchExpansion("A", new { n = 1 }),
                 new ForkBranchExpansion("B", new { n = 2 })
             ],
-            WorkflowInput: new { orderId = "o-1" });
+            WorkflowInput: new { orderId = "o-1" },
+            ParentContext: new ForkParentContext(
+                new Dictionary<string, object?> { ["order"] = new Dictionary<string, object?> { ["status"] = "new" } },
+                new Dictionary<string, object?> { ["Receive"] = new Dictionary<string, object?> { ["output"] = "r-1" } },
+                "root-1"));
 
     private static CompiledWorkflowDefinition CreateDefinition() =>
         new()

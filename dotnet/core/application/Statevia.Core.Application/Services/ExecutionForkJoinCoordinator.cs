@@ -290,7 +290,7 @@ internal sealed class ExecutionForkJoinCoordinator(
         if (evaluation.ContextMerges is { Count: > 0 })
         {
             fragments = evaluation.ContextMerges
-                .Select(m => new PhysicalJoinContextFragment(m.States, m.Vars))
+                .Select(m => new PhysicalJoinContextFragment(m.States, m.VarWrites))
                 .ToList();
         }
 

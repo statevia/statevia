@@ -6990,13 +6990,66 @@ public sealed class ExecutionServiceTests
         await sut.ExecuteQueuedStartAsync(
             executionId,
             request,
-            new ForkBranchStartPayload(workflowInputDoc.RootElement),
+            new ForkBranchStartPayload(workflowInputDoc.RootElement, null, null, null),
             CancellationToken.None);
 
         // Assert
         Assert.NotNull(engine.LastForkBranch);
         var workflowInput = Assert.IsType<JsonElement>(engine.LastForkBranch.WorkflowInput);
         Assert.Equal("o-1", workflowInput.GetProperty("orderId").GetString());
+    }
+
+    /// <summary>Fork の枝の Queued Start では、payload の親の vars / states と論理実行 ID を Engine へ渡す。</summary>
+    [Fact]
+    public async Task ExecuteQueuedStartAsync_WithForkBranch_PassesParentContextToEngine()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeef0");
+        var engine = new FakeExecutionEngine();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildQueuedStartService(sqlite, engine, executionId);
+        using var inputDoc = JsonDocument.Parse("{}");
+        using var varsDoc = JsonDocument.Parse("""{"order":{"status":"new"}}""");
+        using var statesDoc = JsonDocument.Parse("""{"Receive":{"output":"r-1"}}""");
+        var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement, InitialState = "A" };
+
+        // Act
+        await sut.ExecuteQueuedStartAsync(
+            executionId,
+            request,
+            new ForkBranchStartPayload(null, varsDoc.RootElement, statesDoc.RootElement, "root-1"),
+            CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(engine.LastForkBranch);
+        var parent = engine.LastForkBranch.ParentContext;
+        Assert.Equal("root-1", parent.LogicalExecutionId);
+        Assert.Equal("new", Assert.IsType<JsonElement>(parent.Vars).GetProperty("order").GetProperty("status").GetString());
+        Assert.Equal("r-1", Assert.IsType<JsonElement>(parent.States).GetProperty("Receive").GetProperty("output").GetString());
+    }
+
+    /// <summary>論理実行 ID の無い payload（引き継ぎを運ぶ前に enqueue したもの）では、子実行自身の ID を論理実行 ID にする。</summary>
+    [Fact]
+    public async Task ExecuteQueuedStartAsync_WithForkBranchWithoutLogicalId_UsesOwnExecutionId()
+    {
+        // Arrange
+        var executionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeef1");
+        var engine = new FakeExecutionEngine();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildQueuedStartService(sqlite, engine, executionId);
+        using var inputDoc = JsonDocument.Parse("{}");
+        var request = new StartExecutionRequest { DefinitionId = "def-q", Input = inputDoc.RootElement, InitialState = "A" };
+
+        // Act
+        await sut.ExecuteQueuedStartAsync(
+            executionId,
+            request,
+            new ForkBranchStartPayload(null, null, null, null),
+            CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(engine.LastForkBranch);
+        Assert.Equal(executionId.ToString(), engine.LastForkBranch.ParentContext.LogicalExecutionId);
     }
 
     /// <summary>受理済みの実行行と定義版を持つ、Queued Start 用の ExecutionService を作る。</summary>

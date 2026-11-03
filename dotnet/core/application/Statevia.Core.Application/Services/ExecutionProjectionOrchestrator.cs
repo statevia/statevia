@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Statevia.Core.Application.Infrastructure;
 using Statevia.Core.Engine.Abstractions;
+using Statevia.Core.Engine.Engine;
 using System.Text.Json;
 
 namespace Statevia.Core.Application.Services;
@@ -241,7 +242,13 @@ internal sealed class ExecutionProjectionOrchestrator(
         }
     }
 
-    /// <summary>ロード中 Engine から終端 Context（output / states / vars）を JSON 文字列として取り出す。</summary>
+    /// <summary>
+    /// ロード中 Engine から、子の終端 output と、子が書いた states / vars を JSON 文字列として取り出す。
+    /// </summary>
+    /// <remarks>
+    /// Fork 到達時に親から引き継いだだけの値は含めない。含めると Join で他の枝が書いた値を古い値で上書きし得る。
+    /// vars は <c>[{ "path": [...], "value": ... }]</c> の配列にする。
+    /// </remarks>
     private (string? OutputJson, string? StatesJson, string? VarsJson) TryGetChildTerminalContextJson(
         string engineExecutionId)
     {
@@ -257,24 +264,13 @@ internal sealed class ExecutionProjectionOrchestrator(
             outputJson = output.Value.GetRawText();
         }
 
-        string? statesJson = null;
-        if (checkpoint.Context.States is { Count: > 0 })
-        {
-            statesJson = JsonSerializer.Serialize(
-                checkpoint.Context.States.ToDictionary(
-                    kv => kv.Key,
-                    kv => kv.Value,
-                    StringComparer.OrdinalIgnoreCase),
-                JsonSerializerProfiles.CamelCase);
-        }
-
-        string? varsJson = null;
-        var vars = checkpoint.Context.Vars;
-        if (vars is not null
-            && vars.Value.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
-        {
-            varsJson = vars.Value.GetRawText();
-        }
+        var writes = WorkflowExecutionContext.ExportBranchWrites(checkpoint.Context);
+        string? statesJson = writes.States is { Count: > 0 }
+            ? JsonSerializer.Serialize(writes.States, JsonSerializerProfiles.CamelCase)
+            : null;
+        string? varsJson = writes.VarWrites is { Count: > 0 }
+            ? JsonSerializer.Serialize(writes.VarWrites, JsonSerializerProfiles.CamelCase)
+            : null;
 
         return (outputJson, statesJson, varsJson);
     }

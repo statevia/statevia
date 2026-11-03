@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Statevia.Core.Application.Infrastructure;
 using Statevia.Core.Application.Services;
+using Statevia.Core.Engine.Engine;
 using Statevia.Infrastructure.Persistence;
 using Statevia.Infrastructure.Persistence.Repositories;
 using Statevia.Service.Api.Tests.Infrastructure;
@@ -84,6 +86,63 @@ public sealed class ForkChildExecutionCoordinatorJoinAggregationTests
         Assert.True(evaluation.ContextMerges[0].States.ContainsKey("A"));
         Assert.True(evaluation.ContextMerges[1].States.ContainsKey("A"));
         Assert.Equal(99, ((JsonElement)evaluation.ContextMerges[1].States["A"]!).GetProperty("output").GetInt32());
+    }
+
+    /// <summary>
+    /// 子の終端で取り出した「書いたパスと値」の JSON を、枝の完了順の書き込みとして読む。
+    /// </summary>
+    [Fact]
+    public async Task EvaluateJoinAsync_ReadsBranchVarWritesInCompletionOrder()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var parentId = Guid.NewGuid();
+        var childA = Guid.NewGuid();
+        var childB = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await SeedParentAndBranchesAsync(db.Options, parentId, childA, childB, now);
+        await MarkBranchAsync(db.Options, parentId, "B", ExecutionBranchStatuses.Completed, null, null, SerializeBranchVarWrites("$.vars.order.total", 100), now.AddSeconds(2));
+        await MarkBranchAsync(db.Options, parentId, "A", ExecutionBranchStatuses.Completed, null, null, SerializeBranchVarWrites("$.vars.order.status", "charged"), now.AddSeconds(1));
+        var sut = CreateSut(db, new CapturingWorkQueue());
+
+        // Act
+        var evaluation = await sut.EvaluateJoinAsync(parentId, "fork-node-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(ForkJoinEvaluationKind.Satisfied, evaluation.Kind);
+        Assert.NotNull(evaluation.ContextMerges);
+        var first = Assert.Single(evaluation.ContextMerges[0].VarWrites);
+        Assert.Equal(["order", "status"], first.Path);
+        Assert.Equal("charged", ((JsonElement)first.Value!).GetString());
+        var second = Assert.Single(evaluation.ContextMerges[1].VarWrites);
+        Assert.Equal(["order", "total"], second.Path);
+        Assert.Equal(100, ((JsonElement)second.Value!).GetInt32());
+    }
+
+    /// <summary>
+    /// 書いたパスを記録する前に終端した枝の vars（オブジェクト）は、全トップレベルキーを書いたものとして読む。
+    /// </summary>
+    [Fact]
+    public async Task EvaluateJoinAsync_VarsObjectWithoutPaths_ReadsTopLevelKeysAsWrites()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var parentId = Guid.NewGuid();
+        var childA = Guid.NewGuid();
+        var childB = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await SeedParentAndBranchesAsync(db.Options, parentId, childA, childB, now);
+        await MarkBranchAsync(db.Options, parentId, "A", ExecutionBranchStatuses.Completed, null, null, """{"billing":{"id":"b-1"},"note":"x"}""", now.AddSeconds(1));
+        await MarkBranchAsync(db.Options, parentId, "B", ExecutionBranchStatuses.Completed, null, null, null, now.AddSeconds(2));
+        var sut = CreateSut(db, new CapturingWorkQueue());
+
+        // Act
+        var evaluation = await sut.EvaluateJoinAsync(parentId, "fork-node-1", CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(evaluation.ContextMerges);
+        Assert.Equal([["billing"], ["note"]], evaluation.ContextMerges[0].VarWrites.Select(write => write.Path.ToArray()));
+        Assert.Empty(evaluation.ContextMerges[1].VarWrites);
     }
 
     /// <summary>一文 Failed なら Failed 評価を返す。</summary>
@@ -267,6 +326,17 @@ public sealed class ForkChildExecutionCoordinatorJoinAggregationTests
                 UpdatedAt = now
             });
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// 子の終端と同じ経路（Context の書き込み記録 → <see cref="WorkflowExecutionContext.ExportBranchWrites"/> → JSON）で、1 パスを書いた枝の vars_json を作る。
+    /// </summary>
+    private static string SerializeBranchVarWrites(string varsPath, object? value)
+    {
+        var context = WorkflowExecutionContext.Create(null);
+        context.SetVar(varsPath, value);
+        var writes = WorkflowExecutionContext.ExportBranchWrites(context.ExportCheckpoint());
+        return JsonSerializer.Serialize(writes.VarWrites, JsonSerializerProfiles.CamelCase);
     }
 
     private static async Task MarkBranchAsync(
