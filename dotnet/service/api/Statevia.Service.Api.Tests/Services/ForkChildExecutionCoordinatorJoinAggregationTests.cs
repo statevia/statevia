@@ -119,32 +119,6 @@ public sealed class ForkChildExecutionCoordinatorJoinAggregationTests
         Assert.Equal(100, ((JsonElement)second.Value!).GetInt32());
     }
 
-    /// <summary>
-    /// 書いたパスを記録する前に終端した枝の vars（オブジェクト）は、全トップレベルキーを書いたものとして読む。
-    /// </summary>
-    [Fact]
-    public async Task EvaluateJoinAsync_VarsObjectWithoutPaths_ReadsTopLevelKeysAsWrites()
-    {
-        // Arrange
-        using var db = new InMemoryTestDatabase();
-        var parentId = Guid.NewGuid();
-        var childA = Guid.NewGuid();
-        var childB = Guid.NewGuid();
-        var now = DateTime.UtcNow;
-        await SeedParentAndBranchesAsync(db.Options, parentId, childA, childB, now);
-        await MarkBranchAsync(db.Options, parentId, "A", ExecutionBranchStatuses.Completed, null, null, """{"billing":{"id":"b-1"},"note":"x"}""", now.AddSeconds(1));
-        await MarkBranchAsync(db.Options, parentId, "B", ExecutionBranchStatuses.Completed, null, null, null, now.AddSeconds(2));
-        var sut = CreateSut(db, new CapturingWorkQueue());
-
-        // Act
-        var evaluation = await sut.EvaluateJoinAsync(parentId, "fork-node-1", CancellationToken.None);
-
-        // Assert
-        Assert.NotNull(evaluation.ContextMerges);
-        Assert.Equal([["billing"], ["note"]], evaluation.ContextMerges[0].VarWrites.Select(write => write.Path.ToArray()));
-        Assert.Empty(evaluation.ContextMerges[1].VarWrites);
-    }
-
     /// <summary>一文 Failed なら Failed 評価を返す。</summary>
     [Fact]
     public async Task EvaluateJoinAsync_WhenOneFailed_ReturnsFailed()

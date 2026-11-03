@@ -256,9 +256,13 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
     private sealed class BlockFirstProjectionUpdateExecutionService : IExecutionService
     {
         private readonly TaskCompletionSource<bool> _firstUpdateMayProceed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _firstUpdateStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _updateProjectionCallCount;
 
         internal int UpdateProjectionCallCount => _updateProjectionCallCount;
+
+        /// <summary>1 回目の投影更新が始まると完了する（固定の待ち時間に頼らず、Worker が 1 件目を取り出したことを待つ）。</summary>
+        internal Task FirstUpdateStarted => _firstUpdateStarted.Task;
 
         internal void ReleaseFirstUpdate() => _firstUpdateMayProceed.TrySetResult(true);
 
@@ -266,7 +270,10 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
         {
             var callNumber = Interlocked.Increment(ref _updateProjectionCallCount);
             if (callNumber == 1)
+            {
+                _firstUpdateStarted.TrySetResult(true);
                 await _firstUpdateMayProceed.Task.WaitAsync(ct);
+            }
         }
 
         public Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct) => Task.CompletedTask;
@@ -645,7 +652,7 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
         {
             // Act
             await executionEngine.EmitNodeCompletedAsync(executionIdFirst);
-            await Task.Delay(150);
+            await executionService.FirstUpdateStarted.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(1, executionService.UpdateProjectionCallCount);
 
             await executionEngine.EmitNodeCompletedAsync(executionIdSecond);
