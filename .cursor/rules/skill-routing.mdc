@@ -28,3 +28,7 @@ Plan 成果を spec へ書き起こすチャットコマンド: `/spec-from-plan
 - 調査・設計前調査・実装では `.cursor/rules/serena-research-and-implementation.mdc` と Serena 調査実装スキルを併用する。
 - C# または UI の質問・設計・実装では、開始時に対応する Serena（`serena-csharp` / `serena-ui`）を On にする。詳細は上記 Serena スキル。
 - 明示的に切り替えたいときはチャットから `/serena-project-csharp` / `/serena-project-ui`（`.cursor/commands/`）を利用できる。
+
+## MCP（Lore）
+
+- 仕様・実装・テストの所在調査では `.cursor/rules/lore-mcp-research.mdc` に従い、Serena より前の入口として `search` / `references` を使う。

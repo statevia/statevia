@@ -91,6 +91,7 @@ Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines
 - **Engine 境界**: `ExecutionEngine` は `IStateExecutor` のみ。Catalog / Policy / ModuleHost は Service API 側。Hosted Fork の親子協調は Application（`execution_branches`・予約 Resume）
 - **Execution Facade**: HTTP / Worker は `IExecutionService` のみ。実処理は `dotnet/core/application` のドメインサービス（Query / Lifecycle / WaitEvent / Checkpoint / Ownership / Recovery / Projection）。境界は [`docs/architecture/domain-model-boundaries.md`](docs/architecture/domain-model-boundaries.md)
 - **Serena MCP**: C# は `serena-csharp`（`dotnet/` / `statevia.sln`）、UI は `serena-ui`。切替は UI トグル（同時 On は原則 1）。未起動時は停止して起動を促す。手順は [`.cursor/skills/serena-mcp-project-switch/SKILL.md`](.cursor/skills/serena-mcp-project-switch/SKILL.md)。
+- **Lore MCP**（各自の環境で設定する場合）: どこに書いてあるか分からない仕様・実装・テストは、grep の前に `search`、型が決まったら `references`。索引はコミット時点のもので、未コミットのファイルは入らないことがある。本文と参照の追跡は Serena / Read。方針は [`.cursor/rules/lore-mcp-research.mdc`](.cursor/rules/lore-mcp-research.mdc)。
 
 ## .NET SDK
 
