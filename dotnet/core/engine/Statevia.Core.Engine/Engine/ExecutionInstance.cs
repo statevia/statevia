@@ -29,6 +29,12 @@ public sealed class ExecutionInstance : IDisposable
     /// <summary>実行時データの Execution Context（パス評価根）。</summary>
     public WorkflowExecutionContext Context { get; private set; } = WorkflowExecutionContext.Create(null);
 
+    // Engine 単体の Fork で、Join がまだ成立していない枝の範囲（ID → 範囲）。
+    private readonly Dictionary<string, InProcessBranchScope> _liveBranchScopes = new(StringComparer.Ordinal);
+
+    // ノード ID → 属する枝の範囲（_liveBranchScopes に残る範囲のノードだけ）。
+    private readonly Dictionary<string, InProcessBranchScope> _nodeBranchScopes = new(StringComparer.Ordinal);
+
     private readonly Dictionary<string, object?> _stateOutputs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _stateAttempts = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _activeStates = new(StringComparer.OrdinalIgnoreCase);
@@ -72,15 +78,102 @@ public sealed class ExecutionInstance : IDisposable
     /// </summary>
     /// <param name="stateName">状態名。</param>
     /// <param name="output"><see cref="IStateExecutor.ExecuteAsync"/> の戻り値。</param>
-    public void SetOutput(string stateName, object? output)
+    public void SetOutput(string stateName, object? output) => SetOutput(stateName, output, scope: null);
+
+    /// <summary>
+    /// 状態完了時の出力を記録し、範囲の Context の <c>states</c> / <c>vars</c> を更新する。
+    /// </summary>
+    /// <remarks>状態の output の一覧（グラフと checkpoint 用）は範囲によらず実行全体で持つ。</remarks>
+    /// <param name="stateName">状態名。</param>
+    /// <param name="output">状態の output。</param>
+    /// <param name="scope">状態が属する枝の範囲。null なら実行の Context。</param>
+    internal void SetOutput(string stateName, object? output, InProcessBranchScope? scope)
     {
+        var context = ContextOf(scope);
         lock (_lock)
         {
             _stateOutputs[stateName] = output;
-            Context.SetStateOutput(stateName, output);
+            context.SetStateOutput(stateName, output);
             if (Definition.StateOutputs.TryGetValue(stateName, out var varsPath))
             {
-                Context.SetVar(varsPath, output);
+                context.SetVar(varsPath, output);
+            }
+        }
+    }
+
+    /// <summary>範囲の Context を返す。</summary>
+    /// <param name="scope">枝の範囲。null なら実行の Context。</param>
+    /// <returns>評価と書き込みに使う Context。</returns>
+    internal WorkflowExecutionContext ContextOf(InProcessBranchScope? scope) => scope?.Context ?? Context;
+
+    /// <summary>
+    /// Engine 単体の Fork 到達で、枝ごとに範囲を作る（外側の範囲の Context を枝ごとに写す）。
+    /// </summary>
+    /// <param name="forkNodeId">Fork に到達したノードの ID。</param>
+    /// <param name="joinState">対になる Join の状態名。</param>
+    /// <param name="parent">外側の枝の範囲（最外は null）。</param>
+    /// <param name="branchHeads">枝の先頭の状態名。</param>
+    /// <returns>枝の先頭と同じ順の範囲。</returns>
+    internal IReadOnlyList<InProcessBranchScope> BeginInProcessFork(
+        string forkNodeId,
+        string joinState,
+        InProcessBranchScope? parent,
+        IReadOnlyList<string> branchHeads)
+    {
+        var outer = ContextOf(parent);
+        var episode = new InProcessForkEpisode(forkNodeId, joinState, parent);
+        var scopes = branchHeads
+            .Select(head => new InProcessBranchScope($"{forkNodeId}:{head}", episode, head, outer.CreateBranchCopy()))
+            .ToList();
+        lock (_lock)
+        {
+            foreach (var scope in scopes)
+            {
+                _liveBranchScopes[scope.Id] = scope;
+            }
+        }
+
+        return scopes;
+    }
+
+    /// <summary>ノードが属する枝の範囲を記録する。</summary>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <param name="scope">枝の範囲。null なら何もしない（実行の Context）。</param>
+    internal void RegisterNodeScope(string nodeId, InProcessBranchScope? scope)
+    {
+        if (scope is null)
+            return;
+        lock (_lock)
+        {
+            _nodeBranchScopes[nodeId] = scope;
+        }
+    }
+
+    /// <summary>ノードが属する枝の範囲を返す。</summary>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <returns>枝の範囲。範囲の外のノードは null。</returns>
+    internal InProcessBranchScope? GetNodeScope(string nodeId)
+    {
+        lock (_lock)
+        {
+            return _nodeBranchScopes.GetValueOrDefault(nodeId);
+        }
+    }
+
+    /// <summary>Join が成立したエピソードの枝の範囲を手放す（以後 checkpoint に含めない）。</summary>
+    /// <param name="episode">成立したエピソード。</param>
+    internal void CompleteInProcessFork(InProcessForkEpisode episode)
+    {
+        lock (_lock)
+        {
+            foreach (var id in _liveBranchScopes.Where(kv => kv.Value.Episode == episode).Select(kv => kv.Key).ToList())
+            {
+                _liveBranchScopes.Remove(id);
+            }
+
+            foreach (var nodeId in _nodeBranchScopes.Where(kv => kv.Value.Episode == episode).Select(kv => kv.Key).ToList())
+            {
+                _nodeBranchScopes.Remove(nodeId);
             }
         }
     }
@@ -245,8 +338,80 @@ public sealed class ExecutionInstance : IDisposable
                 Context = Context.ExportCheckpoint(),
                 Graph = Graph.ExportCheckpoint(),
                 Join = joinData,
-                PendingWaits = pendingWaits
+                PendingWaits = pendingWaits,
+                BranchScopes = ExportBranchScopesUnlocked(),
+                NodeBranchScopeIds = _nodeBranchScopes.ToDictionary(kv => kv.Key, kv => kv.Value.Id, StringComparer.Ordinal)
             };
+        }
+    }
+
+    private List<CheckpointBranchScope> ExportBranchScopesUnlocked() =>
+        _liveBranchScopes.Values
+            .Select(scope => new CheckpointBranchScope
+            {
+                Id = scope.Id,
+                ForkNodeId = scope.Episode.ForkNodeId,
+                BranchHead = scope.BranchHead,
+                JoinState = scope.Episode.JoinState,
+                ParentScopeId = scope.Episode.Parent?.Id,
+                Context = scope.Context.ExportCheckpoint(),
+                ArrivalOrder = scope.Episode.GetArrivalOrder(scope)
+            })
+            .ToList();
+
+    /// <summary>
+    /// checkpoint の枝の範囲を復元する。外側の範囲から順に作り、エピソードごとに Join への到着順を戻す。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">外側の範囲が一覧に無い、またはノードが一覧に無い範囲を指すとき。</exception>
+    private void ImportBranchScopesUnlocked(ExecutionRuntimeCheckpoint checkpoint)
+    {
+        _liveBranchScopes.Clear();
+        _nodeBranchScopes.Clear();
+        var pending = (checkpoint.BranchScopes ?? []).ToList();
+        var episodes = new Dictionary<string, InProcessForkEpisode>(StringComparer.Ordinal);
+        while (pending.Count > 0)
+        {
+            var ready = pending
+                .Where(data => data.ParentScopeId is null || _liveBranchScopes.ContainsKey(data.ParentScopeId))
+                .ToList();
+            if (ready.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Checkpoint branch scope '{pending[0].Id}' refers to a missing parent scope '{pending[0].ParentScopeId}'.");
+            }
+
+            foreach (var data in ready)
+            {
+                if (!episodes.TryGetValue(data.ForkNodeId, out var episode))
+                {
+                    var parent = data.ParentScopeId is null ? null : _liveBranchScopes[data.ParentScopeId];
+                    episode = new InProcessForkEpisode(data.ForkNodeId, data.JoinState, parent);
+                    episodes[data.ForkNodeId] = episode;
+                }
+
+                var context = WorkflowExecutionContext.CreateFromCheckpoint(data.Context, ExecutionId, Definition.Name);
+                _liveBranchScopes[data.Id] = new InProcessBranchScope(data.Id, episode, data.BranchHead, context);
+                pending.Remove(data);
+            }
+        }
+
+        foreach (var data in (checkpoint.BranchScopes ?? [])
+                     .Where(data => data.ArrivalOrder is not null)
+                     .OrderBy(data => data.ArrivalOrder))
+        {
+            var scope = _liveBranchScopes[data.Id];
+            scope.Episode.TryArrive(scope);
+        }
+
+        foreach (var (nodeId, scopeId) in checkpoint.NodeBranchScopeIds ?? new Dictionary<string, string>())
+        {
+            if (!_liveBranchScopes.TryGetValue(scopeId, out var scope))
+            {
+                throw new InvalidOperationException(
+                    $"Checkpoint node '{nodeId}' refers to a missing branch scope '{scopeId}'.");
+            }
+
+            _nodeBranchScopes[nodeId] = scope;
         }
     }
 
@@ -299,6 +464,8 @@ public sealed class ExecutionInstance : IDisposable
             {
                 concreteJoin.ImportFromCheckpoint(checkpoint.Join);
             }
+
+            ImportBranchScopesUnlocked(checkpoint);
         }
     }
 }

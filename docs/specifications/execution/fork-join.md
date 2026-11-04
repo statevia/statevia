@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.4.0 |
-| 更新日 | 2026-11-02 |
+| Version | 1.5.0 |
+| 更新日 | 2026-11-04 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [wait-cancel.md](wait-cancel.md), [execution-graph.md](execution-graph.md), [../../concepts/durability.md](../../concepts/durability.md), [../../reference/database-schema.md](../../reference/database-schema.md) |
 
 ---
@@ -13,12 +13,14 @@
 
 - **MUST**: 定義時、各 Fork 枝は **Fork（Start）–任意ノード–Join（End）の単一 Definition** である。兄弟 Body は互いに素。Join 供給は `next` / `wait.events` / `edges` の 1 経路（`error` は供給に数えない）。詳細は [definition.md](../definition.md) §2.2 / §4。
 - **MUST**: Fork / Join は**制御ノード**であり、通常の状態（State）ではない。
-- **MUST**: Join は依存する全分岐から所定の事実が揃うまで次へ進んではならない。
+- **MUST**: Fork / Join の契約（Join の成立・Context の引き継ぎとマージ・兄弟参照不可）は実行形態を問わない。Hosted Runtime と Engine 単体で同じ定義は同じ結果になる。
+- **MUST**: Join は、Fork のすべての枝が Join に入るまで次へ進んではならない。`join.all` は待つ枝の先頭の状態名で、各枝は最後の状態が `next` などで Join に入った時点で記録される。2 ノード以上の枝でも、先頭の完了だけでは Join は成立しない。
+- **MUST**: Join の input は「枝の先頭の名前 → Join に入った状態の output」の辞書である。
 - **MUST**: **Hosted Runtime** では Fork 到達時に各分岐を**物理子 execution** として展開する（論理 Fork 互換フラグは設けない）。
-- **MUST**: Hosted の子は、Fork 到達時点の親の `$.vars` / `$.states` を引き継ぐ。枝のどのノードからでも、Fork 前の値を親と同じパスで読める。
+- **MUST**: 各枝は、Fork 到達時点の親の `$.vars` / `$.states` を引き継ぐ。枝のどのノードからでも、Fork 前の値を親と同じパスで読める。
 - **MUST**: **Join 前**は同一 Fork の兄弟分岐同士が互いの `$.states…` / `$.vars…` / Context を参照してはならない（兄弟が Join 前に書いた値は見えない）。
-- **MUST**: **Join 後（成功）**は、各子が**書いた** `vars` のパスと**完了した**状態だけを親 Execution Context へマージし、親の後続から `$.states.<Name>.output` 等を解決できること。引き継いだだけの値は戻さない。同じパス・重なるパスは**枝の完了順で後勝ち**（Failed にしない）。
-- **MUST**: Hosted の子の中の `$.sys.execution.id` は親（論理実行）の ID である。
+- **MUST**: **Join 後（成功）**は、各枝が**書いた** `vars` のパスと**完了した**状態だけを親 Execution Context へマージし、親の後続から `$.states.<Name>.output` 等を解決できること。引き継いだだけの値は戻さない。同じパス・重なるパスは**枝の完了順で後勝ち**（Failed にしない）。
+- **MUST**: 枝の中の `$.sys.execution.id` は親（論理実行）の ID である。
 - **MUST**: 親の `GET …/graph` / `GET …/events` は、UI が物理分割を意識しないよう **GET 時に論理 1 実行へ合成**する（永続への二重書き込みはしない）。
 - **MUST**: `GET /v1/executions` の `items` と件数は、`execution_branches.execution_id` に無いルート execution のみとする。
 - **SHOULD**: Fork は定義上で並列開始する状態集合を明示する。
@@ -76,7 +78,16 @@ Hosted 物理 Fork では、**1 回の Fork 到達（並列エピソード）**�
 
 展開の一時失敗では親をすぐ Failed にしない。**展開リトライ**し、試行上限超過後に残子を Cancel したうえで親を **Failed** にする。展開成功後の子失敗は Join 規則に従う。
 
-スタンドアロン Engine（Host なし）は従来の**論理 Fork**（同一 execution 上の並列）を維持してよい。
+### Engine 単体（Fork 展開ハンドラなし）
+
+Engine をライブラリとして使い、Fork 展開ハンドラを登録しない場合、枝は同じ execution の中で並行に走る。契約は Hosted と同じである。
+
+- Fork 到達時に、親の Context を枝ごとに写す。枝の中の `input` 評価・条件遷移の `when.path`・`output: $.vars…` の代入・`$.states` の記録は、その枝の写しに対して行う。兄弟の枝の書き込みは見えない。
+- 対になる Join は、`join.all` が Fork の枝の集合と一致するもの（定義の検証と同じ対応付け）。見つからない定義（検証を通らない定義を直接渡した場合）は、実行を Failed にする。
+- 枝が Join に入った順（＝枝の完了順）を記録し、Join の成立時にこの順で各枝の書き込みを親の Context へマージする。マージ規則は Hosted の物理 Join と同じ実装を使う。
+- Join の後の状態は親の Context で続く。ネストした Fork では、内側の Join の後は外側の枝の Context で続く。
+- `ExportCheckpoint` は、Join がまだ成立していない枝の範囲（各枝の Context、Join に到着済みの枝と到着順）と、各ノードが属する範囲を含む。`ImportCheckpoint` は枝の Wait を同じ範囲と Context で再開する。枝の範囲を含まない checkpoint（枝が走っていないもの）はこれまでどおり読める。
+- Join に入った後の値は、型を保ったまま親へマージされる（Hosted では子の終端の値が JSON を経由する）。
 
 ### ネスト
 
@@ -86,9 +97,9 @@ Hosted 物理 Fork では、**1 回の Fork 到達（並列エピソード）**�
 
 ## Join
 
-Join は複数の状態からの事実を待ってから次に進みます。
+Join は Fork のすべての枝が Join に入るのを待ってから次に進みます。
 
-例：Join(E) = all(B, C)
+例：Join(E) = all(B, C)。B と C は枝の先頭。枝 `B → B2 → E` では、B2 が E に入った時点で枝 B が記録され、Join の input の `B` は B2 の output になる。
 
 ### Hosted での集約
 
@@ -117,6 +128,8 @@ Join は複数の状態からの事実を待ってから次に進みます。
 | Join 後（成功） | 各子が書いた `vars` のパス（`output: $.vars.order.status` なら `order.status`）と、子で完了した状態だけを親 Context へマージする。引き継いだだけの値は戻さない。後続の `input.path: $.states.A.output` 等は親上で解決する。同じパス・重なるパスは枝の完了順の**後勝ち** |
 | Join 失敗／Cancel 伝播 | 不完全な Context マージは必須としない |
 
+表の契約は Engine 単体でも同じである（「子」を「枝」と読み替える。Engine 単体の仕組みは Fork の節の「Engine 単体」を参照）。
+
 - 引き継いだ値は Start work item の payload に保存する。Worker が再起動しても、同じ値で子を開始する。子が Unload され checkpoint から再開しても、引き継いだ値と「書いたパス」の記録は残る。
 - 引き継いだだけの値を戻さないのは、他の枝の結果を古い値で消さないためである。例: Fork 前の親の `$.vars.order` が `{ status: "new" }`。枝 A が `order` を `{ status: "charged" }` に書き換え、後に完了した枝 B は `order` に触れない。Join 後の親の `order` は A の値になる。
 - パス単位でマージするので、枝 A の `order.status` と枝 B の `order.total` は両方残る。
@@ -132,12 +145,12 @@ Join は複数の状態からの事実を待ってから次に進みます。
 ## ルール
 
 - Fork と Join は状態ではありません。
-- Join は依存状態が事実を生成するたびに評価されます。
+- Join は枝が Join に入るたびに評価されます。枝の途中の状態の完了では評価しません。
 - 必須状態のいずれかが失敗またはキャンセルされた場合、Join は失敗します。
 - **定義時の領域**: 枝は単一 Definition。Join 後の Again で同じ Fork に戻る循環は合法。枝内から Join 以外へ出る遷移、領域外からの侵入、兄弟 Body の共有は拒否する。`error` は枝内または当該 Join へ戻し、領域外へ出してはならない。
 - Fork は実行順序を保証しません。
 - 親 Cancel は未終端の物理子へ Cancel をカスケードする（[wait-cancel.md](wait-cancel.md)）。Join の失敗でも同じく未終端の兄弟を取り消す。
-- 枝の中の状態が失敗しても、`error`（`on.Failed`）で枝内または当該 Join へ進めば子は Completed で終わり、Join は充足し得る（[fsm.md](fsm.md)「失敗事実と on.Failed」）。Engine 単体（プロセス内 Fork）で `join.all` の状態に `on.Failed` を付けた組み合わせは保証しない。
+- 枝の中の状態が失敗しても、`error`（`on.Failed`）で枝内または当該 Join へ進めば子は Completed で終わり、Join は充足し得る（[fsm.md](fsm.md)「失敗事実と on.Failed」）。Engine 単体でも同じで、枝の先頭が失敗して `on.Failed` で枝の中を進んでも、Join に入った時点で記録される。
 - 分岐上の Wait へのイベント配送は**子 execution** を正とする（親 ID への誤配送を解決または拒否する）。
 
 ---

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.9 |
-| 更新日 | 2026-09-30 |
+| Version | 1.5.10 |
+| 更新日 | 2026-11-04 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -13,6 +13,7 @@
 
 - **MUST**: Wait は許可イベントのいずれかが発生するまで実行を一時停止する。各 Wait ノードは一度だけ Resume できる。
 - **MUST**: 再開の正本は **ノードスコープ**（`executionId` + `nodeId` + `eventName`）。HTTP では `POST …/nodes/{nodeId}/resume`、`resumeKey` = イベント名。
+- **MUST**: Wait の遷移先は、Engine がそのノードの再開に使ったイベント名で route table を引いて決める。状態の実行器が返す output の形には依らない。遷移先が決まらない Wait（イベントを待たずに完了した、など）は実行を **Failed** にする（Running のまま止めない）。
 - **MUST**: `POST /v1/events` は Principal と `executions.write` 必須。不足は **403**。成功は **204**（0 件でも）。
 - **MUST**: Cancel は協調的とし、エンジンは状態実行を強制終了してはならない。
 - **MUST**: `Cancelled` 事実は実行が実際に停止したときのみ発行する。durable Wait の Persist / Unload（park）直後に同じ Wait を `Cancelled` 完了してはならない。
@@ -20,6 +21,8 @@
 - **禁止**: 利用者向け文書に `exit` 語彙を出さない。
 
 ---
+
+**Version 1.5.10（2026-11-04）**: Wait の遷移先は Engine が記録した再開イベントで決める（output の `event` に依らない）。遷移先が決まらない Wait は実行を Failed にする。
 
 **Version 1.5.9（2026-09-30）**: 購読候補の GET と、Studio 実行一覧からの集合配送を追記する。ノード Resume は詳細の副経路。
 
@@ -38,7 +41,9 @@ Wait は定義の許可イベントのいずれかが発生するまで状態実
 - **許可外イベント・非アクティブ Wait・不明 nodeId**: 422（`InvalidOperationException` → API `ApiValidationException`）。
 - **遅い Resume**: 投影がすでに終端（Completed / Failed / Cancelled）なら 204（hydrate しない）。非終端で Engine 未ロードかつ checkpoint なしは 422。
 - **FSM の事実**: 待機解消後に状態実行が正常終了すると、JoinTracker 等へ渡す事実は **`Completed`**。次状態の解決は **イベント名 + route table**（[fsm.md](fsm.md)）。
-- **監査**: Wait 完了 output に `{ "event": "<eventName>" }` を載せ得る（遷移判定には使わない）。
+- **遷移先**: Engine は `EventProvider` で再開したイベント名をノードごとに記録し、Wait の完了時にそのイベント名で route table を引く。Engine 単体で Wait の状態を自前の `IState` で書く場合も、`ctx.Events.WaitForEventAsync(ctx.NodeId, …)` で待てば、output は業務の値でよい（`{ event }` を返す必要はない）。checkpoint の復元で、完了済みの Wait の遷移をやり直すときは、記録済み output の `event` を引く。
+- **遷移先が決まらないとき**: 再開イベントが分からない（状態がイベントを待たずに完了した）、またはイベントが route table に無いときは、実行を Failed にしてログ（EventId 50021）を残す。
+- **監査**: 復元した Wait の完了 output には `{ "event": "<eventName>" }` が載る。
 
 ### PublishEvent 互換シム
 

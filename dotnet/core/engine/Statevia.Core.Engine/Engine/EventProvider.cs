@@ -14,6 +14,12 @@ public sealed partial class EventProvider : IEventProvider
     private readonly Dictionary<string, NodeWaitRegistration> _nodeWaiters = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Wait 登録前に届いた Resume（nodeId → eventName）。ImportCheckpoint 直後の競合を吸収する。</summary>
     private readonly Dictionary<string, string> _pendingNodeResumes = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// ノード ID → そのノードの Wait を再開したイベント名。Engine が Wait の遷移先を決めるために、
+    /// 状態の実行器が返す output とは別に記録する（<see cref="TryTakeResumedEvent"/> で 1 回だけ取り出す）。
+    /// </summary>
+    private readonly Dictionary<string, string> _resumedEvents = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
     private readonly ILogger _logger;
 
@@ -66,7 +72,10 @@ public sealed partial class EventProvider : IEventProvider
 
             // Resume が Wait 登録より先に来た場合は即完了（hydrate 直後の競合）。
             if (_pendingNodeResumes.Remove(nodeId, out var buffered) && allowed.Contains(buffered))
+            {
                 pendingEvent = buffered;
+                _resumedEvents[nodeId] = buffered;
+            }
 
             if (pendingEvent is null)
                 _nodeWaiters[nodeId] = new NodeWaitRegistration(allowed, tcs);
@@ -156,10 +165,32 @@ public sealed partial class EventProvider : IEventProvider
             // 1 Wait = 1 回再開: 未使用イベント分の waiter もまとめて除去する。
             _nodeWaiters.Remove(nodeId);
             _pendingNodeResumes.Remove(nodeId);
+            _resumedEvents[nodeId] = trimmedEventName;
             completion = registration.Completion;
         }
 
         completion.TrySetResult(trimmedEventName);
+    }
+
+    /// <summary>
+    /// ノードの Wait を再開したイベント名を取り出し、記録を消す。
+    /// </summary>
+    /// <param name="nodeId">Wait ノード ID。</param>
+    /// <param name="eventName">再開したイベント名（前後の空白は除いたもの）。</param>
+    /// <returns>このノードが <see cref="WaitForEventAsync(string, IReadOnlyList{string}, CancellationToken)"/> で再開済みなら true。</returns>
+    internal bool TryTakeResumedEvent(string nodeId, out string eventName)
+    {
+        lock (_lock)
+        {
+            if (_resumedEvents.Remove(nodeId, out var recorded))
+            {
+                eventName = recorded;
+                return true;
+            }
+        }
+
+        eventName = string.Empty;
+        return false;
     }
 
     /// <summary>

@@ -547,11 +547,12 @@ public class ExecutionInputPropagationTests
             Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
             {
                 ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Fork = new[] { "A", "B" } } },
-                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } },
-                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
+                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["Join1"] = new Dictionary<string, TransitionTarget> { ["Joined"] = new TransitionTarget { End = true } }
             },
             ForkTable = new Dictionary<string, IReadOnlyList<string>> { ["Start"] = new[] { "A", "B" } },
-            JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
+            JoinTable = new Dictionary<string, IReadOnlyList<string>> { ["Join1"] = new[] { "A", "B" } },
             WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
             InitialState = "Start",
             StateExecutorFactory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>
@@ -575,11 +576,12 @@ public class ExecutionInputPropagationTests
             Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
             {
                 ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Fork = new[] { "A", "B" } } },
-                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } },
-                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
+                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["Join1"] = new Dictionary<string, TransitionTarget> { ["Joined"] = new TransitionTarget { End = true } }
             },
             ForkTable = new Dictionary<string, IReadOnlyList<string>> { ["Start"] = new[] { "A", "B" } },
-            JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
+            JoinTable = new Dictionary<string, IReadOnlyList<string>> { ["Join1"] = new[] { "A", "B" } },
             WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
             StateInputs = stateInputs,
             InitialState = "Start",
@@ -593,8 +595,8 @@ public class ExecutionInputPropagationTests
     }
 
     /// <summary>
-    /// A/B には <c>Completed</c> 遷移を置かない（Join へは <see cref="JoinTracker.RecordFact"/> のみ）。
-    /// これにより Join1 は all 完了後にのみ <see cref="ExecutionEngine"/> から起動される。
+    /// Fork の枝 A / B がそれぞれ <c>next</c> で Join1 へ入り、Join1 の後に AfterJoin へ進む定義。
+    /// Join1 は両方の枝が Join に入った後にだけ成立する。
     /// </summary>
     private static CompiledWorkflowDefinition CreateJoinThenNextDefinition(
         IStateExecutor a,
@@ -607,6 +609,8 @@ public class ExecutionInputPropagationTests
             Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
             {
                 ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Fork = new[] { "A", "B" } } },
+                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
                 ["Join1"] = new Dictionary<string, TransitionTarget> { ["Joined"] = new TransitionTarget { Next = "AfterJoin" } },
                 ["AfterJoin"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
             },
@@ -636,6 +640,8 @@ public class ExecutionInputPropagationTests
             Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
             {
                 ["Start"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Fork = new[] { "A", "B" } } },
+                ["A"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
+                ["B"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { Next = "Join1" } },
                 ["Join1"] = new Dictionary<string, TransitionTarget> { ["Joined"] = new TransitionTarget { Next = "AfterJoin" } },
                 ["AfterJoin"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
             },
