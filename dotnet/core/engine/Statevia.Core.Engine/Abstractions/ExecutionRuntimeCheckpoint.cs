@@ -61,6 +61,50 @@ public sealed class ExecutionRuntimeCheckpoint
 
     /// <summary>未完了 Wait（nodeId + 許可イベント）。</summary>
     public required IReadOnlyList<CheckpointPendingWait> PendingWaits { get; init; }
+
+    /// <summary>
+    /// Engine 単体の Fork で、Join がまだ成立していない枝の範囲（Join に到着済みの枝を含む）。
+    /// </summary>
+    /// <remarks>
+    /// null または空は、走っている枝が無い（Hosted、または Fork の外）。枝の範囲を保存する前の checkpoint も null になる。
+    /// 外側の範囲（<see cref="CheckpointBranchScope.ParentScopeId"/>）は同じ一覧に含まれる。
+    /// </remarks>
+    public IReadOnlyList<CheckpointBranchScope>? BranchScopes { get; init; }
+
+    /// <summary>
+    /// ノード ID → 属する枝の範囲の ID（<see cref="BranchScopes"/> に残る範囲のノードだけ）。
+    /// </summary>
+    /// <remarks>
+    /// 復元した Wait と、完了済みで次の遷移をやり直すノードを、正しい枝の Context で続けるために使う。含まれないノードは実行の Context で続ける。
+    /// </remarks>
+    public IReadOnlyDictionary<string, string>? NodeBranchScopeIds { get; init; }
+}
+
+/// <summary>
+/// Engine 単体の Fork の枝の範囲の断面。
+/// </summary>
+public sealed class CheckpointBranchScope
+{
+    /// <summary>範囲の ID（<c>forkNodeId:branchHead</c>）。</summary>
+    public required string Id { get; init; }
+
+    /// <summary>Fork に到達したノードの ID（同じ Fork の枝で共通）。</summary>
+    public required string ForkNodeId { get; init; }
+
+    /// <summary>枝の先頭の状態名（<c>join.all</c> のキー）。</summary>
+    public required string BranchHead { get; init; }
+
+    /// <summary>対になる Join の状態名。</summary>
+    public required string JoinState { get; init; }
+
+    /// <summary>外側の枝の範囲の ID。最外の Fork では null。</summary>
+    public string? ParentScopeId { get; init; }
+
+    /// <summary>この枝の Context（書いたパスの記録を含む）。</summary>
+    public required CheckpointContextData Context { get; init; }
+
+    /// <summary>Join への到着順（0 始まり）。未到着なら null。</summary>
+    public int? ArrivalOrder { get; init; }
 }
 
 /// <summary>チェックポイント内の Execution Context。</summary>

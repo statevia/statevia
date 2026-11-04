@@ -401,6 +401,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         CheckpointPendingWait wait)
     {
         instance.AddActiveState(wait.NodeName);
+        var scope = instance.GetNodeScope(wait.NodeId);
         try
         {
             var (fact, output) = await _scheduler.RunAsync(async ct =>
@@ -414,7 +415,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                     {
                         ["event"] = eventName
                     };
-                    instance.SetOutput(wait.NodeName, result);
+                    instance.SetOutput(wait.NodeName, result, scope);
                     instance.Graph.CompleteNode(wait.NodeId, Fact.Completed, result);
                     await NotifyNodeCompletedAsync(instance.ExecutionId).ConfigureAwait(false);
                     return (Fact.Completed, result);
@@ -450,7 +451,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                 return;
             }
 
-            ProcessFact(instance, eventProvider, wait.NodeName, fact, output, wait.NodeId);
+            ProcessFact(instance, eventProvider, wait.NodeName, fact, output, wait.NodeId, scope);
         }
         finally
         {
@@ -487,7 +488,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             // 未完了 Wait は PendingWaits 経路。完了済み Wait で出辺なしなら ProcessFact が必要。
             instance.RemoveActiveState(node.NodeName);
             instance.TryGetOutput(node.NodeName, out var output);
-            ProcessFact(instance, eventProvider, node.NodeName, node.Fact, output, node.NodeId);
+            ProcessFact(instance, eventProvider, node.NodeName, node.Fact, output, node.NodeId, instance.GetNodeScope(node.NodeId));
         }
     }
 
@@ -503,10 +504,10 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         else
             instance.InitializeContext(input);
         // Fork の枝の input は親の Context で評価済み。子の Context で再評価すると値を失う。
-        var initialInput = forkBranch is null ? ApplyStateInput(instance, startState, input) : input;
+        var initialInput = forkBranch is null ? ApplyStateInput(instance, startState, input, scope: null) : input;
         try
         {
-            await ScheduleStateAsync(instance, eventProvider, startState, null, null, initialInput).ConfigureAwait(false);
+            await ScheduleStateAsync(instance, eventProvider, startState, null, null, initialInput, scope: null).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // 例外種別に依らず捕捉し、実行失敗は MarkFailed により観測する
         catch (Exception ex)
@@ -526,16 +527,38 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
     private static bool IsParkUnloadCancellation(ExecutionInstance instance, OperationCanceledException exception) =>
         exception is ExecutionUnloadException || instance.IsUnloaded;
 
-    private async Task ScheduleStateAsync(ExecutionInstance instance, EventProvider eventProvider, string stateName, string? fromNodeId, EdgeType? edgeType, object? input)
+    /// <summary>
+    /// 状態を 1 つ実行し、完了事実から次へ進む。Join 状態なら Join への到着として扱う。
+    /// </summary>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="eventProvider">実行のイベントプロバイダ。</param>
+    /// <param name="stateName">実行する状態名。</param>
+    /// <param name="fromNodeId">直前のノード ID（先頭は null）。</param>
+    /// <param name="edgeType">直前のノードからの辺の種類（先頭は null）。</param>
+    /// <param name="input">状態の input（Join 状態では入ってきた状態の output）。</param>
+    /// <param name="scope">状態が属する枝の範囲（Engine 単体の Fork の中だけ。外は null）。</param>
+    private async Task ScheduleStateAsync(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string stateName,
+        string? fromNodeId,
+        EdgeType? edgeType,
+        object? input,
+        InProcessBranchScope? scope)
     {
         var def = instance.Definition;
         if (def.JoinTable.ContainsKey(stateName))
         {
+            if (_forkExpansionHandler is null)
+            {
+                await ArriveAtJoinAsync(instance, eventProvider, stateName, fromNodeId, input, scope).ConfigureAwait(false);
+                return;
+            }
+
             // Hosted 物理子: 親側 Join に到達してもローカル事実が揃わないときは
             // Join を実行せず子 execution として終端する（ネスト Fork の内側→外側 Join）。
             // 通常のアクション完了時の「next が Join なら MarkCompleted」と同契約。
-            if (_forkExpansionHandler is not null
-                && !instance.JoinTracker.IsJoinReadyToExecute(stateName))
+            if (!instance.JoinTracker.IsJoinReadyToExecute(stateName))
             {
                 instance.MarkCompleted(input);
                 _executionLog.LogExecutionCompleted(instance.ExecutionId, instance.Definition.Name);
@@ -543,7 +566,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                 return;
             }
 
-            await RunJoinStateAsync(instance, eventProvider, stateName, fromNodeId, edgeType).ConfigureAwait(false);
+            await RunJoinStateAsync(instance, eventProvider, stateName, fromNodeId, edgeType, scope: null).ConfigureAwait(false);
             return;
         }
 
@@ -568,6 +591,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         {
             instance.Graph.AddEdge(fromNodeId, nodeId, edgeType.Value);
         }
+        instance.RegisterNodeScope(nodeId, scope);
         instance.AddActiveState(stateName);
 
         _executionLog.LogStateScheduled(instance.ExecutionId, stateName, nodeId);
@@ -588,7 +612,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             try
             {
                 var o = await executor.ExecuteAsync(ctx, input, ct).ConfigureAwait(false);
-                instance.SetOutput(stateName, o);
+                instance.SetOutput(stateName, o, scope);
                 instance.Graph.CompleteNode(nodeId, Fact.Completed, o);
                 await NotifyNodeCompletedAsync(instance.ExecutionId).ConfigureAwait(false);
                 sw.Stop();
@@ -627,16 +651,96 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             return;
         }
 
-        ProcessFact(instance, eventProvider, stateName, fact, output, nodeId);
+        ProcessFact(instance, eventProvider, stateName, fact, output, nodeId, scope);
     }
 
-    private async Task RunJoinStateAsync(ExecutionInstance instance, EventProvider eventProvider, string joinStateName, string? fromNodeId, EdgeType? edgeType)
+    /// <summary>
+    /// Engine 単体で、枝が Join に入ったことを記録する。全枝がそろえば、枝の完了順に書き込みを外側の Context へマージし、Join を実行する。
+    /// </summary>
+    /// <remarks>
+    /// <para>記録のキーは枝の先頭の名前、値は Join に入ってきた状態の output（Hosted の子の終端と同じ）。
+    /// 2 ノード以上の枝でも、枝の最後の状態が Join に入るまで Join は成立しない。</para>
+    /// <para>範囲の外、または範囲と別の Join に入るのは検証を通らない定義だけ。そのときは実行を終端失敗にする。</para>
+    /// <para>同じ枝の 2 回目の到着（checkpoint の復元で遷移をやり直した場合）は無視する。</para>
+    /// </remarks>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="eventProvider">実行のイベントプロバイダ。</param>
+    /// <param name="joinStateName">入った Join の状態名。</param>
+    /// <param name="fromNodeId">Join に入ったノードの ID（Join の辺の元）。</param>
+    /// <param name="output">Join に入ってきた状態の output。</param>
+    /// <param name="scope">Join に入った枝の範囲。</param>
+    private async Task ArriveAtJoinAsync(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string joinStateName,
+        string? fromNodeId,
+        object? output,
+        InProcessBranchScope? scope)
+    {
+        if (scope is null || !string.Equals(scope.Episode.JoinState, joinStateName, StringComparison.OrdinalIgnoreCase))
+        {
+            instance.MarkFailed();
+            instance.HaltActiveActions();
+            _executionLog.LogJoinReachedOutsideBranch(instance.ExecutionId, instance.Definition.Name, joinStateName, scope?.Episode.JoinState);
+            return;
+        }
+
+        if (!scope.Episode.TryArrive(scope))
+        {
+            return;
+        }
+
+        var readyJoin = instance.JoinTracker.RecordFact(scope.BranchHead, Fact.Completed, output, fromNodeId);
+        if (readyJoin is null || !instance.JoinTracker.TryBeginJoinExecution(joinStateName))
+        {
+            return;
+        }
+
+        var outer = instance.ContextOf(scope.Episode.Parent);
+        foreach (var arrived in scope.Episode.GetArrivals())
+        {
+            outer.ApplyJoinFragment(arrived.Context.ExportBranchWrites());
+        }
+
+        instance.CompleteInProcessFork(scope.Episode);
+        await RunStartedJoinStateAsync(instance, eventProvider, joinStateName, fromNodeId, EdgeType.Join, scope.Episode.Parent)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Join の成立を確かめてから Join 状態を実行する（Hosted の物理 Join 用）。</summary>
+    private async Task RunJoinStateAsync(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string joinStateName,
+        string? fromNodeId,
+        EdgeType? edgeType,
+        InProcessBranchScope? scope)
     {
         if (!instance.JoinTracker.TryBeginJoinExecution(joinStateName))
         {
             return;
         }
 
+        await RunStartedJoinStateAsync(instance, eventProvider, joinStateName, fromNodeId, edgeType, scope).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 開始済み（<see cref="Join.IJoinTracker.TryBeginJoinExecution"/> 済み）の Join 状態を実行し、Join の後へ進む。
+    /// </summary>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <param name="eventProvider">実行のイベントプロバイダ。</param>
+    /// <param name="joinStateName">Join の状態名。</param>
+    /// <param name="fromNodeId">直前のノード ID。</param>
+    /// <param name="edgeType">直前のノードからの辺の種類。<see cref="EdgeType.Join"/> なら各枝の到着ノードから辺を張る。</param>
+    /// <param name="scope">Join の外側の枝の範囲（最外の Fork では null）。Join の後はこの範囲で続く。</param>
+    private async Task RunStartedJoinStateAsync(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string joinStateName,
+        string? fromNodeId,
+        EdgeType? edgeType,
+        InProcessBranchScope? scope)
+    {
         var joinInputs = instance.JoinTracker.GetJoinInputs(joinStateName);
         var joinSourceNodeIds = instance.JoinTracker.GetJoinSourceNodeIds(joinStateName);
         var attempt = instance.NextAttempt(joinStateName);
@@ -652,6 +756,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         {
             instance.Graph.AddEdge(fromNodeId, nodeId, edgeType.Value);
         }
+        instance.RegisterNodeScope(nodeId, scope);
 
         _executionLog.LogJoinStateScheduled(instance.ExecutionId, joinStateName, nodeId);
 
@@ -663,9 +768,9 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         // Join の集約 input を当該 State の output として Context へ記録する。
         // これにより when.path の $.states.<Join>.output… 参照と output: $.vars… 代入が
         // 通常 State と同じ規則で機能する（未記録だと条件が常に path_not_found になる）。
-        instance.SetOutput(joinStateName, joinInputs);
+        instance.SetOutput(joinStateName, joinInputs, scope);
 
-        var (transition, routingDiag) = EvaluateTransition(instance, joinStateName, Fact.Joined);
+        var (transition, routingDiag) = EvaluateTransition(instance, joinStateName, Fact.Joined, scope);
         if (routingDiag is not null)
         {
             instance.Graph.SetNodeConditionRouting(nodeId, routingDiag);
@@ -673,8 +778,8 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
 
         if (transition.HasTransition && transition.Next != null)
         {
-            var mappedJoinInput = ApplyStateInput(instance, transition.Next, joinInputs);
-            await ScheduleStateAsync(instance, eventProvider, transition.Next, nodeId, EdgeType.Next, mappedJoinInput).ConfigureAwait(false);
+            var mappedJoinInput = ApplyStateInput(instance, transition.Next, joinInputs, scope);
+            await ScheduleStateAsync(instance, eventProvider, transition.Next, nodeId, EdgeType.Next, mappedJoinInput, scope).ConfigureAwait(false);
         }
         else if (transition.End)
         {
@@ -737,9 +842,9 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
     /// </summary>
     /// <remarks>
     /// <para>順序: 終端失敗の後なら抑止 → Cancelled は取消として終端（明示 Cancel 後も終端ログを出す） →
-    /// 取消の後なら抑止 → Join の記録と充足 → Completed / Failed は同じ遷移評価（<c>on.Failed</c> / Nodes の <c>error</c> を含む）。</para>
-    /// <para>Join への記録は、実行が続く事実だけに行う。記録を読むのは Join の充足判定と入力の組み立てだけで、
-    /// 抑止した事実や取消で終える事実を記録しても使われないため。</para>
+    /// 取消の後なら抑止 → Completed / Failed は同じ遷移評価（<c>on.Failed</c> / Nodes の <c>error</c> を含む）。</para>
+    /// <para>状態の完了は Join に記録しない。Join への記録は、遷移で Join に入ったとき（<see cref="ArriveAtJoinAsync"/>）だけ行う。
+    /// <c>join.all</c> は枝の先頭なので、先頭の完了で記録すると 2 ノード以上の枝で Join が早く成立するため。</para>
     /// <para>Failed で遷移が無いときは終端失敗とし、並行する状態を止めるが <see cref="ExecutionInstance.IsCancelled"/> は立てない。
     /// 止めた状態が返す Cancelled 事実は終端失敗の後として抑止されるため、実行は Failed のまま残る。</para>
     /// </remarks>
@@ -749,7 +854,15 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
     /// <param name="fact">完了事実（<see cref="Fact"/>）。</param>
     /// <param name="output">状態の output（失敗・取消では null）。</param>
     /// <param name="nodeId">完了したノード ID。</param>
-    private void ProcessFact(ExecutionInstance instance, EventProvider eventProvider, string stateName, string fact, object? output, string nodeId)
+    /// <param name="scope">状態が属する枝の範囲（外は null）。</param>
+    private void ProcessFact(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string stateName,
+        string fact,
+        object? output,
+        string nodeId,
+        InProcessBranchScope? scope)
     {
         if (instance.IsFailed)
         {
@@ -778,22 +891,23 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             return;
         }
 
-        var readyJoin = instance.JoinTracker.RecordFact(stateName, fact, output, nodeId);
-        if (readyJoin is not null)
-        {
-            _ = RunJoinStateAsync(instance, eventProvider, readyJoin, nodeId, EdgeType.Join);
-            return;
-        }
-
         ConditionRoutingDiagnostics? routingDiag = null;
         TransitionResult transition;
-        if (TryResolveWaitEventRoute(instance.Definition, stateName, fact, output, out var waitTransition))
+        var resumedEvent = eventProvider.TryTakeResumedEvent(nodeId, out var recordedEvent) ? recordedEvent : null;
+        switch (ResolveWaitEventRoute(instance.Definition, stateName, fact, resumedEvent, output, out var waitTransition, out var waitEvent))
         {
-            transition = waitTransition;
-        }
-        else
-        {
-            (transition, routingDiag) = EvaluateTransition(instance, stateName, fact);
+            case WaitRouteResolution.Resolved:
+                transition = waitTransition;
+                break;
+            case WaitRouteResolution.Unresolved:
+                // 遷移先の決まらない Wait は黙って止めず、実行を Failed にする。
+                instance.MarkFailed();
+                instance.HaltActiveActions();
+                _executionLog.LogWaitRouteUnresolved(instance.ExecutionId, instance.Definition.Name, stateName, nodeId, waitEvent);
+                return;
+            default:
+                (transition, routingDiag) = EvaluateTransition(instance, stateName, fact, scope);
+                break;
         }
 
         if (routingDiag is not null)
@@ -824,19 +938,24 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             return;
         }
 
-        ScheduleTransitionContinuation(instance, eventProvider, stateName, transition, output, nodeId);
+        ScheduleTransitionContinuation(instance, eventProvider, stateName, transition, output, nodeId, scope);
     }
 
     /// <summary>
     /// Fork / Next 遷移を Hosted 展開または同一インスタンス Schedule に振り分ける。
     /// </summary>
+    /// <remarks>
+    /// Engine 単体の Fork では、枝ごとに範囲を作り（Context は外側の写し）、枝の先頭をその範囲で走らせる。
+    /// 枝の先頭の input 写像は写す前に外側の Context で評価する（Hosted と同じ）。
+    /// </remarks>
     private void ScheduleTransitionContinuation(
         ExecutionInstance instance,
         EventProvider eventProvider,
         string stateName,
         TransitionResult transition,
         object? output,
-        string nodeId)
+        string nodeId,
+        InProcessBranchScope? scope)
     {
         if (transition.Fork != null)
         {
@@ -844,27 +963,17 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             var plans = transition.Fork
                 .Select(nextState => new ForkBranchExpansionPlan(
                     nextState,
-                    ApplyStateInput(instance, nextState, output)))
+                    ApplyStateInput(instance, nextState, output, scope)))
                 .ToList();
 
             if (_forkExpansionHandler is not null)
             {
                 // Hosted: 物理子展開。同一インスタンス上では分岐を走らせない。
-                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans, instance.Context);
+                NotifyForkExpansion(instance.ExecutionId, stateName, nodeId, plans, instance.ContextOf(scope));
                 return;
             }
 
-            foreach (var plan in plans)
-            {
-                _ = ScheduleStateAsync(
-                    instance,
-                    eventProvider,
-                    plan.BranchState,
-                    nodeId,
-                    EdgeType.Fork,
-                    plan.MappedInput);
-            }
-
+            ScheduleInProcessFork(instance, eventProvider, stateName, transition.Fork, plans, nodeId, scope);
             return;
         }
 
@@ -882,8 +991,62 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             return;
         }
 
-        var mappedInput = ApplyStateInput(instance, transition.Next, output);
-        _ = ScheduleStateAsync(instance, eventProvider, transition.Next, nodeId, EdgeType.Next, mappedInput);
+        var mappedInput = ApplyStateInput(instance, transition.Next, output, scope);
+        _ = ScheduleStateAsync(instance, eventProvider, transition.Next, nodeId, EdgeType.Next, mappedInput, scope);
+    }
+
+    /// <summary>
+    /// Engine 単体の Fork で、対になる Join を決めて枝ごとに範囲を作り、各枝の先頭を走らせる。
+    /// </summary>
+    /// <remarks>
+    /// <para>対になる Join は、<c>join.all</c> が Fork の枝の集合と一致するもの（検証の Fork 領域の対応付けと同じ）。
+    /// 見つからないのは検証を通らない定義だけで、そのときは実行を終端失敗にする。</para>
+    /// <para>同じ Join に再び入る（循環で Fork に戻る）ときに前回の到着が残らないよう、Join の記録を捨ててから始める。</para>
+    /// </remarks>
+    private void ScheduleInProcessFork(
+        ExecutionInstance instance,
+        EventProvider eventProvider,
+        string forkStateName,
+        IReadOnlyList<string> branchHeads,
+        IReadOnlyList<ForkBranchExpansionPlan> plans,
+        string nodeId,
+        InProcessBranchScope? scope)
+    {
+        var joinState = FindPairedJoinState(instance.Definition, branchHeads);
+        if (joinState is null)
+        {
+            instance.MarkFailed();
+            instance.HaltActiveActions();
+            _executionLog.LogForkWithoutPairedJoin(instance.ExecutionId, instance.Definition.Name, forkStateName);
+            return;
+        }
+
+        instance.JoinTracker.ResetForPhysicalJoinReentry(joinState);
+        var branchScopes = instance.BeginInProcessFork(nodeId, joinState, scope, branchHeads);
+        foreach (var (plan, branchScope) in plans.Zip(branchScopes))
+        {
+            _ = ScheduleStateAsync(
+                instance,
+                eventProvider,
+                plan.BranchState,
+                nodeId,
+                EdgeType.Fork,
+                plan.MappedInput,
+                branchScope);
+        }
+    }
+
+    /// <summary><c>join.all</c> が枝の集合と一致する Join の状態名を返す。</summary>
+    /// <param name="definition">コンパイル済み定義。</param>
+    /// <param name="branchHeads">Fork の枝の先頭。</param>
+    /// <returns>Join の状態名。一致する Join が無ければ null。</returns>
+    private static string? FindPairedJoinState(CompiledWorkflowDefinition definition, IReadOnlyList<string> branchHeads)
+    {
+        var heads = branchHeads.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return definition.JoinTable
+            .Where(join => heads.SetEquals(join.Value))
+            .Select(join => join.Key)
+            .FirstOrDefault();
     }
 
     /// <inheritdoc />
@@ -909,15 +1072,9 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
                 $"Join state '{joinStateName}' is not defined for execution '{executionId}'.");
         }
 
-        if (contextMerges is { Count: > 0 })
+        foreach (var fragment in contextMerges ?? [])
         {
-            foreach (var fragment in contextMerges)
-            {
-                if (fragment.States is { Count: > 0 })
-                    instance.Context.MergeStateEntries(fragment.States);
-                if (fragment.VarWrites is { Count: > 0 })
-                    instance.Context.ApplyVarWrites(fragment.VarWrites);
-            }
+            instance.Context.ApplyJoinFragment(fragment);
         }
 
         // 循環再入場: 前回訪問の startedJoins / 観測事実を捨ててから物理 Join を再実行する。
@@ -928,17 +1085,18 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             instance.JoinTracker.RecordFact(branchState, Fact.Completed, branchOutput);
         }
 
-        _ = RunJoinStateAsync(instance, eventProvider, joinStateName, fromNodeId: null, edgeType: null);
+        _ = RunJoinStateAsync(instance, eventProvider, joinStateName, fromNodeId: null, edgeType: null, scope: null);
     }
 
-    private object? ApplyStateInput(ExecutionInstance instance, string targetState, object? rawInput)
+    /// <summary>状態の <c>input</c> 写像を範囲の Context で評価する。写像が無ければ候補 input をそのまま返す。</summary>
+    private object? ApplyStateInput(ExecutionInstance instance, string targetState, object? rawInput, InProcessBranchScope? scope)
     {
         if (!instance.Definition.StateInputs.TryGetValue(targetState, out var spec))
         {
             return rawInput;
         }
 
-        var evaluated = StateInputEvaluator.ApplyWithDiagnostics(spec, instance.Context, rawInput);
+        var evaluated = StateInputEvaluator.ApplyWithDiagnostics(spec, instance.ContextOf(scope), rawInput);
         foreach (var warning in evaluated.Warnings)
         {
             _executionLog.LogWarningInputEvaluation(
@@ -951,10 +1109,12 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         return evaluated.Value;
     }
 
+    /// <summary>次の遷移を決める。条件遷移の <c>when.path</c> は範囲の Context で評価する。</summary>
     private (TransitionResult Transition, ConditionRoutingDiagnostics? RoutingDiagnostics) EvaluateTransition(
         ExecutionInstance instance,
         string stateName,
-        string fact)
+        string fact,
+        InProcessBranchScope? scope)
     {
         if (instance.Definition.ConditionalTransitions.TryGetValue(stateName, out var stateTransitions)
             && stateTransitions.TryGetValue(fact, out var compiledTransition))
@@ -962,7 +1122,7 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
             var (transition, diagnostics) = OutputConditionEvaluator.EvaluateDetailed(
                 compiledTransition,
                 fact,
-                instance.Context,
+                instance.ContextOf(scope),
                 onPathWarning: (path, reason) =>
                     _executionLog.LogWarningConditionPathResolution(instance.ExecutionId, stateName, fact, path, reason));
             return (transition, diagnostics);
@@ -971,50 +1131,71 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         return (instance.Fsm.Evaluate(stateName, fact), null);
     }
 
+    /// <summary>Wait 完了時の遷移先の決まり方。</summary>
+    private enum WaitRouteResolution
+    {
+        /// <summary>Wait ではない、または Completed 以外の事実。通常の遷移評価に進む。</summary>
+        NotWaitRoute,
+
+        /// <summary>route table の <c>Next</c> が空（旧 <c>wait.event</c> + <c>on.Completed</c>）。通常の遷移評価に進む。</summary>
+        UseFsm,
+
+        /// <summary>route table から次状態が決まった。</summary>
+        Resolved,
+
+        /// <summary>再開したイベントが分からない、または route table に無い。実行を Failed にする。</summary>
+        Unresolved,
+    }
+
     /// <summary>
     /// Wait 完了時に <see cref="CompiledWorkflowDefinition.WaitEventRouteTable"/> から次状態を解決する。
     /// </summary>
     /// <remarks>
-    /// <para>次状態は route table が正本。監査用 output の event 名はルックアップキーとしてのみ使う。</para>
-    /// <para>ルートにイベントはあるが <c>Next</c> が空のときは false を返し、通常の FSM（on.Completed）へフォールバックする。</para>
+    /// <para>
+    /// 次状態は route table が正本。引くキーは、Engine が <see cref="EventProvider"/> で記録した再開イベント名を正とする。
+    /// 状態の実行器が返す output の形（<c>{ event }</c> を返すかどうか）には依らない。
+    /// 記録が無いとき（checkpoint の復元で、完了済みの Wait の遷移をやり直す場合）は、記録済み output の <c>event</c> を使う。
+    /// </para>
+    /// <para>ルートにイベントはあるが <c>Next</c> が空のときは <see cref="WaitRouteResolution.UseFsm"/> を返し、通常の FSM（on.Completed）に委ねる。</para>
     /// </remarks>
-    private static bool TryResolveWaitEventRoute(
+    /// <param name="definition">コンパイル済み定義。</param>
+    /// <param name="stateName">完了した状態名。</param>
+    /// <param name="fact">完了の事実。</param>
+    /// <param name="resumedEvent">Engine が記録した再開イベント名。無ければ null。</param>
+    /// <param name="output">状態の output。</param>
+    /// <param name="transition"><see cref="WaitRouteResolution.Resolved"/> のときの遷移。</param>
+    /// <param name="eventName">ルックアップに使ったイベント名（分からなければ null）。</param>
+    private static WaitRouteResolution ResolveWaitEventRoute(
         CompiledWorkflowDefinition definition,
         string stateName,
         string fact,
+        string? resumedEvent,
         object? output,
-        out TransitionResult transition)
+        out TransitionResult transition,
+        out string? eventName)
     {
         transition = TransitionResult.None;
-        if (!string.Equals(fact, Fact.Completed, StringComparison.Ordinal))
+        eventName = null;
+        if (!string.Equals(fact, Fact.Completed, StringComparison.Ordinal)
+            || !definition.WaitEventRouteTable.TryGetValue(stateName, out var routes))
         {
-            return false;
+            return WaitRouteResolution.NotWaitRoute;
         }
 
-        if (!definition.WaitEventRouteTable.TryGetValue(stateName, out var routes))
+        eventName = resumedEvent ?? (TryExtractWaitEventName(output, out var fromOutput) ? fromOutput : null);
+        if (eventName is null || !routes.TryGetValue(eventName, out var route))
         {
-            return false;
-        }
-
-        if (!TryExtractWaitEventName(output, out var eventName))
-        {
-            return false;
-        }
-
-        if (!routes.TryGetValue(eventName, out var route))
-        {
-            // ルートに無いイベントは Wait ルート解決済みとして FSM へ落とさない。
-            return true;
+            return WaitRouteResolution.Unresolved;
         }
 
         // Next 未設定（旧 wait.event + on.Completed など）は通常の FSM 評価に委ねる。
         if (string.IsNullOrWhiteSpace(route.Next))
         {
-            return false;
+            return WaitRouteResolution.UseFsm;
         }
 
         transition = TransitionResult.ToNext(route.Next);
-        return true;
+        return WaitRouteResolution.Resolved;
     }
 
     /// <summary>Wait 監査 output からイベント名を取り出す。</summary>

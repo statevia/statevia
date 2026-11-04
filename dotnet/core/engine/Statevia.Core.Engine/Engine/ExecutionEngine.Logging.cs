@@ -116,6 +116,37 @@ public sealed partial class ExecutionEngine
                     definitionName,
                     stateName,
                     fact));
+
+        /// <summary>Engine 単体の Fork に対になる Join が無い（検証を通らない定義）。実行は終端失敗にする。</summary>
+        public void LogForkWithoutPairedJoin(string executionId, string definitionName, string stateName) =>
+            SafeLog(() =>
+                ExecutionLog.ForkWithoutPairedJoin(_logger, executionId, definitionName, stateName));
+
+        /// <summary>Engine 単体で、枝の範囲の外、または範囲と別の Join に入った（検証を通らない定義）。実行は終端失敗にする。</summary>
+        public void LogJoinReachedOutsideBranch(
+            string executionId,
+            string definitionName,
+            string joinState,
+            string? expectedJoinState) =>
+            SafeLog(() =>
+                ExecutionLog.JoinReachedOutsideBranch(_logger, executionId, definitionName, joinState, expectedJoinState));
+
+        /// <summary>
+        /// Wait が完了したが遷移先が決まらない（再開イベントが分からない、または <c>wait.events</c> に無い）ことを記録する。
+        /// </summary>
+        /// <param name="executionId">実行 ID。</param>
+        /// <param name="definitionName">定義名。</param>
+        /// <param name="stateName">Wait の状態名。</param>
+        /// <param name="nodeId">Wait のノード ID。</param>
+        /// <param name="eventName">引いたイベント名。分からなければ null。</param>
+        public void LogWaitRouteUnresolved(
+            string executionId,
+            string definitionName,
+            string stateName,
+            string nodeId,
+            string? eventName) =>
+            SafeLog(() =>
+                ExecutionLog.WaitRouteUnresolved(_logger, executionId, definitionName, stateName, nodeId, eventName));
     }
 
     /// <summary>

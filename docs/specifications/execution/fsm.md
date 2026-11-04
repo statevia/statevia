@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2 |
-| 更新日 | 2026-11-01 |
+| Version | 1.3 |
+| 更新日 | 2026-11-04 |
 | 関連 | [concepts/execution-model.md](../../concepts/execution-model.md), [wait-cancel.md](wait-cancel.md) |
 
 ---
@@ -42,7 +42,7 @@ statevia は事実駆動型有限状態機械を使用します。
 
 YAML の **`wait.events`**（例: `approve` → `Approved`）は、外部から Resume された **イベント名**と突き合わせ、`IEventProvider.WaitForEventAsync` が再開するために使う識別子である。コンパイル後の正本は **`WaitEventRouteTable`**。
 
-待機が解けて状態の `ExecuteAsync` が正常終了したあと、エンジンが JoinTracker / 通常の成功経路に渡す事実は **`Completed` 固定**である（Join 互換）。一方、**次状態の解決**は `ResolveWaitEventRoute(state, eventName)` により route table の Next を用いる（単一イベントの旧定義で Next が空のときのみ `on.Completed` へフォールバック）。
+待機が解けて状態の `ExecuteAsync` が正常終了したあと、エンジンが JoinTracker / 通常の成功経路に渡す事実は **`Completed` 固定**である（Join 互換）。一方、**次状態の解決**は、Engine がそのノードの再開に使ったイベント名で route table の Next を引く（単一イベントの旧定義で Next が空のときのみ `on.Completed` へフォールバック）。状態の output の形には依らない。遷移先が決まらない Wait は実行を Failed にする（[wait-cancel.md](wait-cancel.md)）。
 
 したがって:
 
@@ -57,11 +57,10 @@ YAML の **`wait.events`**（例: `approve` → `Approved`）は、外部から 
 1. 実行が終端失敗していれば、遷移しない（並行していた状態が停止して返す `Cancelled` も含む）。
 2. 事実が `Cancelled`（明示 Cancel や Action の取り消し）なら、実行を Cancelled で終える。
 3. 実行が取り消されていれば、遷移しない。
-4. Join の依存状態なら事実を Join に記録し、Join が充足すれば Join を実行する。
-5. `Completed` と `Failed` は同じ遷移評価を通る。`on.Failed` の `next` / `cases` / `default` / `end` を辿る（Nodes の `error` は `on.Failed.next`）。
-6. `Failed` で遷移が無いときだけ、実行を終端失敗にする。並行する状態の Action は止めるが、実行は Cancelled とは記録しない。投影の状態は FAILED、`cancel_requested` は false。
+4. `Completed` と `Failed` は同じ遷移評価を通る。`on.Failed` の `next` / `cases` / `default` / `end` を辿る（Nodes の `error` は `on.Failed.next`）。
+5. `Failed` で遷移が無いときだけ、実行を終端失敗にする。並行する状態の Action は止めるが、実行は Cancelled とは記録しない。投影の状態は FAILED、`cancel_requested` は false。
 
-Hosted Fork の枝の中で `on.Failed` を辿り当該 Join へ着いた子は Completed で終わる。Engine 単体（プロセス内 Fork）で、`join.all` に含まれる状態に `on.Failed` を付けた組み合わせは保証しない（[fork-join.md](fork-join.md)）。
+状態の完了は Join に記録しない。Join への記録は、遷移で Join に入ったときに行う（[fork-join.md](fork-join.md)）。そのため、枝の中で `on.Failed` を辿り当該 Join へ入った枝も、Hosted と Engine 単体のどちらでも Join に記録される（Hosted では子が Completed で終わる）。
 
 ## FSM の特性
 

@@ -66,5 +66,14 @@ public sealed partial class ExecutionEngine
 
         [LoggerMessage(EventId = 50018, Level = LogLevel.Information, Message = "Execution failure suppressed transition ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} Fact={Fact}")]
         public static partial void ExecutionFailureSuppressedTransition(ILogger logger, string executionId, string definitionName, string stateName, string fact);
+
+        [LoggerMessage(EventId = 50019, Level = LogLevel.Error, Message = "Fork has no paired join ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName}")]
+        public static partial void ForkWithoutPairedJoin(ILogger logger, string executionId, string definitionName, string stateName);
+
+        [LoggerMessage(EventId = 50020, Level = LogLevel.Error, Message = "Join reached outside its fork branch ExecutionId={ExecutionId} DefinitionName={DefinitionName} JoinState={JoinState} ExpectedJoinState={ExpectedJoinState}")]
+        public static partial void JoinReachedOutsideBranch(ILogger logger, string executionId, string definitionName, string joinState, string? expectedJoinState);
+
+        [LoggerMessage(EventId = 50021, Level = LogLevel.Error, Message = "Wait route unresolved ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} NodeId={NodeId} EventName={EventName}")]
+        public static partial void WaitRouteUnresolved(ILogger logger, string executionId, string definitionName, string stateName, string nodeId, string? eventName);
     }
 }

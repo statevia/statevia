@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.18 |
-| 更新日 | 2026-11-02 |
+| Version | 1.5.19 |
+| 更新日 | 2026-11-04 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.19（2026-11-04）**: `join.all` は待つ枝の先頭で、Join は各枝の最後の状態が Join に入った時点で記録される（2 ノード以上の枝でも先頭の完了だけでは成立しない）。Join の input は「枝の先頭の名前 → Join に入った状態の output」。Fork / Join の Context の契約は Hosted と Engine 単体で同じ（§1.4、[execution/fork-join.md](execution/fork-join.md)）。
 
 **Version 1.5.18（2026-11-02）**: Hosted Fork の枝は Fork 到達時点の親の `$.vars` / `$.states` を引き継ぎ、枝のどのノードからでも読める。Join では各枝が書いた `vars` のパスと完了した状態だけを、枝の完了順に後勝ちで親へ戻す。枝の中の `$.sys.execution.id` は親の ID（§1.4、§1.6、[execution/fork-join.md](execution/fork-join.md)）。
 
@@ -327,9 +329,10 @@ Wait は **Signal**（`events`）と **Subscribe**（`subscribe`）の二モー�
 
 ### 1.4 Join（合流）
 
-- **join.all**: 完了を待つ状態名のリスト。すべてが完了すると `Joined` 事実が発生し、`on.Joined` で次へ遷移できる。
+- **join.all**: 待つ枝の先頭の状態名のリスト。Fork の枝の集合と一致させる。各枝は、最後の状態が `next` / `wait.events` などで Join に入った時点で記録される。すべての枝が入ると `Joined` 事実が発生し、`on.Joined` で次へ遷移できる。2 ノード以上の枝でも、先頭の完了だけでは成立しない。
+- **Join の input**: 「枝の先頭の名前 → Join に入った状態の output」の辞書。1 ノードの枝では先頭の output になる。
 - Join 状態は合成ノードとして実行され、**`action` は指定しない**（`wait` と同様に `action` 併記は Level 1 検証エラー）。
-- **Hosted Runtime**: Fork は物理子 execution に展開される。定義語彙（`fork` / `join.all` / `$.states…`）は維持する。実行時契約（兄弟参照不可・Join 後の親 Context マージ・読みモデル合成）は [execution/fork-join.md](execution/fork-join.md) を正とする。
+- **Hosted Runtime**: Fork は物理子 execution に展開される。定義語彙（`fork` / `join.all` / `$.states…`）は維持する。実行時契約（兄弟参照不可・Join 後の親 Context マージ・読みモデル合成）は [execution/fork-join.md](execution/fork-join.md) を正とする。Engine 単体（Fork 展開ハンドラなし）でも、引き継ぎ・兄弟参照・マージの契約は同じ。
 - **引き継ぎ**: 枝は Fork 到達時点の親の `$.vars` / `$.states` を引き継ぎ、枝のどのノードからでも同じパスで読める。
 - **兄弟参照**: Join 前に同一 Fork の兄弟の `$.states…` / `$.vars…` を参照してはならない（兄弟が書いた値は見えない）。Join 後は、各枝が書いた `vars` のパスと完了した状態が親へマージされる。引き継いだだけの値は戻さない。同じパス・重なるパスは枝の完了順で後勝ち。
 
@@ -622,7 +625,7 @@ states:
 ```
 
 - `Start` の output が `{ shared: "fork-value" }` の場合、`A` と `B` の input はどちらも `"fork-value"`。
-- `input` 未定義の Join 次状態へは、候補として `{ A: <Aのoutput>, B: <Bのoutput> }` の辞書が渡る（パス評価根ではない）。
+- `input` 未定義の Join 次状態へは、候補として `{ A: <Aのoutput>, B: <Bのoutput> }` の辞書が渡る（パス評価根ではない）。キーは枝の先頭の名前、値は Join に入った状態の output（この例は 1 ノードの枝なので先頭の output）。
 - `AfterJoin` の `path: $.states.A.output` により、`A` の output だけを抽出して input に渡す。
 
 ---

@@ -21,8 +21,9 @@ namespace Statevia.Core.Engine.Engine;
 /// <c>vars</c> は <see cref="SetVar"/> で読み書き可能。<c>sys</c> は評価時スナップショットの読み取り専用ランタイム情報。
 /// </para>
 /// <para>
-/// この実行で書いた <c>vars</c> のパスと完了した状態名を記録する。Hosted Fork の枝では、Join で親へ戻す範囲になる
-/// （<see cref="ExportBranchWrites"/>）。Fork 到達時に親から引き継いだ値は記録しない。
+/// この実行で書いた <c>vars</c> のパスと完了した状態名を記録する。Fork の枝（Hosted の子、Engine 単体の枝の範囲）では、
+/// Join で親へ戻す範囲になる（<see cref="ExportBranchWrites(CheckpointContextData)"/> / <see cref="ExportBranchWrites()"/>）。
+/// Fork 到達時に親から引き継いだ値は記録しない。
 /// </para>
 /// </remarks>
 public sealed class WorkflowExecutionContext
@@ -166,6 +167,33 @@ public sealed class WorkflowExecutionContext
     }
 
     /// <summary>
+    /// Engine 単体の Fork の枝として、この Context の写しを作る。
+    /// </summary>
+    /// <remarks>
+    /// Hosted の子と同じく、<c>vars</c> / <c>states</c> は写しで初期化し、書いた値には数えない。
+    /// <c>$.input</c> と <c>$.sys.execution.id</c> はこの Context と同じ。
+    /// </remarks>
+    /// <returns>兄弟の枝とも、この Context とも共有しない枝の Context。</returns>
+    public WorkflowExecutionContext CreateBranchCopy() =>
+        CreateForkBranch(new ForkBranchStart(Input, ExportForkParentContext()), _definitionName);
+
+    /// <summary>
+    /// Join で 1 つの枝が書いた <c>states</c> と <c>vars</c> を取り込む（Hosted と Engine 単体で共有するマージ規則）。
+    /// </summary>
+    /// <remarks>
+    /// 枝ごとに完了順で呼ぶ。同じ状態名・同じパス・重なるパスは後勝ち。取り込んだ値はこの実行が書いた値として記録する。
+    /// </remarks>
+    /// <param name="fragment">枝が書いた値（<see cref="ExportBranchWrites()"/> の結果など）。</param>
+    public void ApplyJoinFragment(PhysicalJoinContextFragment fragment)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+        if (fragment.States is { Count: > 0 })
+            MergeStateEntries(fragment.States);
+        if (fragment.VarWrites is { Count: > 0 })
+            ApplyVarWrites(fragment.VarWrites);
+    }
+
+    /// <summary>
     /// チェックポイント断面から、この実行が書いた値だけを Join の断片として取り出す。
     /// </summary>
     /// <remarks>
@@ -178,18 +206,32 @@ public sealed class WorkflowExecutionContext
     {
         ArgumentNullException.ThrowIfNull(data);
         var ctx = CreateFromCheckpoint(data, executionId: string.Empty, definitionName: string.Empty);
-        lock (ctx._lock)
+        return ctx.ExportBranchWritesCore(value => CheckpointJson.ToElement(value));
+    }
+
+    /// <summary>
+    /// この Context が書いた値だけを Join の断片として取り出す（Engine 単体の Join 用）。
+    /// </summary>
+    /// <remarks>
+    /// 値は JSON を経由せず隔離コピーする。Engine 単体では、Join を通っても状態の output の型（文字列・数値など）を保つ。
+    /// </remarks>
+    /// <returns>書いた <c>states</c> と <c>vars</c> のパスと値。</returns>
+    public PhysicalJoinContextFragment ExportBranchWrites() => ExportBranchWritesCore(CloneForIsolation);
+
+    private PhysicalJoinContextFragment ExportBranchWritesCore(Func<object?, object?> convert)
+    {
+        lock (_lock)
         {
-            var states = ctx._writtenStates
-                .Where(ctx._states.ContainsKey)
+            var states = _writtenStates
+                .Where(_states.ContainsKey)
                 .ToDictionary(
                     name => name,
-                    name => (object?)CheckpointJson.ToElement(ctx._states[name]),
+                    name => convert(_states[name]),
                     StringComparer.OrdinalIgnoreCase);
-            var varWrites = ctx._writtenVarPaths
-                .Select(path => (Path: path, Found: TryGetVarValue(ctx._vars, path, out var value), Value: value))
+            var varWrites = _writtenVarPaths
+                .Select(path => (Path: path, Found: TryGetVarValue(_vars, path, out var value), Value: value))
                 .Where(entry => entry.Found)
-                .Select(entry => new ContextVarWrite(entry.Path, CheckpointJson.ToElement(entry.Value)))
+                .Select(entry => new ContextVarWrite(entry.Path, convert(entry.Value)))
                 .ToList();
             return new PhysicalJoinContextFragment(states, varWrites);
         }
