@@ -1,9 +1,14 @@
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Core.Engine.Definition;
+using Statevia.Core.Engine.Definition.Validation;
 using Xunit;
 
 namespace Statevia.Core.Engine.Tests.Definition;
 
+/// <remarks>
+/// 表の構築を見るテストは実行器を登録しないため、実行器の検査を止めてコンパイルする。
+/// 検査そのものは <c>Compile_StateExecutorMissing_*</c> で確かめる。
+/// </remarks>
 public class DefinitionCompilerTests
 {
     /// <summary>DefinitionCompiler が正しい遷移テーブル（on/Completed の next, end）を生成することを検証する。</summary>
@@ -21,7 +26,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -49,7 +54,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -74,7 +79,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -115,7 +120,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -169,7 +174,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -199,7 +204,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -223,7 +228,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -248,7 +253,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -269,7 +274,7 @@ public class DefinitionCompilerTests
             States = new Dictionary<string, StateDefinition>()
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => compiler.Compile(def));
@@ -292,7 +297,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -322,7 +327,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -354,7 +359,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -383,7 +388,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -449,7 +454,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -503,7 +508,7 @@ public class DefinitionCompilerTests
             }
         };
         var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
-        var compiler = new DefinitionCompiler(factory);
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
 
         // Act
         var compiled = compiler.Compile(def);
@@ -513,5 +518,98 @@ public class DefinitionCompilerTests
         Assert.True(compiled.Transitions["B"]["Completed"].End);
         Assert.True(compiled.ConditionalTransitions["A"]["Completed"].LinearTarget!.End);
         Assert.True(compiled.ConditionalTransitions["B"]["Completed"].LinearTarget!.End);
+    }
+
+    /// <summary>既定のコンパイルでは、実行器の無い状態があると例外になり、該当する状態がすべてメッセージと指摘に入ることを検証する。</summary>
+    [Fact]
+    public void Compile_StateExecutorMissing_ThrowsWithAllMissingStateNames()
+    {
+        // Arrange
+        var def = new WorkflowDefinition
+        {
+            Name = "Missing",
+            States = new Dictionary<string, StateDefinition>
+            {
+                ["A"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { Next = "B" } } },
+                ["B"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { Next = "C" } } },
+                ["C"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { End = true } } }
+            }
+        };
+        var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor> { ["A"] = new NoOpExecutor() });
+        var compiler = new DefinitionCompiler(factory);
+
+        // Act
+        var exception = Assert.Throws<DefinitionValidationException>(() => compiler.Compile(def));
+
+        // Assert
+        Assert.Contains("'B'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("'C'", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("'A'", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(["B", "C"], exception.Issues.Select(issue => issue.StateName));
+        Assert.All(exception.Issues, issue => Assert.Equal(DefinitionCompiler.StateExecutorMissingRuleId, issue.RuleId));
+    }
+
+    /// <summary>Join の状態は Engine が実行器を使わずに処理するため、実行器が無くても既定のコンパイルが通ることを検証する。</summary>
+    [Fact]
+    public void Compile_JoinStateWithoutExecutor_Succeeds()
+    {
+        // Arrange
+        var def = new WorkflowDefinition
+        {
+            Name = "JoinOnly",
+            States = new Dictionary<string, StateDefinition>
+            {
+                ["Start"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { Fork = new[] { "A", "B" } } } },
+                ["A"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { Next = "J" } } },
+                ["B"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { Next = "J" } } },
+                ["J"] = new StateDefinition
+                {
+                    Join = new JoinDefinition { All = new[] { "A", "B" } },
+                    On = new Dictionary<string, TransitionDefinition> { ["Joined"] = new TransitionDefinition { End = true } }
+                }
+            }
+        };
+        var executors = new Dictionary<string, IStateExecutor>
+        {
+            ["Start"] = new NoOpExecutor(),
+            ["A"] = new NoOpExecutor(),
+            ["B"] = new NoOpExecutor()
+        };
+        var compiler = new DefinitionCompiler(new DictionaryStateExecutorFactory(executors));
+
+        // Act
+        var compiled = compiler.Compile(def);
+
+        // Assert
+        Assert.True(compiled.JoinTable.ContainsKey("J"));
+    }
+
+    /// <summary>検査を止めると、実行器の無い状態があってもコンパイルが通ることを検証する。</summary>
+    [Fact]
+    public void Compile_StateExecutorMissing_SucceedsWhenCheckDisabled()
+    {
+        // Arrange
+        var def = new WorkflowDefinition
+        {
+            Name = "Unchecked",
+            States = new Dictionary<string, StateDefinition>
+            {
+                ["A"] = new StateDefinition { On = new Dictionary<string, TransitionDefinition> { ["Completed"] = new TransitionDefinition { End = true } } }
+            }
+        };
+        var factory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>());
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
+
+        // Act
+        var compiled = compiler.Compile(def);
+
+        // Assert
+        Assert.Equal("A", compiled.InitialState);
+    }
+
+    /// <summary>何もしない実行器（コンパイル時の検査で「登録済み」と見なされればよい）。</summary>
+    private sealed class NoOpExecutor : IStateExecutor
+    {
+        public Task<object?> ExecuteAsync(StateContext ctx, object? input, CancellationToken ct) => Task.FromResult<object?>(null);
     }
 }

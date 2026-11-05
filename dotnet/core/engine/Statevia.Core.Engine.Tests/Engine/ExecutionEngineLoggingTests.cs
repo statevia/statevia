@@ -209,6 +209,43 @@ public sealed partial class ExecutionEngineLoggingTests
                 e.Message.Contains("Fact=Completed", StringComparison.Ordinal));
     }
 
+    /// <summary>状態の実行器が無いとき、実行 ID・定義名・状態名を載せた Error ログを残す。</summary>
+    [Fact]
+    public async Task Logging_ExecutorNotFound_EmitsErrorWithExecutionDefinitionAndState()
+    {
+        // Arrange
+        var sink = new ListLogger();
+        var def = new CompiledWorkflowDefinition
+        {
+            Name = "MissingExecutor",
+            Transitions = new Dictionary<string, IReadOnlyDictionary<string, TransitionTarget>>
+            {
+                ["Ghost"] = new Dictionary<string, TransitionTarget> { ["Completed"] = new TransitionTarget { End = true } }
+            },
+            ForkTable = new Dictionary<string, IReadOnlyList<string>>(),
+            JoinTable = new Dictionary<string, IReadOnlyList<string>>(),
+            WaitEventRouteTable = new Dictionary<string, IReadOnlyDictionary<string, WaitEventRouteDefinition>>(StringComparer.OrdinalIgnoreCase),
+            InitialState = "Ghost",
+            StateExecutorFactory = new DictionaryStateExecutorFactory(new Dictionary<string, IStateExecutor>())
+        };
+        using var engine = ExecutionEngineTestHarness.Create(maxParallelism: 1, executionLogger: sink);
+
+        // Act
+        var id = engine.Start(def);
+        await Task.Delay(200);
+
+        // Assert
+        Assert.True(engine.GetSnapshot(id)!.IsFailed);
+        Assert.Contains(
+            sink.Entries,
+            e =>
+                e.Level == LogLevel.Error &&
+                e.Message.Contains("State executor not found", StringComparison.Ordinal) &&
+                e.Message.Contains($"ExecutionId={id}", StringComparison.Ordinal) &&
+                e.Message.Contains("DefinitionName=MissingExecutor", StringComparison.Ordinal) &&
+                e.Message.Contains("StateName=Ghost", StringComparison.Ordinal));
+    }
+
     /// <summary>ログ実装が例外を投げても実行完走が継続することを検証する（ログ失敗を遷移に伝播させない）。</summary>
     [Fact]
     public async Task Logging_ThrowingLogger_DoesNotFailExecution()

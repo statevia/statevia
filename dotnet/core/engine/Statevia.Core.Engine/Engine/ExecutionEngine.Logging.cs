@@ -147,6 +147,16 @@ public sealed partial class ExecutionEngine
             string? eventName) =>
             SafeLog(() =>
                 ExecutionLog.WaitRouteUnresolved(_logger, executionId, definitionName, stateName, nodeId, eventName));
+
+        /// <summary>
+        /// 遷移した状態の実行器が状態実行器ファクトリに無いことを記録する。実行は終端失敗にする（定義と登録の食い違い）。
+        /// </summary>
+        /// <param name="executionId">実行 ID。</param>
+        /// <param name="definitionName">定義名。</param>
+        /// <param name="stateName">実行器が無かった状態名。</param>
+        public void LogExecutorNotFound(string executionId, string definitionName, string stateName) =>
+            SafeLog(() =>
+                ExecutionLog.ExecutorNotFound(_logger, executionId, definitionName, stateName));
     }
 
     /// <summary>

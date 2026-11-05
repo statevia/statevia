@@ -292,6 +292,150 @@ public sealed class StandaloneDefinitionUseCaseTests
         Assert.False(shipped);
     }
 
+    /// <summary>開始状態の実行器を登録し忘れると、実行は Running のまま止まらずに Failed で終わる。ノードは作らない。</summary>
+    [Fact]
+    public async Task Start_InitialStateExecutorMissing_ExecutionFails()
+    {
+        // Arrange
+        const string yaml = """
+            workflow:
+              name: MissingInitial
+            states:
+              Receive:
+                on:
+                  Completed:
+                    end: true
+            """;
+        using var engine = ExecutionEngineTestHarness.Create();
+
+        // Act
+        var id = engine.Start(Compile(yaml, new StateTable(), requireStateExecutors: false));
+        await WaitUntilAsync(() => engine.GetSnapshot(id) is { IsTerminal: true });
+
+        // Assert
+        var snapshot = engine.GetSnapshot(id)!;
+        Assert.True(snapshot.IsFailed);
+        Assert.False(snapshot.IsCancelled);
+        Assert.Empty(NodeNames(engine, id));
+    }
+
+    /// <summary>
+    /// 途中の状態の実行器を登録し忘れると、前の状態までは実行され、その状態に遷移した時点で実行は Failed で終わる。
+    /// <c>on.Failed</c> があっても辿らない（設定の誤りで、業務の失敗ではない）。
+    /// </summary>
+    [Fact]
+    public async Task Start_LaterStateExecutorMissing_RunsPreviousStateThenFailsWithoutOnFailed()
+    {
+        // Arrange
+        const string yaml = """
+            workflow:
+              name: MissingLater
+            states:
+              Receive:
+                on:
+                  Completed:
+                    next: Charge
+              Charge:
+                on:
+                  Completed:
+                    end: true
+                  Failed:
+                    next: Compensate
+              Compensate:
+                on:
+                  Completed:
+                    end: true
+            """;
+        var compensated = false;
+        var states = new StateTable()
+            .Add("Receive", _ => "received")
+            .Add("Compensate", _ => { compensated = true; return null; });
+        using var engine = ExecutionEngineTestHarness.Create();
+
+        // Act
+        var id = engine.Start(Compile(yaml, states, requireStateExecutors: false));
+        await WaitUntilAsync(() => engine.GetSnapshot(id) is { IsTerminal: true });
+
+        // Assert
+        Assert.True(engine.GetSnapshot(id)!.IsFailed);
+        Assert.False(compensated);
+        Assert.Equal(["Receive"], NodeNames(engine, id));
+    }
+
+    /// <summary>
+    /// Fork の枝の中の状態の実行器を登録し忘れると、実行は Failed で終わり、他の枝で走っている状態は止まる。
+    /// 止まった状態の Cancelled は終端失敗の後として抑止され、実行は Cancelled にならない。
+    /// </summary>
+    [Fact]
+    public async Task Start_ExecutorMissingInForkBranch_FailsAndHaltsOtherBranch()
+    {
+        // Arrange
+        const string yaml = """
+            workflow:
+              name: MissingInBranch
+            states:
+              Receive:
+                on:
+                  Completed:
+                    fork: [Slow, Check]
+              Slow:
+                on:
+                  Completed:
+                    next: Join1
+              Check:
+                on:
+                  Completed:
+                    next: Missing
+              Missing:
+                on:
+                  Completed:
+                    next: Join1
+              Join1:
+                join:
+                  all: [Slow, Check]
+                on:
+                  Joined:
+                    end: true
+            """;
+        var slowStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var slowHalted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var states = new StateTable()
+            .Add("Receive", _ => null)
+            .Add("Slow", async (_, _, ct) =>
+            {
+                slowStarted.SetResult();
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    slowHalted.SetResult();
+                    throw;
+                }
+
+                return null;
+            })
+            .Add("Check", async (_, _, _) =>
+            {
+                // Slow が走り出してから Missing へ進み、止める対象があることを確かにする。
+                await slowStarted.Task;
+                return null;
+            });
+        using var engine = ExecutionEngineTestHarness.Create();
+
+        // Act
+        var id = engine.Start(Compile(yaml, states, requireStateExecutors: false));
+        await WaitUntilAsync(() => engine.GetSnapshot(id) is { IsTerminal: true });
+        await slowHalted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        var snapshot = engine.GetSnapshot(id)!;
+        Assert.True(snapshot.IsFailed);
+        Assert.False(snapshot.IsCancelled);
+        Assert.DoesNotContain("Missing", NodeNames(engine, id));
+    }
+
     /// <summary><c>wait.events</c> の Wait を <see cref="ExecutionEngine.ResumeWaitNode"/> で再開すると、渡したイベントの遷移先へ進む。</summary>
     [Theory]
     [InlineData("approve", "Approved")]
@@ -701,12 +845,13 @@ public sealed class StandaloneDefinitionUseCaseTests
     /// <summary>YAML を読み、検証を通し、登録した状態でコンパイルする（利用者の手順そのもの）。</summary>
     /// <param name="yaml">States 形式の定義。</param>
     /// <param name="states">状態名 → 実行器。</param>
-    private static CompiledWorkflowDefinition Compile(string yaml, StateTable states)
+    /// <param name="requireStateExecutors">false のとき、実行器の無い状態があってもコンパイルを通す（実行時の失敗を見るテスト用）。</param>
+    private static CompiledWorkflowDefinition Compile(string yaml, StateTable states, bool requireStateExecutors = true)
     {
         var definition = new StateWorkflowDefinitionLoader().Load(yaml);
         var validation = DefinitionValidator.Validate(definition);
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
-        return new DefinitionCompiler(new DictionaryStateExecutorFactory(states.Executors)).Compile(definition);
+        return new DefinitionCompiler(new DictionaryStateExecutorFactory(states.Executors), requireStateExecutors).Compile(definition);
     }
 
     private static IReadOnlyDictionary<string, object?> AsMap(object? value) =>
@@ -726,6 +871,17 @@ public sealed class StandaloneDefinitionUseCaseTests
         JsonElement element => element.GetProperty(key).GetString(),
         _ => null,
     };
+
+    /// <summary>実行グラフのノードの状態名を、グラフに出た順に返す。</summary>
+    private static List<string> NodeNames(ExecutionEngine engine, string executionId)
+    {
+        using var doc = JsonDocument.Parse(engine.ExportExecutionGraph(executionId));
+        if (!doc.RootElement.TryGetProperty("nodes", out var nodes))
+            return [];
+        return nodes.EnumerateArray()
+            .Select(node => node.GetProperty("nodeName").GetString()!)
+            .ToList();
+    }
 
     private static List<string> ActiveWaitNodeIds(ExecutionEngine engine, string executionId)
     {

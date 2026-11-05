@@ -1,4 +1,5 @@
 using Statevia.Core.Engine.Abstractions;
+using Statevia.Core.Engine.Definition.Validation;
 
 namespace Statevia.Core.Engine.Definition;
 
@@ -6,42 +7,77 @@ namespace Statevia.Core.Engine.Definition;
 /// YAML/JSON の WorkflowDefinition をコンパイルし、実行可能な CompiledWorkflowDefinition を生成します。
 /// 遷移テーブル、Fork/Join テーブル、Wait テーブルなどを構築します。
 /// </summary>
-public sealed class DefinitionCompiler
+/// <remarks>
+/// 既定では、Join 以外のすべての状態に実行器が登録されているかをコンパイル時に確かめる。
+/// 実行器の無い状態は、実行時にそこへ遷移した時点で実行が Failed になるため、定義と登録の食い違いを実行前に知らせる。
+/// </remarks>
+/// <param name="executorFactory">コンパイル済み定義に埋め込む <see cref="IStateExecutorFactory"/>。</param>
+/// <param name="requireStateExecutors">
+/// true（既定）のとき、Join 以外の状態で <see cref="IStateExecutorFactory.GetExecutor"/> が null を返すと
+/// <see cref="DefinitionValidationException"/> を投げる。コンパイルより前に同じことを別の手段で確かめている呼び出し元
+/// （Service API など）や、遷移表の構築だけを見るテストでは false を渡す。
+/// </param>
+public sealed class DefinitionCompiler(IStateExecutorFactory executorFactory, bool requireStateExecutors = true)
 {
-    private readonly IStateExecutorFactory _executorFactory;
-
-    /// <summary>
-    /// 状態実行ファクトリを指定してコンパイラを構築する。
-    /// </summary>
-    /// <param name="executorFactory">コンパイル済み定義に埋め込む <see cref="IStateExecutorFactory"/>。</param>
-    public DefinitionCompiler(IStateExecutorFactory executorFactory) => _executorFactory = executorFactory;
+    /// <summary>実行器の無い状態を指す <see cref="ValidationIssue.RuleId"/>。</summary>
+    public const string StateExecutorMissingRuleId = "Compile.StateExecutorMissing";
 
     /// <summary>ワークフロー定義をコンパイルし、実行可能なコンパイル済み定義を返します。</summary>
     /// <param name="definition">ワークフロー定義。</param>
     /// <param name="resolvedModules">compile 時に確定した module alias → 版ピン。</param>
     /// <param name="stateActionBindings">状態別 Action バインディング。</param>
+    /// <exception cref="DefinitionValidationException">
+    /// <c>requireStateExecutors</c> が true で、実行器の無い状態があるとき。メッセージと <see cref="DefinitionValidationException.Issues"/> に該当する状態をすべて入れる。
+    /// </exception>
     public CompiledWorkflowDefinition Compile(
         WorkflowDefinition definition,
         IReadOnlyDictionary<string, ResolvedModuleBinding>? resolvedModules = null,
         IReadOnlyDictionary<string, StateActionBinding>? stateActionBindings = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
+        var joinTable = BuildJoinTable(definition);
+        if (requireStateExecutors)
+        {
+            EnsureStateExecutors(definition, joinTable);
+        }
+
         return new CompiledWorkflowDefinition
         {
             Name = definition.Name,
             Transitions = BuildTransitionTable(definition),
             ConditionalTransitions = BuildConditionalTransitionTable(definition),
             ForkTable = BuildForkTable(definition),
-            JoinTable = BuildJoinTable(definition),
+            JoinTable = joinTable,
             WaitEventRouteTable = BuildWaitEventRouteTable(definition),
             WaitSubscriptions = BuildWaitSubscriptions(definition),
             StateInputs = BuildStateInputTable(definition),
             StateOutputs = BuildStateOutputTable(definition),
             InitialState = DetermineInitialState(definition),
-            StateExecutorFactory = _executorFactory,
+            StateExecutorFactory = executorFactory,
             ResolvedModules = resolvedModules ?? EmptyResolvedModules,
             StateActionBindings = stateActionBindings ?? EmptyStateActionBindings,
         };
+    }
+
+    /// <summary>
+    /// Join 以外の状態で実行器が取れないものを集め、1 つでもあれば例外にする。
+    /// Join の状態は Engine が実行器を使わずに処理するため対象外とする（<c>ExecutionEngine.ScheduleStateAsync</c> と同じ判定）。
+    /// </summary>
+    private void EnsureStateExecutors(
+        WorkflowDefinition definition,
+        Dictionary<string, IReadOnlyList<string>> joinTable)
+    {
+        var issues = definition.States.Keys
+            .Where(stateName => !joinTable.ContainsKey(stateName) && executorFactory.GetExecutor(stateName) is null)
+            .Select(stateName => new ValidationIssue(
+                StateExecutorMissingRuleId,
+                $"State '{stateName}' has no registered executor.",
+                stateName))
+            .ToArray();
+        if (issues.Length > 0)
+        {
+            throw new DefinitionValidationException(new ValidationResult(issues));
+        }
     }
 
     private static readonly IReadOnlyDictionary<string, ResolvedModuleBinding> EmptyResolvedModules =

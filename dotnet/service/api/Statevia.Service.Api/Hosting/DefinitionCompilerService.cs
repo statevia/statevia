@@ -77,7 +77,10 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             _actionCatalog,
             _serviceProvider,
             loaded.NodeBindings);
-        var compiler = new DefinitionCompiler(factory);
+        // 実行器の検査は止める。ModuleActionCompileBinder が Wait / Join 以外の全状態に Action を割り当て、
+        // ValidateRegisteredActions がその登録を確かめている（Wait の実行器は ActionExecutorFactory が自前で作る）ので、同じことを二度しない。
+        // また ActionExecutorFactory.GetExecutor はテナントの文脈を要し、コンパイル時には呼べない。
+        var compiler = new DefinitionCompiler(factory, requireStateExecutors: false);
         var compiled = compiler.Compile(
             def,
             compileBindings.ResolvedModules,

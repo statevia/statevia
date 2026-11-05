@@ -571,8 +571,13 @@ public sealed partial class ExecutionEngine : IExecutionEngine, IDisposable
         }
 
         var executor = def.StateExecutorFactory.GetExecutor(stateName);
-        if (executor == null)
+        if (executor is null)
         {
+            // 実行器の無い状態は定義と登録の食い違い（業務の失敗ではない）。on.Failed / error は辿らず、
+            // ノードも作らずに実行を Failed にする。黙って戻ると実行中の状態が無いまま Running で止まる。
+            instance.MarkFailed();
+            instance.HaltActiveActions();
+            _executionLog.LogExecutorNotFound(instance.ExecutionId, def.Name, stateName);
             return;
         }
 
