@@ -27,17 +27,17 @@
 
 ---
 
-## Lore MCP（仕様・実装の所在調査）
+## Melore MCP（仕様・実装の所在調査）
 
-Lore（`mcp__lore__*`）は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。各自の環境で設定する。正本は `.cursor/rules/lore-mcp-research.mdc`。
+Melore（`mcp__melore__*`）は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。各自の環境で設定する。正本は `.cursor/rules/melore-mcp-research.mdc`。
 
 - **どこに書いてあるか分からない**仕様・実装・テストを探すときは、Grep / Glob / Read の前に `search` を使う。日本語の自然文でよいが、識別子が分かっているならそれも入れる。
 - 型や仕様チャンクが決まったら、`references` で関連する仕様・実装・テストを取る（`basis` を見る）。
-- 本文の読み込み・参照追跡・編集は Serena や Read で行う。Lore は所在探しの入口であり、本文の正本ではない。
+- 本文の読み込み・参照追跡・編集は Serena や Read で行う。Melore は所在探しの入口であり、本文の正本ではない。
 - 出典の行範囲はファイルを開いて確かめてから引用する。`explain` の要約も根拠の本文で裏取りする。
 - 索引はコミット時点のもの。作業中のブランチで追加・変更したファイルは Grep / Read で確かめる。
 - `trace` は大きな型で応答が上限を超え、calls も返さない。依存関係の調査には使わない。
-- Lore が未接続のときは作業を止めず、通常の検索へ切り替えてよい。
+- Melore が未接続のときは作業を止めず、通常の検索へ切り替えてよい。
 
 ---
 
