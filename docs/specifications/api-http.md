@@ -561,7 +561,7 @@ Request:
 
 **GET /v1/schedules/{scheduleId}** — 200。`input` を含む。所属の無いスケジュールは 404、許可の外は 403。
 
-**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。更新後のスケジュールが有効なら発火準備検査を行う。無効にする更新と、無効なスケジュールの更新では行わない。`definitionId` を変えるときは、移し先の定義が未削除で、呼び出し元がその Project でも executor 以上であること（満たさなければ 404 / 403）。`runAsPrincipalId` を指定したときは、有効・無効にかかわらず有効な ServiceAccount であること（422）。
+**PATCH /v1/schedules/{scheduleId}** — 200。指定した項目だけ更新する。cron かタイムゾーンを変えると `nextFireAt` を計算し直す。更新後のスケジュールが有効なら発火準備検査を行う。無効にする更新と、無効なスケジュールの更新では行わない。`definitionId` を変えるときは、移し先の定義が未削除で、呼び出し元がその Project でも executor 以上であること（満たさなければ 404 / 403）。版を固定したスケジュール（`definitionVersionId` が null でない）の `definitionId` を別の定義へ変えるときは、同じ本文で `definitionVersion` か `definitionVersionId` を指定する。省略すると 422（`field=definitionVersion`）で、何も保存しない。固定した版は元の定義に属し、移し先では Start できないため持ち越さない。固定を外して latest に戻す指定は無い。版を固定していないスケジュールは、版を省略して定義を変えても latest のまま。`definitionVersion` / `definitionVersionId` は、`definitionId` を省略したときは現在の定義の版として解決する（無い版は 404）。`runAsPrincipalId` を指定したときは、有効・無効にかかわらず有効な ServiceAccount であること（422）。
 
 **DELETE /v1/schedules/{scheduleId}** — 204。論理削除。以降は発火しない。run-as と定義の状態では止めない。
 
