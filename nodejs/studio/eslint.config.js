@@ -136,6 +136,22 @@ export default defineConfig({
         "jsdoc/require-description": "off",
         "jsdoc/require-param-description": "off",
         "jsdoc/require-returns-description": "off",
+        // 識別子の書式をそろえ、grep やエージェントの調査で取りこぼしを減らす。
+        // React コンポーネントは PascalCase、定数は UPPER_CASE も許す。
+        // オブジェクト・型のプロパティは API 契約（snake_case 等）や HTTP ヘッダ名と一致させる必要があるため対象外。
+        // 見送った規則: boolean の is/has 接頭辞（loading / submitting など React の state 名として一般的な名前が多い）。
+        "@typescript-eslint/naming-convention": [
+            "error",
+            { selector: "default", format: ["camelCase"], leadingUnderscore: "allow" },
+            { selector: "import", format: null },
+            { selector: "variable", format: ["camelCase", "PascalCase", "UPPER_CASE"], leadingUnderscore: "allow" },
+            { selector: "function", format: ["camelCase", "PascalCase"] },
+            { selector: "parameter", format: ["camelCase", "PascalCase"], leadingUnderscore: "allow" },
+            { selector: "typeLike", format: ["PascalCase"] },
+            { selector: "enumMember", format: ["PascalCase", "UPPER_CASE"] },
+            { selector: ["objectLiteralProperty", "typeProperty", "objectLiteralMethod"], format: null },
+            { selector: "classProperty", modifiers: ["static", "readonly"], format: ["camelCase", "UPPER_CASE"] },
+        ],
         "@typescript-eslint/no-unused-vars": [
             "error",
             {

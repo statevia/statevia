@@ -17,7 +17,7 @@ internal static class RetiredBuiltinActions
         "It never resumed a wait. Resume the wait with POST /v1/executions/{id}/nodes/{nodeId}/resume, "
         + "or use wait.subscribe with statevia.action.builtin.event.publish.";
 
-    private static readonly Dictionary<string, string> s_replacementHints = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, string> ReplacementHints = new(StringComparer.Ordinal)
     {
         [WellKnownActionIds.Signal] = SignalReplacementHint,
     };
@@ -29,7 +29,7 @@ internal static class RetiredBuiltinActions
     /// <param name="stateName">その Action を使っている状態名。</param>
     /// <returns>英語のメッセージ。代わりの手段が分かる Action はその説明を添える。</returns>
     public static string FormatRejection(string actionId, string stateName) =>
-        s_replacementHints.TryGetValue(actionId, out var hint)
+        ReplacementHints.TryGetValue(actionId, out var hint)
             ? $"Action '{actionId}' in state '{stateName}' is retired. {hint}"
             : $"Action '{actionId}' in state '{stateName}' is retired.";
 }
