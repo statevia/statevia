@@ -3,12 +3,14 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.3 |
-| 更新日 | 2026-09-16 |
+| Version | 1.4 |
+| 更新日 | 2026-11-05 |
 
 ---
 
 **調べ物** の辞書・一覧。Normative 要件は書かず、詳細は Specification へリンクする。
+
+**Version 1.4（2026-11-05）**: 用語集を追加。
 
 **Version 1.3（2026-09-16）**: ログキー辞書の読者に運用者を含める。
 
@@ -16,6 +18,7 @@
 
 | 内容 | ファイル |
 | --- | --- |
+| 用語集 | [`glossary.md`](glossary.md) |
 | DB スキーマ | [`database-schema.md`](database-schema.md) |
 | ログキー | [`logging-property-keys.md`](logging-property-keys.md) |
 | OpenAPI / Scalar | [`api-openapi.md`](api-openapi.md) |
