@@ -11,6 +11,7 @@ Cursor Cloud / エージェント向けの**薄い索引**。詳細は [`docs/RE
 | HTTP / データ契約 | [`docs/specifications/api-http.md`](docs/specifications/api-http.md), [`docs/specifications/data-integration.md`](docs/specifications/data-integration.md) |
 | コーディング規約 | [`docs/development-guidelines.md`](docs/development-guidelines.md) |
 | レイヤー・境界 | [`docs/architecture/overview.md`](docs/architecture/overview.md), [`docs/architecture/domain-model-boundaries.md`](docs/architecture/domain-model-boundaries.md) |
+| 用語・命名（同義語と紛らわしい組） | [`docs/reference/glossary.md`](docs/reference/glossary.md) |
 
 ## リポジトリ構成（概要）
 
