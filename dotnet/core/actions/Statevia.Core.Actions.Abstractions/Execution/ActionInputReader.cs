@@ -13,7 +13,7 @@ namespace Statevia.Core.Actions.Abstractions.Execution;
 /// </remarks>
 public static class ActionInputReader
 {
-    private static readonly JsonSerializerOptions s_serializeOptions = new()
+    private static readonly JsonSerializerOptions SerializeOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
@@ -131,6 +131,6 @@ public static class ActionInputReader
         input switch
         {
             JsonElement jsonElement => jsonElement,
-            _ => JsonSerializer.SerializeToElement(input, s_serializeOptions),
+            _ => JsonSerializer.SerializeToElement(input, SerializeOptions),
         };
 }

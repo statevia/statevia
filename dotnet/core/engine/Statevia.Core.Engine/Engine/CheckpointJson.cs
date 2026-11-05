@@ -5,7 +5,7 @@ namespace Statevia.Core.Engine.Engine;
 /// <summary>チェックポイント向け JSON 変換ヘルパー。</summary>
 internal static class CheckpointJson
 {
-    private static readonly JsonSerializerOptions s_options = new()
+    private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
@@ -23,7 +23,7 @@ internal static class CheckpointJson
             return element.Clone();
         }
 
-        return JsonSerializer.SerializeToElement(value, s_options);
+        return JsonSerializer.SerializeToElement(value, Options);
     }
 
     /// <summary>JsonElement を object? に戻す（オブジェクト/配列は Dictionary/List）。</summary>

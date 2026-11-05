@@ -19,7 +19,7 @@ namespace Statevia.Service.Api.Hosting;
 /// </summary>
 internal sealed class DefinitionCompilerService : IDefinitionCompilerService
 {
-    private static readonly System.Text.Json.JsonSerializerOptions s_compiledJsonOptions = new()
+    private static readonly System.Text.Json.JsonSerializerOptions CompiledJsonOptions = new()
     {
         PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
     };
@@ -96,7 +96,7 @@ internal sealed class DefinitionCompilerService : IDefinitionCompilerService
             stateOutputs = compiled.StateOutputs,
             resolvedModules = compiled.ResolvedModules,
             stateActionBindings = compiled.StateActionBindings,
-        }, s_compiledJsonOptions);
+        }, CompiledJsonOptions);
         return (compiled, compiledJson);
     }
 

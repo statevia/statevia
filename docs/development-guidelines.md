@@ -66,7 +66,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 ### 4.1 .NET（C#）
 
-- **命名**: 意図が伝わる名前。省略しすぎない。
+- **命名**: 意図が伝わる名前。省略しすぎない。書式は `dotnet/.editorconfig` の命名規則（IDE1006、重大度 warning）で検出する。型・メンバー・`const`・`static readonly` フィールドは PascalCase、private フィールドは `_camelCase`、引数とローカル変数は camelCase（`s_` 接頭辞は使わない）。
 - **コンストラクタ**: プライマリコンストラクタを優先する。
 - **分岐**: パターンマッチング・`switch` を優先し、`as` の多用を避ける。
 - **反復**: LINQ を主構文とし、`foreach` / `for` は可読性・性能上の理由が明確な場合に限る。
@@ -84,7 +84,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 ### 4.2 TypeScript / React（UI）
 
-- **命名**: 意図が伝わる名前。`export` には JSDoc を付ける。
+- **命名**: 意図が伝わる名前。`export` には JSDoc を付ける。書式は ESLint の `@typescript-eslint/naming-convention` で検出する（変数・関数は camelCase か PascalCase、型は PascalCase。オブジェクト・型のプロパティは API 契約に合わせるため対象外）。
 - **型**: ナローイングで表現し、`as` の多用を避ける。
 - **分岐**: `switch` / `Record` を優先する。
 - **データ変換**: `map` / `filter` / `reduce` 等の宣言的配列操作を主構文とする。

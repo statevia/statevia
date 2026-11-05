@@ -8,7 +8,7 @@ namespace Statevia.Service.Api.Application.Definition;
 /// <summary>definition_versions.compiled_json から Engine 投入用定義を復元する。</summary>
 internal static class CompiledDefinitionJsonReader
 {
-    private static readonly JsonSerializerOptions s_options = new()
+    private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true
     };
@@ -74,7 +74,7 @@ internal static class CompiledDefinitionJsonReader
     }
 
     private static CompiledDefinitionDto Deserialize(string compiledJson) =>
-        JsonSerializer.Deserialize<CompiledDefinitionDto>(compiledJson, s_options)
+        JsonSerializer.Deserialize<CompiledDefinitionDto>(compiledJson, Options)
         ?? throw new ArgumentException("compiled_json is empty or invalid.");
 
     private static Dictionary<string, ResolvedModuleBinding> MapResolvedModules(
