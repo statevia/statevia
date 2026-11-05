@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3 |
-| 更新日 | 2026-11-04 |
+| Version | 1.4 |
+| 更新日 | 2026-11-05 |
 | 関連 | [concepts/execution-model.md](../../concepts/execution-model.md), [wait-cancel.md](wait-cancel.md) |
 
 ---
@@ -16,6 +16,7 @@
 - **MUST**: 許可された事実語彙（`Completed` / `Failed` / `Cancelled` / `Joined` 等）以外で遷移してはならない。
 - **SHOULD**: Wait 解消後の正常終了は FSM 上 `Completed` 事実として扱う。
 - **MUST**: `Failed` 事実でも `on.Failed` を `Completed` と同じ規則で評価する。遷移が無いときだけ実行を終端失敗とし、`Cancelled` とは記録しない（下記「失敗事実と on.Failed」）。
+- **MUST**: 実行器の無い状態に遷移したら、`on.Failed` を辿らずに実行を Failed にする（下記「実行器の無い状態」）。
 
 背景は [execution-model](../../concepts/execution-model.md) を参照。
 
@@ -61,6 +62,16 @@ YAML の **`wait.events`**（例: `approve` → `Approved`）は、外部から 
 5. `Failed` で遷移が無いときだけ、実行を終端失敗にする。並行する状態の Action は止めるが、実行は Cancelled とは記録しない。投影の状態は FAILED、`cancel_requested` は false。
 
 状態の完了は Join に記録しない。Join への記録は、遷移で Join に入ったときに行う（[fork-join.md](fork-join.md)）。そのため、枝の中で `on.Failed` を辿り当該 Join へ入った枝も、Hosted と Engine 単体のどちらでも Join に記録される（Hosted では子が Completed で終わる）。
+
+### 実行器の無い状態
+
+Join 以外の状態は、`IStateExecutorFactory.GetExecutor` で実行器を取って動かす。実行器が取れない（null が返る）状態に遷移したとき、エンジンは次のように扱う（`ExecutionEngine.ScheduleStateAsync`）。
+
+- 実行を Failed にし、並行する状態の Action を止める。実行は Cancelled とは記録しない。
+- その状態のノードは作らない。`on.Failed` / `error` も辿らない。状態の業務の失敗ではなく、定義と実行器の登録の食い違いであるため。
+- ログ（EventId 50022、Error）に `ExecutionId` / `DefinitionName` / `StateName` を残す。
+
+`DefinitionCompiler` は既定で、コンパイル時にこの食い違いを検出する（[engine-standalone-guide.md](../../guides/engine-standalone-guide.md)）。Service API では、Action の割り当てと登録の検証がコンパイルより前に済んでいるため、実行時にこの経路へは入らない。
 
 ## FSM の特性
 

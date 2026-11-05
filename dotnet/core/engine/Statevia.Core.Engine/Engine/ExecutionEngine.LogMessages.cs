@@ -75,5 +75,8 @@ public sealed partial class ExecutionEngine
 
         [LoggerMessage(EventId = 50021, Level = LogLevel.Error, Message = "Wait route unresolved ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName} NodeId={NodeId} EventName={EventName}")]
         public static partial void WaitRouteUnresolved(ILogger logger, string executionId, string definitionName, string stateName, string nodeId, string? eventName);
+
+        [LoggerMessage(EventId = 50022, Level = LogLevel.Error, Message = "State executor not found ExecutionId={ExecutionId} DefinitionName={DefinitionName} StateName={StateName}")]
+        public static partial void ExecutorNotFound(ILogger logger, string executionId, string definitionName, string stateName);
     }
 }
