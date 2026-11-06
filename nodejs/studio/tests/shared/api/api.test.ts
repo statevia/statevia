@@ -40,6 +40,19 @@ describe("apiGet", () => {
               )
           } as Response);
         }
+        if (url.includes("/api/core/error-details")) {
+          return Promise.resolve({
+            ok: false,
+            status: 422,
+            statusText: "Unprocessable Entity",
+            text: () =>
+              Promise.resolve(
+                JSON.stringify({
+                  error: { code: "VALIDATION_ERROR", message: "run-as is invalid", details: { field: "runAsPrincipalId" } }
+                })
+              )
+          } as Response);
+        }
         if (url.includes("/api/core/error-plain")) {
           return Promise.resolve({
             ok: false,
@@ -112,6 +125,29 @@ describe("apiGet", () => {
       status: 422,
       error: { code: "INVALID_INPUT", message: "Validation failed" }
     });
+  });
+
+  it("エラー応答の details を ApiError に残す（422 の欄を画面で出し分けるため）", async () => {
+    // Arrange
+    const path = "/error-details";
+
+    // Act / Assert
+    await expect(apiGet(path)).rejects.toMatchObject({
+      status: 422,
+      error: { code: "VALIDATION_ERROR", details: { field: "runAsPrincipalId" } }
+    });
+  });
+
+  it("details が無いエラー応答では details を付けない", async () => {
+    // Arrange
+    const path = "/error-json";
+
+    // Act
+    const error: unknown = await apiGet(path).catch((caught: unknown) => caught);
+
+    // Assert
+    expect(error).toMatchObject({ error: { code: "INVALID_INPUT" } });
+    expect((error as { error: Record<string, unknown> }).error).not.toHaveProperty("details");
   });
 
   it("レスポンスが JSON でないとき生テキストで ApiError をスローする", async () => {

@@ -5,6 +5,7 @@ import { dashboardUiTextEn } from "@/features/dashboard/i18n";
 import { definitionEditorUiTextEn } from "@/features/definition-editor/i18n";
 import { executionsUiTextEn } from "@/features/executions/i18n";
 import { projectsUiTextEn } from "@/features/projects/i18n";
+import { schedulesUiTextEn } from "@/features/schedules/i18n";
 import type { UiText } from "./uiText";
 import { actionCatalogUiTextEnOverrides, actionCatalogUiTextJa } from "./actionCatalogUiText";
 import { uiTextJa } from "./uiText";
@@ -21,6 +22,7 @@ export const uiTextEn: UiText = {
   ...definitionEditorUiTextEn,
   ...executionsUiTextEn,
   ...projectsUiTextEn,
+  ...schedulesUiTextEn,
   actionCatalog: {
     ...actionCatalogUiTextJa,
     ...actionCatalogUiTextEnOverrides,
@@ -35,6 +37,7 @@ export const uiTextEn: UiText = {
     dashboard: "Dashboard",
     definitions: "Definitions",
     executions: "Executions",
+    schedules: "Schedules",
     projectMembers: "Members",
     projectCreate: "Create project",
     adminUsers: "Users",

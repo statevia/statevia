@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.36 |
-| 更新日 | 2026-10-29 |
+| Version | 1.37 |
+| 更新日 | 2026-11-06 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.37（2026-11-06）**: Studio は `/schedules` で定期実行の一覧・作成・部分更新・削除・手動実行を行う。画面はテナント管理者だけが使う。HTTP の権限と所属の判定、成否は変えない。
 
 **Version 1.36（2026-10-29）**: 定期実行を Project の所属に揃える。一覧と取得は定義の Project の所属と実行リソース許可で絞る。有効なスケジュールの保存と手動実行の前に発火準備検査（定義が未削除、run-as の有効性・所属・許可）を行い、run-as の所属不足は 422。無効化と削除は run-as と定義の状態で止めない。Project のメンバー候補に資格のない ServiceAccount を入れ、`kind` の `apiKey` を `serviceAccount` に変える。
 
@@ -540,7 +542,7 @@ Request:
 
 ### 3.12 定期実行スケジュール
 
-定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。Studio の画面は無い。run-as の ServiceAccount に実行リソース許可があれば、発火と手動実行の Start はその許可で絞る。
+定義版の YAML には埋め込まない。発火は既存の Start 受理（`POST /v1/executions` と同じ経路）で、新しい `execution_work_items.kind` は増やさない。外部 Cron から `POST /v1/executions` する運用も残る。run-as の ServiceAccount に実行リソース許可があれば、発火と手動実行の Start はその許可で絞る。
 
 権限は専用キーを増やさない。一覧・取得は `executions.read` と、定義の Project で reader 以上の所属、かつ実行リソース許可の範囲。所属の無いスケジュールは一覧に出ず、取得は不在と同じ 404（`Schedule not found`）。許可の外は一覧に出ず、取得は 403（`RESOURCE_GRANT_DENIED`）。`tenant.admin` でも所属が無ければ見えない。作成・更新・削除・手動実行は `executions.write` と、定義の Project で executor（未登録は 404、Reader のみは 403 `PROJECT_ACCESS_DENIED`）。既存スケジュールの更新・削除・手動実行は、定義が論理削除されていてもその所属 Project で判定する。Principal が無いときは 401（`UNAUTHORIZED`）。他テナントと論理削除済みのスケジュールは 404。
 
@@ -579,6 +581,14 @@ Request:
 - `job_key` がある行は Start しない。実行も work item も増やさない。成功時の `schedule_runs.outcome` は `completed` で、`summary_json` は件数だけを持つ。この run はテナント API に出さない。
 
 資格のない ServiceAccount の作成は §4.1.3。ジョブ作成では発行しない。
+
+Studio の画面は `/schedules`（一覧）、`/schedules/new`（作成）、`/schedules/{scheduleId}`（編集）。
+
+- 画面を使えるのはテナント管理者だけ。run-as の候補を `GET /v1/admin/service-accounts`（管理者専用）から取るため。`executions.write` だけを持つ利用者は HTTP を使う。上記の HTTP の権限と所属の判定はそのまま効くので、テナント管理者でも所属の無い Project の定義のスケジュールは画面に出ない。
+- 一覧は `GET /v1/schedules` だけを使い、`input` を出さない。`input` は編集画面で単票を読んだときだけフォームに出す。
+- run-as の候補は有効な ServiceAccount で、定義の Project のメンバーには絞らない。所属が足りないときは保存時の 422（`field=runAsPrincipalId`）を run-as の欄に出し、Project のメンバーを管理する画面（`/admin/projects`）へのリンクを添える。
+- タイムゾーンが空のときは送らない（UTC で埋めない）。`queue` と版 UUID は画面に出さない。
+- 手動実行は確認後に 1 回だけ送り、無効なスケジュールには出さない。
 
 ---
 

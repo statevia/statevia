@@ -87,5 +87,5 @@ export function isSlugConflictError(error: unknown): boolean {
   }
   const apiError = error as ApiError;
   const details = apiError.error?.details;
-  return apiError.status === 422 && typeof details === "object" && details !== null && details.field === "slug";
+  return apiError.status === 422 && details !== undefined && !Array.isArray(details) && (details as Record<string, unknown>).field === "slug";
 }

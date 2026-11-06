@@ -1,5 +1,6 @@
 import {
   Bot,
+  CalendarClock,
   FileCode,
   FolderKanban,
   FolderPlus,
@@ -33,6 +34,7 @@ export type NavItemId =
   | "dashboard"
   | "definitions"
   | "executions"
+  | "schedules"
   | "projectMembers"
   | "projectCreate"
   | "adminUsers"
@@ -76,6 +78,14 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { id: "dashboard", href: "/dashboard", matchPrefixes: ["/dashboard"], visibility: "all", icon: LayoutDashboard },
       { id: "definitions", href: "/definitions", matchPrefixes: ["/definitions"], visibility: "all", icon: FileCode },
       { id: "executions", href: "/executions", matchPrefixes: ["/executions"], visibility: "all", icon: Play },
+      // 定期実行の画面はテナント管理者だけ（run-as 候補の API が管理者専用）。門は `app/schedules/layout.tsx`。
+      {
+        id: "schedules",
+        href: "/schedules",
+        matchPrefixes: ["/schedules"],
+        visibility: "tenantAdmin",
+        icon: CalendarClock,
+      },
     ],
   },
   {

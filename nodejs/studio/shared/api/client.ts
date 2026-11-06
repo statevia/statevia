@@ -55,12 +55,24 @@ function getErrorCode(res: Response, json: unknown): string {
   return `HTTP_${res.status}`;
 }
 
+/**
+ * 応答の `error.details` を取り出す。422 の項目名（`{ field }` や `[{ field, message }]`）を画面へ渡すために使う。
+ * @param json 応答本文。
+ * @returns オブジェクトか配列の details。無い・形が違うときは undefined。
+ */
+function getErrorDetails(json: unknown): ApiError["error"]["details"] {
+  if (typeof json !== "object" || json === null || !("error" in json)) return undefined;
+  const details: unknown = (json as { error?: { details?: unknown } }).error?.details;
+  return typeof details === "object" && details !== null ? (details as ApiError["error"]["details"]) : undefined;
+}
+
 /** HTTP エラー応答を Error として投げる（`toToastError` の `ApiError` 形状を維持）。 */
 function buildApiError(res: Response, json: unknown): Error & ApiError {
   const message = getErrorMessage(res, json);
+  const details = getErrorDetails(json);
   const apiError: ApiError = {
     status: res.status,
-    error: { code: getErrorCode(res, json), message }
+    error: { code: getErrorCode(res, json), message, ...(details === undefined ? {} : { details }) }
   };
   return Object.assign(new Error(message), apiError);
 }

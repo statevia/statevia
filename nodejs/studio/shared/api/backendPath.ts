@@ -13,5 +13,6 @@ export function pathForBackend(pathParts: string[]): string[] {
   if (pathParts[0] === "auth") return ["v1", "auth", ...pathParts.slice(1)];
   if (pathParts[0] === "events") return ["v1", "events", ...pathParts.slice(1)];
   if (pathParts[0] === "event-subscriptions") return ["v1", "event-subscriptions", ...pathParts.slice(1)];
+  if (pathParts[0] === "schedules") return ["v1", "schedules", ...pathParts.slice(1)];
   return pathParts;
 }
