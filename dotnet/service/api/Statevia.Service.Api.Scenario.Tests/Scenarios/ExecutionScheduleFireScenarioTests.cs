@@ -189,6 +189,45 @@ public sealed class ExecutionScheduleFireScenarioTests
             .AnyAsync(row => row.ScheduleId == created.ScheduleId));
     }
 
+    /// <summary>
+    /// 版を固定した行で定義と版を一緒に変えると、発火は移し先の定義の版で Start する（元の定義の版を持ち越さない）。
+    /// </summary>
+    [SkippableFact]
+    public async Task DispatchDue_AfterPinnedScheduleMovedWithVersion_StartsTargetDefinitionVersion()
+    {
+        // Arrange
+        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        await using var context = await FireArrangement.OpenAsync(_fixture, "repin");
+        using var tenant = context.BeginOperator();
+        var targetDefinitionId = await context.AddDefinitionAsync();
+        var created = await context.CreatePinnedScheduleAsync();
+        await context.Schedules.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest
+            {
+                DefinitionId = targetDefinitionId.ToString("D"),
+                DefinitionVersion = 1
+            },
+            CancellationToken.None);
+        await context.SetNextFireAtAsync(created.ScheduleId, SlotUtc);
+
+        // Act
+        var processed = await context.Dispatch.DispatchDueAsync(DueNowUtc, limit: 64, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(1, processed);
+        await using var verify = await context.CreateDbAsync();
+        var run = await verify.ExecutionScheduleRuns.IgnoreQueryFilters()
+            .SingleAsync(row => row.ScheduleId == created.ScheduleId);
+        Assert.Equal(ExecutionScheduleRunOutcomes.Started, run.Outcome);
+        var execution = await verify.Executions.IgnoreQueryFilters()
+            .SingleAsync(row => row.ExecutionId == run.ExecutionId);
+        Assert.Equal(targetDefinitionId, execution.DefinitionId);
+        var targetVersion = await verify.DefinitionVersions
+            .SingleAsync(row => row.DefinitionId == targetDefinitionId && row.Version == 1);
+        Assert.Equal(targetVersion.DefinitionVersionId, execution.DefinitionVersionId);
+    }
+
     /// <summary>1 テスト分の定義・運用者・run-as SA。</summary>
     private sealed class FireArrangement : IAsyncDisposable
     {
@@ -197,12 +236,14 @@ public sealed class ExecutionScheduleFireScenarioTests
         private FireArrangement(
             AsyncServiceScope scope,
             Guid definitionId,
+            Guid projectId,
             Guid creatorPrincipalId,
             Guid runAsPrincipalId,
             string scheduleName)
         {
             _scope = scope;
             DefinitionId = definitionId;
+            ProjectId = projectId;
             CreatorPrincipalId = creatorPrincipalId;
             RunAsPrincipalId = runAsPrincipalId;
             ScheduleName = scheduleName;
@@ -210,6 +251,9 @@ public sealed class ExecutionScheduleFireScenarioTests
         }
 
         public Guid DefinitionId { get; }
+
+        /// <summary>定義と運用者・run-as の所属がある Project。</summary>
+        public Guid ProjectId { get; }
 
         public Guid CreatorPrincipalId { get; }
 
@@ -351,7 +395,13 @@ public sealed class ExecutionScheduleFireScenarioTests
                 await seed.SaveChangesAsync();
             }
 
-            return new FireArrangement(scope, definitionId, creatorPrincipalId, runAsPrincipalId, $"{namePrefix}-{suffix}");
+            return new FireArrangement(
+                scope,
+                definitionId,
+                projectId,
+                creatorPrincipalId,
+                runAsPrincipalId,
+                $"{namePrefix}-{suffix}");
         }
 
         /// <summary>テストメソッド上で運用者文脈を張る。AsyncLocal は呼び出し元へ戻らない。</summary>
@@ -366,6 +416,53 @@ public sealed class ExecutionScheduleFireScenarioTests
                     WellKnownPermissionKeys.ExecutionsWrite,
                     WellKnownPermissionKeys.ExecutionsRead
                 }));
+
+        /// <summary>同じ Project に版 1 だけを持つ定義を足し、定義 ID を返す。</summary>
+        public async Task<Guid> AddDefinitionAsync()
+        {
+            var compiler = _scope.ServiceProvider.GetRequiredService<IDefinitionCompilerService>();
+            var compiled = compiler.ValidateAndCompile("W", NoopWorkflowYaml);
+            var definitionId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+            await using var db = await CreateDbAsync();
+            db.Definitions.Add(new DefinitionRow
+            {
+                DefinitionId = definitionId,
+                TenantId = DefaultTenantId,
+                ProjectId = ProjectId,
+                Slug = DefinitionSlug.FromName(definitionId, "W"),
+                Name = "W",
+                LatestVersion = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            db.DefinitionVersions.Add(new DefinitionVersionRow
+            {
+                DefinitionVersionId = Guid.NewGuid(),
+                DefinitionId = definitionId,
+                Version = 1,
+                SourceYaml = NoopWorkflowYaml,
+                CompiledJson = compiled.CompiledJson,
+                CreatedAt = now
+            });
+            await db.SaveChangesAsync();
+            return definitionId;
+        }
+
+        /// <summary>定義の版 1 を固定したスケジュールを作る。</summary>
+        public Task<ExecutionScheduleDetailDto> CreatePinnedScheduleAsync() =>
+            Schedules.CreateAsync(
+                new CreateExecutionScheduleRequest
+                {
+                    Name = ScheduleName,
+                    DefinitionId = DefinitionId.ToString("D"),
+                    DefinitionVersion = 1,
+                    CronExpression = "0 3 * * *",
+                    TimeZone = "UTC",
+                    OverlapPolicy = ExecutionScheduleOverlapPolicies.Skip,
+                    RunAsPrincipalId = RunAsPrincipalId
+                },
+                CancellationToken.None);
 
         public Task<ExecutionScheduleDetailDto> CreateScheduleAsync() =>
             Schedules.CreateAsync(

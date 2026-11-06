@@ -148,6 +148,7 @@ internal sealed class ExecutionScheduleService(
             // 移し先の定義は未削除でなければならない。呼び出し元はその Project でも executor 以上が要る。
             await authorization.EnsureCanExecuteOnDefinitionAsync(tenantId, definitionId, cancellationToken)
                 .ConfigureAwait(false);
+            EnsurePinnedVersionFollowsDefinitionChange(row, definitionId, request);
             row.DefinitionId = definitionId;
         }
 
@@ -323,6 +324,33 @@ internal sealed class ExecutionScheduleService(
             && principal.DeletedAt is null;
         if (!usable)
             throw new ApiValidationException(RunAsInvalid, new { field = "runAsPrincipalId" });
+    }
+
+    /// <summary>
+    /// 版を固定した行の定義を変えるとき、同じ PATCH で版の指定を求める。
+    /// </summary>
+    /// <remarks>
+    /// 固定した版は元の定義に属するため、移し先の定義では解決できない。持ち越すと発火も手動実行も
+    /// Start が定義不在で失敗し続ける。固定を黙って外すと固定した意図が失われるため、422 で止める。
+    /// 定義を変えない（同じ定義を指す）PATCH と、版を固定していない行は対象外。
+    /// </remarks>
+    /// <param name="row">更新前のスケジュール行。</param>
+    /// <param name="definitionId">解決済みの移し先定義。</param>
+    /// <param name="request">PATCH 本文。</param>
+    /// <exception cref="ApiValidationException">版を固定した行の定義を変えるのに、版を指定していない。</exception>
+    private static void EnsurePinnedVersionFollowsDefinitionChange(
+        ExecutionScheduleRow row,
+        Guid definitionId,
+        UpdateExecutionScheduleRequest request)
+    {
+        var definitionChanged = row.DefinitionId != definitionId;
+        var versionSpecified = request.DefinitionVersionId is { } || request.DefinitionVersion is { };
+        if (definitionChanged && row.DefinitionVersionId is { } && !versionSpecified)
+        {
+            throw new ApiValidationException(
+                "definitionVersion is required when changing the definition of a schedule pinned to a version.",
+                new { field = "definitionVersion" });
+        }
     }
 
     private static string NormalizeOverlapPolicy(string? overlap)

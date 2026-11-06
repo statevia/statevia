@@ -212,6 +212,102 @@ public sealed class ExecutionScheduleIntegrationTests
         Assert.NotNull((await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync()).DeletedAt);
     }
 
+    /// <summary>
+    /// 版を固定した行で定義だけを変え、版を指定しない PATCH は 422 で、定義も版も保存しない。
+    /// </summary>
+    [Fact]
+    public async Task Update_WhenPinnedAndDefinitionChangedWithoutVersion_ThrowsValidationWithoutSaving()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var targetDefinitionId = await context.AddDefinitionAsync();
+        var created = await context.CreatePinnedScheduleAsync("pinned-move");
+
+        // Act
+        var act = () => context.Schedules.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { DefinitionId = targetDefinitionId.ToString("D") },
+            CancellationToken.None);
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Contains("definitionVersion", exception.Message, StringComparison.Ordinal);
+        await using var verify = context.Database.Factory.CreateDbContext();
+        var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(context.DefinitionId, schedule.DefinitionId);
+        Assert.Equal(created.DefinitionVersionId, schedule.DefinitionVersionId);
+    }
+
+    /// <summary>版を固定した行で定義と版を一緒に変えると、移し先の定義の版に固定し直す。</summary>
+    [Fact]
+    public async Task Update_WhenPinnedAndDefinitionChangedWithVersion_RepinsToTargetVersion()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var targetDefinitionId = await context.AddDefinitionAsync();
+        var created = await context.CreatePinnedScheduleAsync("pinned-repin");
+
+        // Act
+        var updated = await context.Schedules.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest
+            {
+                DefinitionId = targetDefinitionId.ToString("D"),
+                DefinitionVersion = 1
+            },
+            CancellationToken.None);
+
+        // Assert
+        await using var verify = context.Database.Factory.CreateDbContext();
+        var targetVersion = await verify.DefinitionVersions
+            .SingleAsync(row => row.DefinitionId == targetDefinitionId && row.Version == 1);
+        Assert.Equal(targetDefinitionId, updated.DefinitionId);
+        Assert.Equal(targetVersion.DefinitionVersionId, updated.DefinitionVersionId);
+    }
+
+    /// <summary>版を固定した行で同じ定義を送る PATCH は、版を指定しなくても固定を保つ。</summary>
+    [Fact]
+    public async Task Update_WhenPinnedAndSameDefinitionWithoutVersion_KeepsPin()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var created = await context.CreatePinnedScheduleAsync("pinned-same");
+
+        // Act
+        var updated = await context.Schedules.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { DefinitionId = context.DefinitionId.ToString("D") },
+            CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(created.DefinitionVersionId);
+        Assert.Equal(created.DefinitionVersionId, updated.DefinitionVersionId);
+    }
+
+    /// <summary>版を固定していない行は、版を指定せずに定義を変えられ、発火時の latest のまま。</summary>
+    [Fact]
+    public async Task Update_WhenUnpinnedAndDefinitionChangedWithoutVersion_StaysUnpinned()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var targetDefinitionId = await context.AddDefinitionAsync();
+        var created = await context.CreateScheduleAsync("unpinned-move");
+
+        // Act
+        var updated = await context.Schedules.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { DefinitionId = targetDefinitionId.ToString("D") },
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(targetDefinitionId, updated.DefinitionId);
+        Assert.Null(updated.DefinitionVersionId);
+    }
+
     private static DateTime AsUtc(DateTime value) =>
         value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
@@ -223,6 +319,7 @@ public sealed class ExecutionScheduleIntegrationTests
             ServiceProvider provider,
             AsyncServiceScope scope,
             Guid definitionId,
+            Guid projectId,
             Guid creatorPrincipalId,
             Guid runAsPrincipalId)
         {
@@ -230,6 +327,7 @@ public sealed class ExecutionScheduleIntegrationTests
             Provider = provider;
             Scope = scope;
             DefinitionId = definitionId;
+            ProjectId = projectId;
             CreatorPrincipalId = creatorPrincipalId;
             RunAsPrincipalId = runAsPrincipalId;
             Accessor = scope.ServiceProvider.GetRequiredService<ITenantContextAccessor>();
@@ -244,6 +342,9 @@ public sealed class ExecutionScheduleIntegrationTests
         public ITenantContextAccessor Accessor { get; }
 
         public Guid DefinitionId { get; }
+
+        /// <summary>定義と作成者・run-as の所属がある Project。</summary>
+        public Guid ProjectId { get; }
 
         public Guid CreatorPrincipalId { get; }
 
@@ -306,6 +407,7 @@ public sealed class ExecutionScheduleIntegrationTests
                 provider,
                 scope,
                 definitionId,
+                projectId,
                 creatorPrincipalId,
                 runAs.PrincipalId);
         }
@@ -347,6 +449,42 @@ public sealed class ExecutionScheduleIntegrationTests
                 .SingleAsync(row => row.DefinitionId == DefinitionId);
             definition.DeletedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
+        }
+
+        /// <summary>同じ Project に版 1 だけを持つ定義を足し、定義 ID を返す。</summary>
+        public async Task<Guid> AddDefinitionAsync()
+        {
+            var compiler = Scope.ServiceProvider.GetRequiredService<IDefinitionCompilerService>();
+            var compiled = compiler.ValidateAndCompile("W", NoopWorkflowYaml);
+            var definitionId = Guid.NewGuid();
+            await using var db = Database.Factory.CreateDbContext();
+            DefinitionTestData.AddDefinitionWithVersion(
+                db,
+                TestTenantIds.DefaultTenantId,
+                definitionId,
+                "W",
+                ProjectId,
+                sourceYaml: NoopWorkflowYaml,
+                compiledJson: compiled.CompiledJson);
+            await db.SaveChangesAsync();
+            return definitionId;
+        }
+
+        /// <summary>定義の版 1 を固定したスケジュールを作る。</summary>
+        public async Task<ExecutionScheduleDetailDto> CreatePinnedScheduleAsync(string name)
+        {
+            return await Schedules.CreateAsync(
+                new CreateExecutionScheduleRequest
+                {
+                    Name = name,
+                    DefinitionId = DefinitionId.ToString("D"),
+                    DefinitionVersion = 1,
+                    CronExpression = "0 3 * * *",
+                    TimeZone = "UTC",
+                    OverlapPolicy = ExecutionScheduleOverlapPolicies.Skip,
+                    RunAsPrincipalId = RunAsPrincipalId
+                },
+                CancellationToken.None);
         }
 
         public async Task<ExecutionScheduleDetailDto> CreateScheduleAsync(string name)
