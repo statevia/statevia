@@ -6,6 +6,9 @@ export type ApiError = {
   error: {
     code: string;
     message: string;
-    details?: Record<string, unknown>;
+    /**
+     * 422 などの補足。Service API はドメイン検証で `{ field }`、形式検証で `[{ field, message }]` を返す。
+     */
+    details?: Record<string, unknown> | ReadonlyArray<unknown>;
   };
 };

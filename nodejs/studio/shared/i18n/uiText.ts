@@ -26,6 +26,10 @@ import {
   projectsUiTextJa,
   type ProjectsFeatureUiText,
 } from "@/features/projects/i18n";
+import {
+  schedulesUiTextJa,
+  type SchedulesFeatureUiText,
+} from "@/features/schedules/i18n";
 import { actionCatalogUiTextJa, type ActionCatalogUiText } from "./actionCatalogUiText";
 
 export type UiText = DefinitionsFeatureUiText &
@@ -34,7 +38,8 @@ export type UiText = DefinitionsFeatureUiText &
   DashboardFeatureUiText &
   DefinitionEditorFeatureUiText &
   ExecutionsFeatureUiText &
-  ProjectsFeatureUiText & {
+  ProjectsFeatureUiText &
+  SchedulesFeatureUiText & {
   actionCatalog: ActionCatalogUiText;
   actionLinks: {
     aria: {
@@ -46,6 +51,7 @@ export type UiText = DefinitionsFeatureUiText &
     dashboard: string;
     definitions: string;
     executions: string;
+    schedules: string;
     projectMembers: string;
     projectCreate: string;
     adminUsers: string;
@@ -159,6 +165,7 @@ export const uiText: UiText = {
   ...definitionEditorUiTextJa,
   ...executionsUiTextJa,
   ...projectsUiTextJa,
+  ...schedulesUiTextJa,
   actionCatalog: actionCatalogUiTextJa,
   actionLinks: {
     aria: {
@@ -170,6 +177,7 @@ export const uiText: UiText = {
     dashboard: "ダッシュボード",
     definitions: "定義",
     executions: "実行",
+    schedules: "定期実行",
     projectMembers: "メンバー",
     projectCreate: "プロジェクトを作成",
     adminUsers: "ユーザー管理",
