@@ -1,7 +1,7 @@
 ---
 name: serena-workflow-research-impl
 description: >-
-  Serena MCP でコード調査・設計前調査・実装を進める。主戦場の user-serena-* が使えるとき、シンボル探索とシンボル編集を grep/read より優先する。
+  Serena MCP でコード調査・設計前調査・実装を進める。主戦場の serena-* が使えるとき、シンボル探索とシンボル編集を grep/read より優先する。
   ユーザーが調査、設計前の確認、実装、改修、原因究明、影響範囲確認を依頼したときに適用する。
 disable-model-invocation: false
 ---
@@ -10,7 +10,7 @@ disable-model-invocation: false
 
 ## 前提
 
-- 主戦場に対応する MCP サーバーが接続されていること。C# は **`user-serena-csharp`**。UI は **`user-serena-ui`**。
+- 主戦場に対応する MCP サーバーが接続されていること。C# は **`serena-csharp`**。UI は **`serena-ui`**。
 - 未接続・エラー時は、サイレントにフォールバックせず **作業を停止**し、対象 `serena-*` の On ともう一方の Off を促す。ユーザーが「Serena なしで続行」と明示したときだけ Read / Grep 等へ切り替える。
 - プロジェクト切替は UI トグル（`.cursor/skills/serena-mcp-project-switch/SKILL.md`、または `/serena-project-csharp` / `/serena-project-ui`）。**`activate_project` は使わない**。
 - Serena の `initial_instructions` にある **「コードファイルの Read を全面禁止」**は、**Cursor エージェントの運用では次の優先ルールに落とす**（厳格適用はしない）。
@@ -25,7 +25,7 @@ disable-model-invocation: false
 
 ## 調査・設計前調査の流れ
 
-1. 主戦場を決め、対応する **`user-serena-*` が ready** か確認する。C# は `user-serena-csharp`、UI は `user-serena-ui`。違う／未起動ならトグルを促して停止する。
+1. 主戦場を決め、対応する **`serena-*` が ready** か確認する。C# は `serena-csharp`、UI は `serena-ui`。違う／未起動ならトグルを促して停止する。
 2. **シンボルの場所がはっきりしない**
    - 広く候補を拾うなら **`find_symbol`**（`name_path_pattern`、`relative_path` でディレクトリを絞ると速い）。
    - ファイルが決まっているなら **`get_symbols_overview`** で構成を把握。
@@ -40,7 +40,7 @@ disable-model-invocation: false
 
 ## 実装の流れ
 
-1. 上記と同様に **対象 `user-serena-*` を ready にする**。
+1. 上記と同様に **対象 `serena-*` を ready にする**。
 2. 変更対象シンボルを **`find_symbol`** 等で特定し、破壊的変更なら **`find_referencing_symbols`** で参照を確認。
 3. **編集手段の選び方**
    - **シンボル単位で丸ごと差し替え** → **`replace_symbol_body`**
@@ -50,7 +50,7 @@ disable-model-invocation: false
    - **安全な削除** → **`safe_delete_symbol`**
 4. 主戦場プロジェクトが変わる作業では、作業前に **UI トグル切替を促す**（`activate_project` は使わない）。
 
-## ツール早見（Serena / user-serena-*）
+## ツール早見（Serena / serena-*）
 
 | 目的 | 主な手段 |
 | --- | --- |
@@ -64,7 +64,7 @@ disable-model-invocation: false
 | シンボル本文の置換 | `replace_symbol_body`、局所は `replace_content` |
 | メモリ | `list_memories`、`read_memory`、`write_memory` 等 |
 
-各ツールの引数は **MCP スキーマ**を必ず確認してから呼ぶ。呼び先サーバーは主戦場の `user-serena-*`。
+各ツールの引数は **MCP スキーマ**を必ず確認してから呼ぶ。呼び先サーバーは主戦場の `serena-*`。
 
 ## Cursor との棲み分け（推奨）
 

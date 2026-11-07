@@ -29,7 +29,7 @@
 
 ## Melore MCP（仕様・実装の所在調査）
 
-Melore（`mcp__melore__*`）は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。各自の環境で設定する。正本は `.cursor/rules/melore-mcp-research.mdc`。
+Melore（`mcp__melore__*`）は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。`.cursor/mcp.json` / `.mcp.json` は Melore を同じ親フォルダの `../Melore` に置き、`melore-mcp` を発行してある前提。Claude Code の worktree では環境変数 `MELORE_HOME` に Melore のパスを設定する。正本は `.cursor/rules/melore-mcp-research.mdc`。
 
 - **どこに書いてあるか分からない**仕様・実装・テストを探すときは、Grep / Glob / Read の前に `search` を使う。日本語の自然文でよいが、識別子が分かっているならそれも入れる。
 - 型や仕様チャンクが決まったら、`references` で関連する仕様・実装・テストを取る（`basis` を見る）。
@@ -224,3 +224,4 @@ Plan の設計を `.spec/specs/` に書き起こすチャットコマンド: `/s
 - Markdown 編集後は `npx markdownlint-cli2 "<変更したファイルパス>"` を実行する。
 - 旧 `.workspace-docs` は `.spec/archive/workspace-docs/` にアーカイブ済み。新規編集禁止。
 - SonarQube のプロジェクトキーは推測しない。
+- **Claude Code の worktree では Serena で編集しない。** 常駐サーバーは本体のチェックアウトに固定されているので、編集が worktree ではなく本体に入る。読み取りの結果も本体の内容で、worktree の変更は含まない。worktree の編集は Edit、確認は Read / Grep を使う。

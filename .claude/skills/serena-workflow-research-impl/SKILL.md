@@ -17,6 +17,7 @@ disable-model-invocation: false
 
 正本は Cursor 前提のため、次のとおり読み替える。
 
-- `user-serena-csharp` は `mcp__serena-csharp__*`、`user-serena-ui` は `mcp__serena-ui__*` を指す。
+- `serena-csharp` は `mcp__serena-csharp__*`、`serena-ui` は `mcp__serena-ui__*` を指す。
 - Claude Code では両サーバーが同時に有効なため、UI トグルによる切替（`serena-mcp-project-switch`、`/serena-project-csharp`、`/serena-project-ui`）は不要。主戦場に応じて呼び先サーバーを選ぶ。
+- **Claude Code の worktree では Serena で編集しない。** 常駐サーバーは本体のチェックアウトに固定されているので、編集が worktree ではなく本体に入る。読み取りの結果も本体の内容で、worktree の変更は含まない。worktree の編集は Edit、確認は Read / Grep を使う。
 - 未接続・エラー時は作業を停止し、ユーザーに `claude mcp list` での接続確認を促す。`activate_project` は引き続き使わない。

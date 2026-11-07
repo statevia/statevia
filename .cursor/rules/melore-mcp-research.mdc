@@ -4,7 +4,7 @@ alwaysApply: true
 
 # Melore MCP（仕様・実装の所在調査）
 
-Melore は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。ツールは `search` / `references` / `trace` / `explain`。各自の環境で設定するもので、リポジトリには設定を置かない。
+Melore は statevia の `docs/` / `.spec/`（アーカイブ除く）/ `AGENTS.md` / `dotnet/**/*.cs` を索引したローカル MCP。ツールは `search` / `references` / `trace` / `explain`。`.cursor/mcp.json` / `.mcp.json` は Melore を同じ親フォルダの `../Melore` に置き、`melore-mcp` を発行してある前提。Claude Code の worktree では環境変数 `MELORE_HOME` に Melore のパスを設定する。
 
 ## 常時原則
 

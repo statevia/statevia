@@ -13,6 +13,6 @@ description: SonarQube のスキャン結果（Quality Gate / issue / カバレ�
 
 ## Claude Code での読み替え
 
-- MCP `user-sonarqube` は `mcp__sonarqube__*`（ユーザースコープの `sonarqube` サーバー）を指す。
+- MCP `sonarqube` は `mcp__sonarqube__*`（`.mcp.json` のプロジェクトスコープ）を指す。
 - 認可エラー時は Cursor の `mcp_auth` ではなく、環境変数 `SONARQUBE_TOKEN` が USER token かをユーザーに確認してもらう。
 - `.cursor/skills/<name>/SKILL.md` の参照は、そのまま正本を Read すればよい（`.claude/skills/` のラッパーも同じ正本を指す）。

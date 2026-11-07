@@ -33,9 +33,9 @@ coverage/
 
 # --- エージェント / ローカルツール ---
 # Cursor / Claude Code のルール・コマンド・スキル・フックは共有する。
-# フックのロック、個人用 MCP 設定、個人の許可リスト、worktree は除外。
+# MCP 設定も共有するので、絶対パスと秘密情報は書かない。
+# フックのロック、個人の許可リスト、worktree は除外。
 .cursor/hooks/*.lock
-.cursor/mcp.json
 .cursorrules
 .claude/settings.local.json
 .claude/worktrees/
@@ -44,7 +44,6 @@ coverage/
 !/dotnet/.serena/
 /dotnet/.serena/*
 !/dotnet/.serena/project.yml
-.mcp.json
 .playwright-mcp/
 
 # --- Spec ---

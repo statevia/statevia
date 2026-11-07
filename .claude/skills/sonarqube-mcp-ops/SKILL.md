@@ -15,4 +15,4 @@ disable-model-invocation: true
 
 ## Claude Code での読み替え
 
-- MCP サーバー名は `sonarqube`（ユーザースコープ）。ツール名は `mcp__sonarqube__*`。
+- MCP サーバー名は `sonarqube`（`.mcp.json` のプロジェクトスコープ）。ツール名は `mcp__sonarqube__*`。
