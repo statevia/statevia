@@ -26,8 +26,8 @@ statevia の Serena は **2 つ**。それぞれに **独立した MCP サーバ
 
 ## サーバーの選び方（エージェント）
 
-1. **UI 作業** → `user-serena-ui`。
-2. **C# 作業** → `user-serena-csharp`。
+1. **UI 作業** → `serena-ui`。
+2. **C# 作業** → `serena-csharp`。
 3. 対象が未接続 → **作業を停止**し、主戦場の `serena-csharp` または `serena-ui` を On、もう一方を Off にするよう促す。
 4. ユーザーが `/serena-project-csharp` または `/serena-project-ui` を明示したときは、そのサーバーを使う。
 
@@ -40,22 +40,22 @@ statevia の Serena は **2 つ**。それぞれに **独立した MCP サーバ
 
 | Serena プロジェクト | mcp.json 名 | Cursor 上の識別子（目安） | パス（リポジトリ相対） | 用途 |
 | --- | --- | --- | --- | --- |
-| csharp | `serena-csharp` | `user-serena-csharp` | `dotnet/`（`statevia.sln`） | C# |
-| ui | `serena-ui` | `user-serena-ui` | `nodejs/studio/` | UI |
+| csharp | `serena-csharp` | `project-0-statevia-serena-csharp` | `dotnet/`（`statevia.sln`） | C# |
+| ui | `serena-ui` | `project-0-statevia-serena-ui` | `nodejs/studio/` | UI |
 
-Windows 絶対パス例（`mcp.json` の `--project`）:
+`.cursor/mcp.json` の `--project`:
 
 | キー | `--project` |
 | --- | --- |
-| csharp | `C:\Git\statevia\dotnet` |
-| ui | `C:\Git\statevia\nodejs\studio` |
+| csharp | `${workspaceFolder}/dotnet` |
+| ui | `${workspaceFolder}/nodejs/studio` |
 
 `serena-csharp` の索引対象と除外は `dotnet/.serena/project.yml`（`ls_workspace_folders` / `ignored_paths`）が正本。`dotnet/` の中でも、プロダクト C# 以外（サンプル、Fixture、生成物等）は除外する。
 
 ## 手順（エージェント）
 
 1. **主戦場プロジェクトを決める**（質問のみでも可）。未確定ならユーザーに確認する。C# なら `serena-csharp`、UI なら `serena-ui`。
-2. 対応する **`user-serena-*` が ready か**を確認する（`GetMcpTools` 等）。
+2. 対応する **`serena-*` が ready か**を確認する（`GetMcpTools` 等）。
 3. **ready でないとき**
    - 実装・調査を **一旦停止**する。
    - ユーザーへ次を促す（日本語で簡潔に）:
@@ -70,7 +70,7 @@ Windows 絶対パス例（`mcp.json` の `--project`）:
 
 ## 手順（開発者・初回セットアップ）
 
-1. `~/.cursor/mcp.json` に上表の 2 エントリ（`serena-csharp` と `serena-ui`）を定義する。
+1. `.cursor/mcp.json` に上表の 2 エントリ（`serena-csharp` と `serena-ui`）を定義する。
 2. Cursor を開いた直後は、**使わない方を Off** にし、使う 1 つだけ On にする（新規が既定 On の場合への対策）。
 3. 以降の切替はトグルのみ。
 

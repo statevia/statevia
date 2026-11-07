@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "type": "http",
+      "url": "http://127.0.0.1:9124/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SONARQUBE_TOKEN}",
+        "SONARQUBE_ORG": "statevia"
+      }
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://statevia:${STATEVIA}@localhost:5432/statevia"
+      ]
+    },
+    "serena-csharp": {
+      "type": "http",
+      "url": "http://127.0.0.1:9121/mcp"
+    },
+    "serena-ui": {
+      "type": "http",
+      "url": "http://127.0.0.1:9122/mcp"
+    },
+    "melore": {
+      "type": "stdio",
+      "command": "${MELORE_HOME:-../Melore}/artifacts/melore-mcp/melore-mcp.exe",
+      "args": [
+        "--config",
+        "${MELORE_HOME:-../Melore}/melore.json"
+      ]
+    }
+  }
+}

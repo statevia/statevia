@@ -22,4 +22,4 @@ SonarQube MCP を使う作業で、毎回同じ安全手順を実行する。
 
 - `Not authorized` の場合は USER token を確認する（project token ではない）。
 - `Project not found` の場合はキーを再検索し、スペルを確認する。
-- スニペット解析結果はフルスキャンの代替ではないことを明示する。
+- 接続できない場合は、Docker と常駐コンテナ `sonarqube-mcp`（9124 番）の起動を確認する。
