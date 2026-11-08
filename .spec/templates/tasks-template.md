@@ -56,9 +56,9 @@
 ## 完了時の最終タスク（必須）
 
 - [ ] [連番]. `@docs` の仕様書を更新する
-  - File: `docs/*.md`（変更内容に対応する仕様書）
-  - 内容: 実装で追加/変更した API IF・UI 挙動・エラー契約・運用ルールを仕様書へ反映する
-  - 目的: 実装とドキュメントの乖離を防ぎ、後続開発・運用の判断コストを下げる
+  - File: `docs/*.md`（変更内容に対応する仕様書）, `docs/reference/glossary.md`
+  - 内容: 実装で追加/変更した API IF・UI 挙動・エラー契約・運用ルールを仕様書へ反映する。requirements の「用語」で `新規` / `変更` とした語を用語集に足す
+  - 目的: 実装とドキュメントの乖離を防ぎ、後続開発・運用の判断コストを下げる。新しい語の揺れを残さない
   - _Leverage: 既存の `docs/core-api-interface.md`, `docs/statevia-data-integration-contract.md` など_
   - _Requirements: [該当要件番号]_
-  - _Definition of Done: 変更した仕様が docs に反映され、関連箇所の整合が取れている_
+  - _Definition of Done: 変更した仕様が docs に反映され、関連箇所の整合が取れている。「用語」の `新規` / `変更` の行が用語集にある（無ければ対象外）_
