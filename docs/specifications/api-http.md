@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.37 |
-| 更新日 | 2026-11-06 |
+| Version | 1.38 |
+| 更新日 | 2026-11-08 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.38（2026-11-08）**: 定期実行の発火準備検査に run-as の `executions.write` を足す。持たない run-as の有効なスケジュールは保存できず、手動実行も Start の前に 422（`field=runAsPrincipalId`、`reason=missingExecutionsWrite`）で止まる。既存のスケジュールのデータは変えない。Studio はこの失敗に ServiceAccount の画面へのリンクを添える。
 
 **Version 1.37（2026-11-06）**: Studio は `/schedules` で定期実行の一覧・作成・部分更新・削除・手動実行を行う。画面はテナント管理者だけが使う。HTTP の権限と所属の判定、成否は変えない。
 
@@ -550,10 +552,13 @@ Request:
 
 1. 定義が論理削除されていない。満たさなければ 422（`field=definitionId`）。
 2. run-as が同一テナントの有効な ServiceAccount。満たさなければ 422（`field=runAsPrincipalId`）。
-3. run-as が定義の Project で executor 以上のメンバー。満たさなければ 422（`field=runAsPrincipalId`）。発火の Start は run-as を呼び出し元にして所属を見るため、所属の無い run-as では発火できない。
-4. run-as の実行リソース許可に定義が入る。満たさなければ **403**（`RESOURCE_GRANT_DENIED`）。呼び出し側の許可では決めない。
+3. run-as が `executions.write` を持つ。権限はグループから展開し、テナント管理者のグループなら全権限を持つ。満たさなければ 422（`field=runAsPrincipalId`、`reason=missingExecutionsWrite`）。発火の Start は run-as の権限を最初に見るため、持たない run-as では発火できない。応答に run-as の権限の一覧は載せない。
+4. run-as が定義の Project で executor 以上のメンバー。満たさなければ 422（`field=runAsPrincipalId`）。発火の Start は run-as を呼び出し元にして所属を見るため、所属の無い run-as では発火できない。
+5. run-as の実行リソース許可に定義が入る。満たさなければ **403**（`RESOURCE_GRANT_DENIED`）。呼び出し側の許可では決めない。
 
-無効なスケジュール（`enabled` が false）の作成と更新、および削除では発火準備検査をしない。所属や許可が外れたスケジュール、定義が論理削除されたスケジュールも、無効化と削除はできる。保存後に所属・許可・ServiceAccount・定義が変わることはあるため、検査は発火を保証しない。発火時の Start が改めて評価する。
+`reason` は 3 の失敗にだけ付く機械向けの値で、run-as の 422 のうち直す場所が違うものを分ける。
+
+無効なスケジュール（`enabled` が false）の作成と更新、および削除では発火準備検査をしない。権限や所属や許可が外れたスケジュール、定義が論理削除されたスケジュールも、無効化と削除はできる。有効なままの更新は、名前だけの変更でも検査に落ちる。保存後に権限・所属・許可・ServiceAccount・定義が変わることはあるため、検査は発火を保証しない。発火時の Start が改めて評価する。
 
 システムがテナントごとに持つ点検行（`schedules.job_key` あり）は、一覧・取得・更新・削除・手動実行の対象にしない。ID を指定しても不在と同じ 404（`Schedule not found`）。作成リクエストに `job_key` は無く、成功レスポンスの形は変わらない。run を返す API を足す場合も、テナントから見える親（`job_key` が NULL）の run だけを返す。
 
@@ -576,7 +581,7 @@ Request:
 - 同一 cron 枠の再 poll は 1 実行に畳む。`schedule_runs.outcome` は `started` / `skipped_overlap` / `failed`。
 - overlap `skip` で同一スケジュール由来の非終端実行がある枠は Start せず `skipped_overlap` を残し、次枠へ進む。`allow` は前が Running でも Start する。
 - 保存枠の次枠もすでに now 以下なら、その枠は Start しない（途中枠は埋めない）。`nextFireAt` は now の次枠。
-- ServiceAccount 無効、テナントが Active でない、または実行リソース許可が外れているときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。許可不足の `errorCode` は `RESOURCE_GRANT_DENIED`。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
+- ServiceAccount 無効、テナントが Active でない、run-as の `executions.write` が外れている、または実行リソース許可が外れているときは Start しない。`failed` を残し、スケジュールは enabled のまま次枠へ進む。権限不足の `errorCode` は `PERMISSION_DENIED`、許可不足の `errorCode` は `RESOURCE_GRANT_DENIED`。定義が削除済みで Start できないときも、実行は作らず `failed` を残して次枠へ進む。
 - 手動実行は `manual=true`、`scheduledFireAt` は null。
 - `job_key` がある行は Start しない。実行も work item も増やさない。成功時の `schedule_runs.outcome` は `completed` で、`summary_json` は件数だけを持つ。この run はテナント API に出さない。
 
@@ -587,6 +592,7 @@ Studio の画面は `/schedules`（一覧）、`/schedules/new`（作成）、`/
 - 画面を使えるのはテナント管理者だけ。run-as の候補を `GET /v1/admin/service-accounts`（管理者専用）から取るため。`executions.write` だけを持つ利用者は HTTP を使う。上記の HTTP の権限と所属の判定はそのまま効くので、テナント管理者でも所属の無い Project の定義のスケジュールは画面に出ない。
 - 一覧は `GET /v1/schedules` だけを使い、`input` を出さない。`input` は編集画面で単票を読んだときだけフォームに出す。
 - run-as の候補は有効な ServiceAccount で、定義の Project のメンバーには絞らない。所属が足りないときは保存時の 422（`field=runAsPrincipalId`）を run-as の欄に出し、Project のメンバーを管理する画面（`/admin/projects`）へのリンクを添える。
+- run-as の候補は権限でも絞らない。権限が足りないときは 422（`reason=missingExecutionsWrite`）を run-as の欄に出し、ServiceAccount の画面（`/admin/service-accounts`）へのリンクを添える。手動実行の失敗にも同じ文言とリンクを出す。
 - タイムゾーンが空のときは送らない（UTC で埋めない）。`queue` と版 UUID は画面に出さない。
 - 手動実行は確認後に 1 回だけ送り、無効なスケジュールには出さない。
 

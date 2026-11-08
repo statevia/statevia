@@ -94,6 +94,9 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
       runAsUnusable:
         "This run-as cannot run the schedule. It must be an active service account with executor or higher in the definition's project.",
       membersLink: "Manage project members",
+      runAsMissingPermission:
+        "This run-as does not have permission to start executions. Add the service account to a group that has the permission.",
+      serviceAccountsLink: "Manage service accounts",
       definitionUnavailable: "This definition has been deleted, so it cannot run.",
       disableHint: "You can save it if you disable it.",
       runAsGrantDenied: "The run-as service account's resource grants do not include this definition.",

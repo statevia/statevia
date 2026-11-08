@@ -7,7 +7,7 @@
 export type ScheduleOverlapPolicy = "skip" | "allow";
 
 /**
- * `GET /v1/schedules` の 1 行。機微な `input` を持たない（一覧で取りに行かない）。
+ * `GET /v1/schedules` の 1 件。機微な `input` を持たない（一覧で取りに行かない）。
  */
 export type ScheduleListItem = {
   scheduleId: string;

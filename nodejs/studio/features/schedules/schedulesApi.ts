@@ -30,7 +30,7 @@ function schedulePath(scheduleId: string): string {
 /**
  * 応答から一覧の項目だけを写す。一覧型に `input` を持ち込まない。
  * @param row API の 1 件。
- * @returns 画面用の一覧行。
+ * @returns 画面用の一覧の項目。
  */
 function toListItem(row: ScheduleListItem): ScheduleListItem {
   return {
@@ -51,7 +51,7 @@ function toListItem(row: ScheduleListItem): ScheduleListItem {
 
 /**
  * 呼び出し元が閲覧できるスケジュールの一覧（`GET /v1/schedules`）。
- * 所属の無い Project の行と、システムの点検行は API が返さない。行ごとの単票 GET はしない。
+ * 所属の無い Project の定期実行と、システムの点検用の定期実行は API が返さない。定期実行ごとの単票 GET はしない。
  * @returns 一覧（`input` なし）。
  * @throws ApiError 権限不足（403）やセッション切れ（401）。
  */
@@ -82,7 +82,7 @@ export async function createSchedule(body: CreateScheduleBody): Promise<Schedule
 }
 
 /**
- * 変えた項目だけを部分更新する。保存後の行が有効なら API が発火準備検査をする。
+ * 変えた項目だけを部分更新する。保存後の定期実行が有効なら API が発火準備検査をする。
  * @param scheduleId スケジュール ID。
  * @param body `buildUpdateScheduleBody` で作った本文。
  * @returns 更新後の単票。
@@ -106,7 +106,7 @@ export async function deleteSchedule(scheduleId: string): Promise<void> {
  * 冪等キーは付けない（確認後に 1 回だけ呼ぶ）。
  * @param scheduleId スケジュール ID。
  * @returns 開始した実行の display ID。
- * @throws ApiError 無効な行（422 `field=enabled`）、発火準備検査の 422 / 403、404。
+ * @throws ApiError 無効な定期実行（422 `field=enabled`）、発火準備検査の 422 / 403、404。
  */
 export async function runSchedule(scheduleId: string): Promise<ScheduleRunResult> {
   const response = await apiPost<ScheduleRunResult>(`${schedulePath(scheduleId)}/run`, {});

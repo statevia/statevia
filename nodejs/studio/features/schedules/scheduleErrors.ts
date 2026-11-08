@@ -7,6 +7,8 @@ import type { ScheduleField } from "./schedules";
  *
  * - `runAsUnusable`: 422 `field=runAsPrincipalId`。有効な ServiceAccount でないか、定義の Project で executor 未満。
  *   API は 2 つを field で分けないため、画面は同じ文言とメンバー管理へのリンクを出す
+ * - `runAsMissingPermission`: 422 `field=runAsPrincipalId` で `reason=missingExecutionsWrite`。run-as が `executions.write` を持たない。
+ *   直す場所が所属と違うので、ServiceAccount の画面へのリンクを出す
  * - `definitionUnavailable`: 422 `field=definitionId`。定義が論理削除されている
  * - `fieldMessage`: 上記以外で欄が分かる 422。API のメッセージをその欄に出す
  * - `runAsGrantDenied`: 保存・手動実行の 403 `RESOURCE_GRANT_DENIED`。run-as の実行リソース許可に定義が入っていない
@@ -15,16 +17,20 @@ import type { ScheduleField } from "./schedules";
  * - `notFound`: 404。見つからない、または所属外
  * - `other`: それ以外。汎用のエラー表示に回す
  *
- * `disableHint` は「無効にすれば保存できる」を添えるか。保存後の行が有効なときの 422 だけ true（無効な行では API が検査しない）。
+ * `disableHint` は「無効にすれば保存できる」を添えるか。保存後の定期実行が有効なときの 422 だけ true（無効な定期実行では API が検査しない）。
  */
 export type ScheduleWriteError =
   | { kind: "runAsUnusable"; disableHint: boolean }
+  | { kind: "runAsMissingPermission"; disableHint: boolean }
   | { kind: "definitionUnavailable"; disableHint: boolean }
   | { kind: "fieldMessage"; field: ScheduleField; message: string }
   | { kind: "runAsGrantDenied" }
   | { kind: "projectAccessDenied" }
   | { kind: "notFound" }
   | { kind: "other" };
+
+/** run-as が `executions.write` を持たないことを示す、422 の `details.reason`。 */
+const RUN_AS_MISSING_PERMISSION_REASON = "missingExecutionsWrite";
 
 /** API の項目名（小文字）から画面の欄への対応。 */
 const FIELD_BY_API_NAME: Readonly<Record<string, ScheduleField>> = {
@@ -75,9 +81,19 @@ export function readErrorField(details: ApiError["error"]["details"]): ScheduleF
 }
 
 /**
+ * 422 の details が、run-as の権限の不足を示すか。`reason` は `{ field, reason }` の形のときだけ付く。
+ * @param details 422 の details。
+ * @returns 権限の不足なら true。
+ */
+function isRunAsMissingPermission(details: ApiError["error"]["details"]): boolean {
+  if (details === undefined || Array.isArray(details)) return false;
+  return (details as Record<string, unknown>).reason === RUN_AS_MISSING_PERMISSION_REASON;
+}
+
+/**
  * 保存・手動実行の失敗を分類する。
  * @param error 捕まえた値。
- * @param enabledAfterSave 保存後の行が有効か。手動実行では false を渡す（無効化の案内を出さない）。
+ * @param enabledAfterSave 保存後の定期実行が有効か。手動実行では false を渡す（無効化の案内を出さない）。
  * @returns 画面の出し分けに使う種類。
  */
 export function classifyScheduleWriteError(error: unknown, enabledAfterSave: boolean): ScheduleWriteError {
@@ -87,7 +103,10 @@ export function classifyScheduleWriteError(error: unknown, enabledAfterSave: boo
       const field = readErrorField(error.error.details);
       switch (field) {
         case "runAsPrincipalId":
-          return { kind: "runAsUnusable", disableHint: enabledAfterSave };
+          return {
+            kind: isRunAsMissingPermission(error.error.details) ? "runAsMissingPermission" : "runAsUnusable",
+            disableHint: enabledAfterSave
+          };
         case "definitionId":
           return { kind: "definitionUnavailable", disableHint: enabledAfterSave };
         case undefined:

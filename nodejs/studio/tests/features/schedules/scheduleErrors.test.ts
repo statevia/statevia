@@ -13,7 +13,7 @@ function apiError(status: number, code: string, details?: unknown): unknown {
 }
 
 describe("classifyScheduleWriteError", () => {
-  it("run-as の 422 は保存後の行が有効なら無効化の案内を付ける", () => {
+  it("run-as の 422 は保存後の定期実行が有効なら無効化の案内を付ける", () => {
     // Arrange
     const error = apiError(422, "VALIDATION_ERROR", { field: "runAsPrincipalId" });
 
@@ -24,7 +24,29 @@ describe("classifyScheduleWriteError", () => {
     expect(result).toEqual({ kind: "runAsUnusable", disableHint: true });
   });
 
-  it("保存後の行が無効なら定義の 422 に無効化の案内を付けない", () => {
+  it("run-as の 422 に権限の不足の reason があれば、所属の不足と別の種類にする", () => {
+    // Arrange
+    const error = apiError(422, "VALIDATION_ERROR", { field: "runAsPrincipalId", reason: "missingExecutionsWrite" });
+
+    // Act
+    const result = classifyScheduleWriteError(error, true);
+
+    // Assert
+    expect(result).toEqual({ kind: "runAsMissingPermission", disableHint: true });
+  });
+
+  it("手動実行の権限の不足には無効化の案内を付けない", () => {
+    // Arrange
+    const error = apiError(422, "VALIDATION_ERROR", { field: "runAsPrincipalId", reason: "missingExecutionsWrite" });
+
+    // Act
+    const result = classifyScheduleWriteError(error, false);
+
+    // Assert
+    expect(result).toEqual({ kind: "runAsMissingPermission", disableHint: false });
+  });
+
+  it("保存後の定期実行が無効なら定義の 422 に無効化の案内を付けない", () => {
     // Arrange
     const error = apiError(422, "VALIDATION_ERROR", { field: "definitionId" });
 

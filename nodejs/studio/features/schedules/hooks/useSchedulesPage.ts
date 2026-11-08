@@ -10,14 +10,14 @@ import type { ScheduleListItem } from "../types";
 /** 確認待ちの操作。確定するまで API は呼ばない。 */
 export type SchedulePendingAction = Readonly<{ scheduleId: string; action: "delete" | "run" }>;
 
-/** 行の操作の失敗。`fallbackMessage` は分類が `other` のときに出す。 */
+/** 定期実行の操作の失敗。`fallbackMessage` は分類が `other` のときに出す。 */
 export type ScheduleRowFailure = Readonly<{
   scheduleId: string;
   failure: ScheduleWriteError;
   fallbackMessage: string;
 }>;
 
-/** 手動実行で開始した実行。行の下にリンクを出す。 */
+/** 手動実行で開始した実行。定期実行の下にリンクを出す。 */
 export type ScheduleRunStarted = Readonly<{ scheduleId: string; displayId: string }>;
 
 /** 定期実行一覧の描画用状態。ReactNode は含まない。 */
@@ -33,8 +33,8 @@ export type SchedulesPageModel = {
   /** 確認待ちの操作。無ければ null。 */
   pending: SchedulePendingAction | null;
   /**
-   * 操作の確認を始める。無効な行の手動実行は受け付けない。
-   * @param scheduleId 対象の行。
+   * 操作の確認を始める。無効な定期実行の手動実行は受け付けない。
+   * @param scheduleId 対象の定期実行。
    * @param action 削除か手動実行。
    */
   requestConfirm: (scheduleId: string, action: SchedulePendingAction["action"]) => void;
@@ -42,11 +42,11 @@ export type SchedulesPageModel = {
   cancelConfirm: () => void;
   /** 確認中の操作を 1 回だけ送る。送信中の連打は無視する。 */
   confirm: () => Promise<void>;
-  /** 送信中の行。無ければ null。 */
+  /** 送信中の定期実行。無ければ null。 */
   busyScheduleId: string | null;
   /** 直近の手動実行の結果。 */
   runStarted: ScheduleRunStarted | null;
-  /** 直近の行の操作の失敗。 */
+  /** 直近の定期実行の操作の失敗。 */
   rowFailure: ScheduleRowFailure | null;
   /** 成功通知。 */
   toast: ToastState | null;
@@ -55,8 +55,8 @@ export type SchedulesPageModel = {
 };
 
 /**
- * 定期実行一覧の読込と、行の削除・手動実行。
- * 一覧は `GET /v1/schedules` を 1 回だけ読み、行ごとの単票 GET はしない（`input` を取りに行かない）。
+ * 定期実行一覧の読込と、定期実行の削除・手動実行。
+ * 一覧は `GET /v1/schedules` を 1 回だけ読み、定期実行ごとの単票 GET はしない（`input` を取りに行かない）。
  * 定義名は定義一覧を 1 回読んで引く。読めなくても一覧は出す。
  * @returns 描画用の状態と操作。
  */

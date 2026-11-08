@@ -7,6 +7,9 @@ import type { ScheduleWriteError } from "../scheduleErrors";
 /** メンバー管理の画面。Project は遷移先で選ぶ（URL で Project を指定する機能は無い）。 */
 const PROJECT_MEMBERS_ADMIN_PATH = "/admin/projects";
 
+/** ServiceAccount の所属グループを変える画面。run-as の権限はグループから決まる。 */
+const SERVICE_ACCOUNTS_ADMIN_PATH = "/admin/service-accounts";
+
 type ScheduleWriteErrorMessageProps = {
   /** 分類済みの失敗。 */
   failure: ScheduleWriteError;
@@ -18,7 +21,7 @@ type ScheduleWriteErrorMessageProps = {
 
 /**
  * 保存・手動実行の失敗を辞書の文で出す。
- * run-as の 422 にはメンバー管理へのリンクを、有効な行の 422 には「無効にすれば保存できる」を添える。
+ * run-as の 422 には直す画面へのリンク（所属はメンバー管理、権限は ServiceAccount）を、有効な定期実行の 422 には「無効にすれば保存できる」を添える。
  * @param props 失敗と代わりの文。
  * @returns エラー表示。
  */
@@ -36,7 +39,16 @@ export function ScheduleWriteErrorMessage({ failure, fallbackMessage, id }: Read
           </Link>
         </>
       ) : null}
-      {(failure.kind === "runAsUnusable" || failure.kind === "definitionUnavailable") && failure.disableHint
+      {failure.kind === "runAsMissingPermission" ? (
+        <>
+          {" "}
+          <Link href={SERVICE_ACCOUNTS_ADMIN_PATH} className="underline">
+            {text.serviceAccountsLink}
+          </Link>
+        </>
+      ) : null}
+      {(failure.kind === "runAsUnusable" || failure.kind === "runAsMissingPermission" || failure.kind === "definitionUnavailable") &&
+      failure.disableHint
         ? ` ${text.disableHint}`
         : null}
     </p>
@@ -58,6 +70,8 @@ function messageFor(
   switch (failure.kind) {
     case "runAsUnusable":
       return text.runAsUnusable;
+    case "runAsMissingPermission":
+      return text.runAsMissingPermission;
     case "definitionUnavailable":
       return text.definitionUnavailable;
     case "runAsGrantDenied":
