@@ -46,10 +46,10 @@ alwaysApply: true
 | 対象 | 手段 | 現状（2026-11-08） |
 |------|------|------|
 | C# `public` | `GenerateDocumentationFile` と CS1591。6 sln の Warning 0 に乗せる | `Statevia.Core.Application` と `Statevia.Core.Application.Contracts` は csproj の `NoWarn` で抑制中。`GenerateDocumentationFile` が無いプロダクト csproj が 4 つある |
-| C# `internal` | StyleCop.Analyzers のドキュメント欠落規則だけを warning にする。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない | 未導入。いまは機械で検出しない |
+| C# `public` / `internal` | StyleCop.Analyzers のドキュメント欠落・空文の規則だけを warning にする（`dotnet/build/Documentation.targets`）。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない。埋め終えたプロジェクトの csproj に `StateviaDocumentationRulesEnabled=true` と `GenerateDocumentationFile=true` を書くと有効になる | 仕組みは導入済み。有効にしたプロジェクトはまだ無い |
 | TS `export` と公開メンバー | ESLint の `jsdoc/require-jsdoc`（`npm run lint`、GitHub CI の UI lint ジョブ） | export 宣言は検出済み。公開メンバーと説明文の必須化は未設定 |
 
-抑制はプロジェクトの埋め戻しが終わってから外す。先に外すと Warning 0 が崩れる。
+抑制を外すのと `StateviaDocumentationRulesEnabled` を有効にするのは、プロジェクトの埋め戻しが終わってからにする。先にすると Warning 0 が崩れる。
 
 ## 検索の索引（Melore）
 

@@ -21,6 +21,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- XML ドキュメントの欠落の検出（StateviaDocumentationRulesEnabled=true のプロダクトプロジェクトだけ）。 -->
+  <Import Project="$(MSBuildThisFileDirectory)build\Documentation.targets" />
+
   <!--
     コマンドラインの dotnet build から SonarAnalyzer を外し、6 sln の Warning 0 を維持する。
     IDE のデザインタイム評価は CoreCompile を走らせないため、開いているファイルでは Analyzer が残る。
