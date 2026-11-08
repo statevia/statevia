@@ -43,12 +43,15 @@ Melore（`mcp__melore__*`）は statevia の `docs/` / `.spec/`（アーカイ�
 
 ## 用語と命名
 
-用語の正本は `docs/reference/glossary.md`。
+用語の正本は `docs/reference/glossary.md`。手順の正本は `.cursor/rules/ubiquitous-language.mdc`。用語の表はルールへ写さない。
 
+- ドメインの名詞を含む指示を受けたら、検索や実装の前に用語集を読み、どの概念を指すかを決める。仕様文書どうしが食い違うときも、用語集と実装を先に信じる。
 - 検索するときは、用語集の正とする語と、旧語として残る名前（`WorkflowStarted` など）の両方で探す。
-- 新しい型・変数・API・UI 文言には、用語集の正とする語を使う。「使わない語」の同義語で名前を付けない。
-- 紛らわしい組（State と Node、2 種類の子 Execution、Command・Event・Fact）は混同しない。
+- 新しい型・変数・API・UI 文言・文書には、用語集の正とする語を使う。日本語の文では「UI」列の語を使う。「使わない語」の同義語で名前を付けない。
+- 紛らわしい組（State と Node、2 種類の子 Execution、Command・Event・Fact、監査イベントと待機イベント）は混同しない。
+- 既存の識別子や永続の文字列を、用語集に合わせるために改名しない。改名が必要に見えたら、作業を止めて別の Spec を提案する。
 - 用語集に無い概念を足したときは、同じ PR で用語集にも足す。
+- `events-and-commands.md` の 24 種のイベント一覧は実装しない。実装にある監査イベントは `EventStoreEventType` の 3 種だけ。
 
 ---
 
