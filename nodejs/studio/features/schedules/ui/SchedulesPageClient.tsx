@@ -9,8 +9,8 @@ import { useSchedulesPage } from "../hooks/useSchedulesPage";
 import { ScheduleList } from "./ScheduleList";
 
 /**
- * 定期実行の一覧。作成ボタン、空状態、行の編集・手動実行・削除を出す。
- * テナント管理者以外は `app/schedules/layout.tsx` が戻す。所属の無い Project の行は API が返さないため、画面では隠さない。
+ * 定期実行の一覧。作成ボタン、空状態、定期実行の編集・手動実行・削除を出す。
+ * テナント管理者以外は `app/schedules/layout.tsx` が戻す。所属の無い Project の定期実行は API が返さないため、画面では隠さない。
  * @returns 定期実行の一覧画面。
  */
 export function SchedulesPageClient() {

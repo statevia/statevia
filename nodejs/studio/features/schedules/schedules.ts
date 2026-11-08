@@ -56,7 +56,7 @@ export type ScheduleField =
  * - `tooLong`: 名前が 128 文字を超える
  * - `format`: 名前が ASCII ラベルでない、cron が 5 フィールドでない、版番号が正の整数でない、input が JSON でない
  * - `cannotClear`: 既存の input を空にしようとした（PATCH で input を消す手段が無い）
- * - `versionRequired`: 版を固定した行の定義を変えるのに、版番号を入れていない
+ * - `versionRequired`: 版を固定した定期実行の定義を変えるのに、版番号を入れていない
  */
 export type ScheduleFieldErrorKind = "required" | "tooLong" | "format" | "cannotClear" | "versionRequired";
 
@@ -323,7 +323,7 @@ function updateBody(current: ScheduleDetail, next: NormalizedUpdate, changed: Ch
 /**
  * 現在値と比べて、変えた項目だけの部分更新本文を作る。
  * PATCH では input を消せないため、既存の input を空にすると `cannotClear` で止める。
- * 版を固定した行の定義を変えるときは、移し先の版番号を必須にする（古い版の固定を残さない）。
+ * 版を固定した定期実行の定義を変えるときは、移し先の版番号を必須にする（古い版の固定を残さない）。
  * @param current `GET` で読んだ現在値。
  * @param values 編集フォームの入力。
  * @returns 送信できる本文、項目エラー、または変更なし。
@@ -341,7 +341,7 @@ export function buildUpdateScheduleBody(current: ScheduleDetail, values: Schedul
 /**
  * 版番号の欄の項目エラー。
  * @param version 解釈結果。
- * @param required 版番号が必須か（版を固定した行の定義を変えるとき）。
+ * @param required 版番号が必須か（版を固定した定期実行の定義を変えるとき）。
  * @returns 項目エラー。問題なければ undefined。
  */
 function versionError(version: ParsedVersion, required: boolean): ScheduleFieldErrorKind | undefined {
@@ -358,7 +358,7 @@ function versionError(version: ParsedVersion, required: boolean): ScheduleFieldE
 /**
  * input の欄の項目エラー。
  * @param input 解釈結果。
- * @param currentHasInput 現在の行が input を持つか。
+ * @param currentHasInput 現在の定期実行が input を持つか。
  * @returns 項目エラー。問題なければ undefined。
  */
 function inputError(input: ParsedInput, currentHasInput: boolean): ScheduleFieldErrorKind | undefined {

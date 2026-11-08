@@ -139,7 +139,7 @@ describe("buildUpdateScheduleBody", () => {
     expect(result).toEqual({ kind: "invalid", errors: expect.objectContaining({ input: "cannotClear" }) });
   });
 
-  it("版を固定した行の定義を変えるときは版番号を必須にする", () => {
+  it("版を固定した定期実行の定義を変えるときは版番号を必須にする", () => {
     // Arrange
     const pinned = { ...detail, definitionVersionId: "ver-1" };
     const values = { ...toScheduleFormValues(pinned), definitionId: "def-2" };
@@ -151,7 +151,7 @@ describe("buildUpdateScheduleBody", () => {
     expect(result).toEqual({ kind: "invalid", errors: expect.objectContaining({ definitionVersion: "versionRequired" }) });
   });
 
-  it("版を固定していない行は定義だけを変えて送れる", () => {
+  it("版を固定していない定期実行は定義だけを変えて送れる", () => {
     // Arrange
     const values = { ...toScheduleFormValues(detail), definitionId: "def-2" };
 

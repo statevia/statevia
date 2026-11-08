@@ -213,7 +213,7 @@ public sealed class ExecutionScheduleIntegrationTests
     }
 
     /// <summary>
-    /// 版を固定した行で定義だけを変え、版を指定しない PATCH は 422 で、定義も版も保存しない。
+    /// 版を固定した定期実行で定義だけを変え、版を指定しない PATCH は 422 で、定義も版も保存しない。
     /// </summary>
     [Fact]
     public async Task Update_WhenPinnedAndDefinitionChangedWithoutVersion_ThrowsValidationWithoutSaving()
@@ -239,7 +239,7 @@ public sealed class ExecutionScheduleIntegrationTests
         Assert.Equal(created.DefinitionVersionId, schedule.DefinitionVersionId);
     }
 
-    /// <summary>版を固定した行で定義と版を一緒に変えると、移し先の定義の版に固定し直す。</summary>
+    /// <summary>版を固定した定期実行で定義と版を一緒に変えると、移し先の定義の版に固定し直す。</summary>
     [Fact]
     public async Task Update_WhenPinnedAndDefinitionChangedWithVersion_RepinsToTargetVersion()
     {
@@ -267,7 +267,7 @@ public sealed class ExecutionScheduleIntegrationTests
         Assert.Equal(targetVersion.DefinitionVersionId, updated.DefinitionVersionId);
     }
 
-    /// <summary>版を固定した行で同じ定義を送る PATCH は、版を指定しなくても固定を保つ。</summary>
+    /// <summary>版を固定した定期実行で同じ定義を送る PATCH は、版を指定しなくても固定を保つ。</summary>
     [Fact]
     public async Task Update_WhenPinnedAndSameDefinitionWithoutVersion_KeepsPin()
     {
@@ -287,7 +287,7 @@ public sealed class ExecutionScheduleIntegrationTests
         Assert.Equal(created.DefinitionVersionId, updated.DefinitionVersionId);
     }
 
-    /// <summary>版を固定していない行は、版を指定せずに定義を変えられ、発火時の latest のまま。</summary>
+    /// <summary>版を固定していない定期実行は、版を指定せずに定義を変えられ、発火時の latest のまま。</summary>
     [Fact]
     public async Task Update_WhenUnpinnedAndDefinitionChangedWithoutVersion_StaysUnpinned()
     {
@@ -306,6 +306,45 @@ public sealed class ExecutionScheduleIntegrationTests
         // Assert
         Assert.Equal(targetDefinitionId, updated.DefinitionId);
         Assert.Null(updated.DefinitionVersionId);
+    }
+
+    /// <summary>グループの権限を実際に展開し、<c>executions.write</c> の無い run-as の作成を 422 で止める。</summary>
+    [Fact]
+    public async Task Create_WhenRunAsLacksExecutionsWrite_ThrowsValidationWithoutSaving()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var readOnlyRunAs = await context.AddReadOnlyRunAsAsync();
+
+        // Act
+        var act = () => context.CreateScheduleAsync("read-only-run-as", readOnlyRunAs);
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Contains("executions.write", exception.Message, StringComparison.Ordinal);
+        await using var verify = context.Database.Factory.CreateDbContext();
+        Assert.Equal(0, await verify.ExecutionSchedules.IgnoreQueryFilters().CountAsync());
+    }
+
+    /// <summary><c>executions.write</c> の無い run-as の手動実行は、実行も <c>schedule_runs</c> の行も作らない。</summary>
+    [Fact]
+    public async Task RunNow_WhenRunAsLacksExecutionsWrite_LeavesNoRunOrExecution()
+    {
+        // Arrange
+        await using var context = await ScheduleIntegrationContext.OpenAsync();
+        using var tenant = context.BeginOperator();
+        var created = await context.CreateScheduleAsync("lost-permission");
+        await context.SetRunAsAsync(created.ScheduleId, await context.AddReadOnlyRunAsAsync());
+
+        // Act
+        var act = () => context.Schedules.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<ApiValidationException>(act);
+        await using var verify = context.Database.Factory.CreateDbContext();
+        Assert.Equal(0, await verify.ExecutionScheduleRuns.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(0, await verify.Executions.IgnoreQueryFilters().CountAsync());
     }
 
     private static DateTime AsUtc(DateTime value) =>
@@ -487,7 +526,7 @@ public sealed class ExecutionScheduleIntegrationTests
                 CancellationToken.None);
         }
 
-        public async Task<ExecutionScheduleDetailDto> CreateScheduleAsync(string name)
+        public async Task<ExecutionScheduleDetailDto> CreateScheduleAsync(string name, Guid? runAsPrincipalId = null)
         {
             return await Schedules.CreateAsync(
                 new CreateExecutionScheduleRequest
@@ -497,9 +536,33 @@ public sealed class ExecutionScheduleIntegrationTests
                     CronExpression = "0 3 * * *",
                     TimeZone = "UTC",
                     OverlapPolicy = ExecutionScheduleOverlapPolicies.Skip,
-                    RunAsPrincipalId = RunAsPrincipalId
+                    RunAsPrincipalId = runAsPrincipalId ?? RunAsPrincipalId
                 },
                 CancellationToken.None);
+        }
+
+        /// <summary>定義の Project に executor で所属するが、<c>executions.write</c> を持たない run-as を作る。</summary>
+        /// <returns>run-as の Principal ID。</returns>
+        public async Task<Guid> AddReadOnlyRunAsAsync()
+        {
+            var runAs = await SecurityTestSeed.SeedApiKeyAsync(
+                Database,
+                plainKey: $"statevia-test-key-{Guid.NewGuid():N}",
+                permissionKeys: [WellKnownPermissionKeys.ExecutionsRead]);
+            await using var db = Database.Factory.CreateDbContext();
+            ProjectTestData.GrantAccess(db, ProjectId, runAs.PrincipalId, ProjectAccessRole.Executor);
+            await db.SaveChangesAsync();
+            return runAs.PrincipalId;
+        }
+
+        /// <summary>保存後に run-as が変わった定期実行を、検査を通さずに作る。</summary>
+        public async Task SetRunAsAsync(Guid scheduleId, Guid runAsPrincipalId)
+        {
+            await using var db = Database.Factory.CreateDbContext();
+            var schedule = await db.ExecutionSchedules.IgnoreQueryFilters()
+                .SingleAsync(row => row.ScheduleId == scheduleId);
+            schedule.RunAsPrincipalId = runAsPrincipalId;
+            await db.SaveChangesAsync();
         }
 
         public async Task SetNextFireAtAsync(Guid scheduleId, DateTime nextFireAtUtc)

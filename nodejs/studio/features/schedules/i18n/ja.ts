@@ -93,6 +93,8 @@ export const schedulesUiTextJa: SchedulesFeatureUiText = {
       runAsUnusable:
         "この run-as では実行できません。有効な ServiceAccount で、定義のプロジェクトに実行以上のロールで所属している必要があります。",
       membersLink: "プロジェクトのメンバーを管理する",
+      runAsMissingPermission: "この run-as には実行を開始する権限がありません。権限を持つグループに ServiceAccount を所属させてください。",
+      serviceAccountsLink: "ServiceAccount を管理する",
       definitionUnavailable: "この定義は削除されているため、実行できません。",
       disableHint: "無効にすれば保存できます。",
       runAsGrantDenied: "run-as の ServiceAccount の実行リソース許可に、この定義が入っていません。",

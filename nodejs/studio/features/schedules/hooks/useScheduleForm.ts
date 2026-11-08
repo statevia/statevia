@@ -85,7 +85,7 @@ export type ScheduleFormModel = {
 
 /**
  * 定期実行の作成・編集フォーム。
- * run-as の候補は `GET /v1/admin/service-accounts` の有効な行だけ。定義の Project のメンバーには絞らず、所属の不足は保存時の 422 で出す。
+ * run-as の候補は `GET /v1/admin/service-accounts` の有効な ServiceAccount だけ。定義の Project のメンバーには絞らず、所属の不足は保存時の 422 で出す。
  * 一覧が 403 でも Principal ID の手入力へは落とさない。
  * @param scheduleId 編集する ID。省略時は作成。
  * @returns 描画用の状態と操作。

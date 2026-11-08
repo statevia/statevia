@@ -196,7 +196,7 @@ public sealed class ExecutionScheduleServiceTests
 
     /// <summary>他テナントのスケジュールは 404。</summary>
     [Fact]
-    public async Task GetAsync_WhenOtherTenantRow_ThrowsNotFound()
+    public async Task GetAsync_WhenOtherTenantSchedule_ThrowsNotFound()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -439,7 +439,7 @@ public sealed class ExecutionScheduleServiceTests
 
     /// <summary>run-as の所属が外れた有効なスケジュールは、無効化以外の更新を 422 で止める。</summary>
     [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingEnabledRow_ThrowsValidation()
+    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingEnabledSchedule_ThrowsValidation()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -465,7 +465,7 @@ public sealed class ExecutionScheduleServiceTests
 
     /// <summary>run-as の所属が外れた無効なスケジュールは、名前を変えられる。</summary>
     [Fact]
-    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingDisabledRow_Persists()
+    public async Task UpdateAsync_WhenRunAsLeftProjectAndRenamingDisabledSchedule_Persists()
     {
         // Arrange
         using var db = new SqliteTestDatabase();
@@ -676,6 +676,235 @@ public sealed class ExecutionScheduleServiceTests
         Assert.Equal("definitionId", ReadField(ex));
     }
 
+    /// <summary><c>executions.write</c> を持たない run-as で、有効な定期実行の作成は 422 になり、定期実行は作られない。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenRunAsLacksExecutionsWrite_ThrowsValidationWithReason()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ServiceAccountWithoutExecutionsWrite(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+
+        // Act
+        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("runAsPrincipalId", ReadField(ex));
+        Assert.Equal("missingExecutionsWrite", ReadReason(ex));
+        await using var verify = db.Factory.CreateDbContext();
+        Assert.Equal(0, await verify.ExecutionSchedules.IgnoreQueryFilters().CountAsync());
+    }
+
+    /// <summary>権限と所属の両方が足りない run-as は、Start と同じ順で権限の不足を返す。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenRunAsLacksPermissionAndMembership_ReportsPermissionFirst()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var principals = ServiceAccountWithoutExecutionsWrite(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+
+        // Act
+        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("missingExecutionsWrite", ReadReason(ex));
+    }
+
+    /// <summary>所属の不足の 422 は <c>reason</c> を持たず、権限の不足と区別できる。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenRunAsHasPermissionButNotMember_HasNoReason()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs);
+
+        // Act
+        var act = () => sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("runAsPrincipalId", ReadField(ex));
+        Assert.Null(ReadReason(ex));
+    }
+
+    /// <summary>無効のまま作成するなら run-as の権限は確かめない。</summary>
+    [Fact]
+    public async Task CreateAsync_WhenDisabledAndRunAsLacksExecutionsWrite_Persists()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ServiceAccountWithoutExecutionsWrite(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var request = NewCreateRequest(definitionId, runAs);
+        request.Enabled = false;
+
+        // Act
+        var created = await sut.CreateAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.False(created.Enabled);
+    }
+
+    /// <summary>権限が外れた run-as の有効な定期実行は、名前だけの更新でも 422 で止まり、定期実行は変わらない。</summary>
+    [Fact]
+    public async Task UpdateAsync_WhenRunAsLostExecutionsWriteAndRenamingEnabledSchedule_ThrowsValidation()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        var act = () => sut.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { Name = "renamed" },
+            CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("missingExecutionsWrite", ReadReason(ex));
+        var detail = await sut.GetAsync(created.ScheduleId, CancellationToken.None);
+        Assert.Equal(created.Name, detail.Name);
+    }
+
+    /// <summary>権限が外れた run-as の有効な定期実行も、無効化は通す。</summary>
+    [Fact]
+    public async Task UpdateAsync_WhenRunAsLostExecutionsWriteAndDisabling_Persists()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        var updated = await sut.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { Enabled = false },
+            CancellationToken.None);
+
+        // Assert
+        Assert.False(updated.Enabled);
+    }
+
+    /// <summary>権限が外れた run-as の無効な定期実行は、編集できる。</summary>
+    [Fact]
+    public async Task UpdateAsync_WhenRunAsLostExecutionsWriteAndRenamingDisabledSchedule_Persists()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        await sut.UpdateAsync(created.ScheduleId, new UpdateExecutionScheduleRequest { Enabled = false }, CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        var updated = await sut.UpdateAsync(
+            created.ScheduleId,
+            new UpdateExecutionScheduleRequest { Name = "renamed" },
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal("renamed", updated.Name);
+    }
+
+    /// <summary>権限が外れた run-as の有効な定期実行も、削除は通す。</summary>
+    [Fact]
+    public async Task DeleteAsync_WhenRunAsLostExecutionsWrite_Deletes()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        await sut.DeleteAsync(created.ScheduleId, CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sut.GetAsync(created.ScheduleId, CancellationToken.None));
+    }
+
+    /// <summary>権限が外れた run-as の手動実行は 422 で、Dispatcher へ渡さない。</summary>
+    [Fact]
+    public async Task RunNowAsync_WhenRunAsLostExecutionsWrite_ThrowsValidationWithoutDispatch()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var dispatch = new RecordingDispatchService();
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals, dispatch: dispatch);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("runAsPrincipalId", ReadField(ex));
+        Assert.Equal("missingExecutionsWrite", ReadReason(ex));
+        Assert.Equal(0, dispatch.RunCount);
+    }
+
+    /// <summary>無効な定期実行の手動実行は、権限が無くても発火準備検査より先に <c>field=enabled</c> を返す。</summary>
+    [Fact]
+    public async Task RunNowAsync_WhenDisabledAndRunAsLostExecutionsWrite_ReportsEnabledFirst()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var definitionId = Guid.NewGuid();
+        var runAs = Guid.NewGuid();
+        await SeedDefinitionAsync(db, definitionId, executorMembers: [runAs]);
+        var principals = ActiveServiceAccount(runAs);
+        var sut = CreateSut(db, Guid.NewGuid(), runAs, principals);
+        var created = await sut.CreateAsync(NewCreateRequest(definitionId, runAs), CancellationToken.None);
+        await sut.UpdateAsync(created.ScheduleId, new UpdateExecutionScheduleRequest { Enabled = false }, CancellationToken.None);
+        principals.RevokeExecutionsWrite(runAs);
+
+        // Act
+        var act = () => sut.RunNowAsync(created.ScheduleId, "manual-1", CancellationToken.None);
+
+        // Assert
+        var ex = await Assert.ThrowsAsync<ApiValidationException>(act);
+        Assert.Equal("enabled", ReadField(ex));
+    }
+
     private static CreateExecutionScheduleRequest NewCreateRequest(Guid definitionId, Guid runAs) =>
         new()
         {
@@ -690,6 +919,28 @@ public sealed class ExecutionScheduleServiceTests
     {
         var field = exception.Details?.GetType().GetProperty("field")?.GetValue(exception.Details);
         return field as string;
+    }
+
+    private static string? ReadReason(ApiValidationException exception)
+    {
+        var reason = exception.Details?.GetType().GetProperty("reason")?.GetValue(exception.Details);
+        return reason as string;
+    }
+
+    /// <summary>既定のテナントの有効な ServiceAccount を 1 つ持つスタブを作る。</summary>
+    private static StubPrincipalDataAccess ActiveServiceAccount(Guid principalId)
+    {
+        var principals = new StubPrincipalDataAccess();
+        principals.Add(principalId, TestTenantIds.DefaultTenantId, PrincipalType.ServiceAccount, isActive: true);
+        return principals;
+    }
+
+    /// <summary><c>executions.write</c> を持たない、有効な ServiceAccount のスタブを作る。</summary>
+    private static StubPrincipalDataAccess ServiceAccountWithoutExecutionsWrite(Guid principalId)
+    {
+        var principals = ActiveServiceAccount(principalId);
+        principals.RevokeExecutionsWrite(principalId);
+        return principals;
     }
 
     /// <summary>Project と定義を作り、指定 Principal を executor でその Project のメンバーにする。</summary>
@@ -824,9 +1075,13 @@ public sealed class ExecutionScheduleServiceTests
     private sealed class StubPrincipalDataAccess : IPrincipalDataAccess
     {
         private readonly Dictionary<Guid, PrincipalInfo> _principals = [];
+        private readonly HashSet<Guid> _withoutExecutionsWrite = [];
 
         public void Add(Guid principalId, Guid tenantId, PrincipalType type, bool isActive) =>
             _principals[principalId] = new PrincipalInfo(principalId, tenantId, type, isActive, null, null);
+
+        /// <summary>以後の権限の展開で、この Principal の <c>executions.write</c> を返さない。</summary>
+        public void RevokeExecutionsWrite(Guid principalId) => _withoutExecutionsWrite.Add(principalId);
 
         public Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken) =>
             Task.FromResult(_principals.TryGetValue(principalId, out var info) ? info : null);
@@ -840,7 +1095,8 @@ public sealed class ExecutionScheduleServiceTests
         public Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
             Guid principalId,
             CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<string>>([]);
+            Task.FromResult<IReadOnlyList<string>>(
+                _withoutExecutionsWrite.Contains(principalId) ? [] : [WellKnownPermissionKeys.ExecutionsWrite]);
 
         public Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
             Guid principalId,

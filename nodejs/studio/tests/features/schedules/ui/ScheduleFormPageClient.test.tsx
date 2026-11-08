@@ -92,7 +92,7 @@ describe("ScheduleFormPageClient", () => {
     vi.clearAllMocks();
   });
 
-  it("run-as の候補は有効な ServiceAccount だけで、無効な行を出さない", async () => {
+  it("run-as の候補は有効な ServiceAccount だけで、無効なものは出さない", async () => {
     // Arrange
     mockGets();
 
@@ -153,7 +153,30 @@ describe("ScheduleFormPageClient", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("無効のまま作る行の 422 には無効化の案内を付けない", async () => {
+  it("run-as の権限の不足は ServiceAccount の画面へのリンクを出し、メンバー管理へのリンクを出さない", async () => {
+    // Arrange
+    mockGets();
+    vi.mocked(api.apiPost).mockRejectedValue(
+      apiFailure(422, "VALIDATION_ERROR", { field: "runAsPrincipalId", reason: "missingExecutionsWrite" })
+    );
+    renderWithUiText(<ScheduleFormPageClient />);
+    await fillCreateForm("Asia/Tokyo");
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: text.form.submitCreate }));
+
+    // Assert
+    const message = await screen.findByText(new RegExp(text.serverErrors.runAsMissingPermission.slice(0, 10)));
+    expect(message).toHaveTextContent(text.serverErrors.disableHint);
+    expect(screen.getByRole("link", { name: text.serverErrors.serviceAccountsLink })).toHaveAttribute(
+      "href",
+      "/admin/service-accounts"
+    );
+    expect(screen.queryByRole("link", { name: text.serverErrors.membersLink })).toBeNull();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("無効のまま作る定期実行の 422 には無効化の案内を付けない", async () => {
     // Arrange
     mockGets();
     vi.mocked(api.apiPost).mockRejectedValue(apiFailure(422, "VALIDATION_ERROR", { field: "runAsPrincipalId" }));

@@ -103,6 +103,8 @@ export type SchedulesFeatureUiText = {
     serverErrors: {
       runAsUnusable: string;
       membersLink: string;
+      runAsMissingPermission: string;
+      serviceAccountsLink: string;
       definitionUnavailable: string;
       disableHint: string;
       runAsGrantDenied: string;

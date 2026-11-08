@@ -79,6 +79,7 @@ function failurePlacement(submitFailure: ScheduleSubmitFailure): ScheduleField |
   const { failure, definitionChanged } = submitFailure;
   switch (failure.kind) {
     case "runAsUnusable":
+    case "runAsMissingPermission":
     case "runAsGrantDenied":
       return "runAsPrincipalId";
     case "definitionUnavailable":

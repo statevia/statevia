@@ -9,14 +9,14 @@ import type { ScheduleListItem } from "../types";
 import { ScheduleWriteErrorMessage } from "./ScheduleWriteErrorMessage";
 
 type ScheduleListProps = {
-  /** 表示する行。空や失敗は呼び出し側が出す。 */
+  /** 表示する定期実行。空や失敗は呼び出し側が出す。 */
   schedules: readonly ScheduleListItem[];
   /** 一覧の状態と操作。 */
   page: SchedulesPageModel;
 };
 
 type ScheduleRowActionsProps = {
-  /** 対象の行。 */
+  /** 対象の定期実行。 */
   schedule: ScheduleListItem;
   /** 一覧の状態と操作。 */
   page: SchedulesPageModel;
@@ -31,8 +31,8 @@ const CONFIRM_BUTTON_CLASS =
   "rounded-lg border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60";
 
 /**
- * 行の操作。削除と手動実行は確認を挟み、確定で 1 回だけ送る。無効な行には手動実行を出さない。
- * @param props 行と一覧の状態。
+ * 定期実行の操作。削除と手動実行は確認を挟み、確定で 1 回だけ送る。無効な定期実行には手動実行を出さない。
+ * @param props 定期実行と一覧の状態。
  * @returns 操作ボタン群。
  */
 function ScheduleRowActions({ schedule, page }: Readonly<ScheduleRowActionsProps>) {
@@ -103,7 +103,7 @@ function confirmLabel(
 /**
  * 定期実行の一覧。`input` は出さない（一覧の型に無い）。
  * 定義は定義一覧で名前を引き、引けなければ UUID をそのまま出す。
- * @param props 行と一覧の状態。
+ * @param props 定期実行と一覧の状態。
  * @returns 一覧。
  */
 export function ScheduleList({ schedules, page }: Readonly<ScheduleListProps>) {

@@ -9,7 +9,7 @@ namespace Statevia.Core.Application.Services;
 /// <para>書き込みは <c>executions.write</c> と、定義の Project での executor 以上。既存のスケジュールは、定義が論理削除されていても所属 Project で判定する。</para>
 /// <para>
 /// 保存後のスケジュールが有効な作成・更新と手動実行では、発火準備検査（定義が未削除、run-as が有効な ServiceAccount、
-/// run-as の所属、run-as の実行リソース許可）を行う。無効化と削除は run-as と定義の状態で止めない。
+/// run-as の <c>executions.write</c>、run-as の所属、run-as の実行リソース許可）を行う。無効化と削除は run-as と定義の状態で止めない。
 /// </para>
 /// <para>他テナントの ID は 404。run-as は同一テナントの Active な ServiceAccount のみ。</para>
 /// </remarks>
@@ -31,6 +31,12 @@ internal sealed class ExecutionScheduleService(
 {
     private const string ScheduleNotFound = "Schedule not found";
     private const string RunAsInvalid = "runAsPrincipalId must be an active ServiceAccount in the tenant.";
+    private const string RunAsMissingPermission = "runAsPrincipalId must have the executions.write permission.";
+
+    /// <summary>
+    /// 422 の <c>details.reason</c>。所属の不足と同じ <c>field</c> になるため、直し方を分ける画面が機械的に読む値。
+    /// </summary>
+    private const string RunAsMissingPermissionReason = "missingExecutionsWrite";
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ExecutionScheduleListItemDto>> ListAsync(CancellationToken cancellationToken)
@@ -293,8 +299,10 @@ internal sealed class ExecutionScheduleService(
     /// </summary>
     /// <remarks>
     /// 順は、定義が未削除（422 <c>definitionId</c>）、run-as が有効な ServiceAccount（422 <c>runAsPrincipalId</c>）、
+    /// run-as の <c>executions.write</c>（422 <c>runAsPrincipalId</c> と <c>reason</c>）、
     /// run-as の所属（422 <c>runAsPrincipalId</c>）、run-as の実行リソース許可（403 <c>RESOURCE_GRANT_DENIED</c>）。
-    /// 保存後も所属や許可は変わりうるため保証ではない。発火時の Start が改めて評価する。
+    /// 権限、所属、許可の順は Start にそろえる。
+    /// 保存後も権限や所属や許可は変わりうるため保証ではない。発火時の Start が改めて評価する。
     /// </remarks>
     private async Task EnsureFireReadyAsync(
         Guid tenantId,
@@ -304,10 +312,27 @@ internal sealed class ExecutionScheduleService(
     {
         await definitions.EnsureDefinitionNotDeletedAsync(tenantId, definitionId, cancellationToken).ConfigureAwait(false);
         await EnsureActiveServiceAccountAsync(tenantId, runAsPrincipalId, cancellationToken).ConfigureAwait(false);
+        await EnsureRunAsHasExecutionsWriteAsync(runAsPrincipalId, cancellationToken).ConfigureAwait(false);
         await definitions.EnsureRunAsCanExecuteOnDefinitionAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
             .ConfigureAwait(false);
         await authorization.EnsureResourceGrantForPrincipalAsync(tenantId, runAsPrincipalId, definitionId, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// run-as が Start の最初の判定を通ることを確かめる。権限は発火と同じ展開で求めるので、検査と Start の判定はずれない。
+    /// </summary>
+    /// <param name="runAsPrincipalId">run-as の Principal。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <exception cref="ApiValidationException">run-as が <c>executions.write</c> を持たない。応答に権限の一覧は載せない。</exception>
+    private async Task EnsureRunAsHasExecutionsWriteAsync(Guid runAsPrincipalId, CancellationToken cancellationToken)
+    {
+        var permissions = await principals.ExpandPrincipalPermissionKeysAsync(runAsPrincipalId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!permissions.Contains(RuntimePermissionRequirements.ExecutionsWrite, StringComparer.Ordinal))
+            throw new ApiValidationException(
+                RunAsMissingPermission,
+                new { field = "runAsPrincipalId", reason = RunAsMissingPermissionReason });
     }
 
     private async Task EnsureActiveServiceAccountAsync(
@@ -327,17 +352,17 @@ internal sealed class ExecutionScheduleService(
     }
 
     /// <summary>
-    /// 版を固定した行の定義を変えるとき、同じ PATCH で版の指定を求める。
+    /// 版を固定した定期実行の定義を変えるとき、同じ PATCH で版の指定を求める。
     /// </summary>
     /// <remarks>
     /// 固定した版は元の定義に属するため、移し先の定義では解決できない。持ち越すと発火も手動実行も
     /// Start が定義不在で失敗し続ける。固定を黙って外すと固定した意図が失われるため、422 で止める。
-    /// 定義を変えない（同じ定義を指す）PATCH と、版を固定していない行は対象外。
+    /// 定義を変えない（同じ定義を指す）PATCH と、版を固定していない定期実行は対象外。
     /// </remarks>
-    /// <param name="row">更新前のスケジュール行。</param>
+    /// <param name="row">更新前の定期実行。</param>
     /// <param name="definitionId">解決済みの移し先定義。</param>
     /// <param name="request">PATCH 本文。</param>
-    /// <exception cref="ApiValidationException">版を固定した行の定義を変えるのに、版を指定していない。</exception>
+    /// <exception cref="ApiValidationException">版を固定した定期実行の定義を変えるのに、版を指定していない。</exception>
     private static void EnsurePinnedVersionFollowsDefinitionChange(
         ExecutionScheduleRow row,
         Guid definitionId,
