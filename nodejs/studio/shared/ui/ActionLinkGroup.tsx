@@ -8,8 +8,11 @@ type ActionLinkPriority = "primary" | "secondary";
 
 /** ActionLinkItem の型定義。 */
 export type ActionLinkItem = {
+  /** リンクの表示名。 */
   label: string;
+  /** 遷移先のパス。 */
   href: string;
+  /** 見た目の強さ。`primary` は主操作の CTA、`secondary` はナビゲーションボタン。省略すると `secondary`。 */
   priority?: ActionLinkPriority;
 };
 

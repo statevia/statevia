@@ -106,7 +106,9 @@ async function fetchAndParse<T>(path: string, init?: RequestInit): Promise<T> {
 
 /** `GET /v1/executions?limit&offset&status&name&definitionId` 向け（Service API）。 */
 export type PaginationQuery = {
+  /** 1 ページに返す最大件数。 */
   limit: number;
+  /** 先頭から飛ばす件数。 */
   offset: number;
 };
 
@@ -115,7 +117,9 @@ export type SortOrder = "asc" | "desc";
 
 /** 一覧 API のソート指定。 */
 export type SortQuery = {
+  /** 並べ替えに使う列の名前。指定できる値は一覧 API ごとに決まる。省略すると API の既定順。 */
   sortBy?: string;
+  /** 並べ替えの向き。省略すると API の既定。 */
   sortOrder?: SortOrder;
 };
 
