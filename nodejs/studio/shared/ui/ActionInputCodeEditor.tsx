@@ -17,9 +17,11 @@ export type ActionInputSyntaxHighlight = "auto" | "jsonOnly";
 export type ActionInputCodeEditorProps = {
   /** 編集テキスト（パス文字列または JSON オブジェクト文字列） */
   value: string;
+  /** 編集のたびに、変更後のテキストを受け取る。 */
   onChange: (nextValue: string) => void;
   /** フォーカス喪失時のエディタ全文（親の state とずれることがないよう渡す） */
   onBlur?: (latestText: string) => void;
+  /** 未入力のときにエディタへ出す例。 */
   placeholder?: string;
   /**
    * `auto`: `{` / `[` で始まるときだけ JSON ハイライト（action のパス文字列と併用）。

@@ -25,6 +25,36 @@ const exportJsdocContexts = [
     "ExportNamedDeclaration > ClassDeclaration",
 ];
 
+/**
+ * export した型の公開メンバー（interface / type のプロパティとメソッド、class の private でないメンバー、enum）。
+ * 規約（docs/development-guidelines.md §4.3）では明白でも日本語の JSDoc を必須にしている。
+ * 既存の欠落が多いため、埋め終えたディレクトリから memberJsdocEnforcedFiles に足して有効にする。
+ * 直下のメンバーだけを見る（入れ子のオブジェクト型の中までは見ない）。
+ */
+const exportMemberJsdocContexts = [
+    "ExportNamedDeclaration > TSInterfaceDeclaration > TSInterfaceBody > TSPropertySignature",
+    "ExportNamedDeclaration > TSInterfaceDeclaration > TSInterfaceBody > TSMethodSignature",
+    "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeLiteral > TSPropertySignature",
+    "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeLiteral > TSMethodSignature",
+    "ExportNamedDeclaration > ClassDeclaration > ClassBody > MethodDefinition[accessibility!='private'][key.type!='PrivateIdentifier']",
+    "ExportNamedDeclaration > ClassDeclaration > ClassBody > PropertyDefinition[accessibility!='private'][key.type!='PrivateIdentifier']",
+    "ExportNamedDeclaration > TSEnumDeclaration",
+];
+
+/**
+ * export した型の公開メンバーにも JSDoc を求めるファイル。埋め終えたディレクトリを足していく。
+ * 残りの欠落は 2026-11-08 時点で 564 件（features/executions・definition-editor・admin が多い）。
+ */
+const memberJsdocEnforcedFiles = [
+    "app/**/*.{ts,tsx}",
+    "middleware.ts",
+    "features/auth/**/*.{ts,tsx}",
+    "shared/api/**/*.{ts,tsx}",
+    "shared/i18n/**/*.{ts,tsx}",
+    "shared/project/**/*.{ts,tsx}",
+    "shared/ui/**/*.{ts,tsx}",
+];
+
 /** AST selector fragment: literal value contains hiragana or katakana. */
 const japaneseCharClassInLiteral = String.raw `[value=/[\u3040-\u309F\u30A0-\u30FF]/]`;
 
@@ -133,7 +163,8 @@ export default defineConfig({
                 contexts: exportJsdocContexts,
             },
         ],
-        "jsdoc/require-description": "off",
+        // 必須の JSDoc に説明文が無いもの（タグだけの JSDoc や空の JSDoc）を拒む。
+        "jsdoc/require-description": ["error", { contexts: exportJsdocContexts }],
         "jsdoc/require-param-description": "off",
         "jsdoc/require-returns-description": "off",
         // 識別子の書式をそろえ、grep やエージェントの調査で取りこぼしを減らす。
@@ -160,6 +191,24 @@ export default defineConfig({
                 caughtErrorsIgnorePattern: "^_",
             },
         ],
+    },
+}, {
+    // export した型の公開メンバーの JSDoc。埋め終えたディレクトリだけ（memberJsdocEnforcedFiles）。
+    files: memberJsdocEnforcedFiles,
+    rules: {
+        "jsdoc/require-jsdoc": [
+            "error",
+            {
+                publicOnly: true,
+                require: {
+                    FunctionDeclaration: false,
+                    MethodDefinition: false,
+                    ClassDeclaration: false,
+                },
+                contexts: [...exportJsdocContexts, ...exportMemberJsdocContexts],
+            },
+        ],
+        "jsdoc/require-description": ["error", { contexts: [...exportJsdocContexts, ...exportMemberJsdocContexts] }],
     },
 }, {
     // SonarQube Cloud（statevia_statevia_ui）の指摘を編集時・npm run lint で拾う。

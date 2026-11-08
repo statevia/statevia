@@ -4,8 +4,11 @@
  * labelKey 形式: `{actionId}.ui.fields.{field}.label`
  */
 export type ActionCatalogFieldUiText = {
+  /** 入力欄のラベル。 */
   label: string;
+  /** 入力欄の下に出す説明。 */
   description?: string;
+  /** 未入力のときに入力欄へ出す例。 */
   placeholder?: string;
 };
 

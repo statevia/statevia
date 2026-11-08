@@ -2,7 +2,9 @@
  * Service API / BFF のエラー JSON 形状（クライアント側）。
  */
 export type ApiError = {
+  /** HTTP ステータスコード。応答を受け取る前に失敗したときは無い。 */
   status?: number;
+  /** エラーの本体。 */
   error: {
     code: string;
     message: string;

@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type AuthFeatureUiText = {
+  /** ログイン画面の文言。 */
   auth: {
     login: {
       title: string;

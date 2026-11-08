@@ -20,6 +20,8 @@ export class JwtSegment {
   readonly encoded: string;
 
   /**
+   * JWT の 1 セグメントを保持する。
+   *
    * @param kind セグメント種別
    * @param encoded Base64URL 文字列
    */
