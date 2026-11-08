@@ -1,0 +1,31 @@
+<Project>
+  <!--
+    XML ドキュメントの欠落を、通常の dotnet build の警告として検出する。
+    - 対象: StateviaDocumentationRulesEnabled=true を csproj に書いたプロダクトプロジェクト。
+      テストプロジェクトは対象外。プロジェクトの欠落を埋め終えてから、そのプロジェクトで true にする。
+      先に true にすると、6 sln の Warning 0 が崩れる。
+    - public の欠落は CS1591 でも出るが、internal はコンパイラが見ない。StyleCop.Analyzers のドキュメント規則で両方を見る。
+    - 有効にする規則は StyleCop.Documentation.globalconfig に明示した欠落・空文の規則だけ。
+      それ以外の StyleCop 規則（英語の定型文を求める SA1623 / SA1642 など）は none にする。
+    - CS1591 を出すには GenerateDocumentationFile が要る。SDK はそれを本ファイルより前に読むため、ここでは設定できない。
+      csproj に書かれていなければビルドを止める。
+    - ドキュメント専用の CI ジョブは作らない。既存の dotnet build に乗せる。
+    Directory.Build.targets から読み込む（IsTestProject は Directory.Build.props の時点では決まっていないことがある）。
+    restore の評価では Microsoft.NET.Test.Sdk の props がまだ読まれず IsTestProject が空になる。
+    そのとき StyleCop が assets に入ると、テストにも全規則の StyleCop が載る。そのため名前（*.Tests）でも除く。
+  -->
+  <ItemGroup Condition="'$(StateviaDocumentationRulesEnabled)' == 'true' AND '$(IsTestProject)' != 'true' AND !$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="StyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" Visible="false" />
+    <EditorConfigFiles Include="$(MSBuildThisFileDirectory)StyleCop.Documentation.globalconfig" />
+  </ItemGroup>
+
+  <Target Name="StateviaRequireDocumentationFile"
+          BeforeTargets="CoreCompile"
+          Condition="'$(StateviaDocumentationRulesEnabled)' == 'true' AND '$(IsTestProject)' != 'true' AND !$(MSBuildProjectName.EndsWith('.Tests')) AND '$(GenerateDocumentationFile)' != 'true'">
+    <Error Text="StateviaDocumentationRulesEnabled=true のプロジェクトは、csproj に GenerateDocumentationFile=true を書いてください（CS1591 を出すため）。" />
+  </Target>
+</Project>

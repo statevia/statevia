@@ -8,11 +8,16 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <!-- アナライザー。build/BannedGuidNewGuid.props と Directory.Build.targets が参照する。 -->
+  <!-- アナライザー。build/BannedGuidNewGuid.props、build/Documentation.targets、Directory.Build.targets が参照する。 -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" />
     <!-- IDE に入っている SonarQube for IDE の Analyzer（10.35）に合わせる。 -->
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
+    <!--
+      ドキュメント欠落の検出だけに使う（build/Documentation.targets）。1.3 系は 2026-10 から beta が日ごとに出ていて
+      安定していないため、長く使われている 1.2.0-beta.556 に固定する。
+    -->
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
   </ItemGroup>
 
   <!-- Microsoft.Extensions と ASP.NET Core Identity。対象フレームワーク（net10.0）に合わせて 10.0 系にする。 -->

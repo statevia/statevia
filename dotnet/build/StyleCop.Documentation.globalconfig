@@ -1,0 +1,42 @@
+# StyleCop.Analyzers のうち、XML ドキュメントの欠落と空文だけを warning にする。
+# build/Documentation.targets が、StateviaDocumentationRulesEnabled=true のプロダクトプロジェクトにだけ読み込ませる。
+# 規約の正本は docs/development-guidelines.md §4.3。
+#
+# - まず StyleCop の全カテゴリを none にし、下で ID を挙げた規則だけを warning に戻す（ID の指定がカテゴリより優先される）。
+#   none の規則は Roslyn が実行しないので、ビルド時間は欠落の規則の分しか増えない。
+# - 英語の定型文を求める規則（SA1623 プロパティの Gets or sets、SA1642 コンストラクタの Initializes a new instance など）は
+#   日本語の summary と衝突するので有効にしない。書式・並び順・命名などの規則も有効にしない。
+# - 規則を足すときは、欠落か空文の検出であることを確かめ、ここに ID と理由を書く。
+is_global = true
+
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+
+# SA1600: 型・メンバーに XML ドキュメントが無い。stylecop.json で internal も対象にしている（CS1591 は public だけ）。
+dotnet_diagnostic.SA1600.severity = warning
+# SA1601: partial 型・メンバーのどの宣言にも XML ドキュメントが無い。
+dotnet_diagnostic.SA1601.severity = warning
+# SA1602: enum の値に XML ドキュメントが無い。
+dotnet_diagnostic.SA1602.severity = warning
+# SA1604: XML ドキュメントに summary が無い。
+dotnet_diagnostic.SA1604.severity = warning
+# SA1606: summary が空。
+dotnet_diagnostic.SA1606.severity = warning
+# SA1611: 引数の param が無い。
+dotnet_diagnostic.SA1611.severity = warning
+# SA1614: param が空。
+dotnet_diagnostic.SA1614.severity = warning
+# SA1615: 戻り値の returns が無い。
+dotnet_diagnostic.SA1615.severity = warning
+# SA1616: returns が空。
+dotnet_diagnostic.SA1616.severity = warning
+# SA1618: 型引数の typeparam が無い。
+dotnet_diagnostic.SA1618.severity = warning
+# SA1622: typeparam が空。
+dotnet_diagnostic.SA1622.severity = warning
