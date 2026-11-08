@@ -6,6 +6,7 @@ internal sealed class DevelopmentNotificationSender : INotificationSender
     private readonly ILogger<DevelopmentNotificationSender> _logger;
 
     /// <summary>ロガー付きで構築する。</summary>
+    /// <param name="logger">送信を省いたことを残すロガー。宛先と件名は長さだけを残す。</param>
     public DevelopmentNotificationSender(ILogger<DevelopmentNotificationSender> logger) =>
         _logger = logger;
 
@@ -28,6 +29,9 @@ internal sealed class NotificationSenderResolver
     private readonly SmtpNotificationSender _smtpSender;
 
     /// <summary>環境別 sender を構築する。</summary>
+    /// <param name="environment">実行環境。Development かどうかで sender を選ぶ。</param>
+    /// <param name="developmentSender">Development で使う、送らずにログだけ残す sender。</param>
+    /// <param name="smtpSender">Development 以外で使う SMTP の sender。</param>
     public NotificationSenderResolver(
         IHostEnvironment environment,
         DevelopmentNotificationSender developmentSender,
@@ -39,6 +43,7 @@ internal sealed class NotificationSenderResolver
     }
 
     /// <summary>現在環境に応じた sender を返す。</summary>
+    /// <returns>Development なら 送らずにログだけ残す sender、それ以外は SMTP の sender。</returns>
     public INotificationSender Resolve() =>
         _environment.IsDevelopment() ? _developmentSender : _smtpSender;
 }

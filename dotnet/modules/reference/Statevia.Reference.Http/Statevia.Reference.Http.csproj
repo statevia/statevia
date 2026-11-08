@@ -4,6 +4,8 @@
     <RootNamespace>Statevia.Reference.Http</RootNamespace>
     <AssemblyName>Statevia.Reference.Http</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML ドキュメントの欠落（internal を含む）をビルドの警告にする（build/Documentation.targets）。 -->
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <ReferenceModuleId>statevia.action.reference.http</ReferenceModuleId>
     <DefaultTenantModulesDir>$(StateviaModulesOutputRoot)default\$(ReferenceModuleId)\</DefaultTenantModulesDir>
   </PropertyGroup>

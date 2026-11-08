@@ -11,6 +11,15 @@ internal static class HttpRequestBuilder
     private const int MaxBodyBytes = 1_048_576;
 
     /// <summary>入力フィールドから <see cref="HttpRequestMessage"/> を構築する。</summary>
+    /// <remarks>
+    /// <para><c>headers</c> の文字列値をヘッダへ、<c>idempotencyKey</c> を <c>Idempotency-Key</c> ヘッダへ載せる。</para>
+    /// <para><c>body</c> は文字列ならそのまま、オブジェクト・配列なら JSON 文字列にして <c>application/json</c> で送る。UTF-8 で 1 MiB を超えたら拒否する。</para>
+    /// </remarks>
+    /// <param name="fields">action の入力フィールド。<c>headers</c> / <c>idempotencyKey</c> / <c>body</c> を読む。</param>
+    /// <param name="url">送信先 URL。検証は呼び出し側で済ませておく。</param>
+    /// <param name="method">HTTP メソッド名。</param>
+    /// <returns>組み立てたリクエスト。破棄は呼び出し側が持つ。</returns>
+    /// <exception cref="ArgumentException"><c>body</c> が UTF-8 で 1 MiB を超えたとき。</exception>
     public static HttpRequestMessage Build(
         IReadOnlyDictionary<string, JsonElement> fields,
         string url,

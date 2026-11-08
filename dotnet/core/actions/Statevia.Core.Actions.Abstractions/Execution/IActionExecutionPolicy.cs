@@ -8,5 +8,6 @@ public interface IActionExecutionPolicy
     /// <summary>実行モードを解決する。</summary>
     /// <param name="context">実行コンテキスト。</param>
     /// <param name="descriptor">対象 Descriptor。</param>
+    /// <returns>この実行で使う実行モード。</returns>
     ActionExecutionMode Resolve(ActionExecutionContext context, ActionDescriptor descriptor);
 }

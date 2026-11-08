@@ -8,6 +8,11 @@ namespace Statevia.Reference.Notification;
 internal static class SmtpMailSender
 {
     /// <summary>組み立て済みメールを SMTP で送る。</summary>
+    /// <remarks>TLS（<c>EnableSsl</c>）は常に有効。ユーザー名が空なら既定の資格情報で接続する。</remarks>
+    /// <param name="settings">SMTP の接続先と資格情報。</param>
+    /// <param name="message">送るメール。</param>
+    /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>送信が終わると完了するタスク。</returns>
     public static async Task SendAsync(
         NotificationSmtpDispatch settings,
         MailMessage message,

@@ -12,6 +12,7 @@ internal static class HttpRequestPublication
 
     /// <summary>canonical actionId に対応する Publication を返す。</summary>
     /// <param name="actionId">canonical actionId。</param>
+    /// <returns>Descriptor、入力・出力の JSON Schema、入力欄ごとの UI ヒントをまとめた Publication。</returns>
     public static ActionPublication Create(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>

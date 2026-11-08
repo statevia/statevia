@@ -16,5 +16,6 @@ public interface IModuleSource
 
     /// <summary>利用可能な Action Module を列挙する。</summary>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>この Source で見つかった Module。見つからなければ空。</returns>
     Task<IReadOnlyList<DiscoveredModule>> DiscoverAsync(CancellationToken cancellationToken);
 }

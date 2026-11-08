@@ -11,6 +11,10 @@ internal sealed class SmtpConnectionSettingsProviderFactory : ISmtpConnectionSet
     private readonly KmsSmtpConnectionSettingsProvider _kmsProvider;
 
     /// <summary>各実装を注入する。</summary>
+    /// <param name="options">通知の設定。<see cref="NotificationOptions.SmtpSettingsSource"/> で使う実装を選ぶ。</param>
+    /// <param name="environmentProvider">環境変数と <see cref="NotificationOptions.Smtp"/> から SMTP 接続設定を読む実装。</param>
+    /// <param name="databaseProvider">テナントの DB から読む実装（未実装のプレースホルダ）。</param>
+    /// <param name="kmsProvider">KMS / Secret Manager から読む実装（未実装のプレースホルダ）。</param>
     public SmtpConnectionSettingsProviderFactory(
         IOptions<NotificationOptions> options,
         EnvironmentSmtpConnectionSettingsProvider environmentProvider,
