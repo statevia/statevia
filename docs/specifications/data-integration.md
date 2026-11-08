@@ -44,7 +44,7 @@
 
 ### Core-Engine（Domain Kernel・ライブラリ）
 
-- 固定イベント・Reducer（優先順位 + normalize）・Command→Event のルール（[events-and-commands.md](execution/events-and-commands.md) 等で仕様化）
+- 事実駆動の状態遷移（[fsm.md](execution/fsm.md)）。Command・Fact・監査イベントの区別は [events-and-commands.md](execution/events-and-commands.md)
 - **純粋ロジック**（I/O は API 層が担当）
 
 ### Service API（C# / Integration Boundary）

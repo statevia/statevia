@@ -8,7 +8,7 @@
 
 ---
 
-思想と全体像を、**ストーリーとして**理解するためのドキュメント。用語辞典（Wiki）ではない。Normative 要件は [specifications/](../specifications/README.md) を正とする。
+思想と全体像を、**ストーリーとして**理解するためのドキュメント。用語辞典（Wiki）ではない。Normative 要件は [specifications/](../specifications/README.md) を正とする。語の意味と書き方は [用語集](../reference/glossary.md) を参照する。
 
 ## 読む順
 

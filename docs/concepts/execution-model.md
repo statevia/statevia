@@ -19,11 +19,11 @@
 
 ### 2. 状態のスケジュールと事実
 
-各 **State**（または制御ノード）はスケジュールされ、Action 実行や Wait が発生します。完了・失敗・タイムアウトなどの**事実（Fact）**が reducer に渡され、次の遷移が決まります。
+各 **State**（または制御ノード）はスケジュールされ、Action 実行や Wait が発生します。完了・失敗・キャンセル・合流などの**事実（Fact）**が記録され、次の遷移が決まります。
 
-### 3. FSM と reducer
+### 3. FSM と Command
 
-遷移は `(状態, 事実) → 結果` として評価されます。reducer は副作用を持たない純粋な更新として設計され、Command は必ず Event に変換されたうえで適用されます。
+遷移は `(状態, 事実) → 結果` として評価されます。Start や Cancel などの Command は API が受ける要求で、遷移を直接起こしません。Execution への Command を適用すると、監査イベントが `event_store` に残ります。
 
 ### 4. Fork / Join
 
@@ -43,7 +43,7 @@ Engine は実行時グラフ（ノード ID、状態名、attempt、waitKey 等�
 
 | トピック | 正本 |
 | --- | --- |
-| FSM・状態機械・reducer | [execution/fsm.md](../specifications/execution/fsm.md) |
+| FSM・ステータス | [execution/fsm.md](../specifications/execution/fsm.md) |
 | イベント・コマンド | [execution/events-and-commands.md](../specifications/execution/events-and-commands.md) |
 | Wait / Cancel | [execution/wait-cancel.md](../specifications/execution/wait-cancel.md) |
 | Fork / Join | [execution/fork-join.md](../specifications/execution/fork-join.md) |
@@ -51,5 +51,6 @@ Engine は実行時グラフ（ノード ID、状態名、attempt、waitKey 等�
 
 ## 次に読むもの
 
+- 語の意味と書き方: [用語集](../reference/glossary.md)
 - データ連携のタイミング: [durability.md](durability.md)
 - 定義の書き方: [definition.md](definition.md)
