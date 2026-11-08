@@ -10,6 +10,7 @@ public interface IActionExecutor
     /// <param name="stateContext">Engine から渡される状態コンテキスト（InProcess で Backend へ伝播）。</param>
     /// <param name="runtimeInput">Engine が解決した状態入力（InProcess 用）。</param>
     /// <param name="cancellationToken">キャンセルトークン。</param>
+    /// <returns>実行結果。未登録の Action やテナントから見えない Action は、例外ではなく <see cref="ActionExecutionResult.Success"/> が <see langword="false"/> の結果で返す。</returns>
     Task<ActionExecutionResult> ExecuteAsync(
         ActionExecutionRequest request,
         StateContext stateContext,

@@ -46,7 +46,7 @@ alwaysApply: true
 | 対象 | 手段 | 現状（2026-11-08） |
 |------|------|------|
 | C# `public` | `GenerateDocumentationFile` と CS1591。6 sln の Warning 0 に乗せる | `Statevia.Core.Application` と `Statevia.Core.Application.Contracts` は csproj の `NoWarn` で抑制中。`GenerateDocumentationFile` が無いプロダクト csproj が 4 つある |
-| C# `public` / `internal` | StyleCop.Analyzers のドキュメント欠落・空文の規則だけを warning にする（`dotnet/build/Documentation.targets`）。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない。埋め終えたプロジェクトの csproj に `StateviaDocumentationRulesEnabled=true` と `GenerateDocumentationFile=true` を書くと有効になる | 仕組みは導入済み。有効にしたプロジェクトはまだ無い |
+| C# `public` / `internal` | StyleCop.Analyzers のドキュメント欠落・空文の規則だけを warning にする（`dotnet/build/Documentation.targets`）。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない。埋め終えたプロジェクトの csproj に `StateviaDocumentationRulesEnabled=true` と `GenerateDocumentationFile=true` を書くと有効になる | 有効にしたプロジェクトは、csproj の `StateviaDocumentationRulesEnabled` で分かる（`grep -r StateviaDocumentationRulesEnabled dotnet --include=*.csproj`） |
 | TS `export` と公開メンバー | ESLint の `jsdoc/require-jsdoc`（`npm run lint`、GitHub CI の UI lint ジョブ） | export 宣言と説明文の有無は全体で検出済み。公開メンバーは `nodejs/studio/eslint.config.js` の `memberJsdocEnforcedFiles` に挙げたディレクトリだけ（埋め終えたら足す） |
 
 抑制を外すのと `StateviaDocumentationRulesEnabled` を有効にするのは、プロジェクトの埋め戻しが終わってからにする。先にすると Warning 0 が崩れる。

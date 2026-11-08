@@ -4,6 +4,8 @@
     <RootNamespace>Statevia.Core.Actions.Abstractions</RootNamespace>
     <AssemblyName>Statevia.Core.Actions.Abstractions</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML ドキュメントの欠落（internal を含む）をビルドの警告にする（build/Documentation.targets）。 -->
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <!-- SonarScanner for .NET: SDK 形式は既定 GUID を持たない。sln 外の ProjectReference で 00000000 重複警告になるのを防ぐ。 -->
     <ProjectGuid>{3CF52601-1840-46C5-9D0F-142CE6EAFE05}</ProjectGuid>
   </PropertyGroup>

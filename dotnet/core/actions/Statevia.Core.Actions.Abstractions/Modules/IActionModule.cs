@@ -14,5 +14,6 @@ public interface IActionModule
 
     /// <summary>Module が提供する Action 登録情報を返す。</summary>
     /// <param name="serviceProvider">ホストの DI ルート（将来の DI 依存用）。</param>
+    /// <returns>Module が提供する Action ごとの登録情報。</returns>
     IEnumerable<ModuleActionRegistration> GetActions(IServiceProvider serviceProvider);
 }
