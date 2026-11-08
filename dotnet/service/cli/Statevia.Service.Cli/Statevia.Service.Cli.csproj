@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML ドキュメントの欠落（internal を含む）をビルドの警告にする（build/Documentation.targets）。 -->
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <OutputType>Exe</OutputType>
     <RootNamespace>Statevia.Service.Cli</RootNamespace>
     <AssemblyName>statevia</AssemblyName>

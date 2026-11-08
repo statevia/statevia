@@ -266,6 +266,7 @@ internal sealed class ActionHostExecutor
         };
 }
 
+/// <summary><see cref="ActionHostExecutor"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ActionHostExecutorLog
 {
     [LoggerMessage(EventId = 62201, Level = LogLevel.Warning, Message = "Action execution failed for {ActionId} (ExecutionId={ExecutionId})")]

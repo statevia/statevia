@@ -6,10 +6,14 @@ namespace Statevia.Service.Cli.Commands;
 /// <summary><c>statevia config set</c> / <c>get</c> / <c>unset</c> サブコマンド。</summary>
 public static class ConfigCommand
 {
+    /// <summary><c>get</c> で未設定の項目に出す文字列。</summary>
     internal const string UnsetDisplay = "(unset)";
+
+    /// <summary><c>get</c> で API キーの実値の代わりに出すマスク。</summary>
     internal const string ApiKeyMask = "********";
 
     /// <summary>コマンド定義を生成する。</summary>
+    /// <returns>サブコマンドを登録した <see cref="Command"/>。</returns>
     public static Command Create()
     {
         var command = new Command("config", "Read and write CLI home settings");

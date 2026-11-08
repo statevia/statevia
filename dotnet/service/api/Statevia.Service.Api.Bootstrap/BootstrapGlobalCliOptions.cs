@@ -16,6 +16,9 @@ internal sealed class BootstrapGlobalCliOptions
     public string? ConfigPath { get; init; }
 
     /// <summary>先頭のグローバルオプションを除去し、コマンド引数を返す。</summary>
+    /// <param name="args">コマンドライン引数。</param>
+    /// <returns>先頭から読んだグローバルオプションと、最初のグローバルオプション以外のトークンから後ろの引数。</returns>
+    /// <exception cref="ArgumentException">値を取るオプションの後に値が無いとき。</exception>
     public static (BootstrapGlobalCliOptions Global, string[] CommandArgs) Parse(string[] args)
     {
         string? databaseUrl = null;

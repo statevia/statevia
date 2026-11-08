@@ -23,6 +23,9 @@ public static class RuntimeServiceCollectionExtensions
     /// <para>Start 受理が <see cref="ITenantContextAccessor.SetContext"/> できるよう Security の文脈を使う。JWT 発行は登録しない。</para>
     /// <para>製品の実行 Engine と Action Host は登録しない。Start 受理に必要な拒否実装は API の scheduler プロセス登録が足す。</para>
     /// </remarks>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。接続文字列とランタイム設定を読む。</param>
+    /// <returns>呼び出しをつなげるための <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaSchedulerHost(
         this IServiceCollection services, IConfiguration configuration)
     {
@@ -44,6 +47,8 @@ public static class RuntimeServiceCollectionExtensions
     /// 専用 scheduler ホストが常に使う。API プロセス内の Dispatcher は
     /// <c>EnableInProcessScheduleDispatcher</c> で別途登録し、本メソッドは呼ばない。
     /// </remarks>
+    /// <param name="services">サービスコレクション。</param>
+    /// <returns>呼び出しをつなげるための <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaRuntimeSchedulers(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -54,6 +59,8 @@ public static class RuntimeServiceCollectionExtensions
     }
 
     /// <summary>worker hosted service を登録する。</summary>
+    /// <param name="services">サービスコレクション。</param>
+    /// <returns>呼び出しをつなげるための <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaRuntimeWorkerHostedService(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -62,6 +69,9 @@ public static class RuntimeServiceCollectionExtensions
     }
 
     /// <summary>ランタイム設定をバインドし、起動時に検証する。</summary>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>呼び出しをつなげるための <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaRuntimeOptions(
         this IServiceCollection services, IConfiguration configuration)
     {

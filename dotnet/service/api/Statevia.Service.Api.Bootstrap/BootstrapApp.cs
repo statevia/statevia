@@ -7,11 +7,13 @@ namespace Statevia.Service.Api.Bootstrap;
 /// <summary>ブートストラップ CLI エントリ。</summary>
 internal static class BootstrapApp
 {
-    /// <summary>テスト専用。未設定時は <see cref="BootstrapServiceRegistration.BuildProvider"/> を使用する。</summary>
+    /// <summary>テスト専用。未設定時は <see cref="BootstrapServiceRegistration.BuildProvider(BootstrapGlobalCliOptions?)"/> を使用する。</summary>
     internal static Func<ServiceProvider>? ServiceProviderFactory { get; set; }
 
     /// <summary>引数を解釈してサブコマンドを実行する。</summary>
     /// <remarks>未知コマンドは接続文字列を解決せず、終了コード 1 を返す。</remarks>
+    /// <param name="args">コマンドライン引数。</param>
+    /// <returns>プロセスの終了コード。</returns>
     public static async Task<int> RunAsync(string[] args)
     {
         var (globalOptions, commandArgs) = BootstrapGlobalCliOptions.Parse(args);

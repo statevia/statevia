@@ -4,6 +4,8 @@ namespace Statevia.Service.Api.Bootstrap;
 internal static class BootstrapHelp
 {
     /// <summary>ルートヘルプ。</summary>
+    /// <param name="writer">ヘルプを書き出す先。</param>
+    /// <returns>書き終えると完了するタスク。</returns>
     public static Task WriteRootAsync(TextWriter writer) =>
         writer.WriteLineAsync(
             """
@@ -32,6 +34,8 @@ internal static class BootstrapHelp
             """);
 
     /// <summary>create-tenant ヘルプ。</summary>
+    /// <param name="writer">ヘルプを書き出す先。</param>
+    /// <returns>書き終えると完了するタスク。</returns>
     public static Task WriteCreateTenantAsync(TextWriter writer) =>
         writer.WriteLineAsync(
             """
@@ -47,6 +51,8 @@ internal static class BootstrapHelp
             """);
 
     /// <summary>create-admin ヘルプ。</summary>
+    /// <param name="writer">ヘルプを書き出す先。</param>
+    /// <returns>書き終えると完了するタスク。</returns>
     public static Task WriteCreateAdminAsync(TextWriter writer) =>
         writer.WriteLineAsync(
             """

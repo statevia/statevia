@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Statevia.Runtime.Services;
 
+/// <summary><see cref="ExecutionOwnershipRecoveryHostedService"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ExecutionOwnershipRecoveryLogMessages
 {
     [LoggerMessage(EventId = 70201, Level = LogLevel.Error, Message = "Expired ownership recovery iteration failed.")]

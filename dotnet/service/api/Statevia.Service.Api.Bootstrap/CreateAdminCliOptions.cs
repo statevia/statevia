@@ -25,6 +25,9 @@ internal sealed class CreateAdminCliOptions
     public bool SkipIfExists { get; init; }
 
     /// <summary>引数を解析する。</summary>
+    /// <param name="args">コマンド名より後ろの引数。</param>
+    /// <returns>解析結果。未知の引数や必須の値が無いときは <see cref="ShowHelp"/> が <see langword="true"/>。</returns>
+    /// <exception cref="ArgumentException">値を取るオプションの後に値が無いとき。</exception>
     public static CreateAdminCliOptions Parse(string[] args)
     {
         var tenantKey = TenantRequestHeaders.DefaultTenantId;

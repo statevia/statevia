@@ -4,6 +4,8 @@
     <RootNamespace>Statevia.Service.ActionHost</RootNamespace>
     <AssemblyName>Statevia.Service.ActionHost</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML ドキュメントの欠落（internal を含む）をビルドの警告にする（build/Documentation.targets）。 -->
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 

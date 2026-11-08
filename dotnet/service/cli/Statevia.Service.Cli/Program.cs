@@ -8,6 +8,7 @@ public static class Program
 {
     /// <summary>CLI を実行する。</summary>
     /// <param name="args">コマンドライン引数。</param>
+    /// <returns>プロセスの終了コード。</returns>
     public static Task<int> Main(string[] args)
     {
         var root = new RootCommand("Statevia platform CLI");

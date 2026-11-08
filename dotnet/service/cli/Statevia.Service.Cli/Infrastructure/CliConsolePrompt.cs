@@ -10,6 +10,7 @@ namespace Statevia.Service.Cli.Infrastructure;
 /// </remarks>
 internal static class CliConsolePrompt
 {
+    /// <summary>設定済みの機密の代わりに出すマスク。</summary>
     internal const string SecretMask = "********";
 
     /// <summary>1 項目を尋ねる。空入力なら <paramref name="current"/> を返す。</summary>

@@ -94,6 +94,16 @@ internal sealed class FilesystemModuleDiscoverer
             && !Path.IsPathRooted(relative);
     }
 
+    /// <summary>Module ディレクトリから入口 DLL を決める。</summary>
+    /// <remarks>
+    /// <para><c>{ディレクトリ名}.dll</c> があればそれを使う。無ければ直下の DLL が 1 つだけのときにそれを使う。</para>
+    /// <para>直下に DLL が無い、または複数あって <c>{ディレクトリ名}.dll</c> も無いときは決められない。</para>
+    /// </remarks>
+    /// <param name="moduleDirectory">Module ディレクトリのパス。</param>
+    /// <param name="moduleDirectoryName">Module ディレクトリの名前。</param>
+    /// <param name="entryAssemblyPath">決まった入口 DLL の絶対パス。決まらなければ空文字。</param>
+    /// <param name="reason">決まらなかった理由（ログ用）。決まったときは空文字。</param>
+    /// <returns>入口 DLL が決まれば <see langword="true"/>。</returns>
     internal static bool TryResolveEntryAssemblyPath(
         string moduleDirectory,
         string moduleDirectoryName,
@@ -138,6 +148,7 @@ internal sealed class FilesystemModuleDiscoverer
     }
 }
 
+/// <summary><see cref="FilesystemModuleDiscoverer"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class FilesystemModuleDiscovererLog
 {
     [LoggerMessage(EventId = 62101, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]

@@ -9,6 +9,7 @@ namespace Statevia.Service.Cli.Infrastructure;
 /// </remarks>
 public sealed class CliCredentialsStore
 {
+    /// <summary>資格情報ファイルの絶対パスで既定パスを上書きする環境変数。</summary>
     internal const string CredentialsFileEnvironmentVariable = "STATEVIA_CREDENTIALS_FILE";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -29,6 +30,7 @@ public sealed class CliCredentialsStore
     }
 
     /// <summary>環境変数または <see cref="CliHomePaths"/> から既定パスを解決する。</summary>
+    /// <returns>資格情報ファイルの絶対パス。環境変数があればそれを優先する。</returns>
     public static string ResolveDefaultPath()
     {
         var overridePath = Environment.GetEnvironmentVariable(CredentialsFileEnvironmentVariable);
@@ -39,6 +41,7 @@ public sealed class CliCredentialsStore
     }
 
     /// <summary>ファイルがあれば読み取る。欠落・不正 JSON は <see langword="null"/>。</summary>
+    /// <returns>読み取った資格情報。ファイルが無い、JSON が不正、読み取りに失敗したときは <see langword="null"/>。</returns>
     public CliCredentials? TryLoad()
     {
         if (!File.Exists(FilePath))
@@ -77,6 +80,7 @@ public sealed class CliCredentialsStore
     }
 
     /// <summary>期限切れの資格情報ファイルがあるか。</summary>
+    /// <returns>access token があり、有効期限を過ぎていれば <see langword="true"/>。</returns>
     public bool HasExpiredAccessToken()
     {
         var loaded = TryLoad();

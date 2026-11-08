@@ -11,10 +11,14 @@ namespace Statevia.Service.Api.Bootstrap;
 internal static class BootstrapServiceRegistration
 {
     /// <summary>接続文字列を解決してサービスを登録する。</summary>
+    /// <param name="globalOptions">共通の CLI 引数。<c>--database-url</c> と <c>--config</c> を接続文字列の解決に使う。省略時は引数なし。</param>
+    /// <returns>ブートストラップの各サービスを登録したプロバイダー。破棄は呼び出し側が持つ。</returns>
     public static ServiceProvider BuildProvider(BootstrapGlobalCliOptions? globalOptions = null) =>
         BuildProviderCore(registerNpgsql: true, dbContextFactory: null, globalOptions);
 
     /// <summary>テスト用: 既存の <see cref="IDbContextFactory{CoreDbContext}"/> でサービスを登録する。</summary>
+    /// <param name="dbContextFactory">接続文字列の代わりに使う DbContext のファクトリ。</param>
+    /// <returns>ブートストラップの各サービスを登録したプロバイダー。破棄は呼び出し側が持つ。</returns>
     internal static ServiceProvider BuildProvider(IDbContextFactory<CoreDbContext> dbContextFactory) =>
         BuildProviderCore(registerNpgsql: false, dbContextFactory, globalOptions: null);
 
