@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.0 |
-| 更新日 | 2026-11-05 |
+| Version | 1.1 |
+| 更新日 | 2026-11-08 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -37,10 +37,13 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | 用語 | UI | 意味 | 書き方 | 使わない語・区別 |
 | --- | --- | --- | --- | --- |
 | Execution | 実行 | 定義の 1 つの版に従って進む状態機械のインスタンス | `/v1/executions`、`executionId`、`executions` テーブル、`Execution*` | Workflow / Run は使わない。Instance は Engine がメモリ上に持つ実行状態 `ExecutionInstance` だけに使う |
-| Fact | — | 完了・失敗・タイムアウトなど、実際に起きた結果。遷移は Fact だけで確定する | 定義 YAML の `on`、`CompiledFactTransition` | キャンセル**要求**は Fact ではない |
+| 実行ステータス | ステータス | Execution のライフサイクル。内部の投影値と HTTP の値で綴りが違う | 投影（`executions.status`）は `Running` / `Completed` / `Failed` / `Cancelled` / `Unknown`（`ExecutionProjectionStatuses`）。HTTP は `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`（`ExecutionStatusMapper`） | 投影の `Running` は HTTP では `ACTIVE`、`Cancelled` は `CANCELED`。Fact の `Cancelled` は遷移のキーで、実行ステータスではない |
+| Execution Context | — | 1 つの Execution の実行時データ。定義 YAML のパス式（`$.input` / `$.vars` / `$.states` など）の評価の起点になる | `WorkflowExecutionContext`（.NET の `ExecutionContext` と衝突しないための型名） | Execution そのものではない。型名の `Workflow` は旧語ではない |
+| Fact | — | 完了・失敗・キャンセル・合流など、状態で実際に起きた結果。遷移は Fact だけで確定する | `Fact.Completed` / `Failed` / `Cancelled` / `Joined`、定義 YAML の `on`、`CompiledFactTransition` | キャンセル**要求**は Fact ではない。監査イベント・待機イベントとも別（[Command・Event・Fact](#commandeventfact)） |
 | Fork / Join | — | 並列分岐と合流を表す制御ノード。状態そのものではない | 定義 YAML の `fork` / `join` | — |
 | 物理子 Execution | — | Hosted Runtime が Fork の分岐ごとに作る子の Execution。親子の関係は `execution_branches` が正本 | `execution_branches`、`ForkChildExecutionCoordinator` | `workflow.invoke` で起動する子ワークフローとは別（[2 種類の子 Execution](#2-種類の子-execution)） |
 | Wait | 待機 | 外部イベントや再開を待つ、永続化される待機 | `EventWait`、`waitKey`、`execution_waits` テーブル | — |
+| 待機イベント | — | Wait を再開させる外部からの入力。配送すると監査イベント `EventPublished` が残る | `POST /v1/executions/{id}/events`、`POST /v1/events`、`POST /v1/executions/{id}/nodes/{nodeId}/resume`、`ExecutionWaitEventService` | Fact ではない（再開後に状態が出す結果が Fact）。監査イベントの記録そのものとも別 |
 | Cancel | — | 協調的なキャンセル。要求は Command として受け付け、遷移は状態がキャンセルを処理した Fact まで保留される | `POST /v1/executions/{id}/cancel` | Abort / Kill は使わない（強制終了はしない） |
 | Resume | — | 待機中の Execution を再開すること | `ExecutionWaitEventService` | — |
 | Schedule | 定期実行 | 決まった時刻に Execution を開始する設定。発火時の Start は run-as の ServiceAccount が呼び出し元になる | `/v1/schedules`、`ExecutionSchedule*` | Job は使わない。`JobKey` はシステムが作る定期実行（滞留した実行のレポートなど）を見分けるキー |
@@ -55,6 +58,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | Node | ノード | 実行グラフ上の 1 つの実行単位。同じ State を複数回訪れると、訪問ごとに Node ができる | `nodes[*].nodeId`、`ExecutionNode` | Step / Stage は使わない |
 | nodeId | — | ランタイムが採番する実行ノードの ID（opaque） | `nodeId` | 定義上の状態名 `nodeName` とは別 |
 | nodeName | — | Node に対応する定義上の状態名（StateName と同じ値） | `nodeName` | 旧キー `stateName` は使わない |
+| nodeType | — | Node の種別 | `nodeType`（`Start` / `Task` / `Fork` / `Join` / `Wait` / `End`） | Node は独自の状態文字列を持たない。終わったかどうかと結果は `completedAt` と `fact` で表す。IDLE / READY などの語は実装に無い |
 
 詳細は [specifications/execution/execution-graph.md](../specifications/execution/execution-graph.md)。
 
@@ -62,7 +66,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 
 | 用語 | UI | 意味 | 書き方 | 使わない語・区別 |
 | --- | --- | --- | --- | --- |
-| Action | — | State に紐づく実行可能な単位 | 定義 YAML の `action`、`actionId`、`IActionExecutor` | Task / Activity は使わない（`Task` は C# の型としてだけ使う） |
+| Action | — | State に紐づく実行可能な単位 | 定義 YAML の `action`、`actionId`、`IActionExecutor` | Task / Activity は使わない（`Task` は C# の型と `nodeType` の値 `Task` にだけ使う）。エンジンの副作用の総称（`fsm.md` の Effect）を Action と呼ばない |
 | actionId | — | Action の論理 ID。`{moduleId}.{actionName}` の形で、版を含まない | `actionId` | — |
 | Module | — | Action を束ねた配布単位。zip にまとめ、署名・信頼レベル付与の対象になる | `module.json`、`ModuleHost`、`IModuleSource` | Plugin / Package は使わない |
 | Catalog | — | 登録済み Action の一覧。publish 時に Action ID を照合する | `IActionCatalog`、`ActionDescriptor` | — |
@@ -78,11 +82,12 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 
 | 用語 | UI | 意味 | 書き方 | 使わない語・区別 |
 | --- | --- | --- | --- | --- |
-| Command | — | 外部からの操作要求（Start / Cancel / Publish など）。必ず Event に変換されてから適用される | `command_dedup` | Fact とは別（要求であって結果ではない） |
-| Event | イベント | Execution に起きたことの記録 | `event_store` テーブル、`ExecutionEventId` | — |
+| Command | — | 外部からの操作要求（実行の Start / Cancel / 待機イベントの配送、定義の publish など）。監査イベントを残すのは実行への Start / Cancel / 待機イベントの配送だけ | `command_dedup` | Fact とは別（要求であって結果ではない） |
+| 監査イベント（Event） | イベント | Execution に起きたことを `event_store` に残した記録。種別は 3 つだけ | `event_store.type` の値 `WorkflowStarted` / `WorkflowCancelled` / `EventPublished`（`EventStoreEventType`） | Fact ではない。`WorkflowCancelled` はキャンセルの処理が終わった後に残る。種別名の `Workflow` は旧語（[旧語として残る Workflow](#旧語として残る-workflow)）。`execution_events` テーブル（列 `execution_event_id`）は別のテーブルで、今の実装は書き込まない |
 | Read Model | — | UI と `GET /v1/executions*` が返す、表示用の正本 | `executions`、`execution_graph_snapshots` | Operational Projection とは別 |
 | Operational Projection | — | Worker の運用のための投影。Read API の正本ではない | `execution_cursors`、`execution_waits` | Read Model とは別 |
 | 冪等キー | — | 同じ Command やイベント配送を二重に適用しないための記録 | `command_dedup`、`event_delivery_dedup` | — |
+| スキーマグループ | — | DB スキーマの文書で、テーブルをまとめて呼ぶ名前 | `KnowledgeSpace`（定義・Project など）/ `ExecutionSpace`（実行の記録など）。[database-schema.md](database-schema.md) の表の列 | コードの型・名前空間・DB スキーマではない |
 
 詳細は [durability.md](../concepts/durability.md) と [specifications/data-integration.md](../specifications/data-integration.md)。
 
@@ -116,7 +121,15 @@ State は**定義上**の状態で、名前で識別する。Node は**実行グ
 
 ### Command・Event・Fact
 
-Command は外部からの**要求**、Fact は実際に起きた**結果**、Event はそれらを `event_store` に残した**記録**。キャンセルの要求は Command であり、遷移を確定させる Fact ではない。
+Command は外部からの**要求**、Fact は状態で実際に起きた**結果**、監査イベントは Execution への要求の受理と処理を `event_store` に残した**記録**。キャンセルの要求は Command であり、遷移を確定させる Fact ではない。
+
+| | Command | Fact | 監査イベント | 待機イベント |
+| --- | --- | --- | --- | --- |
+| 何か | API が受ける要求 | Engine の遷移のキー | `event_store` の行 | Wait を再開させる入力 |
+| 値 | Start / Cancel / 待機イベントの配送 / 定義の publish など | `Completed` / `Failed` / `Cancelled` / `Joined` | `WorkflowStarted` / `WorkflowCancelled` / `EventPublished` | 定義の Wait が受け付けるイベント名 |
+| 残る場所 | `command_dedup`（冪等キー） | 実行グラフの `fact`、遷移の評価 | `event_store` | 配送すると `EventPublished` が残る |
+
+定義の publish や定期実行の保存など、Execution を動かさない Command は監査イベントを残さない。
 
 ## 旧語として残る Workflow
 
