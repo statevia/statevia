@@ -6,6 +6,14 @@ alwaysApply: true
 
 実装とあわせて、**読み手が意図・契約・制約をコード外からも追える**ことを今後の標準とする。本文は日本語で記述する。
 
+## API ドキュメントの必須範囲
+
+- **必須**: プロダクトコードの C# の `public` / `internal` な型・メンバーと、TypeScript の `export` 宣言、および export した class / interface / type の公開メンバー。
+- **識別子が明白でも日本語で書く。** 付いているものと無いものを混在させない（例: `ExecutionId` には「実行 ID。」と書く）。有無を都度判断しない。
+- **任意**: `private`（TS では export しないもの）は、意図が自明でないときだけ書く。
+- **対象外**: EF Core のマイグレーション、ソース生成物（`*.g.cs` など。手書きの `[LoggerMessage]` の partial 宣言は対象）、テストプロジェクト（`*.Tests`、`nodejs/studio/tests/`）、`dotnet/tools/`、`dotnet/modules/local/`、`dotnet/core/engine/samples/`、`dotnet/tests/Fixtures/`。テストの日本語 `/// <summary>` とケース名は下の「何を書くか」に従う。
+- **既存の欠落**: プロジェクト単位で埋め戻す。埋め戻す前でも、**触った必須対象には付ける**（新しい欠落を増やさない）。
+
 ## いつ書くか
 
 - **新規・改修した公開 API**（`public` / `internal` / `export`）には、変更と同じ PR でドキュメントを付ける。
@@ -17,21 +25,45 @@ alwaysApply: true
 | 対象 | 最低限 |
 |------|--------|
 | クラス / モジュール | 目的、呼び出し元・利用コンテキスト、主要な振る舞い・制約（`<remarks>` / JSDoc の詳細ブロック可） |
-| メソッド / 関数 | 引数・戻り値・投げうる例外・副作用 |
+| メソッド / 関数 | 説明に加え、引数ごとの `<param>` / `@param`（`CancellationToken` も含む）、非 void の `<returns>` / `@returns`、契約として投げる例外・副作用 |
+| プロパティ / フィールド / enum 値 | 日本語の `<summary>` / 説明文。明白でも省かない |
+| インターフェース実装 / override | 本文を重ねず `<inheritdoc />`（TS は基底の JSDoc を継承できるならそれに従う） |
 | 定数（制限値など） | 値の意味と採用理由（推測でない根拠） |
 | private ヘルパー | コードだけでは分からない判定・正規化・防御的チェック |
 | テスト | 日本語 `/// <summary>` またはケース名で検証シナリオを明示 |
 
 ## 書かないもの
 
-- コードをそのまま言い換える行コメント（`// ファイルを開く` など）。
+- コードをそのまま言い換える**行コメント**（`// ファイルを開く` など）。API ドキュメントはこの禁止の対象外で、明白でも書く。
+- 空の `<summary></summary>` や説明の無い `/** */`、識別子を英語で繰り返すだけの説明（`ExecutionId` → 「Execution ID」）。
 - 実装と矛盾する・根拠のない remarks。
 - 機密情報（トークン、接続文字列、個人情報）。
+
+## 欠落の検出
+
+欠落は既存のビルドと lint で止める。**ドキュメント専用の CI ジョブ、コメント検査のためだけのビルド、Sonar の未ドキュメント API 規則は足さない。** 空タグや英語の繰り返しは機械では見ないので、レビューで拒否する。
+
+| 対象 | 手段 | 現状（2026-11-08） |
+|------|------|------|
+| C# `public` | `GenerateDocumentationFile` と CS1591。6 sln の Warning 0 に乗せる | `Statevia.Core.Application` と `Statevia.Core.Application.Contracts` は csproj の `NoWarn` で抑制中。`GenerateDocumentationFile` が無いプロダクト csproj が 4 つある |
+| C# `internal` | StyleCop.Analyzers のドキュメント欠落規則だけを warning にする。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない | 未導入。いまは機械で検出しない |
+| TS `export` と公開メンバー | ESLint の `jsdoc/require-jsdoc`（`npm run lint`、GitHub CI の UI lint ジョブ） | export 宣言は検出済み。公開メンバーと説明文の必須化は未設定 |
+
+抑制はプロジェクトの埋め戻しが終わってから外す。先に外すと Warning 0 が崩れる。
+
+## 検索の索引（Melore）
+
+Melore MCP（`.cursor/rules/melore-mcp-research.mdc`）は、`dotnet/**/*.cs` の XML ドキュメントのうち **`<summary>` と `<remarks>` の本文だけ**を全文検索の索引に入れる。エージェントはこの索引で仕様・実装・テストの所在を探すので、次のように書く。
+
+- 探されたい事柄（何をするか、守る契約、セキュリティ境界、上限、失敗時の振る舞い）は `<summary>` か `<remarks>` に書く。`<param>` / `<returns>` / `<exception>` は索引に入らないので、そこにしか無い契約は検索で見つからない。
+- 用語集の正とする語で書く（`.cursor/rules/ubiquitous-language.mdc`）。旧語の識別子（`WorkflowStarted` など）を説明するときは、正とする語も並べる。
+- `<inheritdoc />` だけのメンバーは索引に説明が入らない。検索はインターフェース側に当たるので、契約はインターフェースの `<summary>` / `<remarks>` に書く。実装にしか無い事情（キャッシュ、ロック、外部 I/O など）は、実装側に `<remarks>` を足す。
+- テストの `/// <summary>` も索引に入る。検証するシナリオを日本語で書く。
 
 ## 言語別の形式
 
 - **C#**: XML ドキュメント（`///`）。クラスは `<summary>` + 必要なら `<remarks>`（箇条書き・段落）。例外は `<exception>`。
-- **TypeScript / React**: JSDoc（`/** */`）。`export` には `@param` / `@returns` / 必要なら `@remarks`。
+- **TypeScript / React**: JSDoc（`/** */`）。`export` には説明文、`@param` / `@returns`、必要なら `@remarks`。
 - **Markdown 仕様**: `.cursor/skills/markdown-spec-authoring/SKILL.md` に従う。編集後は `markdownlint-cli2` で確認。
 
 ## 例（C# クラス）
