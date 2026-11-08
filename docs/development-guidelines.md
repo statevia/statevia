@@ -70,7 +70,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 - **コンストラクタ**: プライマリコンストラクタを優先する。
 - **分岐**: パターンマッチング・`switch` を優先し、`as` の多用を避ける。
 - **反復**: LINQ を主構文とし、`foreach` / `for` は可読性・性能上の理由が明確な場合に限る。
-- **XML ドキュメント**: `public` / `internal` の型・メンバーに `/// <summary>` 等を付ける。`private` は意図が自明でない箇所のみ。
+- **XML ドキュメント**: `public` / `internal` の型・メンバーに、識別子が明白でも日本語の `/// <summary>` 等を付ける。インターフェース実装と override は `<inheritdoc />`。`private` は意図が自明でない箇所のみ。範囲と検出の手段は **§4.3**。
 - **テスト**: メソッドごとに日本語の `/// <summary>` と **`// Arrange` / `// Act` / `// Assert`** 区切り。1 テスト 1 シナリオ（AAA）。
 - **セキュリティ**: 外部入力の検証、認可・テナント境界、機密情報の非出力（ログ・エラー応答含む）。
 - **共通のビルド設定**: `TargetFramework` / `Nullable` / `ImplicitUsings` と `Guid.NewGuid` の禁止（`dotnet/build/BannedGuidNewGuid.props`）は、`dotnet/Directory.Build.props` で全プロジェクトに効かせる。csproj には書かない。禁止から外すプロジェクト（Engine など）は、csproj で `StateviaAllowGuidNewGuid` を `true` にする。C# のイメージのビルドはコンポーネント別の `Directory.Build.props` をコピーしないため、イメージのビルドにも効かせる例外はそこに書かない。
@@ -84,7 +84,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 ### 4.2 TypeScript / React（UI）
 
-- **命名**: 意図が伝わる名前。`export` には JSDoc を付ける。書式は ESLint の `@typescript-eslint/naming-convention` で検出する（変数・関数は camelCase か PascalCase、型は PascalCase。オブジェクト・型のプロパティは API 契約に合わせるため対象外）。
+- **命名**: 意図が伝わる名前。`export` と、export した型の公開メンバーには日本語の JSDoc を付ける（**§4.3**）。書式は ESLint の `@typescript-eslint/naming-convention` で検出する（変数・関数は camelCase か PascalCase、型は PascalCase。オブジェクト・型のプロパティは API 契約に合わせるため対象外）。
 - **型**: ナローイングで表現し、`as` の多用を避ける。
 - **分岐**: `switch` / `Record` を優先する。
 - **データ変換**: `map` / `filter` / `reduce` 等の宣言的配列操作を主構文とする。
@@ -97,11 +97,14 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 
 **実装と同時にドキュメントを充実させる**。Markdown 固有の書き方は [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD.md)。
 
-- **公開 API**（C# の `public` / `internal`、TS の `export`）には、目的・引数・戻り値・例外（またはエラー条件）を記載する。
+- **公開 API**（C# の `public` / `internal`、TS の `export` と export した型の公開メンバー）には、**識別子が明白でも**日本語のドキュメントを付ける。付いているものと無いものを混在させない。目的・引数・戻り値・例外（またはエラー条件）を記載する。インターフェース実装と override は本文を重ねず `<inheritdoc />` にする。
+  - **対象外**: EF Core のマイグレーション、ソース生成物（手書きの `[LoggerMessage]` の partial 宣言は対象）、テストプロジェクトと `nodejs/studio/tests/`、`dotnet/tools/`、`dotnet/modules/local/`、`dotnet/core/engine/samples/`、`dotnet/tests/Fixtures/`。
+  - **既存の欠落**: プロジェクト単位で埋めてから、そのプロジェクトの抑制を外す。埋める前でも、触った箇所には付ける。
+  - **検出**: 既存のビルドと lint で止める。C# の `public` は CS1591（`GenerateDocumentationFile`）、`internal` は StyleCop.Analyzers のドキュメント欠落規則だけ、TS は ESLint の `jsdoc/require-jsdoc`。ドキュメント専用の CI ジョブと、Sonar の未ドキュメント API 規則は足さない。2026-11-08 時点では、Application と Application.Contracts が CS1591 を抑制しており、StyleCop は未導入、ESLint は export 宣言だけを見ている。
 - **クラス / モジュール単位**では、利用コンテキスト・セキュリティ・制限値・上書きなど、コードだけでは分かりにくい契約を `<remarks>` / JSDoc で補足する。
 - **定数（上限値など）**には、値の意味と採用理由を書く（推測や誤った技術的根拠は避ける）。
 - **テスト**には日本語で「何を検証するか」を `/// <summary>` またはケース名で残す。
-- **書かない**: 自明な処理の言い換えコメント、実装と矛盾する説明、機密情報。
+- **書かない**: 処理を言い換える行コメント（API ドキュメントはこの対象外で、明白でも書く）、空のタグや説明の無い JSDoc、識別子を英語で繰り返すだけの説明、実装と矛盾する説明、機密情報。空タグや英語の繰り返しは機械では見ないので、レビューで拒否する。
 - **仕様・運用に影響する変更**では、関連する `docs/` を依頼範囲内で整合させる。
 
 ### 4.4 リンター・ビルド警告・静的チェック
@@ -284,6 +287,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-11-08 | §4.1–4.3 に API ドキュメントの必須範囲（明白でも日本語）、対象外、検出の手段（CS1591・StyleCop のドキュメント欠落規則・ESLint。専用 CI は足さない）を追記 |
 | 2026-10-31 | C# を `dotnet/`、Studio を `nodejs/studio/` へ移したのに合わせ、パス・コマンド・共通設定の置き場所を更新 |
 | 2026-10-30 | §4.1 に、ルートの `Directory.Build.props`（共通のビルド設定）と `Directory.Packages.props`（パッケージ版の一元管理）を追記 |
 | 2026-10-26 | §4.3 に UI ESLint の `sonarjs` 導入・off にしたルールと理由、`jsx-a11y/prefer-tag-over-role` を追記 |
