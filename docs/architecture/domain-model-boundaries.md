@@ -136,6 +136,7 @@ flowchart LR
 - `docs/specifications/data-integration.md`
 - `docs/specifications/api-http.md`
 - [decisions/event-store.md](../decisions/event-store.md)
+- [reference/glossary.md](../reference/glossary.md)（用語と、コード・DB での書き方）
 
 ## 5. Action 実行プラットフォーム境界（Service API）
 

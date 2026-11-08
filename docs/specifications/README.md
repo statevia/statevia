@@ -24,7 +24,7 @@
 
 | ドキュメント | 領域 |
 | --- | --- |
-| [`execution/fsm.md`](execution/fsm.md) | FSM・状態機械・reducer |
+| [`execution/fsm.md`](execution/fsm.md) | FSM・ステータス |
 | [`execution/events-and-commands.md`](execution/events-and-commands.md) | イベント・コマンド |
 | [`execution/wait-cancel.md`](execution/wait-cancel.md) | Wait / Cancel |
 | [`execution/fork-join.md`](execution/fork-join.md) | Fork / Join |
