@@ -65,6 +65,8 @@ public static class DatabaseConnection
     /// <summary>
     /// <c>postgres://</c> 形式なら正規化し、それ以外はそのまま返す。
     /// </summary>
+    /// <param name="value">接続文字列。<c>postgres://</c> / <c>postgresql://</c> の URL 形式か、Npgsql のキー=値形式。</param>
+    /// <returns>Npgsql のキー=値形式の接続文字列。URL 形式でなければ <paramref name="value"/> のまま。</returns>
     public static string NormalizeConnectionString(string value) =>
         value.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
         || value.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
@@ -74,6 +76,9 @@ public static class DatabaseConnection
     /// <summary>
     /// <c>postgres://</c> / <c>postgresql://</c> を Npgsql のキー=値形式へ変換する。
     /// </summary>
+    /// <param name="url">変換する URL。</param>
+    /// <returns>Npgsql のキー=値形式の接続文字列。<c>postgres://</c> / <c>postgresql://</c> で始まらなければ <paramref name="url"/> のまま。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="url"/> が <see langword="null"/>。</exception>
     public static string NormalizePostgresUrl(string url)
     {
         ArgumentNullException.ThrowIfNull(url);

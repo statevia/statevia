@@ -19,6 +19,7 @@ public static class HttpUrlValidator
     /// <summary>HTTPS の公開到達可能 URL か検証する。</summary>
     /// <param name="url">検証対象 URL。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>許可できる URL なら正常に完了するタスク。</returns>
     /// <exception cref="ArgumentException">非 HTTPS、拒否対象ホスト、DNS 失敗・タイムアウトのとき。</exception>
     public static Task EnsureAllowedHttpsUrlAsync(string url, CancellationToken cancellationToken = default) =>
         EnsureAllowedHttpsUrlAsync(url, ResolveDnsAsync, cancellationToken);
@@ -27,6 +28,8 @@ public static class HttpUrlValidator
     /// <param name="url">検証対象 URL。</param>
     /// <param name="resolveAddressesAsync">ホスト名の A/AAAA 解決。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>許可できる URL なら正常に完了するタスク。</returns>
+    /// <exception cref="ArgumentException">非 HTTPS、拒否対象ホスト、DNS 失敗・タイムアウトのとき。</exception>
     internal static async Task EnsureAllowedHttpsUrlAsync(
         string url,
         Func<string, CancellationToken, Task<IPAddress[]>> resolveAddressesAsync,
@@ -73,6 +76,9 @@ public static class HttpUrlValidator
     }
 
     /// <summary>ホスト名をシステム DNS で解決する。</summary>
+    /// <param name="host">解決するホスト名。</param>
+    /// <param name="cancellationToken">キャンセル。打ち切り時間は呼び出し側が掛ける。</param>
+    /// <returns>解決できた A / AAAA のアドレス。</returns>
     internal static Task<IPAddress[]> ResolveDnsAsync(string host, CancellationToken cancellationToken) =>
         Dns.GetHostAddressesAsync(host, cancellationToken);
 

@@ -11,6 +11,7 @@ public static class NotificationServiceCollectionExtensions
     /// </summary>
     /// <param name="services">サービスコレクション。</param>
     /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>呼び出しをつなげるための <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaInfrastructureNotification(
         this IServiceCollection services,
         IConfiguration configuration)

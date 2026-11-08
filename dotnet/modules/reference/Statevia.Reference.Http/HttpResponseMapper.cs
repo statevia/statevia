@@ -8,6 +8,9 @@ internal static class HttpResponseMapper
     private const int MaxBodyBytes = 1_048_576;
 
     /// <summary>HTTP レスポンスを action 出力へ変換する。</summary>
+    /// <param name="response">変換する HTTP レスポンス。</param>
+    /// <param name="ct">本文の読み取りのキャンセル。</param>
+    /// <returns><c>statusCode</c>（数値）、<c>headers</c>（同名ヘッダは <c>, </c> で連結）、<c>body</c>（文字列。長すぎれば切り詰める）を持つ辞書。</returns>
     public static async Task<Dictionary<string, object?>> MapAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
