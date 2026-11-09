@@ -24,6 +24,18 @@ internal sealed class DefinitionService : IDefinitionService
     private readonly ICoreTransactionExecutor _executor;
     private readonly PrincipalResourceGrantAuthorization _resourceGrants;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="displayIds">表示用 ID の解決と採番に使うサービス。<see cref="IDisplayIdWriteService"/> も実装していること。</param>
+    /// <param name="compiler">定義の YAML をコンパイル・検証するサービス。</param>
+    /// <param name="definitions">定義のリポジトリ。</param>
+    /// <param name="projects">プロジェクトのリポジトリ。</param>
+    /// <param name="projectAuth">プロジェクトへのアクセスを認可するサービス。</param>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
+    /// <param name="runtimeAuth">権限キーで認可するポート。</param>
+    /// <param name="idGenerator">ID を採番するジェネレーター。</param>
+    /// <param name="executor">トランザクションの実行器。</param>
+    /// <param name="resourceGrants">Principal のリソース許可を評価する認可。</param>
+    /// <exception cref="InvalidOperationException"><paramref name="displayIds"/> が <see cref="IDisplayIdWriteService"/> を実装していないとき。</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S107:Methods should not have too many parameters",
@@ -54,6 +66,7 @@ internal sealed class DefinitionService : IDefinitionService
         _resourceGrants = resourceGrants;
     }
 
+    /// <inheritdoc />
     public async Task<DefinitionResponse> CreateAsync(CreateDefinitionRequest request, CancellationToken ct)
     {
         await EnsureDefinitionsWriteAsync(ct).ConfigureAwait(false);
@@ -147,6 +160,7 @@ internal sealed class DefinitionService : IDefinitionService
         };
     }
 
+    /// <inheritdoc />
     public async Task<PagedResult<DefinitionResponse>> ListPagedAsync(
         DefinitionListPageQuery query,
         CancellationToken ct)
@@ -219,6 +233,7 @@ internal sealed class DefinitionService : IDefinitionService
             ct).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<DefinitionResponse> UpdateAsync(
         string idOrUuid,
         UpdateDefinitionRequest request,
@@ -265,6 +280,7 @@ internal sealed class DefinitionService : IDefinitionService
             ct).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(string idOrUuid, CancellationToken ct)
     {
         await EnsureDefinitionsWriteAsync(ct).ConfigureAwait(false);
@@ -289,6 +305,7 @@ internal sealed class DefinitionService : IDefinitionService
             throw new NotFoundException(DefinitionValidationMessages.NotFound);
     }
 
+    /// <inheritdoc />
     public async Task<DefinitionResponse> RestoreAsync(string idOrUuid, CancellationToken ct)
     {
         await EnsureDefinitionsWriteAsync(ct).ConfigureAwait(false);

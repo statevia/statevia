@@ -5,8 +5,10 @@ namespace Statevia.Core.Application.Services;
 /// </summary>
 internal static class ExecutionValidationMessages
 {
+    /// <summary>定義が見つからないときのメッセージ。</summary>
     public const string DefinitionNotFound = "Definition not found";
 
+    /// <summary>Execution が見つからないときのメッセージ。</summary>
     public const string ExecutionNotFound = "Execution not found";
 
     /// <summary>保存版を現行コンパイラで Restore できないときの安定メッセージ。</summary>

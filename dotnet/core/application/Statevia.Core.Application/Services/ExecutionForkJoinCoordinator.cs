@@ -55,6 +55,7 @@ internal sealed class ExecutionForkJoinCoordinator(
     /// <param name="execution">親の投影行。</param>
     /// <param name="forkNodeId">Resume payload の nodeId（Fork 到達インスタンス）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>処理が終わると完了するタスク。</returns>
     public async Task HandleChildCompletedResumeAsync(
         Guid parentExecutionId,
         ExecutionRow execution,
@@ -150,6 +151,10 @@ internal sealed class ExecutionForkJoinCoordinator(
     /// 親グラフ上で、当該 Fork 訪問に対応する Join が既に SUCCEEDED か。
     /// </summary>
     /// <remarks>単体テストから到達するため internal。</remarks>
+    /// <param name="parentGraphJson">親の実行グラフ JSON。</param>
+    /// <param name="forkNodeId">Fork に到達したノードの ID。</param>
+    /// <param name="joinState">Fork に対応する Join の State 名。</param>
+    /// <returns>対応する Join ノードがあり、SUCCEEDED なら <see langword="true"/>。Join ノードが無ければ <see langword="false"/>。</returns>
     internal static bool IsPhysicalJoinAlreadyCompleted(
         string parentGraphJson,
         string forkNodeId,

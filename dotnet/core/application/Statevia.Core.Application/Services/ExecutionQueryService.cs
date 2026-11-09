@@ -149,6 +149,7 @@ internal sealed class ExecutionQueryService(
     /// <summary>指定 execution がテナントに存在することを検証する。</summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>存在を確かめ終わると完了するタスク。</returns>
     public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) =>
         executor.ExecuteReadOnlyAsync(
             async (uow, innerCt) =>

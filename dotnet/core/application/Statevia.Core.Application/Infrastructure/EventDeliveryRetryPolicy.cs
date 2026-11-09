@@ -37,6 +37,8 @@ internal static class EventDeliveryRetryPolicy
     /// <summary>
     /// タイムアウト・キャンセル系のため再試行しない例外かどうかを返す。
     /// </summary>
+    /// <param name="exception">判定する例外。</param>
+    /// <returns><see cref="OperationCanceledException"/>・<see cref="TaskCanceledException"/>・<see cref="TimeoutException"/> なら <see langword="true"/>。</returns>
     internal static bool IsNonRetryableTimeoutOrCancellation(Exception exception) =>
         exception is OperationCanceledException or TaskCanceledException or TimeoutException;
 
@@ -44,6 +46,8 @@ internal static class EventDeliveryRetryPolicy
     /// <see cref="DbUpdateException"/> が一意制約違反（重複キー）に起因するか。
     /// <see cref="Exception.InnerException"/> チェーン上のプロバイダ例外を走査する。
     /// </summary>
+    /// <param name="exception">EF Core の更新例外。</param>
+    /// <returns>内部例外のどれかが一意制約違反なら <see langword="true"/>。</returns>
     internal static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         EnumerateInnerExceptions(exception).Any(e =>
             IsPostgresUniqueViolation(e)
@@ -55,6 +59,8 @@ internal static class EventDeliveryRetryPolicy
     /// Serializable 分離レベルや並行更新に起因する、再試行で解消されうる PostgreSQL 競合か。
     /// <see cref="DbUpdateException"/> の内部例外チェーンを走査する。
     /// </summary>
+    /// <param name="exception">判定する例外。内部例外もたどる。</param>
+    /// <returns>シリアライズ失敗かデッドロックの PostgreSQL 例外が含まれれば <see langword="true"/>。</returns>
     internal static bool IsPostgresSerializableOrDeadlockConflict(Exception exception) =>
         EnumerateExceptionAndInner(exception).Any(e =>
             IsPostgresSqlState(e, PostgresSerializationFailureSqlState)
@@ -94,6 +100,11 @@ internal static class EventDeliveryRetryPolicy
     /// <summary>
     /// 指数バックオフに基づく待機時間（ミリ秒）。<paramref name="failureIndex"/> は 0 始まり（初回失敗後は 0）。
     /// </summary>
+    /// <remarks><c>BaseDelayMs × 2^failureIndex</c> を <c>MaxDelayMs</c> で頭打ちにする。ジッターが有効なら、その値の半分以上・その値以下の範囲で乱数にする。</remarks>
+    /// <param name="failureIndex">何回目の失敗か（0 始まり）。0 以上であること。</param>
+    /// <param name="options">基準の待機時間・上限・ジッターの設定。</param>
+    /// <param name="random">ジッターに使う乱数。</param>
+    /// <returns>次の再試行までの待機時間（ミリ秒）。</returns>
     internal static int ComputeBackoffDelayMs(int failureIndex, EventDeliveryRetryOptions options, Random random)
     {
         Debug.Assert(failureIndex >= 0, "failureIndex must be non-negative.");
@@ -116,6 +127,8 @@ internal static class EventDeliveryRetryPolicy
     /// <summary>
     /// 再試行に値する一時的な障害か。一意制約・タイムアウトは含めない。
     /// </summary>
+    /// <param name="exception">判定する例外。</param>
+    /// <returns>一時的な PostgreSQL / Npgsql の障害か <see cref="IOException"/> なら <see langword="true"/>。一意制約違反・タイムアウト・キャンセルは <see langword="false"/>。</returns>
     internal static bool IsTransientInfrastructureFailure(Exception exception)
     {
         if (IsNonRetryableTimeoutOrCancellation(exception))

@@ -648,6 +648,7 @@ internal sealed class ExecutionLifecycleCommandService(
     /// <param name="requestContext">HTTP / Worker 文脈。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">実行が見つからないとき。</exception>
+    /// <returns>キャンセルの受け付けが終わると完了するタスク。</returns>
     public async Task CancelAsync(
         string idOrUuid,
         string? idempotencyKey,
@@ -1231,6 +1232,7 @@ internal sealed class ExecutionLifecycleCommandService(
     /// </summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>投影の更新が終わると完了するタスク。</returns>
     public async Task MarkUnstartedPermanentFailureAsync(Guid executionId, CancellationToken ct)
     {
         await authorization.EnsureExecutionsWriteAsync(ct).ConfigureAwait(false);
@@ -1262,6 +1264,7 @@ internal sealed class ExecutionLifecycleCommandService(
     /// </summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>投影の更新が終わると完了するタスク。</returns>
     public async Task MarkUnclassifiedAttemptLimitAsync(Guid executionId, CancellationToken ct)
     {
         await authorization.EnsureExecutionsWriteAsync(ct).ConfigureAwait(false);

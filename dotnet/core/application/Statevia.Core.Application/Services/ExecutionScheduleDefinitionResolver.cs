@@ -40,6 +40,7 @@ internal sealed class ExecutionScheduleDefinitionResolver(
     /// <param name="definitionId">スケジュールの定義。</param>
     /// <param name="cancellationToken">キャンセル。</param>
     /// <exception cref="ApiValidationException">定義が論理削除済みのとき。<c>field=definitionId</c>。</exception>
+    /// <returns>確かめ終わると完了するタスク。</returns>
     public Task EnsureDefinitionNotDeletedAsync(
         Guid tenantId,
         Guid definitionId,
@@ -66,6 +67,7 @@ internal sealed class ExecutionScheduleDefinitionResolver(
     /// <param name="cancellationToken">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
     /// <exception cref="ApiValidationException">所属が無い、または executor 未満のとき。<c>field=runAsPrincipalId</c>。</exception>
+    /// <returns>確かめ終わると完了するタスク。</returns>
     public Task EnsureRunAsCanExecuteOnDefinitionAsync(
         Guid tenantId,
         Guid runAsPrincipalId,

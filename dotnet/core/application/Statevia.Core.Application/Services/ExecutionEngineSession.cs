@@ -37,6 +37,7 @@ internal sealed class ExecutionEngineSession(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="ArgumentException">終端未ロード、checkpoint 欠落、または二重 hydrate。</exception>
     /// <exception cref="InvalidOperationException">定義バージョン欠落または checkpoint 不正。</exception>
+    /// <returns>Engine にランタイムが載ると完了するタスク。</returns>
     public async Task EnsureEngineRuntimeLoadedForMutationAsync(
         Guid executionId,
         ExecutionRow execution,

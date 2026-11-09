@@ -3,6 +3,7 @@ namespace Statevia.Core.Application.Services;
 /// <summary>Principal の Identity（Live）検証。</summary>
 internal static class PrincipalIdentityAuthorization
 {
+    /// <summary>Principal が無効・論理削除済みのときの <see cref="ForbiddenException"/> のエラーコード。</summary>
     internal const string PrincipalInactiveCode = "PRINCIPAL_INACTIVE";
 
     /// <summary>

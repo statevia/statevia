@@ -13,6 +13,10 @@ internal static class JsonDeserialize
     /// <see cref="JsonSerializer.Deserialize{T}(string, JsonSerializerOptions?)"/> を試し、復元処理で想定する例外のみ失敗として扱う。
     /// </summary>
     /// <returns><c>true</c> のとき復帰値を解釈可能（入力が JSON の <c>null</c> であれば <paramref name="value"/> は既定の参照型どおりになりうる）。</returns>
+    /// <typeparam name="T">復元する型。</typeparam>
+    /// <param name="json">JSON 文字列。null は許さない。</param>
+    /// <param name="options">逆シリアライズの設定。</param>
+    /// <param name="value">復元した値。失敗時は既定値。</param>
     internal static bool TryDeserialize<T>(
         string json,
         JsonSerializerOptions? options,

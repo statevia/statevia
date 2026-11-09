@@ -17,6 +17,8 @@ internal static partial class ExecutionServiceLogMessages
     /// <summary>
     /// Serializable 永続化リトライを記録する。
     /// </summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="details">ログに載せる構造化プロパティ。</param>
     public static void SerializablePersistRetry(this ILogger logger, SerializablePersistRetryDetails details) =>
         SerializablePersistRetry(
             logger,
@@ -51,6 +53,8 @@ internal static partial class ExecutionServiceLogMessages
     /// <summary>
     /// イベント配送 dedup の Information ログを記録する。
     /// </summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="details">ログに載せる構造化プロパティ。</param>
     public static void EventDeliveryDecisionInformation(
         this ILogger logger,
         EventDeliveryDecisionDetails details) =>
@@ -87,6 +91,9 @@ internal static partial class ExecutionServiceLogMessages
     /// <summary>
     /// イベント配送 dedup の Warning ログを記録する。
     /// </summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="ex">記録する例外。</param>
+    /// <param name="details">ログに載せる構造化プロパティ。</param>
     public static void EventDeliveryDecisionWarning(
         this ILogger logger,
         Exception ex,
@@ -126,6 +133,9 @@ internal static partial class ExecutionServiceLogMessages
     /// <summary>
     /// イベント配送 dedup の Error ログを記録する。
     /// </summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="ex">記録する例外。</param>
+    /// <param name="details">ログに載せる構造化プロパティ。</param>
     public static void EventDeliveryDecisionError(
         this ILogger logger,
         Exception ex,

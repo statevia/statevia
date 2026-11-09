@@ -45,12 +45,14 @@ internal sealed class ExecutionProjectionOrchestrator(
     /// <summary>投影キューを drain する。</summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>drain が終わると完了するタスク。</returns>
     public Task DrainAsync(Guid executionId, CancellationToken ct) =>
         _projectionUpdateQueue.DrainAsync(executionId, ct);
 
     /// <summary>投影キューへ enqueue する。</summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>enqueue が終わると完了するタスク。</returns>
     public Task EnqueueAsync(Guid executionId, CancellationToken ct) =>
         _projectionUpdateQueue.EnqueueAsync(executionId, ct);
 
@@ -118,6 +120,7 @@ internal sealed class ExecutionProjectionOrchestrator(
     /// <param name="graphJson">グラフ JSON。</param>
     /// <param name="nodeIdToClear">クリア対象 Wait nodeId。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>同期が終わると完了するタスク。</returns>
     public Task SyncOperationalProjectionAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -152,6 +155,7 @@ internal sealed class ExecutionProjectionOrchestrator(
     /// <param name="discardOrRefreshRuntimeCheckpointAsync">破棄または所有中 refresh。</param>
     /// <param name="upsertRuntimeCheckpointAsync">runtime checkpoint upsert。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>投影の更新が終わると完了するタスク。</returns>
     public async Task UpdateProjectionFromEngineAsync(
         Guid executionId,
         Func<Guid, string, string, CancellationToken, Task<bool>> shouldDiscardRuntimeCheckpointAsync,

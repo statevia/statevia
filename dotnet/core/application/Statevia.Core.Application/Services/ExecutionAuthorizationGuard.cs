@@ -27,17 +27,20 @@ internal sealed class ExecutionAuthorizationGuard(
 {
     /// <summary>Runtime の executions:read を要求する。</summary>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureExecutionsReadAsync(CancellationToken ct) =>
         runtimeAuth.EnsurePermissionAsync(RuntimePermissionRequirements.ExecutionsRead, ct);
 
     /// <summary>Runtime の executions:write を要求する。</summary>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureExecutionsWriteAsync(CancellationToken ct) =>
         runtimeAuth.EnsurePermissionAsync(RuntimePermissionRequirements.ExecutionsWrite, ct);
 
     /// <summary>実行行の security snapshot に基づきミューテーション権限を要求する。</summary>
     /// <param name="execution">実行投影行。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureExecutionMutationWriteAsync(ExecutionRow execution, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(execution);
@@ -53,6 +56,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="definitionId">定義 ID。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が見つからない、または論理削除済みのとき。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureCanExecuteOnDefinitionAsync(
         Guid tenantId,
         Guid definitionId,
@@ -79,6 +83,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public async Task EnsureCanReadOnDefinitionAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -104,6 +109,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が無い、または Project 未所属のとき。</exception>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureCanReadOnDefinitionAsync(Guid tenantId, Guid definitionId, CancellationToken ct) =>
         executor.ExecuteReadOnlyAsync(
             (uow, innerCt) => EnsureCanReadOnDefinitionAsync(uow, tenantId, definitionId, innerCt),
@@ -119,6 +125,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義行が無い、または Project 未所属のとき。</exception>
     /// <exception cref="ForbiddenException">所属が executor 未満のとき。コードは <c>PROJECT_ACCESS_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureCanExecuteOnDefinitionIncludingDeletedAsync(
         Guid tenantId,
         Guid definitionId,
@@ -150,6 +157,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public async Task EnsureResourceGrantAsync(Guid tenantId, Guid definitionId, CancellationToken ct)
     {
         var projectId = await RequireProjectIdAsync(tenantId, definitionId, ct).ConfigureAwait(false);
@@ -164,6 +172,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義が見つからないとき。</exception>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public async Task EnsureResourceGrantForPrincipalAsync(
         Guid tenantId,
         Guid principalId,
@@ -183,6 +192,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義行が無いとき。</exception>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public async Task EnsureResourceGrantForExistingExecutionAsync(
         Guid tenantId,
         Guid definitionId,
@@ -215,6 +225,7 @@ internal sealed class ExecutionAuthorizationGuard(
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">定義行が無い、または Project 未所属のとき。</exception>
     /// <exception cref="ForbiddenException">所属が executor 未満のとき。コードは <c>PROJECT_ACCESS_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureCanMutateOnExecutionProjectAsync(
         Guid tenantId,
         Guid definitionId,
