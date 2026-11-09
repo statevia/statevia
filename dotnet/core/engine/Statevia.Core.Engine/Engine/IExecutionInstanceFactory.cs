@@ -12,5 +12,6 @@ public interface IExecutionInstanceFactory
     /// </summary>
     /// <param name="definition">コンパイル済みワークフロー定義。</param>
     /// <param name="executionId">エンジン内キー（通常は GUID 既定書式）。</param>
+    /// <returns>生成した実行インスタンス。</returns>
     ExecutionInstance Create(CompiledWorkflowDefinition definition, string executionId);
 }

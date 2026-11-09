@@ -8,6 +8,8 @@ namespace Statevia.Core.Engine.Engine;
 public static class ExecutionSnapshotExtensions
 {
     /// <summary>ワークフローインスタンスのスナップショットを取得します。</summary>
+    /// <param name="instance">実行インスタンス。</param>
+    /// <returns>スナップショット。</returns>
     public static ExecutionSnapshot ToSnapshot(this ExecutionInstance instance)
     {
         ArgumentNullException.ThrowIfNull(instance);

@@ -8,7 +8,9 @@ internal readonly record struct StateInputWarning(string InputKey, string Reason
 /// <summary>input 評価の結果値と警告一覧。</summary>
 internal sealed class StateInputEvaluationResult
 {
+    /// <summary>input を評価した値。</summary>
     public object? Value { get; init; }
+    /// <summary>評価中に出た警告。無ければ空。</summary>
     public IReadOnlyList<StateInputWarning> Warnings { get; init; } = Array.Empty<StateInputWarning>();
 }
 
@@ -30,6 +32,7 @@ internal static class StateInputEvaluator
     /// <param name="spec">状態の input 定義。null のとき候補 input をそのまま返す。</param>
     /// <param name="context">評価根となる Execution Context。</param>
     /// <param name="candidateInput">input 未定義時に渡す候補（直前 output 等）。</param>
+    /// <returns>評価した値と警告。</returns>
     public static StateInputEvaluationResult ApplyWithDiagnostics(
         StateInputDefinition? spec,
         WorkflowExecutionContext context,
@@ -74,6 +77,10 @@ internal static class StateInputEvaluator
     }
 
     /// <summary>診断付き評価の値のみを返す。</summary>
+    /// <param name="spec">状態の input 定義。null のとき候補 input をそのまま返す。</param>
+    /// <param name="context">評価の起点にする Execution Context。</param>
+    /// <param name="candidateInput">input 未定義時に渡す候補（直前の output など）。</param>
+    /// <returns>評価した値。警告は捨てる。</returns>
     public static object? Apply(
         StateInputDefinition? spec,
         WorkflowExecutionContext context,

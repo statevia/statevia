@@ -11,5 +11,7 @@ public interface IDefinitionLoader
     /// <summary>コンテンツをパースしてワークフロー定義を返す。</summary>
     /// <exception cref="ArgumentException">形式が不正な場合。</exception>
     /// <exception cref="InvalidOperationException">パースに失敗した場合。</exception>
+    /// <param name="content">ワークフロー定義のテキスト。</param>
+    /// <returns>パースしたワークフロー定義。</returns>
     WorkflowDefinition Load(string content);
 }

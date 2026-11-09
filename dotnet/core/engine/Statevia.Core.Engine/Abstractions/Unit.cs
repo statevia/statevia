@@ -21,8 +21,12 @@ public readonly struct Unit : IEquatable<Unit>
     public override string ToString() => "()";
 
     /// <summary>2 つの <see cref="Unit"/> が等しいかどうかを返す（常に true）。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator ==(Unit left, Unit right) => true;
 
     /// <summary>2 つの <see cref="Unit"/> が異なるかどうかを返す（常に false）。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator !=(Unit left, Unit right) => false;
 }

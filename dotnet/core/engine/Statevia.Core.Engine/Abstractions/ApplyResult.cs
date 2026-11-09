@@ -31,8 +31,12 @@ public readonly struct ApplyResult : IEquatable<ApplyResult>
     public override int GetHashCode() => _alreadyApplied ? 1 : 0;
 
     /// <summary>等価演算子。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator ==(ApplyResult left, ApplyResult right) => left.Equals(right);
 
     /// <summary>非等価演算子。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator !=(ApplyResult left, ApplyResult right) => !left.Equals(right);
 }

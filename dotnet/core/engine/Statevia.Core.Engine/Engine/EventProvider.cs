@@ -51,6 +51,7 @@ public sealed partial class EventProvider : IEventProvider
     /// <param name="eventNames">許可イベント。</param>
     /// <param name="notifySuspend">登録後に <see cref="OnNodeWaitRegistered"/> を呼ぶか（復元時は false）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>受け取ったイベント名を返すタスク。</returns>
     public Task<string> WaitForEventAsync(
         string nodeId,
         IReadOnlyList<string> eventNames,

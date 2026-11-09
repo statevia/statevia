@@ -172,6 +172,7 @@ public sealed class JoinTracker : IJoinTracker
     }
 
     /// <summary>可変状態をチェックポイントへエクスポートする。</summary>
+    /// <returns>Join の追跡状態の断面。</returns>
     public CheckpointJoinData ExportCheckpoint()
     {
         lock (_lock)

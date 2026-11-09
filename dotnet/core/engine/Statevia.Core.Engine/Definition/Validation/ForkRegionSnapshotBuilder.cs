@@ -47,6 +47,10 @@ internal static class ForkRegionSnapshotBuilder
     }
 
     /// <summary>供給辺だけで <paramref name="from"/> から <paramref name="to"/> へ到達できるか。</summary>
+    /// <param name="outgoing">状態名 → その状態から出る制御辺の一覧。</param>
+    /// <param name="from">始点の状態名。</param>
+    /// <param name="to">行き先の状態名。</param>
+    /// <returns>到達できれば <see langword="true"/>。<paramref name="from"/> と <paramref name="to"/> が同じなら <see langword="true"/>。</returns>
     public static bool SupplyReaches(
         IReadOnlyDictionary<string, IReadOnlyList<ControlEdge>> outgoing,
         string from,
@@ -56,6 +60,11 @@ internal static class ForkRegionSnapshotBuilder
     }
 
     /// <summary><paramref name="from"/> から <paramref name="to"/> へ制御辺で到達できるか。</summary>
+    /// <param name="outgoing">状態名 → その状態から出る制御辺の一覧。</param>
+    /// <param name="from">始点の状態名。</param>
+    /// <param name="to">行き先の状態名。</param>
+    /// <param name="supplyOnly"><see langword="true"/> なら Join 供給に数える辺（Failed 以外）だけをたどる。</param>
+    /// <returns>到達できれば <see langword="true"/>。<paramref name="from"/> と <paramref name="to"/> が同じなら <see langword="true"/>。</returns>
     public static bool Reaches(
         IReadOnlyDictionary<string, IReadOnlyList<ControlEdge>> outgoing,
         string from,

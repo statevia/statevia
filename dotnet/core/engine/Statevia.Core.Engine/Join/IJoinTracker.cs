@@ -7,12 +7,23 @@ namespace Statevia.Core.Engine.Join;
 public interface IJoinTracker
 {
     /// <summary>状態の事実と出力を記録し、完了ポリシーを満たした Join 状態名を返します。満たしていなければ null。</summary>
+    /// <param name="stateName">状態名。</param>
+    /// <param name="fact">状態が返した Fact。</param>
+    /// <param name="output">状態の出力。</param>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <returns>完了ポリシーを満たした Join の状態名。満たしていなければ <see langword="null"/>。</returns>
     string? RecordFact(string stateName, string fact, object? output, string? nodeId = null);
     /// <summary>完了ポリシー判定に使われる依存状態のうち、Completed の出力を Join 実行入力として取得します。</summary>
+    /// <param name="joinStateName">Join の状態名。</param>
+    /// <returns>依存状態名 → Completed の出力。</returns>
     IReadOnlyDictionary<string, object?> GetJoinInputs(string joinStateName);
     /// <summary>Join 状態へ合流した依存ノードの実行ノード ID 一覧を取得します。</summary>
+    /// <param name="joinStateName">Join の状態名。</param>
+    /// <returns>合流した依存ノードの ID の一覧。</returns>
     IReadOnlyList<string> GetJoinSourceNodeIds(string joinStateName);
     /// <summary>Join 状態が完了ポリシーを満たして実行可能かを判定し、未実行なら開始済みとしてマークします。</summary>
+    /// <param name="joinStateName">Join の状態名。</param>
+    /// <returns>完了ポリシーを満たしていて、まだ実行していなければ <see langword="true"/>。</returns>
     bool TryBeginJoinExecution(string joinStateName);
 
     /// <summary>

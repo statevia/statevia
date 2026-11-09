@@ -19,12 +19,15 @@ public sealed class TransitionResult
 
     /// <summary>指定状態へ進む next 遷移の結果を返す。</summary>
     /// <param name="next">次の状態名。</param>
+    /// <returns>next 遷移の結果。</returns>
     public static TransitionResult ToNext(string next) => new() { HasTransition = true, Next = next };
 
     /// <summary>指定ブランチへ進む fork 遷移の結果を返す。</summary>
     /// <param name="fork">並列開始する状態名の一覧。</param>
+    /// <returns>fork 遷移の結果。</returns>
     public static TransitionResult ToFork(IReadOnlyList<string> fork) => new() { HasTransition = true, Fork = fork };
 
     /// <summary>ワークフロー終端へ進む結果を返す。</summary>
+    /// <returns>終端へ進む結果。</returns>
     public static TransitionResult ToEnd() => new() { HasTransition = true, End = true };
 }

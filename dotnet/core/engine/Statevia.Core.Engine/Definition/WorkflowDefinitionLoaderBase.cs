@@ -46,12 +46,17 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
     }
 
     /// <summary>デシリアライズ済みルートオブジェクトから定義を構築する。</summary>
+    /// <param name="root">デシリアライズ済みのルートオブジェクト。</param>
+    /// <returns>構築したワークフロー定義。</returns>
     protected abstract WorkflowDefinition BuildDefinition(Dictionary<string, object?> root);
 
     /// <summary>
     /// 厳格仕様の input マッピングを解釈する。
     /// ${...} は拒否し、$. パスは単純 JSONPath 制約で検証する。
     /// </summary>
+    /// <param name="inputVal">定義 YAML の input の値（文字列またはマップ）。null なら input 未定義。</param>
+    /// <param name="ownerLabel">例外メッセージに付けるオーナーの表示名（ノード ID など）。null・空白なら付けない。</param>
+    /// <returns>解釈した input 定義。<paramref name="inputVal"/> が null なら <see langword="null"/>。</returns>
     protected static StateInputDefinition? ParseStrictInputMapping(object? inputVal, string? ownerLabel = null)
     {
         if (inputVal == null)
@@ -595,6 +600,9 @@ public abstract class WorkflowDefinitionLoaderBase : IDefinitionLoader
     /// <summary>
     /// ローダー由来の例外メッセージにオーナー文脈（ノード id 等）を付与する。
     /// </summary>
+    /// <param name="ownerLabel">例外メッセージに付けるオーナーの表示名（ノード ID など）。null・空白なら付けない。</param>
+    /// <param name="message">例外メッセージ。</param>
+    /// <returns><paramref name="ownerLabel"/> があれば <c>Node '{ownerLabel}': </c> を前に付けたメッセージ。</returns>
     protected static string Format(string? ownerLabel, string message) =>
         string.IsNullOrWhiteSpace(ownerLabel) ? message : $"Node '{ownerLabel}': {message}";
 }

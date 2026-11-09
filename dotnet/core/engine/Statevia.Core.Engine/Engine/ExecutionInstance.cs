@@ -273,20 +273,26 @@ public sealed class ExecutionInstance : IDisposable
     /// <summary>
     /// <paramref name="clientEventId"/> を Publish 冪等集合へ未登録なら登録し true。既登録なら false。
     /// </summary>
+    /// <param name="clientEventId">クライアントイベント ID。</param>
+    /// <returns>新しく登録したら <see langword="true"/>。登録済みなら <see langword="false"/>。</returns>
     internal bool TryRegisterPublishClientEventId(Guid clientEventId) =>
         _appliedPublishClientEventIds.TryAdd(clientEventId, 0);
 
     /// <summary>Publish 冪等集合から <paramref name="clientEventId"/> を取り除く（発行失敗時の巻き戻し用）。</summary>
+    /// <param name="clientEventId">クライアントイベント ID。</param>
     internal void RemovePublishClientEventId(Guid clientEventId) =>
         _appliedPublishClientEventIds.TryRemove(clientEventId, out _);
 
     /// <summary>
     /// <paramref name="clientEventId"/> を Cancel 冪等集合へ未登録なら登録し true。既登録なら false。
     /// </summary>
+    /// <param name="clientEventId">クライアントイベント ID。</param>
+    /// <returns>新しく登録したら <see langword="true"/>。登録済みなら <see langword="false"/>。</returns>
     internal bool TryRegisterCancelClientEventId(Guid clientEventId) =>
         _appliedCancelClientEventIds.TryAdd(clientEventId, 0);
 
     /// <summary>チェックポイント用にランタイム状態をエクスポートする。</summary>
+    /// <returns>ランタイムのチェックポイント。</returns>
     internal ExecutionRuntimeCheckpoint ExportRuntimeCheckpoint()
     {
         lock (_lock)
