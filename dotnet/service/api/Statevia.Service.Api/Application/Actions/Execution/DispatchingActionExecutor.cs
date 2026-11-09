@@ -20,6 +20,12 @@ internal sealed class DispatchingActionExecutor : IActionExecutor
     /// <summary>
     /// ディスパッチャを構築する。
     /// </summary>
+    /// <param name="catalog">action のカタログ。</param>
+    /// <param name="visibilityResolver">テナントから見える action を決めるリゾルバー。</param>
+    /// <param name="executionPolicy">action の実行モードを決めるポリシー。</param>
+    /// <param name="backendSelector">実行モードに応じたバックエンドを選ぶセレクター。</param>
+    /// <param name="hostEnvironment">ホスト環境。</param>
+    /// <param name="policyOptions">action の実行ポリシーの設定。</param>
     public DispatchingActionExecutor(
         IActionCatalog catalog,
         IActionVisibilityResolver visibilityResolver,

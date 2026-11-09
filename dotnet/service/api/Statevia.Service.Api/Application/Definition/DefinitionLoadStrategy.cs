@@ -11,6 +11,9 @@ internal sealed class DefinitionLoadStrategy : IDefinitionLoadStrategy
     private readonly StateWorkflowDefinitionLoader _statesLoader;
     private readonly NodesWorkflowDefinitionLoader _nodesLoader;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="statesLoader">states 形式の定義のローダー。</param>
+    /// <param name="nodesLoader">nodes 形式の定義のローダー。</param>
     public DefinitionLoadStrategy(StateWorkflowDefinitionLoader statesLoader, NodesWorkflowDefinitionLoader nodesLoader)
     {
         _statesLoader = statesLoader ?? throw new ArgumentNullException(nameof(statesLoader));

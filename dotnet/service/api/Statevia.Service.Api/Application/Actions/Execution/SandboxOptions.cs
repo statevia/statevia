@@ -68,6 +68,7 @@ internal sealed class SandboxOptions
     public DockerSandboxOptions Docker { get; set; } = new();
 
     /// <summary>設定値から <see cref="SandboxLimits"/> を生成する。</summary>
+    /// <returns>サンドボックスの制限値。</returns>
     public SandboxLimits ToLimits() =>
         new(CpuLimit, MemoryLimitMiB, TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null);
 }

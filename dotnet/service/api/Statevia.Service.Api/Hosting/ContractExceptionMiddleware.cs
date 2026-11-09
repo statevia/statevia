@@ -14,9 +14,12 @@ internal sealed class ContractExceptionMiddleware
     private readonly RequestDelegate _next;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="next">パイプラインの次のミドルウェア。</param>
     public ContractExceptionMiddleware(RequestDelegate next) => _next = next;
 
     /// <summary>リクエストパイプラインを実行する。</summary>
+    /// <param name="context">HTTP の文脈。</param>
+    /// <returns>後続の処理が終わると完了するタスク。</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         try

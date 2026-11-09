@@ -10,8 +10,15 @@ internal sealed class TraceContextEnrichmentMiddleware
 {
     private readonly RequestDelegate _next;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="next">パイプラインの次のミドルウェア。</param>
     public TraceContextEnrichmentMiddleware(RequestDelegate next) => _next = next;
 
+    /// <summary>ルートからドメイン ID を取り出してログと応答の <c>tracestate</c> に載せ、次へ渡す。</summary>
+    /// <param name="context">HTTP の文脈。</param>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="optionsAccessor">リクエストログの設定。</param>
+    /// <returns>後続の処理が終わると完了するタスク。</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Critical Code Smell",
         "S3776:Cognitive Complexity of methods should not be too high",
@@ -69,6 +76,9 @@ internal sealed class TraceContextEnrichmentMiddleware
         await _next(context).ConfigureAwait(false);
     }
 
+    /// <summary>ルートから Execution・定義・グラフの ID を取り出す。</summary>
+    /// <param name="ctx">HTTP の文脈。</param>
+    /// <returns>Execution・定義・グラフの ID。ルートに無いものは null。</returns>
     internal static (string? wf, string? def, string? graph) ExtractDomainIds(HttpContext ctx)
     {
         var path = ctx.Request.Path.Value ?? "";
@@ -92,6 +102,11 @@ internal sealed class TraceContextEnrichmentMiddleware
             ? value.ToString()
             : null;
 
+    /// <summary>ドメイン ID から <c>tracestate</c> の不透明値（<c>w=…|d=…|g=…</c>）を作る。</summary>
+    /// <param name="wf">Execution の表示用 ID。無ければ null。</param>
+    /// <param name="def">定義の表示用 ID。無ければ null。</param>
+    /// <param name="graph">グラフ ID。無ければ null。</param>
+    /// <returns>不透明値（上限 200 文字）。ID がどれも無ければ <see langword="null"/>。</returns>
     internal static string? BuildTracestateOpaque(string? wf, string? def, string? graph)
     {
         if (string.IsNullOrEmpty(wf) && string.IsNullOrEmpty(def) && string.IsNullOrEmpty(graph))

@@ -12,6 +12,8 @@ namespace Statevia.Service.Api.Controllers;
 public sealed class AdminProjectsController(IProjectService projects) : ControllerBase
 {
     /// <summary>GET /v1/admin/projects — テナント内の全 Project。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とテナント内の全 Project。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProjectResponse>>> List(CancellationToken ct) =>

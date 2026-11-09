@@ -251,6 +251,7 @@ internal sealed class InMemoryActionCatalog : IActionCatalog
     /// <summary>Capability メタデータを取得する。</summary>
     /// <param name="actionId">参照 actionId。</param>
     /// <param name="metadata">取得したメタデータ。</param>
+    /// <returns>登録されていれば <see langword="true"/>。</returns>
     public bool TryGetCapabilityMetadata(
         string actionId,
         [NotNullWhen(true)] out ActionCapabilityMetadata? metadata)

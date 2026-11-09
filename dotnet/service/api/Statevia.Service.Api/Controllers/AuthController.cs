@@ -13,6 +13,8 @@ public sealed class AuthController : ControllerBase
     private readonly ITenantContextAccessor _tenantContext;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="authService">認証サービス。</param>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
     public AuthController(IAuthService authService, ITenantContextAccessor tenantContext)
     {
         _authService = authService;
@@ -20,6 +22,9 @@ public sealed class AuthController : ControllerBase
     }
 
     /// <summary>POST /v1/auth/login — パスワードログイン。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とJWT。</returns>
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request, CancellationToken ct)
@@ -29,6 +34,8 @@ public sealed class AuthController : ControllerBase
     }
 
     /// <summary>GET /v1/auth/me — 認証済み Principal 情報。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と認証済み Principal の情報。</returns>
     [HttpGet("me")]
     [ProducesResponseType(typeof(AuthMeResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<AuthMeResponse>> Me(CancellationToken ct)
@@ -42,6 +49,9 @@ public sealed class AuthController : ControllerBase
     }
 
     /// <summary>PUT /v1/auth/me/password — 本人パスワード更新。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPut("me/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ChangeOwnPassword(

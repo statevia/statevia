@@ -23,6 +23,9 @@ public class GraphsController : ControllerBase
     }
 
     /// <summary>GET /v1/graphs/{graphId} — 契約 4.1 Graph Definition（nodes / edges）を返す。graphId は definition の display_id。</summary>
+    /// <param name="graphId">グラフ ID（定義の表示用 ID）。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とグラフ定義。</returns>
     [HttpGet("{graphId}")]
     [ProducesResponseType(typeof(GraphDefinitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<GraphDefinitionResponse>> GetByGraphId(

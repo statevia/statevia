@@ -28,6 +28,8 @@ public class ActionSchemasController : ControllerBase
     /// <summary>
     /// GET /v1/actions/schema — 登録 action 一覧と descriptor 概要を返す。
     /// </summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>200 とaction の一覧。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ActionSchemaListResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ActionSchemaListResponse>> GetList(CancellationToken cancellationToken)
@@ -42,6 +44,8 @@ public class ActionSchemasController : ControllerBase
     /// <summary>
     /// GET /v1/actions/schema/index — Playground 向け軽量 index を返す。
     /// </summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>200 とaction の index。</returns>
     [HttpGet("index")]
     [ProducesResponseType(typeof(ActionSchemaIndexResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ActionSchemaIndexResponse>> GetIndex(CancellationToken cancellationToken)
@@ -56,6 +60,9 @@ public class ActionSchemasController : ControllerBase
     /// <summary>
     /// GET /v1/actions/schema/{actionId} — input/output schema と UI metadata を返す。
     /// </summary>
+    /// <param name="actionId">action ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>200 とschema の詳細。未登録なら 404。</returns>
     [HttpGet("{actionId}")]
     [ProducesResponseType(typeof(ActionSchemaDetailResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

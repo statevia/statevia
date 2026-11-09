@@ -25,6 +25,7 @@ public static class ErrorMonitoringExtensions
     /// </summary>
     /// <param name="builder">API / Worker のホストビルダー。</param>
     /// <returns>同じビルダー。</returns>
+    /// <typeparam name="TBuilder">ホストのビルダーの型。</typeparam>
     public static TBuilder UseStateviaErrorMonitoring<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
@@ -63,6 +64,9 @@ public static class ErrorMonitoringExtensions
     }
 
     /// <summary>PII・トレース・リクエスト本文を切った Sentry オプションを適用する。</summary>
+    /// <param name="options">設定する Sentry のオプション。</param>
+    /// <param name="dsn">Sentry の DSN。</param>
+    /// <param name="environment">Sentry に送る環境名。無ければ送らない。</param>
     internal static void ConfigureSentry(SentryOptions options, string dsn, string? environment)
     {
         ArgumentNullException.ThrowIfNull(options);

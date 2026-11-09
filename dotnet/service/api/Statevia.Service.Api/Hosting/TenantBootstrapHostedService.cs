@@ -17,6 +17,10 @@ internal sealed class TenantBootstrapHostedService : IHostedService
     private readonly ILogger<TenantBootstrapHostedService> _logger;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="scopeFactory">スコープ付きのサービスを解決するためのファクトリ。</param>
+    /// <param name="environment">ホスト環境。</param>
+    /// <param name="devAdminOptions">開発用の管理者を作る設定。</param>
+    /// <param name="logger">ロガー。</param>
     public TenantBootstrapHostedService(
         IServiceScopeFactory scopeFactory,
         IHostEnvironment environment,

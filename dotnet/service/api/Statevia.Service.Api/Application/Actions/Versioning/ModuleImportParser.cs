@@ -21,6 +21,7 @@ internal static class ModuleImportParser
     /// <summary>構造化済み import を <see cref="ModuleReference"/> に変換する。</summary>
     /// <param name="alias">定義内 alias。</param>
     /// <param name="import">syntax parse 済み import。</param>
+    /// <returns>Module の参照。</returns>
     public static ModuleReference Parse(string alias, ModuleImportReference import)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(alias);

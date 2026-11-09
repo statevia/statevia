@@ -24,6 +24,8 @@ public sealed class AdminModulesController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/modules — Module load catalog 一覧。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とModule の一覧。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<AdminModuleListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AdminModuleListItemDto>>> ListModules(CancellationToken ct)

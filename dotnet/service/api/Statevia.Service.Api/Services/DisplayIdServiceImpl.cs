@@ -11,6 +11,8 @@ internal sealed class DisplayIdServiceImpl : IDisplayIdService, IDisplayIdWriteS
     private const int Length = 10;
     private readonly ICoreTransactionExecutor _executor;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="executor">トランザクションの実行器。</param>
     public DisplayIdServiceImpl(ICoreTransactionExecutor executor) => _executor = executor;
 
     /// <inheritdoc />

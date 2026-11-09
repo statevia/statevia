@@ -14,6 +14,10 @@ internal sealed class ExecutionReadModelService : IExecutionReadModelService
     private readonly IDisplayIdService _displayIds;
     private readonly ITenantContextAccessor _tenantContext;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="executor">トランザクションの実行器。</param>
+    /// <param name="displayIds">表示用 ID のサービス。</param>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
     public ExecutionReadModelService(
         ICoreTransactionExecutor executor,
         IDisplayIdService displayIds,
@@ -24,6 +28,7 @@ internal sealed class ExecutionReadModelService : IExecutionReadModelService
         _tenantContext = tenantContext;
     }
 
+    /// <inheritdoc />
     public async Task<ExecutionReadModel> GetByDisplayIdAsync(string id, CancellationToken ct = default)
     {
         var tenantId = _tenantContext.GetRequiredTenantId();
@@ -150,8 +155,12 @@ internal sealed class ExecutionReadModelService : IExecutionReadModelService
         string? Fact);
 }
 
+/// <summary>内部の投影 status を契約の status に変換する。</summary>
 internal static class ExecutionStatusMapper
 {
+    /// <summary>内部の投影 status を契約の status に変換する。</summary>
+    /// <param name="internalStatus">内部の投影 status。</param>
+    /// <returns>契約の status（ACTIVE / COMPLETED / FAILED / CANCELED）。それ以外は UNKNOWN。</returns>
     public static string ToContractStatus(string internalStatus) =>
         internalStatus switch
         {

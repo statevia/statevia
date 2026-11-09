@@ -10,6 +10,7 @@ namespace Statevia.Service.Api.Controllers;
 public sealed class HealthController : ControllerBase
 {
     /// <summary>GET /v1/health — サービス死活。</summary>
+    /// <returns>200 と <c>{"status":"ok"}</c>。</returns>
     [HttpGet("health")]
     [ProducesResponseType(typeof(HealthResponse), StatusCodes.Status200OK)]
     public IActionResult Get() => Ok(new HealthResponse { Status = "ok" });

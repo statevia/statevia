@@ -10,22 +10,37 @@ namespace Statevia.Service.Api.Services;
 public interface ITenantAdministrationService
 {
     /// <summary>権限カタログを返す。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>権限カタログを返すタスク。</returns>
     Task<IReadOnlyList<PermissionDefinitionDto>> ListPermissionsAsync(
         Guid callerPrincipalId,
         CancellationToken cancellationToken);
 
     /// <summary>テナント内ユーザーを一覧する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>ユーザーの一覧を返すタスク。</returns>
     Task<IReadOnlyList<AdminUserListItemDto>> ListUsersAsync(
         Guid callerPrincipalId,
         CancellationToken cancellationToken);
 
     /// <summary>ユーザーを作成する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>作成したユーザーを返すタスク。</returns>
     Task<AdminUserListItemDto> CreateUserAsync(
         Guid callerPrincipalId,
         CreateAdminUserRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>ユーザーを更新する（有効化・管理者フラグ）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新したユーザーを返すタスク。</returns>
     Task<AdminUserListItemDto> UpdateUserAsync(
         Guid callerPrincipalId,
         Guid userId,
@@ -33,6 +48,11 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>ユーザーのパスワードを上書きする。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task UpdateUserPasswordAsync(
         Guid callerPrincipalId,
         Guid userId,
@@ -40,23 +60,39 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>グループを一覧する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>グループの一覧を返すタスク。</returns>
     Task<IReadOnlyList<AdminGroupListItemDto>> ListGroupsAsync(
         Guid callerPrincipalId,
         CancellationToken cancellationToken);
 
     /// <summary>グループを作成する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>作成したグループを返すタスク。</returns>
     Task<AdminGroupDetailDto> CreateGroupAsync(
         Guid callerPrincipalId,
         CreateAdminGroupRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>グループ詳細を返す。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>グループの詳細を返すタスク。</returns>
     Task<AdminGroupDetailDto> GetGroupAsync(
         Guid callerPrincipalId,
         Guid groupId,
         CancellationToken cancellationToken);
 
     /// <summary>グループメンバーを置換する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新したグループを返すタスク。</returns>
     Task<AdminGroupDetailDto> SetGroupMembersAsync(
         Guid callerPrincipalId,
         Guid groupId,
@@ -64,6 +100,11 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>グループ権限を置換する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新したグループを返すタスク。</returns>
     Task<AdminGroupDetailDto> SetGroupPermissionsAsync(
         Guid callerPrincipalId,
         Guid groupId,
@@ -71,40 +112,67 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>API キーを一覧する（平文は含まない）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>API キーの一覧を返すタスク。</returns>
     Task<IReadOnlyList<AdminApiKeyListItemDto>> ListApiKeysAsync(
         Guid callerPrincipalId,
         CancellationToken cancellationToken);
 
     /// <summary>API キーを発行する（平文は応答でのみ返す）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>発行した API キー（平文を含む）を返すタスク。</returns>
     Task<CreatedAdminApiKeyDto> CreateApiKeyAsync(
         Guid callerPrincipalId,
         CreateAdminApiKeyRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>API キーを失効させる（Principal を無効化）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="apiKeyId">API キー ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>失効が終わると完了するタスク。</returns>
     Task RevokeApiKeyAsync(
         Guid callerPrincipalId,
         Guid apiKeyId,
         CancellationToken cancellationToken);
 
     /// <summary>テナント内 ServiceAccount を一覧する（平文キーなし）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>サービスアカウントの一覧を返すタスク。</returns>
     Task<IReadOnlyList<AdminServiceAccountListItemDto>> ListServiceAccountsAsync(
         Guid callerPrincipalId,
         CancellationToken cancellationToken);
 
     /// <summary>資格のない ServiceAccount を作成する（API キーは発行しない）。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>作成したサービスアカウントを返すタスク。</returns>
     Task<AdminServiceAccountListItemDto> CreateServiceAccountAsync(
         Guid callerPrincipalId,
         CreateAdminServiceAccountRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>ServiceAccount 詳細を返す。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>サービスアカウントを返すタスク。</returns>
     Task<AdminServiceAccountListItemDto> GetServiceAccountAsync(
         Guid callerPrincipalId,
         Guid serviceAccountId,
         CancellationToken cancellationToken);
 
     /// <summary>ServiceAccount の有効・表示名・所属グループを更新する。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新したサービスアカウントを返すタスク。</returns>
     Task<AdminServiceAccountListItemDto> UpdateServiceAccountAsync(
         Guid callerPrincipalId,
         Guid serviceAccountId,
@@ -112,12 +180,21 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>ユーザーの実行リソース許可を返す。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>リソース許可を返すタスク。</returns>
     Task<PrincipalResourceGrantsDto> GetUserResourceGrantsAsync(
         Guid callerPrincipalId,
         Guid userId,
         CancellationToken cancellationToken);
 
     /// <summary>ユーザーの実行リソース許可を両種別まとめて置き換える。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>置き換えたリソース許可を返すタスク。</returns>
     Task<PrincipalResourceGrantsDto> ReplaceUserResourceGrantsAsync(
         Guid callerPrincipalId,
         Guid userId,
@@ -125,12 +202,21 @@ public interface ITenantAdministrationService
         CancellationToken cancellationToken);
 
     /// <summary>ServiceAccount の実行リソース許可を返す。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>リソース許可を返すタスク。</returns>
     Task<PrincipalResourceGrantsDto> GetServiceAccountResourceGrantsAsync(
         Guid callerPrincipalId,
         Guid serviceAccountId,
         CancellationToken cancellationToken);
 
     /// <summary>ServiceAccount の実行リソース許可を両種別まとめて置き換える。</summary>
+    /// <param name="callerPrincipalId">呼び出し元の Principal ID。テナント管理者であることを確かめる。</param>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>置き換えたリソース許可を返すタスク。</returns>
     Task<PrincipalResourceGrantsDto> ReplaceServiceAccountResourceGrantsAsync(
         Guid callerPrincipalId,
         Guid serviceAccountId,

@@ -13,6 +13,8 @@ internal sealed class TenantContextMiddleware
     private readonly JwtTokenService _jwtTokenService;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="next">パイプラインの次のミドルウェア。</param>
+    /// <param name="jwtTokenService">JWT を検証するサービス。</param>
     public TenantContextMiddleware(RequestDelegate next, JwtTokenService jwtTokenService)
     {
         _next = next;
@@ -20,6 +22,10 @@ internal sealed class TenantContextMiddleware
     }
 
     /// <summary>リクエストパイプラインを実行する。</summary>
+    /// <param name="context">HTTP の文脈。</param>
+    /// <param name="tenantContextAccessor">現在のテナント文脈。</param>
+    /// <param name="platformDataAccess">テナントと Principal を検索する Platform データアクセス。</param>
+    /// <returns>後続の処理が終わると完了するタスク。</returns>
     public async Task InvokeAsync(
         HttpContext context,
         ITenantContextAccessor tenantContextAccessor,

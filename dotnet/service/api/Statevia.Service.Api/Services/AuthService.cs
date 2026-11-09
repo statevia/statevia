@@ -7,12 +7,24 @@ namespace Statevia.Service.Api.Services;
 public interface IAuthService
 {
     /// <summary>パスワードログインし JWT を発行する。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>JWT を返すタスク。</returns>
     Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
 
     /// <summary>認証済み Principal の情報を返す。</summary>
+    /// <param name="tenantId">テナントの内部 ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>認証済み Principal の情報を返すタスク。</returns>
     Task<AuthMeResponse> GetMeAsync(Guid tenantId, Guid principalId, CancellationToken cancellationToken);
 
     /// <summary>本人が現行パスワード確認付きで自分のハッシュを更新する。</summary>
+    /// <param name="tenantId">テナントの内部 ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task ChangeOwnPasswordAsync(
         Guid tenantId,
         Guid principalId,

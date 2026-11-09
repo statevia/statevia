@@ -23,6 +23,8 @@ public sealed class InternalModulesController : ControllerBase
     }
 
     /// <summary>POST /internal/modules/reload — discover / load を明示実行する。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPost("reload")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ReloadModules(CancellationToken ct)

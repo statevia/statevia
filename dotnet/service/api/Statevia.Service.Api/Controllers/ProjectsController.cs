@@ -15,18 +15,26 @@ namespace Statevia.Service.Api.Controllers;
 public sealed class ProjectsController(IProjectService projects) : ControllerBase
 {
     /// <summary>GET /v1/projects — 所属 Project 一覧。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とProject の一覧。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProjectResponse>>> List(CancellationToken ct) =>
         Ok(await projects.ListAsync(ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/projects/{projectId} — メンバーであれば取得。未所属は 404。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とProject。</returns>
     [HttpGet("{projectId:guid}")]
     [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ProjectResponse>> Get(Guid projectId, CancellationToken ct) =>
         Ok(await projects.GetAsync(projectId, ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/projects — 作成し、作成者を admin にする。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したProject。</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ProjectResponse>> Create(
@@ -38,6 +46,10 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
     }
 
     /// <summary>PATCH /v1/projects/{projectId} — 表示名・説明・slug の部分更新。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新した Project。</returns>
     [HttpPatch("{projectId:guid}")]
     [ProducesResponseType(typeof(ProjectResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ProjectResponse>> Update(
@@ -47,6 +59,9 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
         Ok(await projects.UpdateAsync(projectId, request, ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/projects/{projectId}/members — メンバー一覧。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とメンバーの一覧。</returns>
     [HttpGet("{projectId:guid}/members")]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectMemberResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProjectMemberResponse>>> ListMembers(
@@ -55,6 +70,9 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
         Ok(await projects.ListMembersAsync(projectId, ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/projects/{projectId}/member-candidates — 付与できるユーザーと API キー。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と付与候補の一覧。</returns>
     [HttpGet("{projectId:guid}/member-candidates")]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectGrantCandidateResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ProjectGrantCandidateResponse>>> ListMemberCandidates(
@@ -63,6 +81,11 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
         Ok(await projects.ListGrantCandidatesAsync(projectId, ct).ConfigureAwait(false));
 
     /// <summary>PUT /v1/projects/{projectId}/members/{principalId} — 付与またはロール変更。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPut("{projectId:guid}/members/{principalId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> UpsertMember(
@@ -76,6 +99,10 @@ public sealed class ProjectsController(IProjectService projects) : ControllerBas
     }
 
     /// <summary>DELETE /v1/projects/{projectId}/members/{principalId} — メンバー剥奪。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpDelete("{projectId:guid}/members/{principalId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RemoveMember(

@@ -21,6 +21,8 @@ internal static class WorkflowDefinitionYamlFormat
     /// ルートをパースし形式を返す。
     /// </summary>
     /// <exception cref="ArgumentException">nodes と states が併存、または nodes が配列でない等。</exception>
+    /// <param name="content">定義のテキスト。</param>
+    /// <returns>形式。本文が空なら states 形式。</returns>
     public static WorkflowDefinitionYamlFormatKind Analyze(string content)
     {
         ArgumentNullException.ThrowIfNull(content);

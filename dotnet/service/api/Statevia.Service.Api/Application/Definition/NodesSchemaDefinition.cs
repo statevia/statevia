@@ -7,9 +7,13 @@ using static NodesSchemaLiteral;
 /// </summary>
 internal static class NodesSchemaDefinition
 {
+    /// <summary>スキーマ文書のバージョン。</summary>
     public const string SchemaVersion = "1.0.2";
+    /// <summary>nodes 形式の整数バージョン。</summary>
     public const int NodesVersion = 1;
 
+    /// <summary>nodes 形式の JSON Schema 相当の文書を組み立てる。</summary>
+    /// <returns>スキーマ文書（匿名型）。</returns>
     public static object CreateSchemaDocument() => new
     {
         type = TypeObject,

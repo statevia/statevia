@@ -5,9 +5,12 @@ namespace Statevia.Service.Api.Application.Definition;
 /// </summary>
 internal sealed class NodesSchemaProvider : INodesSchemaProvider
 {
+    /// <inheritdoc />
     public object GetSchemaDocument() => NodesSchemaDefinition.CreateSchemaDocument();
 
+    /// <inheritdoc />
     public string GetSchemaVersion() => NodesSchemaDefinition.SchemaVersion;
 
+    /// <inheritdoc />
     public int GetNodesVersion() => NodesSchemaDefinition.NodesVersion;
 }

@@ -7,6 +7,7 @@ namespace Statevia.Service.Api.Infrastructure;
 /// </summary>
 internal sealed class HttpContextCorrelationIdAccessor(IHttpContextAccessor httpContextAccessor) : ICorrelationIdAccessor
 {
+    /// <inheritdoc />
     public string GetCorrelationId()
     {
         var httpContext = httpContextAccessor.HttpContext;

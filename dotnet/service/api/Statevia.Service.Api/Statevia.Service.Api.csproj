@@ -4,6 +4,7 @@
     <RootNamespace>Statevia.Service.Api</RootNamespace>
     <AssemblyName>Statevia.Service.Api</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <!-- CA2007: ASP.NET Core では既定で SynchronizationContext が掛からないため、ライブラリ向けの ConfigureAwait 指摘はノイズとなる。 -->
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>

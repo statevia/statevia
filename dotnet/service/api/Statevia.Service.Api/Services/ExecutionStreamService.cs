@@ -33,6 +33,7 @@ public sealed class ExecutionStreamService
     /// <param name="response">HTTP レスポンス。</param>
     /// <param name="idOrUuid">ワークフロー表示 ID または UUID。</param>
     /// <param name="ct">キャンセルトークン。</param>
+    /// <returns>書き込みが終わると完了するタスク。</returns>
     public async Task WriteStreamAsync(HttpResponse response, string idOrUuid, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(response);

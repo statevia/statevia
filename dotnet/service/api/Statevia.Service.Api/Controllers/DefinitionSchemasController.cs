@@ -31,6 +31,8 @@ public class DefinitionSchemasController : ControllerBase
     /// GET /v1/definitions/schema/nodes — nodes 形式の入力スキーマを返す。
     /// UI の補完/Lint 源泉として利用する。
     /// </summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>200 とnodes 形式のスキーマ。</returns>
     [HttpGet("nodes")]
     [ProducesResponseType(typeof(DefinitionNodesSchemaResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<DefinitionNodesSchemaResponse>> GetNodesSchema(CancellationToken cancellationToken)

@@ -12,6 +12,7 @@ internal static class TraceIdResolver
     /// </summary>
     /// <param name="request">HTTP リクエスト。</param>
     /// <param name="idGenerator">フォールバック用の非永続 ID 採番。</param>
+    /// <returns>トレース ID。</returns>
     public static string ResolveTraceId(HttpRequest request, IIdGenerator idGenerator)
     {
         ArgumentNullException.ThrowIfNull(idGenerator);
@@ -34,6 +35,10 @@ internal static class TraceIdResolver
         return idGenerator.NewRandomGuid().ToString("N");
     }
 
+    /// <summary><c>traceparent</c> ヘッダーから trace-id を取り出す。</summary>
+    /// <param name="value"><c>traceparent</c> ヘッダーの値。</param>
+    /// <param name="traceId">trace-id（32 桁の 16 進数）。失敗時は空文字。</param>
+    /// <returns>4 つに分かれ、trace-id が 32 桁の 16 進数なら <see langword="true"/>。</returns>
     internal static bool TryParseTraceParent(string value, out string traceId)
     {
         traceId = "";

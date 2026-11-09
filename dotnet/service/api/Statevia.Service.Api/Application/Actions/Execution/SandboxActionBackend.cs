@@ -31,6 +31,7 @@ internal abstract class SandboxActionBackend(
 
     /// <summary>この Mode が使用するランタイムの ProviderKey を設定から解決する。</summary>
     /// <param name="sandbox">サンドボックス設定。</param>
+    /// <returns>ProviderKey。設定が無ければ <see langword="null"/>。</returns>
     protected abstract string? ResolveRuntimeProviderKey(SandboxOptions sandbox);
 
     /// <inheritdoc />

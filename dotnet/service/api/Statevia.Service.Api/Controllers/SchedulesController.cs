@@ -12,18 +12,26 @@ namespace Statevia.Service.Api.Controllers;
 public sealed class SchedulesController(IExecutionScheduleService schedules) : ControllerBase
 {
     /// <summary>GET /v1/schedules — テナント内一覧。input は含めない。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とスケジュールの一覧。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ExecutionScheduleListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ExecutionScheduleListItemDto>>> List(CancellationToken ct) =>
         Ok(await schedules.ListAsync(ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/schedules/{scheduleId} — 単票。input を含む。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とスケジュール。</returns>
     [HttpGet("{scheduleId:guid}")]
     [ProducesResponseType(typeof(ExecutionScheduleDetailDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ExecutionScheduleDetailDto>> Get(Guid scheduleId, CancellationToken ct) =>
         Ok(await schedules.GetAsync(scheduleId, ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/schedules — 作成。定義 YAML は変えない。SA は発行しない。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したスケジュール。</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ExecutionScheduleDetailDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<ExecutionScheduleDetailDto>> Create(
@@ -35,6 +43,10 @@ public sealed class SchedulesController(IExecutionScheduleService schedules) : C
     }
 
     /// <summary>PATCH /v1/schedules/{scheduleId} — 部分更新。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新したスケジュール。</returns>
     [HttpPatch("{scheduleId:guid}")]
     [ProducesResponseType(typeof(ExecutionScheduleDetailDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ExecutionScheduleDetailDto>> Update(
@@ -44,6 +56,9 @@ public sealed class SchedulesController(IExecutionScheduleService schedules) : C
         Ok(await schedules.UpdateAsync(scheduleId, request, ct).ConfigureAwait(false));
 
     /// <summary>DELETE /v1/schedules/{scheduleId} — 論理削除。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpDelete("{scheduleId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid scheduleId, CancellationToken ct)
@@ -53,6 +68,10 @@ public sealed class SchedulesController(IExecutionScheduleService schedules) : C
     }
 
     /// <summary>POST /v1/schedules/{scheduleId}/run — 手動 1 回。201 で実行応答。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c> の値。無ければ冪等にしない。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したExecution。</returns>
     [HttpPost("{scheduleId:guid}/run")]
     [ProducesResponseType(typeof(ExecutionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ExecutionResponse>> Run(

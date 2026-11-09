@@ -100,7 +100,7 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
 - **公開 API**（C# の `public` / `internal`、TS の `export` と export した型の公開メンバー）には、**識別子が明白でも**日本語のドキュメントを付ける。付いているものと無いものを混在させない。目的・引数・戻り値・例外（またはエラー条件）を記載する。インターフェース実装と override は本文を重ねず `<inheritdoc />` にする。
   - **対象外**: EF Core のマイグレーション、ソース生成物（手書きの `[LoggerMessage]` の partial 宣言は対象）、テストプロジェクトと `nodejs/studio/tests/`、`dotnet/tools/`、`dotnet/modules/local/`、`dotnet/core/engine/samples/`、`dotnet/tests/Fixtures/`。
   - **既存の欠落**: プロジェクト単位で埋めてから、そのプロジェクトの抑制を外す。埋める前でも、触った箇所には付ける。
-  - **検出**: 既存のビルドと lint で止める。C# の `public` は CS1591（`GenerateDocumentationFile`）、`internal` は StyleCop.Analyzers のドキュメント欠落規則だけ、TS は ESLint の `jsdoc/require-jsdoc`。ドキュメント専用の CI ジョブと、Sonar の未ドキュメント API 規則は足さない。StyleCop は `dotnet/build/Documentation.targets` が、csproj に `StateviaDocumentationRulesEnabled=true`（と `GenerateDocumentationFile=true`）を書いたプロダクトプロジェクトにだけ載せる。有効にするのは `dotnet/build/StyleCop.Documentation.globalconfig` に挙げた欠落・空文の規則だけ。埋め終えたプロジェクトから有効にする。有効にしたプロジェクトは csproj の `StateviaDocumentationRulesEnabled` で分かる。2026-11-08 時点では、Application と Application.Contracts が CS1591 を抑制している。ESLint は export 宣言と説明文の有無を全体で見ており、export した型の公開メンバーは `eslint.config.js` の `memberJsdocEnforcedFiles` に挙げたディレクトリだけで見る（埋め終えたディレクトリを足していく）。
+  - **検出**: 既存のビルドと lint で止める。C# の `public` は CS1591（`GenerateDocumentationFile`）、`internal` は StyleCop.Analyzers のドキュメント欠落規則だけ、TS は ESLint の `jsdoc/require-jsdoc`。ドキュメント専用の CI ジョブと、Sonar の未ドキュメント API 規則は足さない。StyleCop は `dotnet/build/Documentation.targets` が、csproj に `StateviaDocumentationRulesEnabled=true`（と `GenerateDocumentationFile=true`）を書いたプロダクトプロジェクトにだけ載せる。有効にするのは `dotnet/build/StyleCop.Documentation.globalconfig` に挙げた欠落・空文の規則だけ。埋め終えたプロジェクトから有効にする。有効にしたプロジェクトは csproj の `StateviaDocumentationRulesEnabled` で分かる。2026-11-09 時点で、C# のプロダクトプロジェクトはすべて有効で、CS1591 を抑制しているプロジェクトは無い。新しいプロダクトプロジェクトを足すときも、csproj に 2 つの設定を書く。ESLint は export 宣言と説明文の有無を全体で見ており、export した型の公開メンバーは `eslint.config.js` の `memberJsdocEnforcedFiles` に挙げたディレクトリだけで見る（埋め終えたディレクトリを足していく）。
 - **クラス / モジュール単位**では、利用コンテキスト・セキュリティ・制限値・上書きなど、コードだけでは分かりにくい契約を `<remarks>` / JSDoc で補足する。
 - **定数（上限値など）**には、値の意味と採用理由を書く（推測や誤った技術的根拠は避ける）。
 - **テスト**には日本語で「何を検証するか」を `/// <summary>` またはケース名で残す。
@@ -287,6 +287,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-11-09 | §4.3 の検出の現状を更新（C# のプロダクトプロジェクトはすべて StyleCop のドキュメント欠落規則が有効で、CS1591 の抑制は無い） |
 | 2026-11-08 | §4.3 に ESLint の公開メンバーの JSDoc（`memberJsdocEnforcedFiles`）と説明文の必須化を追記 |
 | 2026-11-08 | §4.3 に StyleCop のドキュメント欠落規則の有効化の仕方（`StateviaDocumentationRulesEnabled`）を追記 |
 | 2026-11-08 | §4.1–4.3 に API ドキュメントの必須範囲（明白でも日本語）、対象外、検出の手段（CS1591・StyleCop のドキュメント欠落規則・ESLint。専用 CI は足さない）を追記 |

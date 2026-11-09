@@ -14,6 +14,7 @@ internal sealed class WorkflowActionState : IState<object?, object?>
     private readonly IServiceScopeFactory _scopeFactory;
 
     /// <summary>スコープ付き runner 解決用に構築する。</summary>
+    /// <param name="scopeFactory">スコープ付きのサービスを解決するためのファクトリ。</param>
     public WorkflowActionState(IServiceScopeFactory scopeFactory) =>
         _scopeFactory = scopeFactory;
 

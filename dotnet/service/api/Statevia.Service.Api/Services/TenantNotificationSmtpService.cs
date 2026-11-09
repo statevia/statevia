@@ -30,6 +30,7 @@ public interface ITenantNotificationSmtpService
     /// <summary>自テナントの通知 SMTP を消す。行が無くても成功する。</summary>
     /// <param name="callerPrincipalId">呼び出し主体。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task DeleteAsync(Guid callerPrincipalId, CancellationToken cancellationToken);
 }
 

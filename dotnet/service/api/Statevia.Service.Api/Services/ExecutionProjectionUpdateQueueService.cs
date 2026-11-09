@@ -73,6 +73,11 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
     // Dispose 済みか。WebApplicationFactory などは Dispose の後に StopAsync を呼ぶことがあるため、破棄済みの CTS に触れないよう使う。
     private bool _disposed;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="scopeFactory">スコープ付きのサービスを解決するためのファクトリ。</param>
+    /// <param name="executionEngine">Execution を動かす Engine。</param>
+    /// <param name="options">投影の更新キューの設定。</param>
+    /// <param name="logger">ロガー。</param>
     public ExecutionProjectionUpdateQueueService(
         IServiceScopeFactory scopeFactory,
         IExecutionEngine executionEngine,
@@ -175,6 +180,7 @@ internal sealed class ExecutionProjectionUpdateQueueService : BackgroundService,
     /// 起動直後のステップ完了通知（checkpoint と投影更新）を取りこぼす。そのため、ここで同期的に登録する。
     /// </remarks>
     /// <param name="cancellationToken">起動の取り消し。</param>
+    /// <returns>ハンドラを登録し、ワーカーループを始めると完了するタスク。</returns>
     public override Task StartAsync(CancellationToken cancellationToken)
     {
         RegisterEngineHandlers(_handlerStopping.Token);

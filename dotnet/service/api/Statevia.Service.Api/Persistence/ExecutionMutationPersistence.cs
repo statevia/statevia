@@ -28,6 +28,11 @@ internal sealed class ExecutionMutationPersistence : IExecutionMutationPersisten
     /// <summary>
     /// 新しいインスタンスを初期化する。
     /// </summary>
+    /// <param name="unitOfWorkFactory">ユニットオブワークのファクトリ。</param>
+    /// <param name="eventDeliveryDedup">イベント配送の冪等の記録のリポジトリ。</param>
+    /// <param name="eventDeliveryRetryOptions">イベント配送の再試行の設定。</param>
+    /// <param name="httpContextAccessor">相関 ID を読むための HTTP 文脈のアクセサー。</param>
+    /// <param name="logger">ロガー。</param>
     public ExecutionMutationPersistence(
         ICoreUnitOfWorkFactory unitOfWorkFactory,
         IEventDeliveryDedupRepository eventDeliveryDedup,
