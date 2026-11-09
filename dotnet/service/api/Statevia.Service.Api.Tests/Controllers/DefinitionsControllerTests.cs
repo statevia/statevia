@@ -98,7 +98,7 @@ public sealed class DefinitionsControllerTests
         // Assert
         var created = Assert.IsType<CreatedAtActionResult>(res.Result);
         Assert.Equal(nameof(controller.Get), created.ActionName);
-        Assert.Equal("DEF-1", created.RouteValues!["id"]);
+        Assert.Equal("DEF-1", created.RouteValues!["definitionId"]);
     }
 
     /// <summary>検証は 201 ではなく 200 を返す。</summary>
@@ -379,7 +379,7 @@ public sealed class DefinitionsControllerTests
 
         // Assert
         var created = Assert.IsType<CreatedAtActionResult>(res.Result);
-        Assert.Equal("DEF-1", created.RouteValues!["id"]);
+        Assert.Equal("DEF-1", created.RouteValues!["definitionId"]);
     }
 
     /// <summary>

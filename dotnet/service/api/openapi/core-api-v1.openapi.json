@@ -158,6 +158,7 @@
           {
             "name": "actionId",
             "in": "path",
+            "description": "action ID。",
             "required": true,
             "schema": {
               "type": "string"
@@ -413,6 +414,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -495,6 +497,7 @@
           {
             "name": "userId",
             "in": "path",
+            "description": "ユーザー ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -512,6 +515,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -594,6 +598,7 @@
           {
             "name": "userId",
             "in": "path",
+            "description": "ユーザー ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -611,6 +616,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -762,6 +768,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -844,6 +851,7 @@
           {
             "name": "groupId",
             "in": "path",
+            "description": "グループ ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -924,6 +932,7 @@
           {
             "name": "groupId",
             "in": "path",
+            "description": "グループ ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -941,6 +950,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1023,6 +1033,7 @@
           {
             "name": "groupId",
             "in": "path",
+            "description": "グループ ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1040,6 +1051,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1208,6 +1220,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1290,6 +1303,7 @@
           {
             "name": "apiKeyId",
             "in": "path",
+            "description": "API キー ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1439,6 +1453,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1521,6 +1536,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "サービスアカウント ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1599,6 +1615,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "サービスアカウント ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1616,6 +1633,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1698,6 +1716,7 @@
           {
             "name": "userId",
             "in": "path",
+            "description": "ユーザー ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1776,6 +1795,7 @@
           {
             "name": "userId",
             "in": "path",
+            "description": "ユーザー ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1793,6 +1813,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -1875,6 +1896,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "サービスアカウント ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1953,6 +1975,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "サービスアカウント ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -1970,6 +1993,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -2762,6 +2786,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -2923,6 +2948,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -2996,6 +3022,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -3220,6 +3247,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -3292,16 +3320,17 @@
         }
       }
     },
-    "/v1/definitions/{id}": {
+    "/v1/definitions/{definitionId}": {
       "put": {
         "tags": [
           "Definitions"
         ],
-        "summary": "PUT /v1/definitions/{id} — 定義を更新。name + yaml を受け取り、検証・コンパイルして保存。",
+        "summary": "PUT /v1/definitions/{definitionId} — 定義を更新。name + yaml を受け取り、検証・コンパイルして保存。",
         "parameters": [
           {
-            "name": "id",
+            "name": "definitionId",
             "in": "path",
+            "description": "定義の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -3318,6 +3347,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -3393,11 +3423,12 @@
         "tags": [
           "Definitions"
         ],
-        "summary": "GET /v1/definitions/{id} — 表示用 ID または UUID で取得。",
+        "summary": "GET /v1/definitions/{definitionId} — 表示用 ID または UUID で取得。",
         "parameters": [
           {
-            "name": "id",
+            "name": "definitionId",
             "in": "path",
+            "description": "定義の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -3470,11 +3501,12 @@
         "tags": [
           "Definitions"
         ],
-        "summary": "DELETE /v1/definitions/{id} — catalog から論理削除する。",
+        "summary": "DELETE /v1/definitions/{definitionId} — catalog から論理削除する。",
         "parameters": [
           {
-            "name": "id",
+            "name": "definitionId",
             "in": "path",
+            "description": "定義の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -3527,16 +3559,17 @@
         }
       }
     },
-    "/v1/definitions/{id}/restore": {
+    "/v1/definitions/{definitionId}/restore": {
       "post": {
         "tags": [
           "Definitions"
         ],
-        "summary": "POST /v1/definitions/{id}/restore — 削除済み定義を復元する。",
+        "summary": "POST /v1/definitions/{definitionId}/restore — 削除済み定義を復元する。",
         "parameters": [
           {
-            "name": "id",
+            "name": "definitionId",
             "in": "path",
+            "description": "定義の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -3833,6 +3866,7 @@
           {
             "name": "X-Idempotency-Key",
             "in": "header",
+            "description": "`X-Idempotency-Key` の値。無ければ冪等にしない。",
             "schema": {
               "pattern": "^[\\x20-\\x7E]+$",
               "type": "string"
@@ -3857,6 +3891,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -4081,16 +4116,17 @@
         }
       }
     },
-    "/v1/executions/{id}": {
+    "/v1/executions/{executionId}": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id} — 一覧と同一の Statevia.Core.Application.Contracts.Services.ExecutionResponse（UI ExecutionDTO 向け）。X-Tenant-Id でスコープ。",
+        "summary": "GET /v1/executions/{executionId} — 一覧と同一の Statevia.Core.Application.Contracts.Services.ExecutionResponse（UI ExecutionDTO 向け）。X-Tenant-Id でスコープ。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4160,16 +4196,17 @@
         }
       }
     },
-    "/v1/executions/{id}/graph": {
+    "/v1/executions/{executionId}/graph": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id}/graph — execution_graph_snapshots から取得。X-Tenant-Id でスコープ。",
+        "summary": "GET /v1/executions/{executionId}/graph — execution_graph_snapshots から取得。X-Tenant-Id でスコープ。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4230,17 +4267,18 @@
         }
       }
     },
-    "/v1/executions/{id}/waits": {
+    "/v1/executions/{executionId}/waits": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id}/waits — 未完了 Wait の再開キー。正本は graph スナップショット。X-Tenant-Id でスコープ。",
+        "summary": "GET /v1/executions/{executionId}/waits — 未完了 Wait の再開キー。正本は graph スナップショット。X-Tenant-Id でスコープ。",
         "description": "機微 IO 方針: `input` / `output` は返さない。権限は既存 executions GET と同じ `executions.read`。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4320,16 +4358,17 @@
         }
       }
     },
-    "/v1/executions/{id}/state": {
+    "/v1/executions/{executionId}/state": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id}/state?atSeq= — UI 用 ExecutionView（リプレイは現状スナップショット近似）。",
+        "summary": "GET /v1/executions/{executionId}/state?atSeq= — UI 用 ExecutionView（リプレイは現状スナップショット近似）。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4409,16 +4448,17 @@
         }
       }
     },
-    "/v1/executions/{id}/events": {
+    "/v1/executions/{executionId}/events": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id}/events — event_store 由来のタイムライン（limit / afterSeq）。",
+        "summary": "GET /v1/executions/{executionId}/events — event_store 由来のタイムライン（limit / afterSeq）。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4512,11 +4552,12 @@
         "tags": [
           "Executions"
         ],
-        "summary": "POST /v1/executions/{id}/events — body: { \"name\": \"Approve\" }。Engine.PublishEvent(executionId, eventName)。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。",
+        "summary": "POST /v1/executions/{executionId}/events — body: { \"name\": \"Approve\" }。Engine.PublishEvent(executionId, eventName)。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4525,6 +4566,7 @@
           {
             "name": "X-Idempotency-Key",
             "in": "header",
+            "description": "`X-Idempotency-Key` の値。無ければ冪等にしない。",
             "schema": {
               "pattern": "^[\\x20-\\x7E]+$",
               "type": "string"
@@ -4549,6 +4591,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -4614,16 +4657,17 @@
         }
       }
     },
-    "/v1/executions/{id}/stream": {
+    "/v1/executions/{executionId}/stream": {
       "get": {
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions/{id}/stream — SSE（グラフ JSON の変化を GraphUpdated として送出）。",
+        "summary": "GET /v1/executions/{executionId}/stream — SSE（グラフ JSON の変化を GraphUpdated として送出）。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4676,16 +4720,17 @@
         }
       }
     },
-    "/v1/executions/{id}/cancel": {
+    "/v1/executions/{executionId}/cancel": {
       "post": {
         "tags": [
           "Executions"
         ],
-        "summary": "POST /v1/executions/{id}/cancel — Engine.CancelAsync を呼び、projection を更新。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。",
+        "summary": "POST /v1/executions/{executionId}/cancel — Engine.CancelAsync を呼び、projection を更新。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4694,6 +4739,7 @@
           {
             "name": "X-Idempotency-Key",
             "in": "header",
+            "description": "`X-Idempotency-Key` の値。無ければ冪等にしない。",
             "schema": {
               "pattern": "^[\\x20-\\x7E]+$",
               "type": "string"
@@ -4764,16 +4810,17 @@
         }
       }
     },
-    "/v1/executions/{id}/nodes/{nodeId}/resume": {
+    "/v1/executions/{executionId}/nodes/{nodeId}/resume": {
       "post": {
         "tags": [
           "Executions"
         ],
-        "summary": "POST /v1/executions/{id}/nodes/{nodeId}/resume — body: { \"resumeKey\": \"...\" }。PublishEvent と同様。X-Idempotency-Key で冪等。",
+        "summary": "POST /v1/executions/{executionId}/nodes/{nodeId}/resume — body: { \"resumeKey\": \"...\" }。PublishEvent と同様。X-Idempotency-Key で冪等。",
         "parameters": [
           {
-            "name": "id",
+            "name": "executionId",
             "in": "path",
+            "description": "Execution の表示用 ID または UUID の文字列。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4782,6 +4829,7 @@
           {
             "name": "nodeId",
             "in": "path",
+            "description": "Wait ノード ID。",
             "required": true,
             "schema": {
               "type": "string"
@@ -4790,6 +4838,7 @@
           {
             "name": "X-Idempotency-Key",
             "in": "header",
+            "description": "`X-Idempotency-Key` の値。無ければ冪等にしない。",
             "schema": {
               "pattern": "^[\\x20-\\x7E]+$",
               "type": "string"
@@ -4814,6 +4863,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -4889,6 +4939,7 @@
           {
             "name": "graphId",
             "in": "path",
+            "description": "グラフ ID（定義の表示用 ID）。",
             "required": true,
             "schema": {
               "type": "string"
@@ -5140,6 +5191,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -5222,6 +5274,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5300,6 +5353,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5317,6 +5371,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -5399,6 +5454,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5488,6 +5544,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5577,6 +5634,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5586,6 +5644,7 @@
           {
             "name": "principalId",
             "in": "path",
+            "description": "Principal ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5603,6 +5662,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -5666,6 +5726,7 @@
           {
             "name": "projectId",
             "in": "path",
+            "description": "Project ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5675,6 +5736,7 @@
           {
             "name": "principalId",
             "in": "path",
+            "description": "Principal ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5824,6 +5886,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -5906,6 +5969,7 @@
           {
             "name": "scheduleId",
             "in": "path",
+            "description": "スケジュール ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -5984,6 +6048,7 @@
           {
             "name": "scheduleId",
             "in": "path",
+            "description": "スケジュール ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -6001,6 +6066,7 @@
           }
         ],
         "requestBody": {
+          "description": "要求の本文。",
           "content": {
             "application/json": {
               "schema": {
@@ -6081,6 +6147,7 @@
           {
             "name": "scheduleId",
             "in": "path",
+            "description": "スケジュール ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -6144,6 +6211,7 @@
           {
             "name": "scheduleId",
             "in": "path",
+            "description": "スケジュール ID。",
             "required": true,
             "schema": {
               "type": "string",
@@ -6153,6 +6221,7 @@
           {
             "name": "X-Idempotency-Key",
             "in": "header",
+            "description": "`X-Idempotency-Key` の値。無ければ冪等にしない。",
             "schema": {
               "pattern": "^[\\x20-\\x7E]+$",
               "type": "string"

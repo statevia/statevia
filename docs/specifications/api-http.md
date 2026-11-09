@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.38 |
-| 更新日 | 2026-11-08 |
+| Version | 1.39 |
+| 更新日 | 2026-11-09 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -14,7 +14,7 @@
 - **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/projects` / `/v1/schedules` / `/v1/events` / `/v1/event-subscriptions` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
 - **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。成功は **204**（一致 0 件でも）。
 - **MUST**: `GET /v1/event-subscriptions` は `executions.read` 必須。成功は **200**。候補は現在テナントの一意な topic / key（最大 500）。
-- **MUST**: 定義版は immutable。`PUT /v1/definitions/{id}` は新版 INSERT のみ（既存版の上書き禁止）。
+- **MUST**: 定義版は immutable。`PUT /v1/definitions/{definitionId}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
 - **MUST**: 入力検証失敗は **422**、`error.code = VALIDATION_ERROR`（[data-integration.md](data-integration.md) §7）。
 - **MUST**: 定義名・イベント名・topic / 非空 key / resumeKey / 指定時の initialState は ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。表示名（ユーザー / グループ / API キー / テナント）は ASCII ラベル（先頭末尾英数字。途中のみスペース可）。パスワードと実行 payload は文字種制限しない。既存の非 ASCII 識別子は GET では落ちず、次回 write で 422。
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.39（2026-11-09）**: 定義と Execution のパス引数の名前を `{id}` から `{definitionId}` / `{executionId}` に変える。URL の形と成否は変えない。OpenAPI の引数名とパスのキーが変わる。
 
 **Version 1.38（2026-11-08）**: 定期実行の発火準備検査に run-as の `executions.write` を足す。持たない run-as の有効なスケジュールは保存できず、手動実行も Start の前に 422（`field=runAsPrincipalId`、`reason=missingExecutionsWrite`）で止まる。既存のスケジュールのデータは変えない。Studio はこの失敗に ServiceAccount の画面へのリンクを添える。
 
@@ -153,11 +155,11 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 | GET      | /v1/admin/projects        | テナント内の全 Project        |
 | POST     | /v1/definitions           | 定義登録                      |
 | POST     | /v1/definitions/validate  | 定義検証（永続化しない）      |
-| PUT      | /v1/definitions/{id}      | 定義更新（displayId または UUID） |
-| DELETE   | /v1/definitions/{id}      | 定義の catalog 論理削除       |
-| POST     | /v1/definitions/{id}/restore | 削除済み定義の復元         |
+| PUT      | /v1/definitions/{definitionId}      | 定義更新（displayId または UUID） |
+| DELETE   | /v1/definitions/{definitionId}      | 定義の catalog 論理削除       |
+| POST     | /v1/definitions/{definitionId}/restore | 削除済み定義の復元         |
 | GET      | /v1/definitions           | 定義一覧                      |
-| GET      | /v1/definitions/{id}      | 定義取得                      |
+| GET      | /v1/definitions/{definitionId}      | 定義取得                      |
 | GET      | /v1/definitions/schema/nodes | nodes 入力スキーマ取得     |
 | GET      | /v1/actions/schema        | 登録 action 一覧（descriptor 概要） |
 | GET      | /v1/actions/schema/index  | Playground 向け軽量 index |
@@ -165,15 +167,15 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 | GET      | /v1/graphs/{graphId}      | Graph Definition（nodes/edges） |
 | POST     | /v1/executions             | 実行開始                      |
 | GET      | /v1/executions             | 実行一覧                      |
-| GET      | /v1/executions/{id}        | 実行取得                      |
-| GET      | /v1/executions/{id}/graph  | 実行グラフ（JSON）取得        |
-| GET      | /v1/executions/{id}/waits  | 未完了 Wait の再開キー一覧    |
-| GET      | /v1/executions/{id}/state  | 状態ビュー（`atSeq` クエリ必須） |
-| GET      | /v1/executions/{id}/events  | event_store タイムライン（`afterSeq`, `limit`） |
-| GET      | /v1/executions/{id}/stream  | SSE（グラフ変化を `GraphUpdated` で送出） |
-| POST     | /v1/executions/{id}/cancel | キャンセル                    |
-| POST     | /v1/executions/{id}/events | イベント発行（Wait 再開の互換シム） |
-| POST     | /v1/executions/{id}/nodes/{nodeId}/resume | Wait 再開の正本（body: `resumeKey` = イベント名） |
+| GET      | /v1/executions/{executionId}        | 実行取得                      |
+| GET      | /v1/executions/{executionId}/graph  | 実行グラフ（JSON）取得        |
+| GET      | /v1/executions/{executionId}/waits  | 未完了 Wait の再開キー一覧    |
+| GET      | /v1/executions/{executionId}/state  | 状態ビュー（`atSeq` クエリ必須） |
+| GET      | /v1/executions/{executionId}/events  | event_store タイムライン（`afterSeq`, `limit`） |
+| GET      | /v1/executions/{executionId}/stream  | SSE（グラフ変化を `GraphUpdated` で送出） |
+| POST     | /v1/executions/{executionId}/cancel | キャンセル                    |
+| POST     | /v1/executions/{executionId}/events | イベント発行（Wait 再開の互換シム） |
+| POST     | /v1/executions/{executionId}/nodes/{nodeId}/resume | Wait 再開の正本（body: `resumeKey` = イベント名） |
 | POST     | /v1/events                | 集合配送（topic / key。`executions.write`） |
 | GET      | /v1/event-subscriptions   | 集合配送の候補（一意な topic / key。`executions.read`） |
 | GET      | /v1/schedules             | 定期実行一覧（`input` なし） |
@@ -206,7 +208,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 ### 2.1.1 定義 publish（版追加）
 
-**PUT /v1/definitions/{id}**
+**PUT /v1/definitions/{definitionId}**
 
 - `id`: displayId または UUID
 - Request: `POST` と同形（`name`, `yaml` 必須）。`yaml` のサイズ上限も `POST` と同じ（ボディ 2MiB 超過の 413 も同じ）
@@ -217,7 +219,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 ### 2.1.2 catalog 論理削除
 
-**DELETE /v1/definitions/{id}**
+**DELETE /v1/definitions/{definitionId}**
 
 - `id`: displayId または UUID
 - 成功: **204 No Content**（`definitions.deleted_at` を **UTC** で設定）。既に削除済みの場合も冪等 **204**。
@@ -226,7 +228,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 ### 2.1.3 catalog 復元
 
-**POST /v1/definitions/{id}/restore**
+**POST /v1/definitions/{definitionId}/restore**
 
 - 削除済み定義のみ対象。成功: **200 OK** + `DefinitionResponse`（`deletedAt` は含めない）。
 - 未削除定義: **409**（`error.code`: `STATE_CONFLICT`）。
@@ -256,7 +258,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 ### 2.3 定義取得
 
-**GET /v1/definitions/{id}**
+**GET /v1/definitions/{definitionId}**
 
 - `id`: displayId または UUID
 - Response: 200 OK で 1 件（`displayId`, `resourceId`, `name`, `latestVersion`, `createdAt`, `updatedAt`, **`yaml`**（**最新版**の保存済みソース））。catalog 上削除済み・存在しない・他テナント・Project 未所属は **404**（operational invisibility）。所属でも実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
@@ -386,17 +388,17 @@ Request:
   - `limit`: 1〜500（必須）、`offset`: 0 以上（省略時 0）
   - `items` / `totalCount` / `hasMore` は、`execution_branches.execution_id` に無いルート execution のみ。ネスト Fork の中間親も子 ID として除外する。追加のクエリパラメータは無い
 - `limit` 未指定・不正: **422**
-- 子の displayId または UUID を指定した **GET /v1/executions/{id}** は、一覧に含まれなくても 200 で返す
+- 子の displayId または UUID を指定した **GET /v1/executions/{executionId}** は、一覧に含まれなくても 200 で返す
 
 ### 3.3 実行取得
 
-**GET /v1/executions/{id}**
+**GET /v1/executions/{executionId}**
 
 - Response: 200 OK、**一覧と同一形の `ExecutionResponse`**（UI の ExecutionDTO と整合）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 
 ### 3.4 実行グラフ取得
 
-**GET /v1/executions/{id}/graph**
+**GET /v1/executions/{executionId}/graph**
 
 Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` に保存された **ExecutionGraph と同形の JSON** を返す。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。`execution_graph_snapshots` 行が無いときも 404。
 
@@ -415,13 +417,13 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 ### 3.4.1 未完了 Wait 一覧（再開キー）
 
-**GET /v1/executions/{id}/waits**
+**GET /v1/executions/{executionId}/waits**
 
 - Response: 200 OK、`ExecutionWaitsResponse`（`{ "waits": [ … ] }`）。Wait が無いときは空配列。
 - 404 は実行未存在、Project 未所属、または `GET …/graph` と同じく graph スナップショットが無いとき。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。グラフ取得と同じ判定を通る。
 - 各要素は `nodeId`（実行グラフの opaque ID）、`nodeName`（定義上の状態名）、`allowedEvents`（文字列配列。null は出さない。0 件は `[]`）。
 - 対象はスナップショット上の **WAITING かつ nodeType=Wait** のみ。完了済みや Task/Start は含めない。順序は graph `nodes` 配列順。
-- Hosted 物理 Fork の親 ID では `GET …/graph` と同じ合成後グラフから射影する。子実行の Wait は子の `{id}` で取る。
+- Hosted 物理 Fork の親 ID では `GET …/graph` と同じ合成後グラフから射影する。子実行の Wait は子の `{executionId}` で取る。
 - `waitKey` は応答に出さない（値は `allowedEvents` に含まれる）。
 - 正本は graph スナップショット（Hosted 親は GET 時合成後）。`execution_waits` テーブルは読まない。
 - `input` / `output` は返さない（[io-log-masking.md](platform/io-log-masking.md)）。
@@ -429,7 +431,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 ### 3.5 状態ビュー（UI）
 
-**GET /v1/executions/{id}/state?atSeq={seq}**
+**GET /v1/executions/{executionId}/state?atSeq={seq}**
 
 - **atSeq**: 必須（long）。`event_store` のシーケンスに基づく状態ビュー（`ExecutionViewDto`）。リプレイ用途。
 - Response: 200 OK。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
@@ -445,18 +447,18 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
   - **`input`**, **`output`**: JSON 断片（存在しない場合は省略または `null`。外部ログではマスキングを推奨）。
   - **`conditionRouting`**: 実行グラフの `conditionRouting` を API が透過的に返したもの（UI 側で再評価しない）。
 
-通常画面の実行ビューは **`GET /v1/executions/{id}`** と **`GET /v1/executions/{id}/graph`** を組み合わせて UI 側で `ExecutionView` を構築する。本エンドポイントは **シーケンス指定のビュー取得**に用いる。
+通常画面の実行ビューは **`GET /v1/executions/{executionId}`** と **`GET /v1/executions/{executionId}/graph`** を組み合わせて UI 側で `ExecutionView` を構築する。本エンドポイントは **シーケンス指定のビュー取得**に用いる。
 
 ### 3.6 イベントタイムライン（Read）
 
-**GET /v1/executions/{id}/events**
+**GET /v1/executions/{executionId}/events**
 
 - クエリ: **`afterSeq`**（既定 0）、**`limit`**（既定 500、上限は実装に従う）。
 - Response: 200 OK、`ExecutionEventsResponseDto`（タイムライン行の列挙）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。グラフ取得と同じ判定を通る。
 
 ### 3.7 SSE（グラフ変化の Push）
 
-**GET /v1/executions/{id}/stream**
+**GET /v1/executions/{executionId}/stream**
 
 - Response: **`200`**、`Content-Type: text/event-stream`。本文は SSE の **`data:`** 行に JSON（`type: GraphUpdated`）。接続維持型。サーバは約 2 秒周期で snapshot の `UpdatedAt` を比較し、変わったときだけ `GraphJson` を読んで `data:` を 1 件書く。
 - **必須**: Principal（JWT または `X-Api-Key`）と `X-Tenant-Id`。未認証は **401**。SSE も `/v1/executions` 配下のため Middleware の Principal 必須と同一。
@@ -466,7 +468,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 ### 3.8 キャンセル
 
-**POST /v1/executions/{id}/cancel**
+**POST /v1/executions/{executionId}/cancel**
 
 - **X-Idempotency-Key**: 任意だが推奨。同一キー＋同一リクエストの再送は `command_dedup` により初回と同じ結果（通常 204）を返す。キーは `event_delivery_dedup` の `client_event_id` 導出にも使われる（[data-integration.md](data-integration.md) §3.3）。
 - Response: 204 No Content。エンジンで Cancel を適用し、projection を更新。
@@ -476,7 +478,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 ### 3.9 イベント発行（Write・互換シム）
 
-**POST /v1/executions/{id}/events**
+**POST /v1/executions/{executionId}/events**
 
 Request:
 
@@ -495,7 +497,7 @@ Request:
 
 ### 3.10 ノード再開（Wait 正本）
 
-**POST /v1/executions/{id}/nodes/{nodeId}/resume**
+**POST /v1/executions/{executionId}/nodes/{nodeId}/resume**
 
 Request（JSON）:
 
@@ -736,7 +738,7 @@ Principal 解決後、サービス層で **semantic permission key** を評価�
 ### 4.2 JSON 命名ポリシー（実装準拠）
 
 - Service API が返す JSON は原則 **camelCase** を採用する。
-- `GET /v1/executions/{id}/graph`（ExecutionGraph JSON）と、定義コンパイル由来のデバッグ JSON（`compiledJson`）は camelCase で統一済み。
+- `GET /v1/executions/{executionId}/graph`（ExecutionGraph JSON）と、定義コンパイル由来のデバッグ JSON（`compiledJson`）は camelCase で統一済み。
 
 ### 4.3 ステータスコード
 

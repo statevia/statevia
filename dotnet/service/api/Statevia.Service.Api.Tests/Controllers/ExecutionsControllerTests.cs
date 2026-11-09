@@ -227,8 +227,8 @@ public sealed class ExecutionsControllerTests
         // Assert
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(nameof(controller.Get), created.ActionName);
-        Assert.True(created.RouteValues!.ContainsKey("id"));
-        Assert.Equal("WF-DISP-1", created.RouteValues!["id"]);
+        Assert.True(created.RouteValues!.ContainsKey("executionId"));
+        Assert.Equal("WF-DISP-1", created.RouteValues!["executionId"]);
         var value = Assert.IsType<ExecutionResponse>(created.Value);
         Assert.Equal("WF-DISP-1", value.DisplayId);
     }

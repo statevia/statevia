@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Statevia.Service.Api.Contracts;
 
 /// <summary>
-/// GET /v1/executions/{id}/state のクエリパラメータ。
+/// GET /v1/executions/{executionId}/state のクエリパラメータ。
 /// </summary>
 public sealed class ExecutionStateQuery
 {

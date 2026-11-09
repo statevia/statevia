@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Statevia.Service.Api.Contracts;
 
 /// <summary>
-/// GET /v1/executions/{id}/events のクエリパラメータ。
+/// GET /v1/executions/{executionId}/events のクエリパラメータ。
 /// </summary>
 public sealed class ExecutionEventsQuery
 {

@@ -77,18 +77,22 @@ internal sealed class TraceContextEnrichmentMiddleware
     }
 
     /// <summary>ルートから Execution・定義・グラフの ID を取り出す。</summary>
+    /// <remarks>
+    /// ルートの値の名前（<c>executionId</c> / <c>definitionId</c> / <c>graphId</c>）はコントローラーのルート引数と一致させる。
+    /// 名前がずれるとログと <c>tracestate</c> から ID が黙って消えるので、テストで名前を固定している。
+    /// </remarks>
     /// <param name="ctx">HTTP の文脈。</param>
     /// <returns>Execution・定義・グラフの ID。ルートに無いものは null。</returns>
     internal static (string? wf, string? def, string? graph) ExtractDomainIds(HttpContext ctx)
     {
         var path = ctx.Request.Path.Value ?? "";
-        if (TryGetRouteString(ctx, "id") is { } routeId)
-        {
-            if (path.StartsWith("/v1/executions/", StringComparison.OrdinalIgnoreCase))
-                return (routeId, null, null);
-            if (path.StartsWith("/v1/definitions/", StringComparison.OrdinalIgnoreCase))
-                return (null, routeId, null);
-        }
+        if (path.StartsWith("/v1/executions/", StringComparison.OrdinalIgnoreCase)
+            && TryGetRouteString(ctx, "executionId") is { } executionId)
+            return (executionId, null, null);
+
+        if (path.StartsWith("/v1/definitions/", StringComparison.OrdinalIgnoreCase)
+            && TryGetRouteString(ctx, "definitionId") is { } definitionId)
+            return (null, definitionId, null);
 
         if (path.StartsWith("/v1/graphs/", StringComparison.OrdinalIgnoreCase)
             && TryGetRouteString(ctx, "graphId") is { } graphId)
