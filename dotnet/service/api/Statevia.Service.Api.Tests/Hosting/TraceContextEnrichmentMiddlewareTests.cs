@@ -1,6 +1,9 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Statevia.Service.Api.Controllers;
 using Statevia.Service.Api.Hosting;
 
 namespace Statevia.Service.Api.Tests.Hosting;
@@ -16,7 +19,7 @@ public sealed class TraceContextEnrichmentMiddlewareTests
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
         ctx.Request.Path = "/v1/executions/wf-abc";
-        ctx.Request.RouteValues["id"] = "wf-abc";
+        ctx.Request.RouteValues["executionId"] = "wf-abc";
         ctx.Response.Body = new MemoryStream();
 
         var collector = new LogCollector();
@@ -43,7 +46,7 @@ public sealed class TraceContextEnrichmentMiddlewareTests
         var ctx = new DefaultHttpContext();
         ctx.Request.Method = "GET";
         ctx.Request.Path = "/v1/executions/wf-abc";
-        ctx.Request.RouteValues["id"] = "wf-abc";
+        ctx.Request.RouteValues["executionId"] = "wf-abc";
         ctx.Items[RequestLogContext.TraceIdItemKey] = "tid-1";
         ctx.Response.Body = new MemoryStream();
 
@@ -78,7 +81,7 @@ public sealed class TraceContextEnrichmentMiddlewareTests
         // Arrange
         var ctx = new DefaultHttpContext();
         ctx.Request.Path = "/v1/definitions/def-1";
-        ctx.Request.RouteValues["id"] = "def-1";
+        ctx.Request.RouteValues["definitionId"] = "def-1";
 
         // Act
         var (executionId, definitionId, graphId) = TraceContextEnrichmentMiddleware.ExtractDomainIds(ctx);
@@ -87,6 +90,57 @@ public sealed class TraceContextEnrichmentMiddlewareTests
         Assert.Null(executionId);
         Assert.Equal("def-1", definitionId);
         Assert.Null(graphId);
+    }
+
+    /// <summary>
+    /// <see cref="TraceContextEnrichmentMiddleware.ExtractDomainIds"/> が Execution ルートから Execution の ID を返す。
+    /// </summary>
+    [Fact]
+    public void ExtractDomainIds_ReturnsExecutionId()
+    {
+        // Arrange
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Path = "/v1/executions/wf-abc/graph";
+        ctx.Request.RouteValues["executionId"] = "wf-abc";
+
+        // Act
+        var (executionId, definitionId, graphId) = TraceContextEnrichmentMiddleware.ExtractDomainIds(ctx);
+
+        // Assert
+        Assert.Equal("wf-abc", executionId);
+        Assert.Null(definitionId);
+        Assert.Null(graphId);
+    }
+
+    /// <summary>
+    /// <see cref="TraceContextEnrichmentMiddleware.ExtractDomainIds"/> が読むルートの値の名前が、
+    /// コントローラーのルート引数の名前と一致する（取り違えるとログと tracestate から ID が消える）。
+    /// </summary>
+    /// <param name="controllerType">ルートを確かめるコントローラー。</param>
+    /// <param name="routeKey">ExtractDomainIds が読むルートの値の名前。</param>
+    [Theory]
+    [InlineData(typeof(ExecutionsController), "executionId")]
+    [InlineData(typeof(DefinitionsController), "definitionId")]
+    [InlineData(typeof(GraphsController), "graphId")]
+    public void ExtractDomainIds_RouteKeys_MatchControllerRouteTemplates(Type controllerType, string routeKey)
+    {
+        // Arrange
+        ArgumentNullException.ThrowIfNull(controllerType);
+        var templates = controllerType
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .SelectMany(method => method.GetCustomAttributes<HttpMethodAttribute>())
+            .Select(attribute => attribute.Template)
+            .Where(template => template is not null && template.StartsWith('{'))
+            .ToList();
+
+        // Act
+        var mismatched = templates
+            .Where(template => !template!.StartsWith("{" + routeKey, StringComparison.Ordinal))
+            .ToList();
+
+        // Assert
+        Assert.NotEmpty(templates);
+        Assert.Empty(mismatched);
     }
 
     /// <summary>

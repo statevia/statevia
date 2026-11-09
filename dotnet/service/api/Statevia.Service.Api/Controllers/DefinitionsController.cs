@@ -38,7 +38,7 @@ public class DefinitionsController : ControllerBase
         CancellationToken ct = default)
     {
         var created = await _definitions.CreateAsync(request, ct).ConfigureAwait(false);
-        return CreatedAtAction(nameof(Get), new { id = created.DisplayId }, created);
+        return CreatedAtAction(nameof(Get), new { definitionId = created.DisplayId }, created);
     }
 
     /// <summary>POST /v1/definitions/validate — 定義 YAML を検証する。catalog へは保存しない。</summary>
@@ -56,20 +56,20 @@ public class DefinitionsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>PUT /v1/definitions/{id} — 定義を更新。name + yaml を受け取り、検証・コンパイルして保存。</summary>
-    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <summary>PUT /v1/definitions/{definitionId} — 定義を更新。name + yaml を受け取り、検証・コンパイルして保存。</summary>
+    /// <param name="definitionId">定義の表示用 ID または UUID の文字列。</param>
     /// <param name="request">要求の本文。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>200 と更新した定義。</returns>
-    [HttpPut("{id}")]
+    [HttpPut("{definitionId}")]
     [RequestSizeLimit(DefinitionYamlConstraints.MaxRequestBodyBytes)]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<DefinitionResponse>> Update(
-        string id,
+        string definitionId,
         [FromBody] UpdateDefinitionRequest request,
         CancellationToken ct = default)
     {
-        var updated = await _definitions.UpdateAsync(id, request, ct).ConfigureAwait(false);
+        var updated = await _definitions.UpdateAsync(definitionId, request, ct).ConfigureAwait(false);
         return Ok(updated);
     }
 
@@ -100,41 +100,41 @@ public class DefinitionsController : ControllerBase
         return Ok(paged);
     }
 
-    /// <summary>GET /v1/definitions/{id} — 表示用 ID または UUID で取得。</summary>
-    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <summary>GET /v1/definitions/{definitionId} — 表示用 ID または UUID で取得。</summary>
+    /// <param name="definitionId">定義の表示用 ID または UUID の文字列。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>200 と定義。</returns>
-    [HttpGet("{id}")]
+    [HttpGet("{definitionId}")]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<DefinitionResponse>> Get(
-        string id,
+        string definitionId,
         CancellationToken ct = default)
     {
-        var row = await _definitions.GetAsync(id, ct).ConfigureAwait(false);
+        var row = await _definitions.GetAsync(definitionId, ct).ConfigureAwait(false);
         return Ok(row);
     }
 
-    /// <summary>DELETE /v1/definitions/{id} — catalog から論理削除する。</summary>
-    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <summary>DELETE /v1/definitions/{definitionId} — catalog から論理削除する。</summary>
+    /// <param name="definitionId">定義の表示用 ID または UUID の文字列。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>204（本文なし）。</returns>
-    [HttpDelete("{id}")]
+    [HttpDelete("{definitionId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Delete(string id, CancellationToken ct = default)
+    public async Task<IActionResult> Delete(string definitionId, CancellationToken ct = default)
     {
-        await _definitions.DeleteAsync(id, ct).ConfigureAwait(false);
+        await _definitions.DeleteAsync(definitionId, ct).ConfigureAwait(false);
         return NoContent();
     }
 
-    /// <summary>POST /v1/definitions/{id}/restore — 削除済み定義を復元する。</summary>
-    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <summary>POST /v1/definitions/{definitionId}/restore — 削除済み定義を復元する。</summary>
+    /// <param name="definitionId">定義の表示用 ID または UUID の文字列。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>200 と復元した定義。</returns>
-    [HttpPost("{id}/restore")]
+    [HttpPost("{definitionId}/restore")]
     [ProducesResponseType(typeof(DefinitionResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<DefinitionResponse>> Restore(string id, CancellationToken ct = default)
+    public async Task<ActionResult<DefinitionResponse>> Restore(string definitionId, CancellationToken ct = default)
     {
-        var restored = await _definitions.RestoreAsync(id, ct).ConfigureAwait(false);
+        var restored = await _definitions.RestoreAsync(definitionId, ct).ConfigureAwait(false);
         return Ok(restored);
     }
 }

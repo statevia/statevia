@@ -8,10 +8,10 @@ internal static class RequestLogContext
     /// <summary>ミドルウェアが決定した相関用 ID（後続の enrich やログで共有）。</summary>
     public const string TraceIdItemKey = "Statevia.TraceId";
 
-    /// <summary>ルート <c>{id}</c> から取得したワークフロー表示 ID。</summary>
+    /// <summary>ルート <c>{executionId}</c> から取得した Execution の表示用 ID。</summary>
     public const string ExecutionDisplayIdItemKey = "Statevia.ExecutionDisplayId";
 
-    /// <summary>ルート <c>{id}</c> から取得した定義表示 ID。</summary>
+    /// <summary>ルート <c>{definitionId}</c> から取得した定義の表示用 ID。</summary>
     public const string DefinitionDisplayIdItemKey = "Statevia.DefinitionDisplayId";
 
     /// <summary>ルート <c>{graphId}</c> から取得したグラフ定義 ID。</summary>
