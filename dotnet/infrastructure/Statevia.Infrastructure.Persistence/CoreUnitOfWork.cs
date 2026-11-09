@@ -16,6 +16,7 @@ internal sealed class CoreUnitOfWork : ICoreUnitOfWork
     /// <summary>
     /// 新しいインスタンスを初期化する。
     /// </summary>
+    /// <param name="db">このユニットオブワークが使う DbContext。破棄はユニットオブワークが行う。</param>
     public CoreUnitOfWork(CoreDbContext db) => _db = db;
 
     /// <inheritdoc />

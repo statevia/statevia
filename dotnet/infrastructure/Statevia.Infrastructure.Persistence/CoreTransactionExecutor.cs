@@ -12,6 +12,7 @@ internal sealed class CoreTransactionExecutor : ICoreTransactionExecutor
     /// <summary>
     /// 新しいインスタンスを初期化する。
     /// </summary>
+    /// <param name="unitOfWorkFactory">トランザクションごとにユニットオブワークを作るファクトリ。</param>
     public CoreTransactionExecutor(ICoreUnitOfWorkFactory unitOfWorkFactory) =>
         _unitOfWorkFactory = unitOfWorkFactory;
 

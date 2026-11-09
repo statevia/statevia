@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Statevia.Infrastructure.Persistence.Repositories;
 
+/// <summary><see cref="ICommandDedupRepository"/> の EF Core 実装。<c>command_dedup</c> を読み書きする。</summary>
 internal sealed class CommandDedupRepository : ICommandDedupRepository
 {
+    /// <inheritdoc />
     public Task<CommandDedupRow?> FindValidAsync(
         ICoreUnitOfWork uow,
         string dedupKey,
@@ -12,6 +14,7 @@ internal sealed class CommandDedupRepository : ICommandDedupRepository
         uow.GetDb().CommandDedup.AsNoTracking()
             .FirstOrDefaultAsync(x => x.DedupKey == dedupKey && x.ExpiresAt > utcNow, ct);
 
+    /// <inheritdoc />
     public Task<CommandDedupRow?> FindValidConflictingRequestHashAsync(
         ICoreUnitOfWork uow,
         string tenantKey,
@@ -32,6 +35,7 @@ internal sealed class CommandDedupRepository : ICommandDedupRepository
             .FirstOrDefaultAsync(ct);
     }
 
+    /// <inheritdoc />
     public Task SaveAsync(ICoreUnitOfWork uow, CommandDedupRow row, CancellationToken ct)
     {
         uow.GetDb().CommandDedup.Add(row);

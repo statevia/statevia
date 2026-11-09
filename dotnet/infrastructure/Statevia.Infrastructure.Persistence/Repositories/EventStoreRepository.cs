@@ -4,10 +4,13 @@ using System.Text;
 
 namespace Statevia.Infrastructure.Persistence.Repositories;
 
+/// <summary><see cref="IEventStoreRepository"/> の EF Core 実装。<c>event_store</c> に監査イベントを追記し読み出す。</summary>
 internal sealed class EventStoreRepository : IEventStoreRepository
 {
     private readonly IIdGenerator _ids;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="ids">イベント ID を採番するジェネレーター。</param>
     public EventStoreRepository(IIdGenerator ids) => _ids = ids;
 
     /// <inheritdoc />
@@ -60,6 +63,7 @@ internal sealed class EventStoreRepository : IEventStoreRepository
         });
     }
 
+    /// <inheritdoc />
     public async Task<bool> TryAppendIfAbsentByClientEventAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -110,6 +114,7 @@ internal sealed class EventStoreRepository : IEventStoreRepository
         return true;
     }
 
+    /// <inheritdoc />
     public async Task<(IReadOnlyList<EventStoreRow> Items, bool HasMore)> ListAfterSeqAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -135,6 +140,7 @@ internal sealed class EventStoreRepository : IEventStoreRepository
         return (list, hasMore);
     }
 
+    /// <inheritdoc />
     public async Task<long> GetMaxSeqAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct = default)
     {
         var max = await uow.GetDb().EventStore.AsNoTracking()

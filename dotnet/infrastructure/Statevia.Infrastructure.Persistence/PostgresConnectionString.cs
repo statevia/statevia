@@ -6,6 +6,8 @@ internal static class PostgresConnectionString
     /// <summary>
     /// <paramref name="value"/> が <c>postgres://</c> / <c>postgresql://</c> なら Npgsql 形式へ変換する。
     /// </summary>
+    /// <param name="value">接続文字列。URL 形式でもキーと値の形式でもよい。</param>
+    /// <returns>Npgsql のキーと値の形式の接続文字列。URL 形式でなければ <paramref name="value"/> をそのまま返す。</returns>
     internal static string Normalize(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
