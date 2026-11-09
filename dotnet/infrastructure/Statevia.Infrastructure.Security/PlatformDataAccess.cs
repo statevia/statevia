@@ -26,21 +26,37 @@ internal sealed record ExecutionTenantLookup(Guid TenantId, string TenantKey, Te
 internal interface IPlatformDataAccess
 {
     /// <summary><paramref name="tenantKey"/> でテナントを検索する（フィルタ無視）。</summary>
+    /// <param name="tenantKey">テナントキー（<c>tenants.tenant_key</c>）。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント行。見つからなければ null。</returns>
     Task<TenantRow?> FindTenantByKeyAsync(string tenantKey, CancellationToken cancellationToken);
 
     /// <summary>テナントを内部 UUID で検索する（フィルタ無視）。</summary>
+    /// <param name="tenantId">テナントの内部 ID（<c>tenants.tenant_id</c>）。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント行。見つからなければ null。</returns>
     Task<TenantRow?> FindTenantByIdAsync(Guid tenantId, CancellationToken cancellationToken);
 
     /// <summary>ライフサイクルが Active のテナントを <c>tenant_key</c> 昇順で返す（フィルタ無視）。</summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>Active のテナント行の一覧。無ければ空。</returns>
     Task<IReadOnlyList<TenantRow>> ListActiveTenantsAsync(CancellationToken cancellationToken);
 
     /// <summary>ログイン用の tenant / user / principal を検索する。</summary>
+    /// <param name="tenantKey">テナントキー。</param>
+    /// <param name="username">テナント内のユーザー名。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント・ユーザー・Principal の行。どれかが見つからなければ null。</returns>
     Task<LoginCredentialLookup?> FindLoginCredentialAsync(
         string tenantKey,
         string username,
         CancellationToken cancellationToken);
 
     /// <summary>Principal ID とテナント内部 ID でユーザー情報を取得する。</summary>
+    /// <param name="tenantId">テナントの内部 ID。</param>
+    /// <param name="principalId">ユーザーの Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント・ユーザー・Principal の行。どれかが見つからなければ null。</returns>
     Task<LoginCredentialLookup?> FindUserPrincipalAsync(
         Guid tenantId,
         Guid principalId,
@@ -59,37 +75,64 @@ internal interface IPlatformDataAccess
         CancellationToken cancellationToken);
 
     /// <summary>API キー（prefix + hash）から資格情報を検索する。</summary>
+    /// <param name="keyPrefix">平文の API キーの先頭部分。</param>
+    /// <param name="keyHash">平文の API キーのハッシュ。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント・API キー・Principal の行。どれかが見つからなければ null。</returns>
     Task<ApiKeyCredentialLookup?> FindApiKeyCredentialAsync(
         string keyPrefix,
         string keyHash,
         CancellationToken cancellationToken);
 
     /// <summary>API キーの最終利用時刻を更新する。</summary>
+    /// <param name="apiKeyId">API キー ID。該当行が無ければ何もしない。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task TouchApiKeyLastUsedAsync(Guid apiKeyId, CancellationToken cancellationToken);
 
     /// <summary>既定テナントが無ければ作成する。</summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>既定テナントがあることを確かめ終わると完了するタスク。</returns>
     Task EnsureDefaultTenantAsync(CancellationToken cancellationToken);
 
     /// <summary>権限カタログが無ければシードする。</summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>シードが終わると完了するタスク。</returns>
     Task EnsurePermissionCatalogAsync(CancellationToken cancellationToken);
 
     /// <summary>Principal がテナント管理者（<c>is_tenant_admin</c>）か。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>ユーザーの Principal で <c>is_tenant_admin</c> が true なら true。</returns>
     Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken);
 
     /// <summary>グループ展開と管理者フラグから Principal の許可 semantic key 集合を返す。</summary>
+    /// <remarks>テナント管理者には権限カタログのすべてのキーを返す。それ以外はユーザーまたはサービスアカウントの所属グループに付いた権限を重複なく返す。</remarks>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>許可された権限キーの一覧。所属が無ければ空。</returns>
     Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
         Guid principalId,
         CancellationToken cancellationToken);
 
     /// <summary>Principal ID で Principal 行を検索する。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>Principal 行。見つからなければ null。</returns>
     Task<PrincipalRow?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken);
 
     /// <summary>Principal の所属グループ（ID と名称）を返す。</summary>
+    /// <param name="principalId">Principal ID（ユーザーまたはサービスアカウント）。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>所属グループの一覧（名称の昇順）。所属が無ければ空。</returns>
     Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
         Guid principalId,
         CancellationToken cancellationToken);
 
     /// <summary><paramref name="executionId"/> のテナント境界を検索する（フィルタ無視）。</summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント境界。Execution が見つからなければ null。</returns>
     Task<ExecutionTenantLookup?> FindExecutionTenantAsync(Guid executionId, CancellationToken cancellationToken);
 }
 

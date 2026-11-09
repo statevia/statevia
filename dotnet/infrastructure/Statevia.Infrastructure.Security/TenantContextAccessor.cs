@@ -56,6 +56,7 @@ internal static class TenantExecutionScope
     /// <param name="accessor">テナント文脈アクセサ。</param>
     /// <param name="state">適用する文脈。</param>
     /// <param name="action">実行する処理。</param>
+    /// <returns><paramref name="action"/> が終わり、文脈を元に戻すと完了するタスク。</returns>
     public static async Task RunAsync(
         ITenantContextAccessor accessor,
         TenantContextState state,

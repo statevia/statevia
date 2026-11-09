@@ -12,6 +12,7 @@ public static class SecurityServiceCollectionExtensions
     /// </summary>
     /// <param name="services">サービスコレクション。</param>
     /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>（呼び出しを連ねるため）。</returns>
     /// <remarks>
     /// JWT 発行と SigningKey の起動検証は含まない。HTTP API は <see cref="AddStateviaJwtAuth"/> を別途登録する。
     /// 専用 Worker は JWT を発行しないため、本メソッドだけを使う。
@@ -46,6 +47,7 @@ public static class SecurityServiceCollectionExtensions
     /// </summary>
     /// <param name="services">サービスコレクション。</param>
     /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>（呼び出しを連ねるため）。</returns>
     /// <remarks>
     /// Service API（HTTP）専用。Production / Staging では開発既定 SigningKey と 32 文字未満を拒否する。失敗メッセージに鍵値は出さない。
     /// </remarks>

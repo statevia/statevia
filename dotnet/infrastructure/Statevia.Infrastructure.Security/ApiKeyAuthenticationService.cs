@@ -15,6 +15,13 @@ internal sealed record ApiKeyValidationResult(
 internal interface IApiKeyAuthenticationService
 {
     /// <summary>API キーを検証する。</summary>
+    /// <remarks>
+    /// Principal が無効・論理削除済み、または API キーの期限切れなら認証しない。
+    /// 有効スコープは、Principal に許可された権限と API キーに許可したスコープの交差。検証に成功すると最終利用時刻を更新する。
+    /// </remarks>
+    /// <param name="plainApiKey">平文の API キー。空白だけなら認証しない。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>検証結果。認証できなければ null。</returns>
     Task<ApiKeyValidationResult?> ValidateAsync(string plainApiKey, CancellationToken cancellationToken);
 }
 
@@ -25,6 +32,7 @@ internal sealed class ApiKeyAuthenticationService : IApiKeyAuthenticationService
     private readonly IPlatformDataAccess _platformDataAccess;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="platformDataAccess">API キーと Principal を検索する Platform データアクセス。</param>
     public ApiKeyAuthenticationService(IPlatformDataAccess platformDataAccess)
     {
         _platformDataAccess = platformDataAccess;

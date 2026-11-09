@@ -4,12 +4,15 @@ namespace Statevia.Infrastructure.Security;
 /// <inheritdoc />
 internal sealed class RuntimePermissionAuthorization : IRuntimePermissionAuthorization
 {
+    /// <summary>権限が足りないときの <see cref="ForbiddenException"/> のエラーコード。</summary>
     internal const string PermissionDeniedCode = "PERMISSION_DENIED";
 
     private readonly ITenantContextAccessor _tenantContext;
     private readonly IPlatformDataAccess _platformDataAccess;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
+    /// <param name="platformDataAccess">Principal の権限を展開する Platform データアクセス。</param>
     public RuntimePermissionAuthorization(
         ITenantContextAccessor tenantContext,
         IPlatformDataAccess platformDataAccess)
