@@ -170,6 +170,7 @@ internal sealed class OrasOciArtifactFetcher(
     }
 }
 
+/// <summary><see cref="OrasOciArtifactFetcher"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class OrasOciArtifactFetcherLog
 {
     [LoggerMessage(

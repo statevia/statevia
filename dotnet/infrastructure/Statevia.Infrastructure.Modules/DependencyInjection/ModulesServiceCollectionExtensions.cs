@@ -11,6 +11,7 @@ public static class ModulesServiceCollectionExtensions
     /// </summary>
     /// <param name="services">サービスコレクション。</param>
     /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>（呼び出しを連ねるため）。</returns>
     public static IServiceCollection AddStateviaInfrastructureModules(
         this IServiceCollection services,
         IConfiguration configuration)

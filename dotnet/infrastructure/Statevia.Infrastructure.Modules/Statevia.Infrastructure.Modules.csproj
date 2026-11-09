@@ -4,6 +4,7 @@
     <RootNamespace>Statevia.Infrastructure.Modules</RootNamespace>
     <AssemblyName>Statevia.Infrastructure.Modules</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <StateviaDocumentationRulesEnabled>true</StateviaDocumentationRulesEnabled>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
     <!-- SonarScanner for .NET: SDK 形式は既定 GUID を持たない。sln 外の ProjectReference で 00000000 重複警告になるのを防ぐ。 -->
     <ProjectGuid>{486C758E-FC6C-43EB-8956-9824E6563A76}</ProjectGuid>

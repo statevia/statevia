@@ -25,6 +25,13 @@ internal sealed class ModuleHost
     private readonly Dictionary<string, ModuleAssemblyLoadContext> _loadContexts = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="moduleSource">Module を discover する Source（filesystem とリモートの集約）。</param>
+    /// <param name="catalog">load した Module の Action を登録するカタログ。</param>
+    /// <param name="loadCatalog">Module ごとの load 結果を記録するカタログ。</param>
+    /// <param name="signatureVerifier">Module の署名を検証し信頼レベルを決める検証器。</param>
+    /// <param name="serviceProvider">Module の初期化に渡すサービスプロバイダー。</param>
+    /// <param name="options">Module ホストの設定。現在の実装では値を読まない。</param>
+    /// <param name="logger">ロガー。</param>
     public ModuleHost(
         IModuleSource moduleSource,
         IActionCatalog catalog,
@@ -52,6 +59,7 @@ internal sealed class ModuleHost
     /// </param>
     /// <param name="discoverFilesystem">filesystem Source を discover するか。</param>
     /// <param name="discoverRemote">リモート Source を discover するか。</param>
+    /// <returns>discover と登録が終わると完了するタスク。</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="discoverFilesystem"/> が true なのに <paramref name="filesystemTenantKey"/> が空のとき。
     /// </exception>
@@ -452,6 +460,7 @@ internal sealed class ModuleHost
     }
 }
 
+/// <summary><see cref="ModuleHost"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ModuleHostLog
 {
     [LoggerMessage(EventId = 60001, Level = LogLevel.Error, Message = "Module discovery failed")]

@@ -91,6 +91,10 @@ internal sealed class AwsS3ArtifactFetcher(ILogger<AwsS3ArtifactFetcher> logger)
     }
 
     /// <summary>ETag / VersionId からキャッシュキー用 content identity を組み立てる。</summary>
+    /// <remarks>VersionId があれば <c>ver:</c> を先頭にし、ETag は前後の空白と二重引用符を除いて足す。どちらも無ければ <c>etag:unknown</c>。</remarks>
+    /// <param name="etag">S3 オブジェクトの ETag。null・空白なら使わない。</param>
+    /// <param name="versionId">S3 オブジェクトの VersionId。null・空なら使わない。</param>
+    /// <returns><c>ver:{VersionId}+etag:{ETag}</c>、<c>ver:{VersionId}</c>、<c>etag:{ETag}</c> のいずれかの形の文字列。</returns>
     internal static string BuildContentIdentity(string? etag, string? versionId)
     {
         var normalizedEtag = NormalizeEtag(etag);
@@ -115,6 +119,7 @@ internal sealed class AwsS3ArtifactFetcher(ILogger<AwsS3ArtifactFetcher> logger)
     }
 }
 
+/// <summary><see cref="AwsS3ArtifactFetcher"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class AwsS3ArtifactFetcherLog
 {
     [LoggerMessage(
