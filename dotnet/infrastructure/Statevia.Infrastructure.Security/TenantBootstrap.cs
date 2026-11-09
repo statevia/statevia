@@ -45,6 +45,9 @@ internal sealed class TenantBootstrap
     /// <param name="displayName">表示名（未指定時は tenantKey）。</param>
     /// <param name="skipIfExists">既存キーがあれば何もしない。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>作成した、または既にあったテナント。<see cref="TenantBootstrapResult.Created"/> で区別する。</returns>
+    /// <exception cref="ArgumentException">テナントキーが形式に合わないとき、または表示名が ASCII ラベルの制約を満たさないとき。</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="skipIfExists"/> が false で同じキーのテナントが既にあるとき。</exception>
     public async Task<TenantBootstrapResult> CreateTenantAsync(
         string tenantKey,
         string? displayName,

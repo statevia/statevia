@@ -10,6 +10,9 @@ internal sealed class ExecutionMutationAuthorization : IExecutionMutationAuthori
     private readonly IPlatformDataAccess _platformDataAccess;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
+    /// <param name="runtimeAuth">権限キーで認可するポート。</param>
+    /// <param name="platformDataAccess">Principal とグループを検索する Platform データアクセス。</param>
     public ExecutionMutationAuthorization(
         ITenantContextAccessor tenantContext,
         IRuntimePermissionAuthorization runtimeAuth,

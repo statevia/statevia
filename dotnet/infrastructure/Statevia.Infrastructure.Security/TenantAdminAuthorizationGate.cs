@@ -8,6 +8,9 @@ internal static class TenantAdminAuthorizationGate
     /// <param name="tenantContext">テナントコンテキスト。</param>
     /// <param name="tenantAdminAuthorization">管理者判定。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>管理者であることを確かめ終わると完了するタスク。</returns>
+    /// <exception cref="UnauthorizedException">テナント文脈が未解決か、Principal ID が無いとき。</exception>
+    /// <exception cref="ForbiddenException">Principal がテナント管理者でないとき。</exception>
     public static async Task EnsureTenantAdminAsync(
         ITenantContextAccessor tenantContext,
         ITenantAdminAuthorization tenantAdminAuthorization,

@@ -9,8 +9,11 @@ namespace Statevia.Infrastructure.Security;
 /// <summary>JWT 発行・検証。</summary>
 internal sealed class JwtTokenService
 {
+    /// <summary>テナントの内部 ID（<c>tenants.tenant_id</c>）を入れるクレーム名。</summary>
     public const string TenantIdClaim = "tenant_id";
+    /// <summary>テナントキー（<c>tenants.tenant_key</c>）を入れるクレーム名。</summary>
     public const string TenantKeyClaim = "tenant_key";
+    /// <summary>Principal ID を入れるクレーム名。</summary>
     public const string PrincipalIdClaim = "principal_id";
 
     private readonly JwtAuthOptions _options;
