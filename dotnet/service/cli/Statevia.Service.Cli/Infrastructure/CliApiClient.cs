@@ -44,7 +44,7 @@ internal static class CliApiClient
     internal const int TimeoutSeconds = 30;
 
     /// <summary>
-    /// URI パスの 1 セグメントとして使えるとき、Trim して <see cref="Uri.EscapeDataString"/> する。
+    /// URI パスの 1 セグメントとして使えるとき、Trim して <see cref="Uri.EscapeDataString(string)"/> する。
     /// </summary>
     /// <remarks>
     /// <para><c>/</c> <c>\</c> やセグメント全体が <c>.</c> / <c>..</c>、制御文字は拒否する。
@@ -112,6 +112,7 @@ internal static class CliApiClient
 
     /// <summary>成功時の JSON を stdout へ出す。204 や空本文は何も書かない。</summary>
     /// <param name="result">API 応答。</param>
+    /// <returns>書き終えると完了するタスク。</returns>
     public static async Task WriteSuccessAsync(CliApiSendResult result)
     {
         ArgumentNullException.ThrowIfNull(result);

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Statevia.Runtime.Services;
 
+/// <summary><see cref="DelayWaitSchedulerHostedService"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class DelayWaitSchedulerLogMessages
 {
     [LoggerMessage(EventId = 70101, Level = LogLevel.Error, Message = "Delay wait scheduling iteration failed.")]

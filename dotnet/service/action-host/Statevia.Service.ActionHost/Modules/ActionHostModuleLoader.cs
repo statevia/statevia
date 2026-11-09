@@ -17,6 +17,12 @@ internal sealed class ActionHostModuleLoader
     private readonly List<ModuleAssemblyLoadContext> _loadContexts = [];
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="registry">load した Action を登録する実行レジストリ。</param>
+    /// <param name="discoverer">modules ルート配下の Module ディレクトリを探す。</param>
+    /// <param name="serviceProvider">Module の <c>GetActions</c> に渡すホストの DI ルート。</param>
+    /// <param name="hostEnvironment">modules ルートの相対パスを解決する基準（ContentRoot）。</param>
+    /// <param name="options">Action Host の設定（modules ルートなど）。</param>
+    /// <param name="logger">ロガー。</param>
     public ActionHostModuleLoader(
         ActionHostActionRegistry registry,
         FilesystemModuleDiscoverer discoverer,
@@ -177,6 +183,7 @@ internal sealed class ActionHostModuleLoader
                 && type is { IsAbstract: false, IsInterface: false });
 }
 
+/// <summary><see cref="ActionHostModuleLoader"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ActionHostModuleLoaderLog
 {
     [LoggerMessage(EventId = 62001, Level = LogLevel.Warning, Message = "Skipping module '{ModuleDirectory}': {Reason}")]

@@ -11,6 +11,7 @@ public static class AuthCommand
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>コマンド定義を生成する。</summary>
+    /// <returns>login / logout を登録した <see cref="Command"/>。</returns>
     public static Command Create()
     {
         var command = new Command("auth", "CLI credential utilities");

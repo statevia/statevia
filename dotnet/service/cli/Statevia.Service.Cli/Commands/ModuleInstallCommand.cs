@@ -8,6 +8,7 @@ namespace Statevia.Service.Cli.Commands;
 public static class ModuleInstallCommand
 {
     /// <summary>コマンド定義を生成する。</summary>
+    /// <returns><c>module install</c> の <see cref="Command"/>。</returns>
     public static Command Create()
     {
         var zipArgument = new Argument<FileInfo>("zip-file", "Action Module zip archive");
