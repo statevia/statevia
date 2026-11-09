@@ -14,6 +14,7 @@ internal sealed class ScalarPreservingNodeTypeResolver : INodeTypeResolver
     private const string TagInt = "tag:yaml.org,2002:int";
     private const string TagFloat = "tag:yaml.org,2002:float";
 
+    /// <inheritdoc />
     public bool Resolve(NodeEvent? nodeEvent, ref Type currentType)
     {
         if (currentType != typeof(object) || nodeEvent is not Scalar scalar)

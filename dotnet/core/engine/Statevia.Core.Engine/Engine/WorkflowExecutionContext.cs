@@ -130,6 +130,7 @@ public sealed class WorkflowExecutionContext
     }
 
     /// <summary>チェックポイント用に Context 断面をエクスポートする。</summary>
+    /// <returns>Context の断面。</returns>
     public CheckpointContextData ExportCheckpoint()
     {
         lock (_lock)

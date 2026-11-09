@@ -6,6 +6,7 @@ namespace Statevia.Core.Engine.Definition.Validation;
 /// </summary>
 internal static class ValidationPipeline
 {
+    /// <summary>実行する検証ルールの一覧。</summary>
     internal static readonly IReadOnlyList<IValidationRule> Rules = CreateRules();
 
     /// <summary>

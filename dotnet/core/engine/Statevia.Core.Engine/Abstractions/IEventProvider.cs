@@ -30,5 +30,7 @@ public interface IEventProvider
     void Resume(string nodeId, string eventName);
 
     /// <summary>システムスコープのトピックへイベントを発行します（外部 bus 未接続時は dispatch ログのみ）。</summary>
+    /// <param name="topic">イベントを発行するトピック名。</param>
+    /// <param name="payloadSummary">ログに載せるペイロードの要約。無ければ null。</param>
     void PublishTopic(string topic, object? payloadSummary);
 }

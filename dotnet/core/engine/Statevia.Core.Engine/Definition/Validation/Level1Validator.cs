@@ -9,6 +9,8 @@ namespace Statevia.Core.Engine.Definition.Validation;
 public static class Level1Validator
 {
     /// <summary>ワークフロー定義を検証し、エラー一覧を返します（Structural フェーズのみ）。</summary>
+    /// <param name="definition">ワークフロー定義。</param>
+    /// <returns>検証結果。</returns>
     public static ValidationResult Validate(WorkflowDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);

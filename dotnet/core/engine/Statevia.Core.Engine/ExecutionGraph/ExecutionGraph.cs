@@ -37,6 +37,7 @@ public sealed class ExecutionGraph
     private Func<string>? _nodeIdCandidateFactory;
 
     /// <summary>ノード一覧のスナップショットを返します。</summary>
+    /// <returns>呼び出し時点のノードのコピー。</returns>
     public IReadOnlyList<ExecutionNode> GetNodesSnapshot()
     {
         lock (_lock)
@@ -46,6 +47,7 @@ public sealed class ExecutionGraph
     }
 
     /// <summary>辺一覧のスナップショットを返します。</summary>
+    /// <returns>呼び出し時点の辺のコピー。</returns>
     public IReadOnlyList<ExecutionEdge> GetEdgesSnapshot()
     {
         lock (_lock)
@@ -134,6 +136,9 @@ public sealed class ExecutionGraph
         _nodes.Find(n => string.Equals(n.NodeId, nodeId, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>ノードを完了としてマークし、事実と出力を記録します。</summary>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <param name="fact">状態が返した Fact。</param>
+    /// <param name="output">状態の出力。</param>
     public void CompleteNode(string nodeId, string fact, object? output)
     {
         lock (_lock)
@@ -152,6 +157,8 @@ public sealed class ExecutionGraph
     /// <summary>
     /// ノードに output 条件遷移の診断を付与する（同一ノードへの再呼び出しで上書き可能）。
     /// </summary>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <param name="diagnostics">条件遷移の診断。null なら診断を消す。</param>
     public void SetNodeConditionRouting(string nodeId, ConditionRoutingDiagnostics? diagnostics)
     {
         lock (_lock)
@@ -218,6 +225,7 @@ public sealed class ExecutionGraph
     }
 
     /// <summary>チェックポイント用にグラフ断面をエクスポートする。</summary>
+    /// <returns>グラフの断面。</returns>
     public CheckpointGraphData ExportCheckpoint()
     {
         lock (_lock)
@@ -252,6 +260,7 @@ public sealed class ExecutionGraph
     }
 
     /// <summary>実行グラフを JSON としてエクスポートします。</summary>
+    /// <returns>実行グラフの JSON。</returns>
     public string ExportJson()
     {
         lock (_lock)

@@ -15,6 +15,7 @@ public interface IExecutionEngine
     /// Hosted Fork の枝として開始するときの指定。指定時は <paramref name="input"/> を評価済みとして開始状態の input 写像を適用せず、
     /// <c>$.input</c> を <see cref="ForkBranchStart.WorkflowInput"/> にする。省略時は通常の開始。
     /// </param>
+    /// <returns>開始した Execution の実行 ID。<paramref name="executionId"/> を省略したときは採番した ID。</returns>
     string Start(
         CompiledWorkflowDefinition definition,
         string? executionId = null,
@@ -35,26 +36,41 @@ public interface IExecutionEngine
     /// 非推奨シム。アクティブな Wait がちょうど 1 ノードかつそのイベントが 1 件のときのみ
     /// <see cref="ResumeWaitNode"/> に委譲する。
     /// </summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <param name="eventName">発生させるイベント名。</param>
     void PublishEvent(string executionId, string eventName);
 
     /// <summary>
     /// <see cref="PublishEvent(string, string)"/> と同様にイベントを発行するが、同一インスタンス内で
     /// <paramref name="clientEventId"/> が既に処理済みのときは発行せず <see cref="ApplyResult.AlreadyApplied"/> を返す。
     /// </summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <param name="eventName">発生させるイベント名。</param>
+    /// <param name="clientEventId">クライアントイベント ID。同じ Execution 内で同じ値の再適用は何もしない。</param>
+    /// <returns>発行したら <see cref="ApplyResult.Applied"/>。<paramref name="clientEventId"/> が処理済みなら <see cref="ApplyResult.AlreadyApplied"/>。Execution が無いときも <see cref="ApplyResult.Applied"/>（何もしない）。</returns>
     ApplyResult PublishEvent(string executionId, string eventName, Guid clientEventId);
 
     /// <summary>実行インスタンスに協調的キャンセルをリクエストします。エンジンは強制終了しません。</summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <returns>キャンセルの要求を記録すると完了するタスク。Execution が無ければ何もしない。</returns>
     Task CancelAsync(string executionId);
 
     /// <summary>
     /// <see cref="CancelAsync(string)"/> と同様に協調的キャンセルを行うが、同一 <paramref name="clientEventId"/> の再呼び出しは No-Op となる。
     /// </summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <param name="clientEventId">クライアントイベント ID。同じ Execution 内で同じ値の再適用は何もしない。</param>
+    /// <returns>要求を記録したら <see cref="ApplyResult.Applied"/>。<paramref name="clientEventId"/> が処理済みなら <see cref="ApplyResult.AlreadyApplied"/>。Execution が無いときも <see cref="ApplyResult.Applied"/>（何もしない）。</returns>
     Task<ApplyResult> CancelAsync(string executionId, Guid clientEventId);
 
     /// <summary>実行インスタンスの現在のスナップショットを取得します。</summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <returns>スナップショット。Execution が無ければ <see langword="null"/>。</returns>
     ExecutionSnapshot? GetSnapshot(string executionId);
 
     /// <summary>実行グラフを JSON としてエクスポートします（デバッグ・可視化用）。</summary>
+    /// <param name="executionId">実行 ID（Engine 内のキー）。</param>
+    /// <returns>実行グラフの JSON。Execution が無ければ <c>{}</c>。</returns>
     string ExportExecutionGraph(string executionId);
 
     /// <summary>
@@ -64,6 +80,7 @@ public interface IExecutionEngine
     /// <remarks>
     /// 直近の登録で上書きされます。<paramref name="handler"/> に <c>null</c> を渡すと解除します。
     /// </remarks>
+    /// <param name="handler">登録するハンドラ。null なら解除する。</param>
     void SetNodeCompletedHandler(Func<string, Task>? handler);
 
     /// <summary>
@@ -71,6 +88,7 @@ public interface IExecutionEngine
     /// 引数は (executionId, nodeId) です。ホストが checkpoint 保存と Unload に使います。
     /// </summary>
     /// <remarks>単体 DLL 利用時は未登録のままでよい（メモリ常駐）。</remarks>
+    /// <param name="handler">登録するハンドラ。null なら解除する。</param>
     void SetSuspendHandler(Func<string, string, Task>? handler);
 
     /// <summary>
@@ -84,6 +102,7 @@ public interface IExecutionEngine
     /// 子インスタンスは当該 output で <c>MarkCompleted</c> する。
     /// </para>
     /// </remarks>
+    /// <param name="handler">登録するハンドラ。null なら解除する。</param>
     void SetForkExpansionHandler(Func<ForkExpansionEvent, Task>? handler);
 
     /// <summary>

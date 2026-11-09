@@ -469,12 +469,18 @@ internal sealed class ForkRegionWaitTargetRule : IValidationRule
 internal static class ForkRegionRuleSupport
 {
     /// <summary>Fork の branches 辺かどうか。</summary>
+    /// <param name="snap">Fork 領域の解析結果。</param>
+    /// <param name="edge">調べる制御辺。</param>
+    /// <returns><paramref name="edge"/> が Fork から枝の先頭へ入る辺なら <see langword="true"/>。</returns>
     public static bool IsLegalForkEntry(ForkRegionSnapshot snap, ControlEdge edge) =>
         snap.Pairs.Any(p =>
             string.Equals(p.ForkState, edge.From, StringComparison.OrdinalIgnoreCase)
             && p.Branches.Contains(edge.To, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>ノードが属するペアと枝先頭。領域外なら null。</summary>
+    /// <param name="snap">Fork 領域の解析結果。</param>
+    /// <param name="node">調べる状態名。</param>
+    /// <returns>ノードが属する Fork と Join の組と枝の先頭。どの枝の Body にも無ければ <see langword="null"/>。</returns>
     public static BodyLocation? LocateBody(ForkRegionSnapshot snap, string node)
     {
         var hit = snap.Pairs
@@ -484,6 +490,8 @@ internal static class ForkRegionRuleSupport
     }
 
     /// <summary>指摘を蓄積する。</summary>
+    /// <param name="issues">指摘を足す先のコレクション。</param>
+    /// <param name="found">足す指摘。</param>
     public static void AddAll(ICollection<ValidationIssue> issues, IEnumerable<ValidationIssue> found)
     {
         foreach (var issue in found)
@@ -493,6 +501,11 @@ internal static class ForkRegionRuleSupport
     }
 
     /// <summary>同一 Body・当該 Join・入れ子 Fork 開始なら合法出口。</summary>
+    /// <param name="snap">Fork 領域の解析結果。</param>
+    /// <param name="pair">出口を調べる Fork と Join の組。</param>
+    /// <param name="fromHead">出口の始点が属する枝の先頭の状態名。</param>
+    /// <param name="to">行き先の状態名。</param>
+    /// <returns>行き先が対応する Join、同じ枝の Body、または対応する Join へ供給が届く入れ子の Fork なら <see langword="true"/>。</returns>
     public static bool IsLegalExit(ForkRegionSnapshot snap, ForkJoinPair pair, string fromHead, string to)
     {
         if (string.Equals(to, pair.JoinState, StringComparison.OrdinalIgnoreCase))
@@ -511,6 +524,8 @@ internal static class ForkRegionRuleSupport
     }
 
     /// <summary><c>input</c> 上の <c>$.states…</c> リテラルが指す状態名。</summary>
+    /// <param name="stateDef">状態の定義。</param>
+    /// <returns>input の path と values の path のうち、<c>$.states</c> で始まるものが指す状態名。</returns>
     public static IEnumerable<string> EnumerateStatesPathRefs(StateDefinition stateDef)
     {
         var fromPath = stateDef.Input?.Path is { } path

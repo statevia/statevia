@@ -7,5 +7,6 @@ namespace Statevia.Core.Engine.Abstractions;
 public interface IExecutionIdGenerator
 {
     /// <summary>エンジン内キー・イベントプロバイダ名に使う一意文字列（通常は GUID の既定書式）。</summary>
+    /// <returns>新しい実行 ID。</returns>
     string NewExecutionId();
 }

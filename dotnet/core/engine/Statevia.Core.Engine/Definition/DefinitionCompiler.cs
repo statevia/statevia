@@ -29,6 +29,7 @@ public sealed class DefinitionCompiler(IStateExecutorFactory executorFactory, bo
     /// <exception cref="DefinitionValidationException">
     /// <c>requireStateExecutors</c> が true で、実行器の無い状態があるとき。メッセージと <see cref="DefinitionValidationException.Issues"/> に該当する状態をすべて入れる。
     /// </exception>
+    /// <returns>コンパイル済みのワークフロー定義。</returns>
     public CompiledWorkflowDefinition Compile(
         WorkflowDefinition definition,
         IReadOnlyDictionary<string, ResolvedModuleBinding>? resolvedModules = null,
