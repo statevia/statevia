@@ -12,5 +12,6 @@ public interface IForkExpansionHostHandler
     /// </summary>
     /// <param name="evt">Engine からの展開通知。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>処理が終わると完了するタスク。</returns>
     Task HandleAsync(ForkExpansionEvent evt, CancellationToken ct);
 }

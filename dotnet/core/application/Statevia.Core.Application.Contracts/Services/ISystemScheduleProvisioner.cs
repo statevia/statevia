@@ -9,5 +9,6 @@ public interface ISystemScheduleProvisioner
     /// </summary>
     /// <param name="tenantId">テナント ID。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>システムスケジュールがあることを確かめ終わると完了するタスク。</returns>
     Task EnsureAsync(Guid tenantId, CancellationToken cancellationToken);
 }

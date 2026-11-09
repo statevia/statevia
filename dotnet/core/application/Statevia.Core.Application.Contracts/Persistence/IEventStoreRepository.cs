@@ -11,6 +11,7 @@ public interface IEventStoreRepository
     /// <param name="eventType">イベント種別。</param>
     /// <param name="payloadJson">ペイロード JSON。無いときは null。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>追記が終わると完了するタスク。</returns>
     Task AppendAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -26,6 +27,7 @@ public interface IEventStoreRepository
     /// <param name="actorKind">主体種別。スケジュール発火の開始では <c>scheduler</c>。未設定時は null。</param>
     /// <param name="actorId">主体 ID。スケジュール発火ではスケジュール ID。未設定時は null。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>追記が終わると完了するタスク。</returns>
     Task AppendAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -35,6 +37,14 @@ public interface IEventStoreRepository
         string? actorId,
         CancellationToken ct = default);
 
+    /// <summary>クライアントイベント ID から決まるイベント ID が未登録のときだけ、監査イベントを次の seq で追記する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="clientEventId">クライアントイベント ID。</param>
+    /// <param name="eventType">監査イベントの種別。</param>
+    /// <param name="payloadJson">ペイロードの JSON。無ければ null。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>追記したら <see langword="true"/>。同じクライアントイベント ID の監査イベントが既にあれば <see langword="false"/>。</returns>
     Task<bool> TryAppendIfAbsentByClientEventAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -43,6 +53,13 @@ public interface IEventStoreRepository
         string? payloadJson,
         CancellationToken cancellationToken);
 
+    /// <summary>指定 seq より後の監査イベントを seq の昇順で返す。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="afterSeq">この seq より後のイベントを返す。0 以上。</param>
+    /// <param name="limit">返す件数の上限。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>最大 <paramref name="limit"/> 件の監査イベントと、続きがあるか。</returns>
     Task<(IReadOnlyList<EventStoreRow> Items, bool HasMore)> ListAfterSeqAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -50,5 +67,10 @@ public interface IEventStoreRepository
         int limit,
         CancellationToken ct = default);
 
+    /// <summary>Execution の監査イベントの最大 seq を返す。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>最大 seq。監査イベントが無ければ 0。</returns>
     Task<long> GetMaxSeqAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct = default);
 }

@@ -11,6 +11,7 @@ public interface IExecutionSecuritySnapshotFactory
     /// <param name="definitionId">開始対象定義 ID。</param>
     /// <param name="capturedAt">永続化 tx のコミット時刻（UTC）。</param>
     /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>Start 用のスナップショットを返すタスク。</returns>
     Task<ExecutionSecuritySnapshot> CaptureForStartAsync(
         Guid tenantId,
         Guid definitionId,

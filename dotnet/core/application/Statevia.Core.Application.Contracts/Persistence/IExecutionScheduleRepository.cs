@@ -8,6 +8,9 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 public interface IExecutionScheduleRepository
 {
     /// <summary>テナントから見える未削除スケジュールを 1 件取得する。システムスケジュールは不在と同じ。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>スケジュール。無いか、削除済みかシステムスケジュールなら <see langword="null"/>。</returns>
     Task<ExecutionScheduleRow?> GetByIdAsync(Guid scheduleId, CancellationToken cancellationToken);
 
     /// <summary>呼び出し元が閲覧できる未削除スケジュールを一覧する。システムスケジュールは含めない。</summary>
@@ -28,30 +31,58 @@ public interface IExecutionScheduleRepository
     /// <param name="tenantId">対象テナント。</param>
     /// <param name="jobKey">ジョブ識別子。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>あれば <see langword="true"/>。</returns>
     Task<bool> SystemJobExistsAsync(Guid tenantId, string jobKey, CancellationToken cancellationToken);
 
     /// <summary>テナント内の未削除スケジュールを名前で取得する。</summary>
+    /// <param name="tenantId">テナントの内部 ID（<c>tenants.tenant_id</c>）。</param>
+    /// <param name="name">スケジュール名。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>スケジュール。無ければ <see langword="null"/>。</returns>
     Task<ExecutionScheduleRow?> GetByNameAsync(Guid tenantId, string name, CancellationToken cancellationToken);
 
     /// <summary>スケジュールを追加する。</summary>
+    /// <param name="row">追加するスケジュール。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task AddAsync(ExecutionScheduleRow row, CancellationToken cancellationToken);
 
     /// <summary>既存のスケジュールを保存する。</summary>
+    /// <param name="row">保存するスケジュール。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>保存が終わると完了するタスク。</returns>
     Task UpdateAsync(ExecutionScheduleRow row, CancellationToken cancellationToken);
 
     /// <summary>枠結果を追加する。同一枠の二重 INSERT は一意制約で失敗する。</summary>
+    /// <param name="row">追加する枠結果。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task AddRunAsync(ExecutionScheduleRunRow row, CancellationToken cancellationToken);
 
     /// <summary>枠結果を UoW に追加する。SaveChanges は呼び出し側。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="row">追加する枠結果。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task AddRunAsync(ICoreUnitOfWork uow, ExecutionScheduleRunRow row, CancellationToken cancellationToken);
 
     /// <summary>同一スケジュール由来の非終端実行があるか。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>あれば <see langword="true"/>。</returns>
     Task<bool> HasNonTerminalStartedRunAsync(
         ICoreUnitOfWork uow,
         Guid scheduleId,
         CancellationToken cancellationToken);
 
     /// <summary><c>next_fire_at</c> を進める。ExecuteUpdate のため即時反映する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="nextFireAtUtc">次の発火時刻（UTC）。</param>
+    /// <param name="updatedAtUtc">更新日時として書く時刻（UTC）。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task AdvanceNextFireAtAsync(
         ICoreUnitOfWork uow,
         Guid scheduleId,
@@ -80,6 +111,7 @@ public interface IExecutionScheduleRepository
     /// <param name="tenantId">点検中スケジュールのテナント。他テナントは数えない。</param>
     /// <param name="updatedAtOrBefore">この時刻以前の <c>updated_at</c> を停滞とする。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>該当する Execution の件数。</returns>
     Task<int> CountStuckExecutionsAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -91,6 +123,7 @@ public interface IExecutionScheduleRepository
     /// <param name="tenantId">点検中スケジュールのテナント。</param>
     /// <param name="createdAfter">この時刻より後の <c>created_at</c>。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>該当する run の件数。</returns>
     Task<int> CountFailedTenantScheduleRunsAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -102,6 +135,7 @@ public interface IExecutionScheduleRepository
     /// <param name="scheduleId">点検中のシステムスケジュール。</param>
     /// <param name="tenantId">点検中スケジュールのテナント。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>直近の発火予定時刻。無ければ <see langword="null"/>。</returns>
     Task<DateTime?> FindLatestCompletedFireAtAsync(
         ICoreUnitOfWork uow,
         Guid scheduleId,

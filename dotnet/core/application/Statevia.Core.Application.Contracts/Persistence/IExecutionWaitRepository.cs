@@ -10,6 +10,7 @@ public interface IExecutionWaitRepository
     /// <param name="executionId">対象 execution。</param>
     /// <param name="waits">残したい wait 行（1 Wait = 1 行）。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>置換が終わると完了するタスク。</returns>
     Task ReplaceWaitsAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -23,6 +24,7 @@ public interface IExecutionWaitRepository
     /// <param name="executionId">対象 execution。</param>
     /// <param name="nodeId">削除する Wait ノード ID。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task DeleteByNodeIdAsync(
         ICoreUnitOfWork uow,
         Guid executionId,

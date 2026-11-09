@@ -9,5 +9,7 @@ namespace Statevia.Core.Application.Contracts.Services;
 public interface IDefinitionLoadStrategy
 {
     /// <summary>コンテンツを解析し、対応するローダで <see cref="WorkflowDefinition"/> を構築する。</summary>
+    /// <param name="content">定義のテキスト。</param>
+    /// <returns>ワークフロー定義。</returns>
     WorkflowDefinition Load(string content);
 }

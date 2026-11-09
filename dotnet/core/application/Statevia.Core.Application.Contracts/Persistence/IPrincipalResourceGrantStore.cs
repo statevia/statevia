@@ -21,6 +21,7 @@ public interface IPrincipalResourceGrantStore
     /// <param name="cancellationToken">キャンセル。</param>
     /// <exception cref="ArgumentException">ID が空 GUID のとき。</exception>
     /// <exception cref="InvalidOperationException">テナント文脈が未解決のとき。</exception>
+    /// <returns>置き換えが終わると完了するタスク。</returns>
     Task ReplaceAsync(
         Guid principalId,
         IReadOnlyCollection<Guid> projectIds,

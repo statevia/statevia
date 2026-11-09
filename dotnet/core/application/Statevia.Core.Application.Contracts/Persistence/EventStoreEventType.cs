@@ -20,5 +20,7 @@ public enum EventStoreEventType
 public static class EventStoreEventTypeExtensions
 {
     /// <summary>DB の <c>type</c> 列に書き込む値（従来のリテラルと互換）。</summary>
+    /// <param name="value">変換する値。</param>
+    /// <returns>列挙値の名前。</returns>
     public static string ToPersistedString(this EventStoreEventType value) => value.ToString();
 }

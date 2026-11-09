@@ -28,9 +28,13 @@ public readonly struct CommandDedupKey : IEquatable<CommandDedupKey>
         HashCode.Combine(DedupKey, Endpoint, IdempotencyKey);
 
     /// <summary>等値比較。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator ==(CommandDedupKey left, CommandDedupKey right) => left.Equals(right);
 
     /// <summary>非等値比較。</summary>
+    /// <param name="left">左辺。</param>
+    /// <param name="right">右辺。</param>
     public static bool operator !=(CommandDedupKey left, CommandDedupKey right) => !left.Equals(right);
 }
 

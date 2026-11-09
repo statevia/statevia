@@ -6,20 +6,35 @@ namespace Statevia.Core.Application.Contracts.Security;
 public interface IPrincipalDataAccess
 {
     /// <summary>Principal ID で Principal 情報を検索する。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>Principal 情報。無ければ <see langword="null"/>。</returns>
     Task<PrincipalInfo?> FindPrincipalAsync(Guid principalId, CancellationToken cancellationToken);
 
     /// <summary>テナントを内部 UUID で検索する（フィルタ無視）。</summary>
+    /// <param name="tenantId">テナントの内部 ID（<c>tenants.tenant_id</c>）。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント情報。無ければ <see langword="null"/>。</returns>
     Task<TenantInfo?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken);
 
     /// <summary>Principal がテナント管理者か。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>テナント管理者なら <see langword="true"/>。</returns>
     Task<bool> IsTenantAdminAsync(Guid principalId, CancellationToken cancellationToken);
 
     /// <summary>グループ展開と管理者フラグから Principal の許可 semantic key 集合を返す。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>許可された権限キーの一覧。</returns>
     Task<IReadOnlyList<string>> ExpandPrincipalPermissionKeysAsync(
         Guid principalId,
         CancellationToken cancellationToken);
 
     /// <summary>Principal の所属グループ（ID と名称）を返す。</summary>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>所属グループの一覧。</returns>
     Task<IReadOnlyList<GroupSnapshot>> GetGroupSnapshotsForPrincipalAsync(
         Guid principalId,
         CancellationToken cancellationToken);

@@ -10,6 +10,7 @@ public static class PermissionSetHash
     /// permission key 集合から SHA-256（小文字 hex）を算出する。
     /// </summary>
     /// <param name="permissionKeys">展開済み semantic permission key。</param>
+    /// <returns>空白を除き、重複を除いて Ordinal 順に並べたキーの SHA-256（小文字 16 進数）。</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Globalization",
         "CA1308:Normalize strings to uppercase",

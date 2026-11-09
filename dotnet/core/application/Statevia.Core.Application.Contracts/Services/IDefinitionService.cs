@@ -6,6 +6,9 @@ namespace Statevia.Core.Application.Contracts.Services;
 public interface IDefinitionService
 {
     /// <summary>定義を新規登録する。<c>projectId</c> は必須で、所属 <c>publisher</c> 以上を要求する。</summary>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>登録した定義を返すタスク。</returns>
     Task<DefinitionResponse> CreateAsync(CreateDefinitionRequest request, CancellationToken ct);
 
     /// <summary>定義 YAML を検証・コンパイルし、catalog へ保存せず結果だけ返す。</summary>
@@ -15,19 +18,35 @@ public interface IDefinitionService
     Task<ValidateDefinitionResponse> ValidateAsync(ValidateDefinitionRequest request, CancellationToken ct);
 
     /// <summary>表示 ID または UUID で定義を更新する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>更新した定義を返すタスク。</returns>
     Task<DefinitionResponse> UpdateAsync(string idOrUuid, UpdateDefinitionRequest request, CancellationToken ct);
 
     /// <summary>ページング付き一覧を返す。</summary>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>定義のページを返すタスク。</returns>
     Task<PagedResult<DefinitionResponse>> ListPagedAsync(
         Persistence.DefinitionListPageQuery query,
         CancellationToken ct);
 
     /// <summary>表示 ID または UUID で単一定義を取得する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>定義を返すタスク。</returns>
     Task<DefinitionResponse> GetAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>catalog から定義を論理削除する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>論理削除が終わると完了するタスク。</returns>
     Task DeleteAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>削除済み定義を catalog に復元する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>復元した定義を返すタスク。</returns>
     Task<DefinitionResponse> RestoreAsync(string idOrUuid, CancellationToken ct);
 }

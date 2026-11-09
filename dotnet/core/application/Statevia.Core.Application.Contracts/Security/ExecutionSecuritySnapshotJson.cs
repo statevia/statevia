@@ -14,11 +14,13 @@ public static class ExecutionSecuritySnapshotJson
 
     /// <summary>スナップショットを JSON 文字列へシリアル化する。</summary>
     /// <param name="snapshot">スナップショット。</param>
+    /// <returns>JSON 文字列。</returns>
     public static string Serialize(ExecutionSecuritySnapshot snapshot) =>
         JsonSerializer.Serialize(snapshot, SerializerOptions);
 
     /// <summary>JSON 文字列からスナップショットを復元する。</summary>
     /// <param name="json">永続化 JSON。空の場合は <see langword="null"/>。</param>
+    /// <returns>スナップショット。<paramref name="json"/> が空なら <see langword="null"/>。</returns>
     public static ExecutionSecuritySnapshot? TryDeserialize(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))

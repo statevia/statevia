@@ -5,6 +5,7 @@ public static class PrincipalTypeLabels
 {
     /// <summary>Principal 種別をスナップショット用ラベルへ変換する。</summary>
     /// <param name="principalType">Principal 種別。</param>
+    /// <returns>スナップショット用のラベル。</returns>
     public static string ToSnapshotLabel(PrincipalType principalType) =>
         principalType switch
         {

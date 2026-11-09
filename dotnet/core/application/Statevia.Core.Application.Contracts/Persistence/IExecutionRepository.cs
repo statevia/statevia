@@ -3,11 +3,28 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// <summary>executions / execution_graph_snapshots 永続化。</summary>
 public interface IExecutionRepository
 {
+    /// <summary>テナントと Execution ID で Execution の投影を取得する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="tenantId">テナントの内部 ID（<c>tenants.tenant_id</c>）。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Execution の投影。無ければ <see langword="null"/>。</returns>
     Task<ExecutionRow?> GetByIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid executionId, CancellationToken ct);
 
+    /// <summary>Execution ID だけで Execution の投影を取得する。テナントのクエリフィルタは使わない。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Execution の投影。無ければ <see langword="null"/>。</returns>
     Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
 
     /// <summary>呼び出し元 Principal が Reader 以上の定義 Project に属する実行だけをページングする。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="tenantId">テナントの内部 ID（<c>tenants.tenant_id</c>）。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>絞り込み後の総件数と、ページ内の Execution と表示用 ID。</returns>
     Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
@@ -15,12 +32,23 @@ public interface IExecutionRepository
         ExecutionListPageQuery query,
         CancellationToken ct);
 
+    /// <summary>Execution の投影と実行グラフのスナップショットをユニットオブワークに追加する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="execution">追加する Execution の投影。</param>
+    /// <param name="snapshot">追加する実行グラフのスナップショット。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task AddExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
         ExecutionRow execution,
         ExecutionGraphSnapshotRow snapshot,
         CancellationToken ct);
 
+    /// <summary>Execution の実行グラフのスナップショットを取得する。</summary>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>スナップショット。無ければ <see langword="null"/>。</returns>
     Task<ExecutionGraphSnapshotRow?> GetSnapshotByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
 
     /// <summary>
@@ -54,6 +82,7 @@ public interface IExecutionRepository
     /// 明示の Cancel 以外で、終端 status を <c>Running</c> に戻さない。
     /// 遅れた persist がキューの Completed を上書きするのを防ぐ。
     /// </remarks>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task UpdateExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
         Guid executionId,
@@ -66,6 +95,7 @@ public interface IExecutionRepository
     /// <param name="uow">参加中のユニットオブワーク。</param>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>更新が終わると完了するタスク。</returns>
     Task MarkRestartLostAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
         Task.CompletedTask;
 }

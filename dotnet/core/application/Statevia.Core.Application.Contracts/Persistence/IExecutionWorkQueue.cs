@@ -9,24 +9,28 @@ public interface IExecutionWorkQueue
     /// <param name="item">追加する項目。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <remarks>呼び出し側 UoW と原子性を取る場合は <see cref="EnqueueAsync(ICoreUnitOfWork, ExecutionWorkItemRow, CancellationToken)"/> を使う。</remarks>
+    /// <returns>追加とコミットが終わると完了するタスク。</returns>
     Task EnqueueAsync(ExecutionWorkItemRow item, CancellationToken ct);
 
     /// <summary>呼び出し側 UoW にワーク項目を追加する（SaveChanges / コミットは呼び出し側）。</summary>
     /// <param name="uow">同一トランザクションの Unit of Work。</param>
     /// <param name="item">追加する項目。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task EnqueueAsync(ICoreUnitOfWork uow, ExecutionWorkItemRow item, CancellationToken ct);
 
     /// <summary>複数のワーク項目を同一コミットでキューへ追加する（専用 DbContext）。</summary>
     /// <param name="items">追加する項目。空なら何もしない。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <remarks>チャンク分割は負荷計測後に検討する。現状は呼び出し側の全件を一括投入する。</remarks>
+    /// <returns>追加とコミットが終わると完了するタスク。</returns>
     Task EnqueueManyAsync(IReadOnlyList<ExecutionWorkItemRow> items, CancellationToken ct);
 
     /// <summary>呼び出し側 UoW に複数ワーク項目を追加する（SaveChanges / コミットは呼び出し側）。</summary>
     /// <param name="uow">同一トランザクションの Unit of Work。</param>
     /// <param name="items">追加する項目。空なら何もしない。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>追加が終わると完了するタスク。</returns>
     Task EnqueueManyAsync(ICoreUnitOfWork uow, IReadOnlyList<ExecutionWorkItemRow> items, CancellationToken ct);
 
     /// <summary>
@@ -71,6 +75,7 @@ public interface IExecutionWorkQueue
     /// <param name="workItemId">ワーク項目 ID。</param>
     /// <param name="leaseOwner">lease 所有者。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task CompleteAsync(Guid workItemId, string leaseOwner, CancellationToken ct);
 
     /// <summary>
@@ -83,6 +88,7 @@ public interface IExecutionWorkQueue
     /// 未 Start Cancel 終端と同一 UoW で呼び、残 Start の再 claim による <c>engine.Start</c> を防ぐ。
     /// kind 語彙は変えない。
     /// </remarks>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task CompleteIncompleteStartItemsAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct);
 
     /// <summary>失敗した項目の lease を解放し、指定時刻以降へ再投入する。</summary>
@@ -90,6 +96,7 @@ public interface IExecutionWorkQueue
     /// <param name="leaseOwner">lease 所有者。</param>
     /// <param name="availableAt">再投入可能となる UTC 時刻。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>解放が終わると完了するタスク。</returns>
     Task ReleaseAsync(Guid workItemId, string leaseOwner, DateTime availableAt, CancellationToken ct);
 
     /// <summary>
@@ -103,6 +110,7 @@ public interface IExecutionWorkQueue
     /// <para>Claim が <c>attempts</c> を +1 したあとに呼ぶ。lease_owner 一致時だけ加算分を戻す。</para>
     /// <para>既定実装は <see cref="ReleaseAsync"/> と同じ（加算分を戻さない）。永続キューは上書きする。</para>
     /// </remarks>
+    /// <returns>解放が終わると完了するタスク。</returns>
     Task ReleaseWithoutCountingAttemptAsync(
         Guid workItemId,
         string leaseOwner,
@@ -115,6 +123,9 @@ public interface IExecutionWorkQueue
     /// <c>Resume mode=recovery</c> を enqueue する。
     /// </summary>
     /// <returns>投入した recovery 件数。</returns>
+    /// <param name="nowUtc">判定に使う現在時刻（UTC）。</param>
+    /// <param name="limit">一度に投入する件数の上限。</param>
+    /// <param name="ct">キャンセル トークン。</param>
     Task<int> EnqueueExpiredOwnershipRecoveriesAsync(
         DateTime nowUtc,
         int limit,
@@ -129,6 +140,9 @@ public interface IExecutionWorkQueue
     /// 子購読行は FK CASCADE で削除される。
     /// </remarks>
     /// <returns>投入した Resume 件数。</returns>
+    /// <param name="nowUtc">判定に使う現在時刻（UTC）。</param>
+    /// <param name="limit">一度に投入する件数の上限。</param>
+    /// <param name="ct">キャンセル トークン。</param>
     Task<int> EnqueueExpiredDelayWaitResumesAsync(
         DateTime nowUtc,
         int limit,

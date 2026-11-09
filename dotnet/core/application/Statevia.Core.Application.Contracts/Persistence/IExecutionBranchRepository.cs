@@ -16,6 +16,7 @@ public interface IExecutionBranchRepository
     /// <param name="uow">同一トランザクションの Unit of Work。</param>
     /// <param name="branches">挿入する分岐行。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>挿入が終わると完了するタスク。</returns>
     Task InsertBranchesIdempotentAsync(
         ICoreUnitOfWork uow,
         IReadOnlyList<ExecutionBranchRow> branches,

@@ -174,6 +174,7 @@ public interface IForkChildExecutionCoordinator
     /// <remarks>ネスト時は各層の Cancel 処理で再帰的に孫へ伝播する。</remarks>
     /// <param name="parentExecutionId">親（または中間親）execution。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>enqueue が終わると完了するタスク。</returns>
     Task CascadeCancelToRunningChildrenAsync(Guid parentExecutionId, CancellationToken ct);
 
     /// <summary>

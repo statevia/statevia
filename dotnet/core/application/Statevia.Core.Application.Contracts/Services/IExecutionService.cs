@@ -8,6 +8,11 @@ namespace Statevia.Core.Application.Contracts.Services;
 public interface IExecutionService
 {
     /// <summary>実行を開始し、表示用 ID 付きの応答を返す。</summary>
+    /// <param name="request">開始の要求。</param>
+    /// <param name="idempotencyKey">冪等キー。null なら冪等にしない。</param>
+    /// <param name="requestContext">HTTP / Worker の要求の文脈。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>開始した Execution を返すタスク。</returns>
     Task<ExecutionResponse> StartAsync(
         StartExecutionRequest request,
         string? idempotencyKey,
@@ -21,6 +26,7 @@ public interface IExecutionService
     /// <param name="request">開始リクエスト。</param>
     /// <param name="forkBranch">Hosted Fork の枝の開始のときの指定。通常の開始では null。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>開始した Execution を返すタスク。</returns>
     Task<ExecutionResponse> ExecuteQueuedStartAsync(
         Guid executionId,
         StartExecutionRequest request,
@@ -49,17 +55,29 @@ public interface IExecutionService
     /// <summary>
     /// ページング一覧を返す。クエリの status・definitionId・name 等で絞り込む。
     /// </summary>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Execution のページを返すタスク。</returns>
     Task<PagedResult<ExecutionResponse>> ListPagedAsync(
         ExecutionListPageQuery query,
         CancellationToken ct);
 
     /// <summary>単一取得（一覧 <see cref="ExecutionResponse"/> と同一形。UI の ExecutionDTO 向け）。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Execution を返すタスク。</returns>
     Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>指定 execution がテナントに存在することを検証する（存在しなければ例外）。</summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>存在を確かめ終わると完了するタスク。</returns>
     Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct);
 
     /// <summary>投影済み実行グラフ JSON を返す。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>実行グラフの JSON を返すタスク。</returns>
     Task<string> GetGraphJsonAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>
@@ -71,6 +89,9 @@ public interface IExecutionService
     Task<ExecutionWaitsResponse> GetExecutionWaitsAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>スナップショット行からグラフ JSON を取得する。無ければ <see langword="null"/>。</summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>実行グラフの JSON を返すタスク。無ければ <see langword="null"/>。</returns>
     Task<string?> TryGetSnapshotGraphJsonByExecutionIdAsync(Guid executionId, CancellationToken ct);
 
     /// <summary>
@@ -94,15 +115,34 @@ public interface IExecutionService
         throw new NotSupportedException();
 
     /// <summary>現在の実行ビュー（UI 向け DTO）を返す。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>実行ビューを返すタスク。</returns>
     Task<ExecutionViewDto> GetExecutionViewAsync(string idOrUuid, CancellationToken ct);
 
     /// <summary>指定シーケンス時点に近い実行ビューを返す（リプレイ近似）。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="atSeq">再現する時点の seq。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>実行ビューを返すタスク。</returns>
     Task<ExecutionViewDto> GetExecutionViewAtSeqAsync(string idOrUuid, long atSeq, CancellationToken ct);
 
     /// <summary>event_store 由来のタイムラインイベントを返す。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="afterSeq">この seq より後のイベントを返す。0 以上。</param>
+    /// <param name="limit">返す件数の上限。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>タイムラインのイベントを返すタスク。</returns>
     Task<ExecutionEventsResponseDto> ListEventsAsync(string idOrUuid, long afterSeq, int limit, CancellationToken ct);
 
     /// <summary>Wait ノードを <paramref name="resumeKey"/> で再開する（内部でイベント発行）。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="nodeId">ノード ID。</param>
+    /// <param name="resumeKey">再開に使うイベント名。null ならノードの待機から決める。</param>
+    /// <param name="idempotencyKey">冪等キー。null なら冪等にしない。</param>
+    /// <param name="requestContext">HTTP / Worker の要求の文脈。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>再開の受け付けが終わると完了するタスク。</returns>
     Task ResumeNodeAsync(
         string idOrUuid,
         string nodeId,
@@ -117,12 +157,18 @@ public interface IExecutionService
     /// <param name="executionId">実行 ID。</param>
     /// <param name="requestContext">コマンド文脈（Worker 等）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>復旧が終わると完了するタスク。</returns>
     Task RecoverExecutionAsync(
         Guid executionId,
         CommandRequestContext requestContext,
         CancellationToken ct);
 
     /// <summary>実行をキャンセル要求状態にし、エンジンへ伝播する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="idempotencyKey">冪等キー。null なら冪等にしない。</param>
+    /// <param name="requestContext">HTTP / Worker の要求の文脈。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>キャンセルの受け付けが終わると完了するタスク。</returns>
     Task CancelAsync(
         string idOrUuid,
         string? idempotencyKey,
@@ -130,6 +176,12 @@ public interface IExecutionService
         CancellationToken ct);
 
     /// <summary>名前付きイベントをエンジンへ発行する。</summary>
+    /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
+    /// <param name="eventName">発行するイベント名。</param>
+    /// <param name="idempotencyKey">冪等キー。null なら冪等にしない。</param>
+    /// <param name="requestContext">HTTP / Worker の要求の文脈。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>イベントの受け付けが終わると完了するタスク。</returns>
     Task PublishEventAsync(
         string idOrUuid,
         string eventName,
@@ -140,6 +192,9 @@ public interface IExecutionService
     /// <summary>
     /// エンジンの現在状態を読み取り、投影（executions / execution_graph_snapshots）を更新する。
     /// </summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>投影の更新が終わると完了するタスク。</returns>
     Task UpdateProjectionFromEngineAsync(Guid executionId, CancellationToken ct);
 
     /// <summary>
@@ -148,6 +203,7 @@ public interface IExecutionService
     /// <param name="executionId">実行 ID。</param>
     /// <param name="nodeId">登録された Wait ノード ID（ログ用）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>保存と Unload が終わると完了するタスク。</returns>
     Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct);
 
     /// <summary>
@@ -156,6 +212,7 @@ public interface IExecutionService
     /// <param name="engineExecutionId">Engine 辞書キー（Start 時に渡した文字列）。</param>
     /// <param name="nodeId">登録された Wait ノード ID（ログ用）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>保存と Unload が終わると完了するタスク。</returns>
     Task PersistCheckpointAndUnloadByEngineIdAsync(
         string engineExecutionId,
         string nodeId,
@@ -166,12 +223,17 @@ public interface IExecutionService
     /// </summary>
     /// <param name="engineExecutionId">Engine 辞書キー。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>保存が終わると完了するタスク。</returns>
     Task PersistCheckpointKeepLoadedAsync(string engineExecutionId, CancellationToken ct);
 
     /// <summary>
     /// Worker セッションの所有を獲得しトラッカーへ登録する。
     /// </summary>
     /// <returns>獲得後の世代。失敗時は null。</returns>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="workerId">所有する Worker の ID。</param>
+    /// <param name="leaseDuration">lease を延ばす長さ。</param>
+    /// <param name="ct">キャンセル トークン。</param>
     Task<long?> BeginOwnedSessionAsync(
         Guid executionId,
         string workerId,
@@ -179,17 +241,26 @@ public interface IExecutionService
         CancellationToken ct);
 
     /// <summary>所有 lease を延長する（世代一致）。</summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="leaseDuration">lease を延ばす長さ。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>延長できたら <see langword="true"/>。</returns>
     Task<bool> RenewOwnedSessionLeaseAsync(
         Guid executionId,
         TimeSpan leaseDuration,
         CancellationToken ct);
 
     /// <summary>所有を解放しトラッカーから削除する。</summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>解放が終わると完了するタスク。</returns>
     Task EndOwnedSessionAsync(Guid executionId, CancellationToken ct);
 
     /// <summary>
     /// lease 喪失時にローカル Engine を Unload しトラッカーを捨てる（DB 所有は触らない）。
     /// </summary>
+    /// <param name="executionId">Execution ID。</param>
+    /// <returns>放棄と Unload が終わると完了するタスク。</returns>
     Task AbandonLocalOwnedSessionAsync(Guid executionId);
 
     /// <summary>
@@ -198,6 +269,7 @@ public interface IExecutionService
     /// </summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>ローカルの実行が終わると完了するタスク。</returns>
     Task AwaitLocalExecutionLoadAsync(Guid executionId, CancellationToken ct) =>
         AwaitLocalExecutionLoadAsync(executionId, Timeout.InfiniteTimeSpan, ct);
 
@@ -208,6 +280,7 @@ public interface IExecutionService
     /// <param name="executionId">実行 ID。</param>
     /// <param name="noProgressTimeout">無進捗の上限。<see cref="Timeout.InfiniteTimeSpan"/> なら watchdog しない。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>ローカルの実行が終わると完了するタスク。</returns>
     Task AwaitLocalExecutionLoadAsync(
         Guid executionId,
         TimeSpan noProgressTimeout,
