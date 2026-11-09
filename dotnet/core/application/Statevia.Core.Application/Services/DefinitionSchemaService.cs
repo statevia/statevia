@@ -8,14 +8,19 @@ internal sealed class DefinitionSchemaService : IDefinitionSchemaService
 {
     private readonly INodesSchemaProvider _schemaProvider;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="schemaProvider">nodes スキーマを返すプロバイダー。</param>
     public DefinitionSchemaService(INodesSchemaProvider schemaProvider)
     {
         _schemaProvider = schemaProvider;
     }
 
+    /// <inheritdoc />
     public object GetNodesSchemaDocument() => _schemaProvider.GetSchemaDocument();
 
+    /// <inheritdoc />
     public string GetNodesSchemaVersion() => _schemaProvider.GetSchemaVersion();
 
+    /// <inheritdoc />
     public int GetNodesVersion() => _schemaProvider.GetNodesVersion();
 }

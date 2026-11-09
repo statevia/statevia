@@ -123,6 +123,7 @@ internal sealed class ExecutionOwnershipService(
     /// </summary>
     /// <param name="executionId">実行 ID。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>解放が終わると完了するタスク。</returns>
     public async Task EndOwnedSessionAsync(Guid executionId, CancellationToken ct)
     {
         if (!ownership.TryGet(executionId, out _, out var generation))
@@ -148,6 +149,7 @@ internal sealed class ExecutionOwnershipService(
     /// ローカル所有をベストエフォートで放棄し Engine を Unload する。
     /// </summary>
     /// <param name="executionId">実行 ID。</param>
+    /// <returns>放棄と Unload が終わると完了するタスク。</returns>
     public Task AbandonLocalOwnedSessionAsync(Guid executionId)
     {
         ownership.Clear(executionId);
@@ -174,6 +176,7 @@ internal sealed class ExecutionOwnershipService(
     /// 非 Wait Running が無い無進捗の上限。<see cref="Timeout.InfiniteTimeSpan"/> 以下なら watchdog しない。
     /// </param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>ローカルの実行が終わると完了するタスク。</returns>
     public async Task AwaitLocalExecutionLoadAsync(
         Guid executionId,
         TimeSpan noProgressTimeout,

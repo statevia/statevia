@@ -3,6 +3,7 @@ namespace Statevia.Core.Application.Services;
 /// <summary><see cref="ICommandDedupService"/> 実装。</summary>
 internal sealed class CommandDedupService : ICommandDedupService
 {
+    /// <inheritdoc />
     public CommandDedupKey? Create(string tenantKey, string? idempotencyKey, string method, string path, string? requestHash = null)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))

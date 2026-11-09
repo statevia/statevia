@@ -391,6 +391,10 @@ public sealed class ForkChildExecutionCoordinator(
     /// <summary>
     /// Join.all と Fork 分岐先頭集合が一致する Join を一意に解決する。
     /// </summary>
+    /// <param name="definition">コンパイル済みの定義。</param>
+    /// <param name="branches">Fork の分岐。分岐先の State は重複しないこと。</param>
+    /// <returns>一致した Join の State 名。</returns>
+    /// <exception cref="ForkJoinResolutionException">分岐先が重複するとき、一致する Join が無いとき、2 つ以上あるとき。</exception>
     internal static string ResolveJoinState(
         CompiledWorkflowDefinition definition,
         IReadOnlyList<ForkBranchExpansion> branches)

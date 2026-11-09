@@ -10,6 +10,11 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
     private readonly IProjectRepository _projects;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
+    /// <param name="principalDataAccess">Principal とグループを検索するデータアクセス。</param>
+    /// <param name="executor">読み取りトランザクションの実行器。</param>
+    /// <param name="definitions">定義のリポジトリ。</param>
+    /// <param name="projects">プロジェクトのリポジトリ。</param>
     public ExecutionSecuritySnapshotFactory(
         ITenantContextAccessor tenantContext,
         IPrincipalDataAccess principalDataAccess,

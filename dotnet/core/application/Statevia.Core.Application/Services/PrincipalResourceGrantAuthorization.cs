@@ -18,6 +18,7 @@ internal sealed class PrincipalResourceGrantAuthorization(
     /// <param name="definitionId">論理定義 ID。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public Task EnsureAsync(Guid projectId, Guid definitionId, CancellationToken ct)
     {
         if (tenantContext.PrincipalId is not Guid principalId)
@@ -32,6 +33,7 @@ internal sealed class PrincipalResourceGrantAuthorization(
     /// <param name="definitionId">論理定義 ID。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="ForbiddenException">許可集合に含まれないとき。コードは <c>RESOURCE_GRANT_DENIED</c>。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     public async Task EnsureForPrincipalAsync(
         Guid principalId,
         Guid projectId,

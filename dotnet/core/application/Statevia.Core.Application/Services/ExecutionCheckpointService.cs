@@ -55,6 +55,7 @@ internal sealed class ExecutionCheckpointService(
     /// </remarks>
     /// <param name="engineExecutionId">Engine 辞書キー。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>保存が終わると完了するタスク。</returns>
     public async Task PersistCheckpointKeepLoadedAsync(string engineExecutionId, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(engineExecutionId);
@@ -128,6 +129,11 @@ internal sealed class ExecutionCheckpointService(
     /// Worker 所有 lease は同列にしない。終端では所有中でも
     /// <see cref="DiscardOrRefreshRuntimeCheckpointAsync"/> が Delete する。
     /// </remarks>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="status">書き込む投影 status。</param>
+    /// <param name="graphJson">書き込む実行グラフ JSON。durable な待機が残っているかを見る。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>status が Running 以外なら <see langword="true"/>。Running なら、保持理由（durable な待機・未完了の物理 Join）が無いときだけ <see langword="true"/>。</returns>
     public async Task<bool> ShouldDiscardRuntimeCheckpointAsync(
         Guid executionId,
         string status,
@@ -185,6 +191,10 @@ internal sealed class ExecutionCheckpointService(
     ///（終端で checkpoint 削除後）。Running 中の所有維持や非所有 Delete のみは
     /// <see langword="false"/>。
     /// </returns>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="engineExecutionId">Engine に渡した実行 ID（辞書キー）。</param>
+    /// <param name="executionId">Execution ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
     public async Task<bool> DiscardOrRefreshRuntimeCheckpointAsync(
         ICoreUnitOfWork uow,
         string engineExecutionId,
@@ -216,6 +226,10 @@ internal sealed class ExecutionCheckpointService(
     /// Engine 辞書キーは <see cref="Guid.ToString()"/>（Start 時と同じ形式）を使う。
     /// Export できない場合は Warning を出し、Unload しない（インメモリ再開を維持する）。
     /// </remarks>
+    /// <param name="executionId">Execution ID。Engine の辞書キーにも使う。</param>
+    /// <returns>保存と Unload が終わると完了するタスク。</returns>
+    /// <param name="nodeId">Wait ノード ID（ログ用）。</param>
+    /// <param name="ct">キャンセル トークン。</param>
     public Task PersistCheckpointAndUnloadAsync(Guid executionId, string nodeId, CancellationToken ct) =>
         PersistCheckpointAndUnloadCoreAsync(executionId.ToString(), executionId, nodeId, ct);
 
@@ -225,6 +239,7 @@ internal sealed class ExecutionCheckpointService(
     /// <param name="engineExecutionId">Engine に渡した実行 ID（辞書キー）。</param>
     /// <param name="nodeId">Wait ノード ID（ログ用）。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>保存と Unload が終わると完了するタスク。</returns>
     public Task PersistCheckpointAndUnloadByEngineIdAsync(
         string engineExecutionId,
         string nodeId,
@@ -516,6 +531,9 @@ internal sealed class ExecutionCheckpointService(
     /// 永続済み断面より incoming が遅れているか（古い Fork Unload の上書き防止）。
     /// </summary>
     /// <remarks>単体テストから到達するため internal。</remarks>
+    /// <param name="incoming">これから保存するチェックポイント。</param>
+    /// <param name="stored">保存済みのチェックポイント。</param>
+    /// <returns>incoming が終端でなく、ノード数が少ないか、stored にある durable な待機が incoming で消えて実行中の State も無ければ <see langword="true"/>。</returns>
     internal static bool IsRuntimeCheckpointLessAdvanced(
         ExecutionRuntimeCheckpoint incoming,
         ExecutionRuntimeCheckpoint stored)

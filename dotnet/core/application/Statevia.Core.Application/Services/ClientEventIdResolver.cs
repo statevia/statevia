@@ -13,6 +13,9 @@ internal static class ClientEventIdResolver
     /// 非 GUID のときは SHA-256 先頭 16 バイトから名前空間付き UUID 風の値を生成する。
     /// キーが無いときは <paramref name="idGenerator"/> で新規 GUID を返す（再送単位の冪等は持たない）。
     /// </summary>
+    /// <param name="idempotencyKey">冪等キー。null・空白なら新しい GUID を採番する。</param>
+    /// <param name="idGenerator">キーが無いときに GUID を採番するジェネレーター。</param>
+    /// <returns>クライアントイベント ID。キーがあれば、同じキーからは同じ値になる。</returns>
     public static Guid FromIdempotencyKey(string? idempotencyKey, IIdGenerator idGenerator)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))

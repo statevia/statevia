@@ -10,6 +10,12 @@ namespace Statevia.Core.Application.Services;
 /// </summary>
 internal static class ExecutionViewMapper
 {
+    /// <summary>Execution の投影と実行グラフ JSON から、UI 向けの ExecutionView を組み立てる。</summary>
+    /// <param name="execution">Execution の投影。</param>
+    /// <param name="graphJson">実行グラフ JSON。</param>
+    /// <param name="displayId">Execution の表示用 ID。</param>
+    /// <param name="graphIdDisplay">表示するグラフ ID。</param>
+    /// <returns>ExecutionView。ノードは <see cref="MapNodes"/> で組み立てる。</returns>
     public static ExecutionViewDto BuildExecutionView(
         ExecutionRow execution,
         string graphJson,
@@ -30,6 +36,9 @@ internal static class ExecutionViewMapper
         };
     }
 
+    /// <summary>実行グラフ JSON のノードを UI 向けのノードに変換する。</summary>
+    /// <param name="graphJson">実行グラフ JSON。</param>
+    /// <returns>ノードの一覧。JSON が空・解釈できない・ノードが無いときは空。</returns>
     public static IReadOnlyList<ExecutionViewNodeDto> MapNodes(string graphJson)
     {
         if (string.IsNullOrWhiteSpace(graphJson))
@@ -96,6 +105,9 @@ internal static class ExecutionViewMapper
         return new ExecutionWaitsResponse { Waits = waits };
     }
 
+    /// <summary>実行グラフ JSON から SSE のパッチ用ノードだけを取り出す。</summary>
+    /// <param name="graphJson">実行グラフ JSON。</param>
+    /// <returns><see cref="ReadGraphUpdate"/> のノード。</returns>
     public static IReadOnlyList<GraphPatchNodeDto> MapGraphPatchNodes(string graphJson) =>
         ReadGraphUpdate(graphJson).Nodes;
 

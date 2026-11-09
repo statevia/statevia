@@ -79,6 +79,7 @@ internal sealed class ExecutionWaitEventService(
     /// <param name="idempotencyKey">冪等キー（任意）。</param>
     /// <param name="requestContext">HTTP / Worker 文脈。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>イベントの受け付けが終わると完了するタスク。</returns>
     public async Task PublishEventAsync(
         string idOrUuid,
         string eventName,
@@ -298,6 +299,7 @@ internal sealed class ExecutionWaitEventService(
     /// <param name="idempotencyKey">冪等キー（任意）。</param>
     /// <param name="requestContext">HTTP / Worker 文脈。</param>
     /// <param name="ct">キャンセル。</param>
+    /// <returns>再開の受け付けが終わると完了するタスク。</returns>
     public async Task ResumeNodeAsync(
         string idOrUuid,
         string nodeId,
@@ -717,6 +719,9 @@ internal sealed class ExecutionWaitEventService(
     /// 後続の完了投影（noop 完了 → Completed）を上書きし、次ノードが RUNNING のまま固着する。
     /// </para>
     /// </remarks>
+    /// <param name="engineExecutionId">Engine に渡した実行 ID（辞書キー）。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Execution が Engine に無いか終端になるか、実行中の State が無くなると完了するタスク。10 ミリ秒間隔で最大 200 回待ち、それでも収まらなければ警告ログを出して完了する。</returns>
     public async Task WaitForEngineQuiescedAfterWaitAsync(
         string engineExecutionId,
         CancellationToken ct)
@@ -745,6 +750,9 @@ internal sealed class ExecutionWaitEventService(
 
     /// <summary>グラフ JSON 上の指定 nodeId の完了有無を取得する。</summary>
     /// <returns>ノードが存在するとき <see langword="true"/>。</returns>
+    /// <param name="graphJson">実行グラフ JSON。</param>
+    /// <param name="nodeId">完了を調べるノードの ID。</param>
+    /// <param name="completed">ノードが完了していれば <see langword="true"/>。ノードが無ければ <see langword="false"/>。</param>
     internal static bool TryGetGraphNodeCompletion(string graphJson, string nodeId, out bool completed)
     {
         completed = false;

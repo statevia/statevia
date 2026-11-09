@@ -19,6 +19,13 @@ internal static class ExecutionOperationalProjectionSync
     /// durable Wait が一度も無い Running では cursor を INSERT しない。
     /// 終端の空 <c>ReplaceWaits</c> は行が無いとき no-op（リポジトリ側）。
     /// </remarks>
+    /// <param name="uow">参加中のユニットオブワーク。</param>
+    /// <param name="cursors">cursor のリポジトリ。</param>
+    /// <param name="waits">待機のリポジトリ。</param>
+    /// <param name="request">同期する Execution、投影 status、グラフ JSON、クリアする待機のノード ID。</param>
+    /// <param name="idGenerator">待機の購読 ID を採番するジェネレーター。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>同期が終わると完了するタスク。</returns>
     public static async Task SyncAsync(
         ICoreUnitOfWork uow,
         IExecutionCursorRepository cursors,

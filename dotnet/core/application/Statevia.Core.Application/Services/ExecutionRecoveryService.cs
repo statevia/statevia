@@ -42,6 +42,7 @@ internal sealed class ExecutionRecoveryService(
     /// <param name="requestContext">HTTP / Worker 文脈。</param>
     /// <param name="ct">キャンセル。</param>
     /// <exception cref="NotFoundException">実行が見つからないとき。</exception>
+    /// <returns>復旧が終わると完了するタスク。</returns>
     public async Task RecoverExecutionAsync(
         Guid executionId,
         CommandRequestContext requestContext,
