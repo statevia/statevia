@@ -12,6 +12,7 @@ public static class PersistenceServiceCollectionExtensions
     /// </summary>
     /// <param name="services">サービスコレクション。</param>
     /// <param name="connectionString">PostgreSQL 接続文字列。</param>
+    /// <returns>登録後の <paramref name="services"/>（呼び出しを連ねるため）。</returns>
     public static IServiceCollection AddStateviaInfrastructurePersistence(
         this IServiceCollection services,
         string connectionString)

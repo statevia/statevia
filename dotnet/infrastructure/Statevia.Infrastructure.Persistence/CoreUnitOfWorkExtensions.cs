@@ -4,6 +4,9 @@ namespace Statevia.Infrastructure.Persistence;
 internal static class CoreUnitOfWorkExtensions
 {
     /// <summary>EF Core <see cref="CoreDbContext"/> を返す。</summary>
+    /// <param name="uow">EF Core 実装のユニットオブワーク。</param>
+    /// <returns><paramref name="uow"/> の DbContext。</returns>
+    /// <exception cref="InvalidCastException"><paramref name="uow"/> の Db が <see cref="CoreDbContext"/> でないとき。</exception>
     internal static CoreDbContext GetDb(this ICoreUnitOfWork uow) =>
         (CoreDbContext)uow.Db;
 }

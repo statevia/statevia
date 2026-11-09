@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Statevia.Infrastructure.Persistence.Repositories;
 
+/// <summary><see cref="IExecutionRepository"/> の EF Core 実装。<c>executions</c> と <c>execution_graph_snapshots</c> を読み書きする。</summary>
 internal sealed class ExecutionRepository : IExecutionRepository
 {
     private sealed class ExecutionWithDisplay
@@ -10,10 +11,12 @@ internal sealed class ExecutionRepository : IExecutionRepository
         public string? DisplayId { get; init; }
     }
 
+    /// <inheritdoc />
     public Task<ExecutionRow?> GetByIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid executionId, CancellationToken ct) =>
         uow.GetDb().Executions.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId && x.TenantId == tenantId, ct);
 
+    /// <inheritdoc />
     public Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
         uow.GetDb().Executions.IgnoreQueryFilters().AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct);
@@ -92,6 +95,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
         return (total, list);
     }
 
+    /// <inheritdoc />
     public Task AddExecutionAndSnapshotAsync(
         ICoreUnitOfWork uow,
         ExecutionRow execution,
@@ -103,6 +107,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<ExecutionGraphSnapshotRow?> GetSnapshotByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
         uow.GetDb().ExecutionGraphSnapshots.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ExecutionId == executionId, ct);
@@ -121,9 +126,7 @@ internal sealed class ExecutionRepository : IExecutionRepository
             .Select(x => (string?)x.Status)
             .FirstOrDefaultAsync(ct);
 
-    /// <summary>
-    /// executions の status を更新し、graph JSON が変わったときだけ snapshot を書く。
-    /// </summary>
+    /// <inheritdoc />
     /// <remarks>
     /// <para>status は <c>ExecuteUpdate</c>（テナント query filter を無視する。Worker など未解決テナントでも ID 指定更新できるようにする）。</para>
     /// <para>snapshot は Ordinal 比較で未変化なら UPDATE しない（TOAST 回避）。</para>

@@ -5,6 +5,12 @@ using System.Text.Json;
 
 namespace Statevia.Infrastructure.Persistence;
 
+/// <summary>Core の永続化に使う EF Core の DbContext。<see cref="ICoreDatabase"/> の実装。</summary>
+/// <remarks>
+/// テナント境界のあるエンティティには、テナント ID のクエリフィルタを掛ける。
+/// フィルタは <see cref="ITenantQueryFilterOptions.IsEnabled"/> が true のときだけ効き、テナント文脈が未解決なら何も返さない。
+/// 列名とテーブル名は <c>OnModelCreating</c> で明示する（docs/reference/database-schema.md）。
+/// </remarks>
 internal class CoreDbContext : DbContext, ICoreDatabase
 {
     private static class Columns
@@ -152,6 +158,9 @@ internal class CoreDbContext : DbContext, ICoreDatabase
     private readonly ITenantQueryFilterOptions _queryFilterOptions;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="options">DbContext の設定。</param>
+    /// <param name="tenantAccessor">クエリフィルタに使うテナント文脈。null なら常に未解決として扱う。</param>
+    /// <param name="queryFilterOptions">テナントのクエリフィルタを有効にするか。null ならフィルタを無効にする。</param>
     public CoreDbContext(
         DbContextOptions<CoreDbContext> options,
         ITenantContextAccessor? tenantAccessor = null,
@@ -161,34 +170,63 @@ internal class CoreDbContext : DbContext, ICoreDatabase
         _queryFilterOptions = queryFilterOptions ?? DisabledTenantQueryFilterOptions.Instance;
     }
 
+    /// <summary><c>display_ids</c>（表示用 ID）テーブル。</summary>
     public DbSet<DisplayIdRow> DisplayIds => Set<DisplayIdRow>();
+    /// <summary><c>workflow_definitions</c>（レガシーの定義）テーブル。</summary>
     public DbSet<WorkflowDefinitionRow> WorkflowDefinitions => Set<WorkflowDefinitionRow>();
+    /// <summary><c>definitions</c>（定義）テーブル。</summary>
     public DbSet<DefinitionRow> Definitions => Set<DefinitionRow>();
+    /// <summary><c>definition_versions</c>（定義のバージョン）テーブル。</summary>
     public DbSet<DefinitionVersionRow> DefinitionVersions => Set<DefinitionVersionRow>();
+    /// <summary><c>executions</c>（Execution の投影）テーブル。</summary>
     public DbSet<ExecutionRow> Executions => Set<ExecutionRow>();
+    /// <summary><c>event_store</c>（監査イベントのイベントソース）テーブル。</summary>
     public DbSet<EventStoreRow> EventStore => Set<EventStoreRow>();
+    /// <summary><c>execution_events</c>（監査用）テーブル。</summary>
     public DbSet<ExecutionEventRow> ExecutionEvents => Set<ExecutionEventRow>();
+    /// <summary><c>execution_graph_snapshots</c>（実行グラフのスナップショット）テーブル。</summary>
     public DbSet<ExecutionGraphSnapshotRow> ExecutionGraphSnapshots => Set<ExecutionGraphSnapshotRow>();
+    /// <summary><c>execution_cursors</c> テーブル。</summary>
     public DbSet<ExecutionCursorRow> ExecutionCursors => Set<ExecutionCursorRow>();
+    /// <summary><c>execution_waits</c>（待機）テーブル。</summary>
     public DbSet<ExecutionWaitRow> ExecutionWaits => Set<ExecutionWaitRow>();
+    /// <summary><c>execution_wait_subscriptions</c>（待機の購読）テーブル。</summary>
     public DbSet<ExecutionWaitSubscriptionRow> ExecutionWaitSubscriptions => Set<ExecutionWaitSubscriptionRow>();
+    /// <summary><c>execution_branches</c> テーブル。</summary>
     public DbSet<ExecutionBranchRow> ExecutionBranches => Set<ExecutionBranchRow>();
+    /// <summary><c>execution_runtime_checkpoints</c>（ランタイムのチェックポイント）テーブル。</summary>
     public DbSet<ExecutionCheckpointDocument> ExecutionCheckpoints => Set<ExecutionCheckpointDocument>();
+    /// <summary><c>execution_work_items</c> テーブル。</summary>
     public DbSet<ExecutionWorkItemRow> ExecutionWorkItems => Set<ExecutionWorkItemRow>();
+    /// <summary><c>command_dedup</c>（冪等キーによる Command の重複排除）テーブル。</summary>
     public DbSet<CommandDedupRow> CommandDedup => Set<CommandDedupRow>();
+    /// <summary><c>event_delivery_dedup</c>（イベント配信の重複排除）テーブル。</summary>
     public DbSet<EventDeliveryDedupRow> EventDeliveryDedup => Set<EventDeliveryDedupRow>();
+    /// <summary><c>tenants</c> テーブル。</summary>
     public DbSet<TenantRow> Tenants => Set<TenantRow>();
+    /// <summary><c>permission_definitions</c>（権限カタログ）テーブル。</summary>
     public DbSet<PermissionDefinitionRow> PermissionDefinitions => Set<PermissionDefinitionRow>();
+    /// <summary><c>principals</c> テーブル。</summary>
     public DbSet<PrincipalRow> Principals => Set<PrincipalRow>();
+    /// <summary><c>user_principals</c>（User と Principal の対応）テーブル。</summary>
     public DbSet<UserPrincipalRow> UserPrincipals => Set<UserPrincipalRow>();
+    /// <summary><c>users</c> テーブル。</summary>
     public DbSet<UserRow> Users => Set<UserRow>();
+    /// <summary><c>groups</c> テーブル。</summary>
     public DbSet<GroupRow> Groups => Set<GroupRow>();
+    /// <summary><c>group_permissions</c>（グループの権限）テーブル。</summary>
     public DbSet<GroupPermissionRow> GroupPermissions => Set<GroupPermissionRow>();
+    /// <summary><c>user_group_members</c>（ユーザーのグループ所属）テーブル。</summary>
     public DbSet<UserGroupMemberRow> UserGroupMembers => Set<UserGroupMemberRow>();
+    /// <summary><c>service_accounts</c> テーブル。</summary>
     public DbSet<ServiceAccountRow> ServiceAccounts => Set<ServiceAccountRow>();
+    /// <summary><c>service_account_group_members</c>（サービスアカウントのグループ所属）テーブル。</summary>
     public DbSet<ServiceAccountGroupMemberRow> ServiceAccountGroupMembers => Set<ServiceAccountGroupMemberRow>();
+    /// <summary><c>api_keys</c> テーブル。</summary>
     public DbSet<ApiKeyRow> ApiKeys => Set<ApiKeyRow>();
+    /// <summary><c>projects</c> テーブル。</summary>
     public DbSet<ProjectRow> Projects => Set<ProjectRow>();
+    /// <summary><c>project_accesses</c> テーブル。</summary>
     public DbSet<ProjectAccessRow> ProjectAccesses => Set<ProjectAccessRow>();
     /// <summary>ログイン失敗ロック行。</summary>
     public DbSet<LoginFailureLockRow> LoginFailureLocks => Set<LoginFailureLockRow>();
@@ -211,6 +249,7 @@ internal class CoreDbContext : DbContext, ICoreDatabase
     /// <summary>テナントの Action 変数とシークレット。</summary>
     public DbSet<TenantActionBindingRow> TenantActionBindings => Set<TenantActionBindingRow>();
 
+    /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // display_ids: カラムはスネークケース

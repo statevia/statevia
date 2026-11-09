@@ -12,6 +12,7 @@ internal sealed class CoreUnitOfWorkFactory : ICoreUnitOfWorkFactory
     /// <summary>
     /// 新しいインスタンスを初期化する。
     /// </summary>
+    /// <param name="dbFactory">ユニットオブワークごとに DbContext を作るファクトリ。</param>
     public CoreUnitOfWorkFactory(IDbContextFactory<CoreDbContext> dbFactory) => _dbFactory = dbFactory;
 
     /// <inheritdoc />
