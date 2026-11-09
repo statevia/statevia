@@ -3,6 +3,7 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// <summary>definitions テーブル（論理定義の投影メタ）。</summary>
 public class DefinitionRow
 {
+    /// <summary>定義 ID。</summary>
     public Guid DefinitionId { get; set; }
 
     /// <summary>所属テナント（<c>tenants.tenant_id</c> FK）。</summary>
@@ -20,8 +21,10 @@ public class DefinitionRow
     /// <summary>最新版番号（投影。truth は definition_versions）。</summary>
     public int LatestVersion { get; set; }
 
+    /// <summary>作成日時（UTC）。</summary>
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>最後に publish した日時（UTC）。</summary>
     public DateTime UpdatedAt { get; set; }
 
     /// <summary>catalog 論理削除日時（UTC）。NULL は Active。</summary>

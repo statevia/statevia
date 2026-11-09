@@ -11,8 +11,10 @@ public interface IDefinitionSchemaService
     object GetNodesSchemaDocument();
 
     /// <summary>スキーマ文書のバージョン文字列を返す。</summary>
+    /// <returns>スキーマ文書のバージョン文字列。</returns>
     string GetNodesSchemaVersion();
 
     /// <summary>nodes スキーマの整数バージョンを返す。</summary>
+    /// <returns>nodes スキーマのバージョン。</returns>
     int GetNodesVersion();
 }

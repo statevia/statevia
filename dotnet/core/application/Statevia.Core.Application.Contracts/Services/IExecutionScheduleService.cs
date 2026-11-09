@@ -13,26 +13,41 @@ namespace Statevia.Core.Application.Contracts.Services;
 public interface IExecutionScheduleService
 {
     /// <summary>テナント内の未削除スケジュールを一覧する。</summary>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>スケジュールの一覧を返すタスク。</returns>
     Task<IReadOnlyList<ExecutionScheduleListItemDto>> ListAsync(CancellationToken cancellationToken);
 
     /// <summary>未削除の 1 件を取得する。</summary>
     /// <exception cref="NotFoundException">無い、または他テナント。</exception>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>スケジュールを返すタスク。</returns>
     Task<ExecutionScheduleDetailDto> GetAsync(Guid scheduleId, CancellationToken cancellationToken);
 
     /// <summary>スケジュールを作成し <c>next_fire_at</c> を計算する。</summary>
     /// <exception cref="ApiValidationException">cron / TZ / run-as / overlap / 名前が不正。</exception>
     /// <exception cref="NotFoundException">定義または指定版が無い。</exception>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>作成したスケジュールを返すタスク。</returns>
     Task<ExecutionScheduleDetailDto> CreateAsync(
         CreateExecutionScheduleRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>未削除行を部分更新する。cron / TZ 変更時は next を再計算する。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>更新したスケジュールを返すタスク。</returns>
     Task<ExecutionScheduleDetailDto> UpdateAsync(
         Guid scheduleId,
         UpdateExecutionScheduleRequest request,
         CancellationToken cancellationToken);
 
     /// <summary>論理削除する。以降 Dispatcher は発火しない。</summary>
+    /// <param name="scheduleId">スケジュール ID。</param>
+    /// <param name="cancellationToken">キャンセル トークン。</param>
+    /// <returns>論理削除が終わると完了するタスク。</returns>
     Task DeleteAsync(Guid scheduleId, CancellationToken cancellationToken);
 
     /// <summary>

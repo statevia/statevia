@@ -10,5 +10,6 @@ public interface IExecutionReadModelService
     /// </summary>
     /// <param name="id">ワークフロー表示 ID または UUID。</param>
     /// <param name="ct">キャンセルトークン。</param>
+    /// <returns>実行読み取りモデルを返すタスク。</returns>
     Task<ExecutionReadModel> GetByDisplayIdAsync(string id, CancellationToken ct = default);
 }

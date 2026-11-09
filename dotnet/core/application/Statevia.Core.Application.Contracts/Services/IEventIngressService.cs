@@ -19,6 +19,7 @@ public interface IEventIngressService
     /// <param name="topic">トピック（必須。前後空白は trim）。</param>
     /// <param name="key">相関キー（未指定・空白は空文字）。</param>
     /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Resume ワークの投入が終わると完了するタスク。</returns>
     Task PublishAsync(
         string topic,
         string key,

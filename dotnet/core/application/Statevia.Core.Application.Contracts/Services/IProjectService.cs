@@ -8,24 +8,47 @@ namespace Statevia.Core.Application.Contracts.Services;
 public interface IProjectService
 {
     /// <summary>呼び出し元 Principal がメンバーの Project だけを返す。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Project の一覧を返すタスク。</returns>
     Task<IReadOnlyList<ProjectResponse>> ListAsync(CancellationToken ct);
 
     /// <summary>メンバーであれば取得する。未所属は 404。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Project を返すタスク。</returns>
     Task<ProjectResponse> GetAsync(Guid projectId, CancellationToken ct);
 
     /// <summary><c>projects.create</c> で作成し、作成者を <c>admin</c> にする。</summary>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>作成した Project を返すタスク。</returns>
     Task<ProjectResponse> CreateAsync(CreateProjectRequest request, CancellationToken ct);
 
     /// <summary><c>project.admin</c> が表示名・説明・slug を部分更新する。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>更新した Project を返すタスク。</returns>
     Task<ProjectResponse> UpdateAsync(Guid projectId, UpdateProjectRequest request, CancellationToken ct);
 
     /// <summary><c>project.admin</c> または <c>tenant.admin</c> がメンバーを一覧する。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>メンバーの一覧を返すタスク。</returns>
     Task<IReadOnlyList<ProjectMemberResponse>> ListMembersAsync(Guid projectId, CancellationToken ct);
 
     /// <summary>同一テナントのユーザーと API キーを、付与候補として名前付きで返す。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>付与候補の一覧を返すタスク。</returns>
     Task<IReadOnlyList<ProjectGrantCandidateResponse>> ListGrantCandidatesAsync(Guid projectId, CancellationToken ct);
 
     /// <summary>メンバーを付与またはロール変更する。自己昇格を含む。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="request">要求の内容。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>付与が終わると完了するタスク。</returns>
     Task UpsertMemberAsync(
         Guid projectId,
         Guid principalId,
@@ -33,9 +56,15 @@ public interface IProjectService
         CancellationToken ct);
 
     /// <summary>メンバーを外す。最後の <c>admin</c> は <c>tenant.admin</c> だけが外せる。</summary>
+    /// <param name="projectId">Project ID。</param>
+    /// <param name="principalId">Principal ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task RemoveMemberAsync(Guid projectId, Guid principalId, CancellationToken ct);
 
     /// <summary><c>tenant.admin</c> がテナント内の全 Project を見る。未所属を含む。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Project の一覧を返すタスク。</returns>
     Task<IReadOnlyList<ProjectResponse>> ListAllForTenantAdminAsync(CancellationToken ct);
 }
 

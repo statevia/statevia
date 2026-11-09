@@ -11,11 +11,13 @@ public interface IModuleManagementAuthorization
     /// <param name="cancellationToken">キャンセル。</param>
     /// <exception cref="UnauthorizedException">Principal 未解決。</exception>
     /// <exception cref="ForbiddenException">管理者でも <c>modules.reload</c> でもない。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     Task EnsureReloadAllowedAsync(CancellationToken cancellationToken);
 
     /// <summary><c>GET /v1/admin/modules</c> を許可する。</summary>
     /// <param name="cancellationToken">キャンセル。</param>
     /// <exception cref="UnauthorizedException">Principal 未解決。</exception>
     /// <exception cref="ForbiddenException">管理者でも <c>modules.read</c> でもない。</exception>
+    /// <returns>認可を確かめ終わると完了するタスク。拒否するときは例外で失敗する。</returns>
     Task EnsureReadAllowedAsync(CancellationToken cancellationToken);
 }

@@ -10,5 +10,6 @@ public interface IGraphDefinitionService
     /// </summary>
     /// <param name="graphId">グラフ ID。</param>
     /// <param name="ct">キャンセルトークン。</param>
+    /// <returns>グラフ定義を返すタスク。</returns>
     Task<GraphDefinitionResponse> GetByGraphIdAsync(string graphId, CancellationToken ct = default);
 }

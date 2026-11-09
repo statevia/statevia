@@ -19,5 +19,6 @@ public interface IDefinitionCompilerService
     /// </summary>
     /// <param name="sourceYaml">当該版の source_yaml。</param>
     /// <param name="compiledJson">当該版の compiled_json。</param>
+    /// <returns>Engine に渡すコンパイル済みの定義。</returns>
     CompiledWorkflowDefinition RestoreFromStoredVersion(string sourceYaml, string compiledJson);
 }
