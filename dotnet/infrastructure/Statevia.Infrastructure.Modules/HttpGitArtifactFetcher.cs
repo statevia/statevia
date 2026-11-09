@@ -189,10 +189,13 @@ internal sealed class HttpGitArtifactFetcher(IHttpClientFactory httpClientFactor
     }
 
     /// <summary>40 桁 hex のフル commit SHA か。</summary>
+    /// <param name="value">判定する文字列（ブランチ名・タグ名・commit SHA のいずれか）。</param>
+    /// <returns>40 文字ですべて 16 進数字なら <see langword="true"/>。</returns>
     internal static bool LooksLikeFullCommitSha(string value) =>
         value.Length == 40 && value.All(static c => Uri.IsHexDigit(c));
 }
 
+/// <summary><see cref="HttpGitArtifactFetcher"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class HttpGitArtifactFetcherLog
 {
     [LoggerMessage(

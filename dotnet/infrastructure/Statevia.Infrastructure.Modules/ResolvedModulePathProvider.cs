@@ -33,6 +33,7 @@ internal sealed class ResolvedModulePathProvider : IResolvedModulePathProvider
     public string ModulesRoot { get; }
 }
 
+/// <summary><see cref="ResolvedModulePathProvider"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ResolvedModulePathProviderLog
 {
     [LoggerMessage(EventId = 61001, Level = LogLevel.Information, Message = "Modules root resolved to {ModulesRoot}")]

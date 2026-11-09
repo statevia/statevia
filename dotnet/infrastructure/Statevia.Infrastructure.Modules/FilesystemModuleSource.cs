@@ -97,6 +97,16 @@ internal sealed class FilesystemModuleSource : IModuleSource
             SourceLabel: "filesystem"));
     }
 
+    /// <summary>Module ディレクトリ直下からエントリ DLL の絶対パスを決める。</summary>
+    /// <remarks>
+    /// <c>{ディレクトリ名}.dll</c> があればそれを選ぶ。無ければ直下の DLL がちょうど 1 つのときだけそれを選ぶ。
+    /// 0 個または 2 個以上なら決められないので失敗にし、理由を返す。サブディレクトリは見ない。
+    /// </remarks>
+    /// <param name="moduleDirectory">Module ディレクトリの絶対パス。</param>
+    /// <param name="moduleDirectoryName">Module ディレクトリ名。優先するエントリ DLL の名前に使う。</param>
+    /// <param name="entryAssemblyPath">決まったエントリ DLL の絶対パス。失敗時は空文字。</param>
+    /// <param name="reason">失敗の理由（ログ用の英語の文）。成功時は空文字。</param>
+    /// <returns>エントリ DLL を決められたら <see langword="true"/>。</returns>
     internal static bool TryResolveEntryAssemblyPath(
         string moduleDirectory,
         string moduleDirectoryName,
@@ -141,6 +151,7 @@ internal sealed class FilesystemModuleSource : IModuleSource
     }
 }
 
+/// <summary><see cref="FilesystemModuleSource"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class FilesystemModuleSourceLog
 {
     [LoggerMessage(EventId = 60101, Level = LogLevel.Information, Message = "Modules root does not exist yet: {ModulesRoot}")]

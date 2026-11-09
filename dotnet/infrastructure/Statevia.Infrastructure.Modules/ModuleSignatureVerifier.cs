@@ -32,6 +32,8 @@ internal sealed class ModuleSignatureVerifier : IModuleSignatureVerifier
     private readonly ILogger<ModuleSignatureVerifier> _logger;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="options">署名検証の設定。信頼する署名者のフィンガープリントを正規化して保持する。</param>
+    /// <param name="logger">ロガー。</param>
     public ModuleSignatureVerifier(
         IOptions<ModuleSigningOptions> options,
         ILogger<ModuleSignatureVerifier> logger)
@@ -194,6 +196,7 @@ internal sealed class ModuleSignatureVerifier : IModuleSignatureVerifier
         [property: JsonPropertyName("signerName")] string? SignerName);
 }
 
+/// <summary><see cref="ModuleSignatureVerifier"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ModuleSignatureVerifierLog
 {
     [LoggerMessage(EventId = 60901, Level = LogLevel.Warning, Message = "Module signature verification error ({ReasonCategory})")]

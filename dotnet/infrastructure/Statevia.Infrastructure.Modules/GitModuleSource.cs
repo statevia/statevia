@@ -188,6 +188,9 @@ internal sealed class GitModuleSource(
     }
 
     /// <summary>キャッシュキー用 content identity（commit SHA + ModulePath）。</summary>
+    /// <param name="commitSha">解決済みの commit SHA。</param>
+    /// <param name="modulePath">リポジトリ内の ModulePath。キーにする前に正規化する。</param>
+    /// <returns><c>sha:{commitSha}+path:{正規化した ModulePath}</c> の形の文字列。</returns>
     internal static string BuildContentIdentity(string commitSha, string modulePath) =>
         $"sha:{commitSha}+path:{NormalizeModulePathKey(modulePath)}";
 
@@ -219,6 +222,11 @@ internal static class GitArchiveMaterializer
     private const long MaxArchiveUncompressedBytes = 64L * 1024 * 1024;
 
     /// <summary>archive zip bytes から Module を materialize し、module ディレクトリ絶対パスを返す。</summary>
+    /// <param name="archiveZip">Git リポジトリ archive の zip バイト列。</param>
+    /// <param name="modulePath">archive 内の ModulePath（ディレクトリまたは単一の .zip entry）。</param>
+    /// <param name="artifactCacheDir">展開先のキャッシュディレクトリ。無ければ作る。</param>
+    /// <returns>展開した Module ディレクトリの絶対パス。</returns>
+    /// <exception cref="InvalidOperationException">archive が空、ModulePath が不正・見つからない、パストラバーサル、サイズ上限超過のとき。</exception>
     public static string Materialize(byte[] archiveZip, string modulePath, string artifactCacheDir)
     {
         ArgumentNullException.ThrowIfNull(archiveZip);

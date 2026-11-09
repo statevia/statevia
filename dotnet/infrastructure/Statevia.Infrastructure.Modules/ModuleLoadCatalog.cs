@@ -7,6 +7,7 @@ internal sealed class ModuleLoadCatalog
     private readonly List<ModuleLoadRecord> _records = [];
 
     /// <summary>登録済みレコードのスナップショットを返す。</summary>
+    /// <returns>呼び出し時点のレコードのコピー。後の <see cref="Upsert"/> の影響を受けない。</returns>
     public IReadOnlyList<ModuleLoadRecord> GetRecords()
     {
         lock (_sync)
@@ -36,7 +37,8 @@ internal sealed class ModuleLoadCatalog
     }
 
     /// <summary>entry パスが Loaded のレコードとして存在するか。</summary>
-    /// <param name="entryAssemblyPath">entry DLL 絶対パス。</param>
+    /// <param name="entryAssemblyPath">entry DLL 絶対パス。大文字小文字を区別せずに比べる。</param>
+    /// <returns>同じ entry パスのレコードがあり、状態が <see cref="ModuleLoadStatus.Loaded"/> なら <see langword="true"/>。</returns>
     public bool IsLoaded(string entryAssemblyPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryAssemblyPath);
