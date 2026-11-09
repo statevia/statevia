@@ -17,6 +17,8 @@ internal static class OpenApiServiceExtensions
     /// <summary>
     /// OpenAPI 生成（Swashbuckle）を DI に登録する。
     /// </summary>
+    /// <param name="services">サービスコレクション。</param>
+    /// <returns>登録後の <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaOpenApi(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -53,6 +55,8 @@ internal static class OpenApiServiceExtensions
     /// <summary>
     /// Development / Staging / <c>STATEVIA_ENABLE_API_DOCS</c> 時のみ Swagger と Scalar を有効化する。
     /// </summary>
+    /// <param name="app">Web アプリケーション。</param>
+    /// <returns>同じ <paramref name="app"/>。</returns>
     public static WebApplication UseStateviaOpenApi(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -75,6 +79,8 @@ internal static class OpenApiServiceExtensions
     /// <summary>
     /// API ドキュメントエンドポイントを公開してよいか判定する。
     /// </summary>
+    /// <param name="environment">ホスト環境。</param>
+    /// <returns>Development か Staging、または <c>STATEVIA_ENABLE_API_DOCS=true</c> なら <see langword="true"/>。</returns>
     internal static bool IsApiDocsEnabled(IHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(environment);

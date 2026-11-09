@@ -32,18 +32,25 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/permissions — 権限カタログ。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と権限カタログ。</returns>
     [HttpGet("permissions")]
     [ProducesResponseType(typeof(IReadOnlyList<PermissionDefinitionDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PermissionDefinitionDto>>> ListPermissions(CancellationToken ct) =>
         Ok(await _administration.ListPermissionsAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/admin/users — ユーザー一覧。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とユーザーの一覧。</returns>
     [HttpGet("users")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminUserListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AdminUserListItemDto>>> ListUsers(CancellationToken ct) =>
         Ok(await _administration.ListUsersAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/admin/users — ユーザー作成。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したユーザー。</returns>
     [HttpPost("users")]
     [ProducesResponseType(typeof(AdminUserListItemDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<AdminUserListItemDto>> CreateUser(
@@ -55,6 +62,10 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>PATCH /v1/admin/users/{userId} — ユーザー更新。</summary>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新したユーザー。</returns>
     [HttpPatch("users/{userId:guid}")]
     [ProducesResponseType(typeof(AdminUserListItemDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminUserListItemDto>> UpdateUser(
@@ -64,6 +75,10 @@ public sealed class AdminController : ControllerBase
         Ok(await _administration.UpdateUserAsync(RequirePrincipalId(), userId, request, ct).ConfigureAwait(false));
 
     /// <summary>PUT /v1/admin/users/{userId}/password — パスワード上書き。</summary>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPut("users/{userId:guid}/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> UpdateUserPassword(
@@ -76,12 +91,17 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/groups — グループ一覧。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とグループの一覧。</returns>
     [HttpGet("groups")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminGroupListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AdminGroupListItemDto>>> ListGroups(CancellationToken ct) =>
         Ok(await _administration.ListGroupsAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/admin/groups — グループ作成。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したグループ。</returns>
     [HttpPost("groups")]
     [ProducesResponseType(typeof(AdminGroupDetailDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<AdminGroupDetailDto>> CreateGroup(
@@ -93,12 +113,19 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/groups/{groupId} — グループ詳細。</summary>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とグループの詳細。</returns>
     [HttpGet("groups/{groupId:guid}")]
     [ProducesResponseType(typeof(AdminGroupDetailDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminGroupDetailDto>> GetGroup(Guid groupId, CancellationToken ct) =>
         Ok(await _administration.GetGroupAsync(RequirePrincipalId(), groupId, ct).ConfigureAwait(false));
 
     /// <summary>PUT /v1/admin/groups/{groupId}/members — メンバー置換。</summary>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新したグループ。</returns>
     [HttpPut("groups/{groupId:guid}/members")]
     [ProducesResponseType(typeof(AdminGroupDetailDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminGroupDetailDto>> SetGroupMembers(
@@ -108,6 +135,10 @@ public sealed class AdminController : ControllerBase
         Ok(await _administration.SetGroupMembersAsync(RequirePrincipalId(), groupId, request, ct).ConfigureAwait(false));
 
     /// <summary>PUT /v1/admin/groups/{groupId}/permissions — 権限置換。</summary>
+    /// <param name="groupId">グループ ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新したグループ。</returns>
     [HttpPut("groups/{groupId:guid}/permissions")]
     [ProducesResponseType(typeof(AdminGroupDetailDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminGroupDetailDto>> SetGroupPermissions(
@@ -117,12 +148,17 @@ public sealed class AdminController : ControllerBase
         Ok(await _administration.SetGroupPermissionsAsync(RequirePrincipalId(), groupId, request, ct).ConfigureAwait(false));
 
     /// <summary>GET /v1/admin/api-keys — API キー一覧（平文なし）。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とAPI キーの一覧。</returns>
     [HttpGet("api-keys")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminApiKeyListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AdminApiKeyListItemDto>>> ListApiKeys(CancellationToken ct) =>
         Ok(await _administration.ListApiKeysAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/admin/api-keys — API キー発行（平文は応答のみ）。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したAPI キー（平文はこの応答だけに入る）。</returns>
     [HttpPost("api-keys")]
     [ProducesResponseType(typeof(CreatedAdminApiKeyDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<CreatedAdminApiKeyDto>> CreateApiKey(
@@ -134,6 +170,9 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>DELETE /v1/admin/api-keys/{apiKeyId} — API キー失効。</summary>
+    /// <param name="apiKeyId">API キー ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpDelete("api-keys/{apiKeyId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RevokeApiKey(Guid apiKeyId, CancellationToken ct)
@@ -143,6 +182,8 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/service-accounts — ServiceAccount 一覧（平文なし）。</summary>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とサービスアカウントの一覧。</returns>
     [HttpGet("service-accounts")]
     [ProducesResponseType(typeof(IReadOnlyList<AdminServiceAccountListItemDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AdminServiceAccountListItemDto>>> ListServiceAccounts(
@@ -150,6 +191,9 @@ public sealed class AdminController : ControllerBase
         Ok(await _administration.ListServiceAccountsAsync(RequirePrincipalId(), ct).ConfigureAwait(false));
 
     /// <summary>POST /v1/admin/service-accounts — 資格のない ServiceAccount 作成。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したサービスアカウント。</returns>
     [HttpPost("service-accounts")]
     [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<AdminServiceAccountListItemDto>> CreateServiceAccount(
@@ -162,6 +206,9 @@ public sealed class AdminController : ControllerBase
     }
 
     /// <summary>GET /v1/admin/service-accounts/{serviceAccountId} — ServiceAccount 詳細。</summary>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とサービスアカウント。</returns>
     [HttpGet("service-accounts/{serviceAccountId:guid}")]
     [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminServiceAccountListItemDto>> GetServiceAccount(
@@ -171,6 +218,10 @@ public sealed class AdminController : ControllerBase
             .ConfigureAwait(false));
 
     /// <summary>PATCH /v1/admin/service-accounts/{serviceAccountId} — 有効・表示名・所属の更新。</summary>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と更新したサービスアカウント。</returns>
     [HttpPatch("service-accounts/{serviceAccountId:guid}")]
     [ProducesResponseType(typeof(AdminServiceAccountListItemDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminServiceAccountListItemDto>> UpdateServiceAccount(
@@ -181,6 +232,9 @@ public sealed class AdminController : ControllerBase
             .ConfigureAwait(false));
 
     /// <summary>GET /v1/admin/users/{userId}/resource-grants — ユーザーの実行リソース許可。</summary>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とユーザーのリソース許可。</returns>
     [HttpGet("users/{userId:guid}/resource-grants")]
     [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PrincipalResourceGrantsDto>> GetUserResourceGrants(
@@ -189,6 +243,10 @@ public sealed class AdminController : ControllerBase
         Ok(await _administration.GetUserResourceGrantsAsync(RequirePrincipalId(), userId, ct).ConfigureAwait(false));
 
     /// <summary>PUT /v1/admin/users/{userId}/resource-grants — ユーザーの実行リソース許可を一括置換する。</summary>
+    /// <param name="userId">ユーザー ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と置き換えたリソース許可。</returns>
     [HttpPut("users/{userId:guid}/resource-grants")]
     [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PrincipalResourceGrantsDto>> ReplaceUserResourceGrants(
@@ -199,6 +257,9 @@ public sealed class AdminController : ControllerBase
             .ConfigureAwait(false));
 
     /// <summary>GET /v1/admin/service-accounts/{serviceAccountId}/resource-grants — ServiceAccount の実行リソース許可。</summary>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とサービスアカウントのリソース許可。</returns>
     [HttpGet("service-accounts/{serviceAccountId:guid}/resource-grants")]
     [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PrincipalResourceGrantsDto>> GetServiceAccountResourceGrants(
@@ -208,6 +269,10 @@ public sealed class AdminController : ControllerBase
             .ConfigureAwait(false));
 
     /// <summary>PUT /v1/admin/service-accounts/{serviceAccountId}/resource-grants — ServiceAccount の実行リソース許可を一括置換する。</summary>
+    /// <param name="serviceAccountId">サービスアカウント ID。</param>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と置き換えたリソース許可。</returns>
     [HttpPut("service-accounts/{serviceAccountId:guid}/resource-grants")]
     [ProducesResponseType(typeof(PrincipalResourceGrantsDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PrincipalResourceGrantsDto>> ReplaceServiceAccountResourceGrants(

@@ -40,6 +40,10 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>POST /v1/executions — definitionId で定義を取得し、Engine.Start を呼ぶ。display_id と resource_id を返す。</summary>
+    /// <param name="request">要求の本文。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c> の値。無ければ冪等にしない。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>201 と作成したExecution。</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ExecutionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<ExecutionResponse>> Create(
@@ -64,6 +68,9 @@ public class ExecutionsController : ControllerBase
     /// <c>definitionId</c> は定義の display / UUID。 <c>name</c> は execution の <c>displayId</c> 部分一致、または execution の UUID 完全一致で絞り込み。
     /// 応答の <c>items</c> と <c>totalCount</c> は、<c>execution_branches.execution_id</c> に無いルートのみ。
     /// </summary>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とExecution のページ。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ExecutionResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
@@ -96,6 +103,9 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>GET /v1/executions/{id} — 一覧と同一の <see cref="ExecutionResponse"/>（UI ExecutionDTO 向け）。X-Tenant-Id でスコープ。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とExecution。</returns>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ExecutionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ExecutionResponse>> Get(
@@ -107,6 +117,9 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>GET /v1/executions/{id}/graph — execution_graph_snapshots から取得。X-Tenant-Id でスコープ。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と実行グラフの JSON。</returns>
     [HttpGet("{id}/graph")]
     [Produces("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -122,6 +135,9 @@ public class ExecutionsController : ControllerBase
     /// GET /v1/executions/{id}/waits — 未完了 Wait の再開キー。正本は graph スナップショット。X-Tenant-Id でスコープ。
     /// </summary>
     /// <remarks>機微 IO 方針: <c>input</c> / <c>output</c> は返さない。権限は既存 executions GET と同じ <c>executions.read</c>。</remarks>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と待機中の Wait の一覧。</returns>
     [HttpGet("{id}/waits")]
     [ProducesResponseType(typeof(ExecutionWaitsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -134,6 +150,10 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>GET /v1/executions/{id}/state?atSeq= — UI 用 ExecutionView（リプレイは現状スナップショット近似）。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と実行ビュー。</returns>
     [HttpGet("{id}/state")]
     [ProducesResponseType(typeof(ExecutionViewDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ExecutionViewDto>> GetState(
@@ -147,6 +167,10 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>GET /v1/executions/{id}/events — event_store 由来のタイムライン（limit / afterSeq）。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="query">ページングと絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 とタイムラインのイベント。</returns>
     [HttpGet("{id}/events")]
     [ProducesResponseType(typeof(ExecutionEventsResponseDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ExecutionEventsResponseDto>> GetEvents(
@@ -160,6 +184,9 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>GET /v1/executions/{id}/stream — SSE（グラフ JSON の変化を GraphUpdated として送出）。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>Server-Sent Events の書き込みが終わると完了するタスク。</returns>
     [HttpGet("{id}/stream")]
     [Produces("text/event-stream")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -171,6 +198,10 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>POST /v1/executions/{id}/cancel — Engine.CancelAsync を呼び、projection を更新。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c> の値。無ければ冪等にしない。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPost("{id}/cancel")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> Cancel(
@@ -191,6 +222,12 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>POST /v1/executions/{id}/nodes/{nodeId}/resume — body: { "resumeKey": "..." }。PublishEvent と同様。X-Idempotency-Key で冪等。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="nodeId">Wait ノード ID。</param>
+    /// <param name="body">要求の本文。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c> の値。無ければ冪等にしない。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPost("{id}/nodes/{nodeId}/resume")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -218,6 +255,11 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>POST /v1/executions/{id}/events — body: { "name": "Approve" }。Engine.PublishEvent(executionId, eventName)。X-Idempotency-Key で冪等。X-Tenant-Id でスコープ。</summary>
+    /// <param name="id">表示用 ID または UUID の文字列。</param>
+    /// <param name="body">要求の本文。</param>
+    /// <param name="idempotencyKey"><c>X-Idempotency-Key</c> の値。無ければ冪等にしない。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>204（本文なし）。</returns>
     [HttpPost("{id}/events")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> PublishEvent(

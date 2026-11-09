@@ -25,6 +25,7 @@ internal static class BuiltinActionSchemas
     /// <param name="outputSchemaJson">output JSON Schema 文字列。</param>
     /// <param name="fieldOrder">UI フィールド順。</param>
     /// <param name="fields">UI フィールドヒント。</param>
+    /// <returns>Builtin の ActionPublication。</returns>
     public static ActionPublication Create(
         string actionId,
         string displayName,
@@ -47,6 +48,8 @@ internal static class BuiltinActionSchemas
                 : new ActionUiMetadata(fieldOrder, fields));
 
     /// <summary>noop action の Publication。</summary>
+    /// <param name="actionId">action ID。</param>
+    /// <returns>noop の ActionPublication。</returns>
     public static ActionPublication NoOp(string actionId) =>
         Create(
             actionId,
@@ -68,6 +71,8 @@ internal static class BuiltinActionSchemas
             """);
 
     /// <summary>sleep action の Publication。</summary>
+    /// <param name="actionId">action ID。</param>
+    /// <returns>sleep の ActionPublication。</returns>
     public static ActionPublication Sleep(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>
@@ -110,6 +115,8 @@ internal static class BuiltinActionSchemas
     }
 
     /// <summary>退役した signal action の Publication（保存済みの版の input 検証にだけ使う）。</summary>
+    /// <param name="actionId">action ID。</param>
+    /// <returns>signal の ActionPublication。</returns>
     public static ActionPublication Signal(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>
@@ -155,6 +162,8 @@ internal static class BuiltinActionSchemas
     }
 
     /// <summary>publish action の Publication。</summary>
+    /// <param name="actionId">action ID。</param>
+    /// <returns>publish の ActionPublication。</returns>
     public static ActionPublication Publish(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>
@@ -207,6 +216,8 @@ internal static class BuiltinActionSchemas
     }
 
     /// <summary>workflow action の Publication。</summary>
+    /// <param name="actionId">action ID。</param>
+    /// <returns>workflow の ActionPublication。</returns>
     public static ActionPublication Workflow(string actionId)
     {
         var fields = new Dictionary<string, ActionFieldUiHints>

@@ -45,6 +45,7 @@ public interface ITenantActionBindingService
     /// <param name="callerPrincipalId">呼び出し主体。</param>
     /// <param name="name">名前。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>削除が終わると完了するタスク。</returns>
     Task DeleteAsync(Guid callerPrincipalId, string name, CancellationToken cancellationToken);
 }
 

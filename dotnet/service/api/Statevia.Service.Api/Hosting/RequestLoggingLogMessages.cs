@@ -10,6 +10,8 @@ internal static partial class RequestLoggingLogMessages
     /// <summary>
     /// HTTP リクエスト開始ログを記録する。
     /// </summary>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="details">ログに載せる構造化プロパティ。</param>
     public static void HttpRequestStart(this ILogger logger, RequestLogStartDetails details) =>
         HttpRequestStart(
             logger,

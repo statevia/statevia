@@ -5,6 +5,7 @@ namespace Statevia.Service.Api.Hosting;
 /// </summary>
 internal static class TracestateHelper
 {
+    /// <summary>statevia のベンダーキー。</summary>
     public const string StateviaVendorKey = "st@statevia";
 
     /// <summary>不透明値の上限（W3C の list-member 制限に合わせた実用的な上限）。</summary>
@@ -16,6 +17,10 @@ internal static class TracestateHelper
     /// <summary>
     /// <paramref name="existing"/> から同一ベンダーキーのメンバーを除き、末尾に <paramref name="vendorKey"/>=<paramref name="opaqueValue"/> を追加する。
     /// </summary>
+    /// <param name="existing">既存の <c>tracestate</c> の値。無ければ null。</param>
+    /// <param name="vendorKey">追加するベンダーキー。同じキーの既存メンバーは除く。</param>
+    /// <param name="opaqueValue">追加する不透明値。空なら <paramref name="existing"/> をそのまま返す。</param>
+    /// <returns>マージした <c>tracestate</c>（上限 512 文字で切り詰める）。</returns>
     public static string Merge(string? existing, string vendorKey, string opaqueValue)
     {
         if (string.IsNullOrEmpty(opaqueValue))

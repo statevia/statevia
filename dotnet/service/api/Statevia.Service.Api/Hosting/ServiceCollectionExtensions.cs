@@ -45,6 +45,9 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Service API 向けに実行ランタイムと HTTP アダプタを登録する。
     /// </summary>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaServiceApi(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -89,6 +92,9 @@ public static class ServiceCollectionExtensions
     /// プロセス内 Scheduler / OwnershipRecovery は Off、Worker HostedService は On に固定する。
     /// JWT 発行と SigningKey の起動検証は登録しない（HTTP API 専用）。
     /// </remarks>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaWorkerHost(
         this IServiceCollection services, IConfiguration configuration)
     {
@@ -168,6 +174,9 @@ public static class ServiceCollectionExtensions
     /// Persistence / Engine / Actions / Runtime HostedService など実行系 DI を登録する。
     /// </summary>
     /// <remarks>HTTP コントローラ・CORS・OpenAPI・テナント管理・JWT 発行は含まない。</remarks>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaExecutionRuntime(
         this IServiceCollection services, IConfiguration configuration)
     {
@@ -257,6 +266,9 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// HTTP API 向けサービス（認証・テナント管理・MVC・OpenAPI 等）を登録する。
     /// </summary>
+    /// <param name="services">サービスコレクション。</param>
+    /// <param name="configuration">アプリケーション設定。</param>
+    /// <returns>登録後の <paramref name="services"/>。</returns>
     public static IServiceCollection AddStateviaApiHost(
         this IServiceCollection services, IConfiguration configuration)
     {

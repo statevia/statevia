@@ -28,6 +28,10 @@ internal sealed class ModuleLoadHostedService : IHostedService, IDisposable
     private bool _disposed;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="dependencies">Module ホストと modules ルートのパスの組。</param>
+    /// <param name="scopeFactory">スコープ付きのサービスを解決するためのファクトリ。</param>
+    /// <param name="options">Module ホストの設定。</param>
+    /// <param name="logger">ロガー。</param>
     public ModuleLoadHostedService(
         ModuleLoadHostedServiceDependencies dependencies,
         IServiceScopeFactory scopeFactory,
@@ -269,6 +273,9 @@ internal sealed class ModuleLoadHostedService : IHostedService, IDisposable
     /// 変更パスから tenant_key（先頭セグメント）を推定する。
     /// レイアウトは <c>{modulesRoot}/{tenantKey}/{module}/...</c> を前提とする。
     /// </summary>
+    /// <param name="modulesRoot">modules ルートの絶対パス。</param>
+    /// <param name="fullPath">変更されたファイルの絶対パス。</param>
+    /// <returns>tenant_key。modules ルートの外か、セグメントが 2 つ未満なら <see langword="null"/>。</returns>
     internal static string? TryResolveTenantKeyFromPath(string modulesRoot, string fullPath)
     {
         var relative = Path.GetRelativePath(modulesRoot, fullPath);
@@ -294,6 +301,8 @@ internal sealed class ModuleLoadHostedService : IHostedService, IDisposable
 internal sealed class ModuleLoadHostedServiceDependencies
 {
     /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="moduleHost">Module を load するホスト。</param>
+    /// <param name="pathProvider">modules ルートのパスを返すプロバイダー。</param>
     public ModuleLoadHostedServiceDependencies(ModuleHost moduleHost, IResolvedModulePathProvider pathProvider)
     {
         ModuleHost = moduleHost;
@@ -307,6 +316,7 @@ internal sealed class ModuleLoadHostedServiceDependencies
     public IResolvedModulePathProvider PathProvider { get; }
 }
 
+/// <summary><see cref="ModuleLoadHostedService"/> 用のログ（<see cref="LoggerMessageAttribute"/>）。</summary>
 internal static partial class ModuleLoadHostedServiceLog
 {
     [LoggerMessage(EventId = 64001, Level = LogLevel.Warning, Message = "Module change detected at {Path}. Restart required for updates or removals.")]

@@ -12,6 +12,8 @@ internal sealed class ChildWorkflowRunner : IChildWorkflowRunner
     private readonly ITenantContextAccessor _tenantContext;
 
     /// <summary>スコープ付き実行サービス解決用に構築する。</summary>
+    /// <param name="scopeFactory">スコープ付きのサービスを解決するためのファクトリ。</param>
+    /// <param name="tenantContext">現在のテナント文脈。</param>
     public ChildWorkflowRunner(IServiceScopeFactory scopeFactory, ITenantContextAccessor tenantContext)
     {
         _scopeFactory = scopeFactory;

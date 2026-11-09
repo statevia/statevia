@@ -11,8 +11,17 @@ internal sealed class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;
 
+    /// <summary>新しいインスタンスを初期化する。</summary>
+    /// <param name="next">パイプラインの次のミドルウェア。</param>
     public RequestLoggingMiddleware(RequestDelegate next) => _next = next;
 
+    /// <summary>トレース ID を決め、リクエストの開始・完了・未処理例外を記録して次へ渡す。</summary>
+    /// <param name="context">HTTP の文脈。</param>
+    /// <param name="logger">ロガー。</param>
+    /// <param name="optionsAccessor">リクエストログの設定。</param>
+    /// <param name="tenantContextAccessor">現在のテナント文脈。</param>
+    /// <param name="idGenerator">ID を採番するジェネレーター。</param>
+    /// <returns>後続の処理が終わると完了するタスク。</returns>
     public async Task InvokeAsync(
         HttpContext context,
         ILogger<RequestLoggingMiddleware> logger,

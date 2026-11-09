@@ -6,6 +6,7 @@ internal interface IChildWorkflowRunner
     /// <summary>子ワークフローを起動する。</summary>
     /// <param name="request">起動リクエスト。</param>
     /// <param name="ct">キャンセルトークン。</param>
+    /// <returns>子ワークフローの結果を返すタスク。</returns>
     Task<ChildWorkflowResult> RunAsync(ChildWorkflowRequest request, CancellationToken ct);
 }
 

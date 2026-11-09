@@ -19,6 +19,7 @@ internal interface IDockerContainerClient
     /// <summary>コンテナを停止して削除する（失敗しても例外を握りつぶさない実装側方針可）。</summary>
     /// <param name="containerId">コンテナ ID。</param>
     /// <param name="cancellationToken">キャンセル。</param>
+    /// <returns>停止と削除が終わると完了するタスク。</returns>
     Task StopAndRemoveAsync(string containerId, CancellationToken cancellationToken);
 }
 

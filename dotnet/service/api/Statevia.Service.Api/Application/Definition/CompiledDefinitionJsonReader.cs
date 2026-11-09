@@ -14,6 +14,8 @@ internal static class CompiledDefinitionJsonReader
     };
 
     /// <summary>保存済み compiled_json に版バインディングが含まれるか。</summary>
+    /// <param name="compiledJson">保存済みの compiled_json。</param>
+    /// <returns>版バインディングがあれば <see langword="true"/>。</returns>
     public static bool HasStoredBindings(string compiledJson)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(compiledJson);
@@ -23,6 +25,8 @@ internal static class CompiledDefinitionJsonReader
     }
 
     /// <summary>保存済み compiled_json から版バインディングを読み取る。</summary>
+    /// <param name="compiledJson">保存済みの compiled_json。</param>
+    /// <returns>module alias → 版ピンと、状態別の Action バインディング。</returns>
     public static (
         IReadOnlyDictionary<string, ResolvedModuleBinding> ResolvedModules,
         IReadOnlyDictionary<string, StateActionBinding> StateActionBindings) ReadStoredBindings(string compiledJson)
@@ -41,6 +45,7 @@ internal static class CompiledDefinitionJsonReader
     /// <param name="waitSubscriptions">
     /// 明示購読表。指定時は JSON より優先する（YAML からの再構築。古い compiled_json 欠落の補完）。
     /// </param>
+    /// <returns>実行に使うコンパイル済みの定義。</returns>
     public static CompiledWorkflowDefinition Read(
         string compiledJson,
         IStateExecutorFactory factory,

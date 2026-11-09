@@ -45,6 +45,7 @@ internal sealed class GraphDefinitionService : IGraphDefinitionService
         _resourceGrants = resourceGrants;
     }
 
+    /// <inheritdoc />
     public async Task<GraphDefinitionResponse> GetByGraphIdAsync(string graphId, CancellationToken ct = default)
     {
         await EnsureDefinitionsReadAsync(ct).ConfigureAwait(false);
@@ -79,6 +80,11 @@ internal sealed class GraphDefinitionService : IGraphDefinitionService
     private Task EnsureDefinitionsReadAsync(CancellationToken ct) =>
         _runtimeAuth.EnsurePermissionAsync(RuntimePermissionRequirements.DefinitionsRead, ct);
 
+    /// <summary>compiled_json からグラフ定義（ノードと辺）を組み立てる。</summary>
+    /// <param name="graphId">グラフ ID（定義の表示用 ID）。</param>
+    /// <param name="definitionName">定義名。</param>
+    /// <param name="compiledJson">保存済みの compiled_json。</param>
+    /// <returns>グラフ定義。compiled_json を読めなければ空のグラフ。</returns>
     internal static GraphDefinitionResponse BuildFromCompiledJson(string graphId, string definitionName, string compiledJson)
     {
         var dto = DeserializeCompiledDefinition(compiledJson);
