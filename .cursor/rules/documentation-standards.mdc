@@ -11,8 +11,8 @@ alwaysApply: true
 - **必須**: プロダクトコードの C# の `public` / `internal` な型・メンバーと、TypeScript の `export` 宣言、および export した class / interface / type の公開メンバー。
 - **識別子が明白でも日本語で書く。** 付いているものと無いものを混在させない（例: `ExecutionId` には「実行 ID。」と書く）。有無を都度判断しない。
 - **任意**: `private`（TS では export しないもの）は、意図が自明でないときだけ書く。
-- **対象外**: EF Core のマイグレーション、ソース生成物（`*.g.cs` など。手書きの `[LoggerMessage]` の partial 宣言は対象）、テストプロジェクト（`*.Tests`、`nodejs/studio/tests/`）、`dotnet/tools/`、`dotnet/modules/local/`、`dotnet/core/engine/samples/`、`dotnet/tests/Fixtures/`。テストの日本語 `/// <summary>` とケース名は下の「何を書くか」に従う。
-- **既存の欠落**: プロジェクト単位で埋め戻す。埋め戻す前でも、**触った必須対象には付ける**（新しい欠落を増やさない）。
+- **対象外**: EF Core のマイグレーション（`Migrations/.editorconfig` の `generated_code = true`）、ソース生成物（`*.g.cs` など。手書きの `[LoggerMessage]` の partial 宣言は対象）、テストプロジェクト（`*.Tests`、`nodejs/studio/tests/`）、`dotnet/tools/`、`dotnet/modules/local/`、`dotnet/core/engine/samples/`、`dotnet/tests/Fixtures/`。テストの日本語 `/// <summary>` とケース名は下の「何を書くか」に従う。
+- **新しいプロジェクト・ディレクトリ**: C# のプロダクトプロジェクトは、欠落を埋めてから csproj で検出を有効にする。TS は新しいディレクトリも最初から検出の対象になる。どちらも、書いたときに付ける（新しい欠落を増やさない）。
 
 ## いつ書くか
 
