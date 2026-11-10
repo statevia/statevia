@@ -31,9 +31,9 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       executionNotFound: "The specified execution was not found. Please check the ID.",
     },
     toasts: {
-      cancelAccepted: "CancelExecution accepted",
-      publishAccepted: "PublishEvent accepted",
-      resumeAccepted: "ResumeNode accepted",
+      cancelAccepted: "Cancellation requested.",
+      publishAccepted: "Event sent.",
+      resumeAccepted: "Resume requested.",
     },
     replayDisabledReason: "Actions are disabled while replaying.",
     operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
@@ -53,7 +53,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   executionComparison: {
     ...executionsUiTextJa.executionComparison,
     title: "Compare two executions",
-    executionIdPlaceholder: "ex-2",
+    executionIdPlaceholder: "e.g. a1B2c3D4e5",
     executionABaselineLabel: (executionLabel: string) => `${executionLabel} A (baseline)`,
     executionBLabel: (executionLabel: string) => `${executionLabel} B`,
     kind: {
@@ -88,11 +88,10 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       attempt: (attempt: number) => `Attempts: ${attempt}`,
       waitKey: (waitKey: string) => `Wait key: ${waitKey}`,
       allowedEvents: (events: string) => `Allowed events: ${events}`,
-      canceledByExecution: (canceledByExecution: boolean) => `Canceled: ${String(canceledByExecution)}`,
     },
     waiting: {
       title: "Waiting",
-      reasonWaitByWaitKeyAndResumeWait: "Reason: waiting for resume event by wait key",
+      reasonWaitByWaitKeyAndResumeWait: "Reason: waiting for a resume event on the wait key.",
       resumeEventName: (eventName: string) => `Resume event name: ${eventName}`,
       selectResumeEvent: "Event to resume with",
       selectInternalResumeEvent: "Internal event name",
@@ -100,8 +99,9 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       subscribeResumeAction: "Resume this execution only",
     },
     cancel: {
-      detailTitle: (cancelLabel: string) => `${cancelLabel} detail`,
-      convergedByExecutionCancel: "Converged by execution cancellation",
+      detailTitle: (cancelLabel: string) => `${cancelLabel} details`,
+      reason: (cancelReason: string) => `Reason: ${cancelReason}`,
+      convergedByExecutionCancel: "Stopped because the execution was canceled.",
     },
     failure: {
       title: "Failure",
@@ -146,7 +146,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   },
   executionHeader: {
     ...executionsUiTextJa.executionHeader,
-    placeholderExecutionId: "ex-1",
+    placeholderExecutionId: "e.g. a1B2c3D4e5",
     executionIdLabel: (executionLabel: string) => `${executionLabel} ID`,
     compareLabel: "Compare",
     realtimeSseLabel: "Realtime updates",
@@ -182,8 +182,8 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       statusFailed: "Failed",
       definitionInputHint: "Definition display ID / UUID",
       definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel} (display ID / UUID)`,
-      definitionPlaceholder: "e.g. def-...",
-      nameInputHint: "name (execution display ID partial match, or execution UUID exact match)",
+      definitionPlaceholder: "e.g. a1B2c3D4e5",
+      nameInputHint: "Execution ID (partial match) or UUID (exact match)",
       search: "Search",
       clear: "Clear",
       sortByLabel: "Sort by",
@@ -192,10 +192,9 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       sortByDisplayId: "Display ID",
       sortOrderDesc: "Descending",
       sortOrderAsc: "Ascending",
-      invalidName: "Name allows only ASCII alphanumerics plus . - _ within 100 characters.",
+      invalidName: "Execution ID allows only ASCII alphanumerics plus . - _ within 100 characters.",
       invalidDefinitionId: "Definition ID allows only ASCII alphanumerics plus - _ within 80 characters.",
-      pageInfo: (limit: number, offset: number, page: number) =>
-        `Items per page: ${limit}. Offset: ${offset} (approx. page ${page})`,
+      pageInfo: (limit: number) => `Showing up to ${limit} items per page.`,
     },
     actions: {
       openDetail: "Details",

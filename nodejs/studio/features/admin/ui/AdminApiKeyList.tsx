@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
-import type { AdminApiKeyListItem } from "../types";
+import { resolvePermissionLabel } from "../permissionLabel";
+import type { AdminApiKeyListItem, PermissionDefinitionDto } from "../types";
 
 /**
  * ISO 日時をローカル表示用に整形する。解釈できない値はそのまま返す。
@@ -23,6 +25,8 @@ function formatDateTime(value: string | null | undefined): string | null {
 export type AdminApiKeyListProps = {
   /** 現在の API キー。空や失敗は呼び出し側が出す。 */
   apiKeys: readonly AdminApiKeyListItem[];
+  /** 権限カタログ。許可スコープを権限名で出すのに使う。カタログに無い権限キーはキーのまま出す。 */
+  permissions: readonly PermissionDefinitionDto[];
   /** 失効中の API キー ID。無ければ null。 */
   revokingId: string | null;
   /**
@@ -39,10 +43,19 @@ export type AdminApiKeyListProps = {
  */
 export function AdminApiKeyList({
   apiKeys,
+  permissions,
   revokingId,
   onRevoke
 }: Readonly<AdminApiKeyListProps>) {
   const uiText = useUiText();
+  const permissionNames = uiText.admin.permissions.names;
+  const scopeLabels = useMemo(
+    () =>
+      new Map(
+        permissions.map((permission) => [permission.permissionKey, resolvePermissionLabel(permission, permissionNames)])
+      ),
+    [permissions, permissionNames]
+  );
 
   return (
     <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
@@ -58,7 +71,7 @@ export function AdminApiKeyList({
             </p>
             <p className="text-xs text-md-on-surface-variant">
               {apiKey.isActive ? uiText.admin.apiKeys.active : uiText.admin.apiKeys.inactive}
-              {` · ${apiKey.allowedScopes.join(", ")}`}
+              {` · ${apiKey.allowedScopes.map((scope) => scopeLabels.get(scope) ?? scope).join(uiText.admin.apiKeys.scopeSeparator)}`}
             </p>
             <p className="text-xs text-md-on-surface-variant">
               {uiText.admin.apiKeys.createdLabel(formatDateTime(apiKey.createdAt) ?? apiKey.createdAt)}

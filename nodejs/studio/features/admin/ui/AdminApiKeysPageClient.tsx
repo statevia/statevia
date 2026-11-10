@@ -47,6 +47,7 @@ export function AdminApiKeysPageClient() {
       {!page.loading && apiKeys !== null && apiKeys.length > 0 ? (
         <AdminApiKeyList
           apiKeys={apiKeys}
+          permissions={page.permissions}
           revokingId={page.revokingId}
           onRevoke={page.revokeApiKey}
         />

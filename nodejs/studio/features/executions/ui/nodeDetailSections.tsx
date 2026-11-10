@@ -129,7 +129,7 @@ export function NodeDetailStatusPanels({
         <div className="mt-2 rounded-lg border border-red-200 bg-red-50/80 p-2">
           <div className="font-medium text-red-900">{uiText.nodeDetail.cancel.detailTitle(uiText.actions.cancel)}</div>
           <div className="mt-1 space-y-0.5 text-red-800">
-            {node.cancelReason != null && node.cancelReason !== "" && <div>reason: {node.cancelReason}</div>}
+            {node.cancelReason != null && node.cancelReason !== "" && <div>{uiText.nodeDetail.cancel.reason(node.cancelReason)}</div>}
             {node.canceledByExecution && (
               <div className="rounded-sm bg-red-100 px-2 py-1">{uiText.nodeDetail.cancel.convergedByExecutionCancel}</div>
             )}

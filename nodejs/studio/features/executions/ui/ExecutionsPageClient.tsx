@@ -83,8 +83,6 @@ function ExecutionsPageClientInner() {
         definitionDraft={page.definitionDraft}
         loading={page.loading}
         limit={page.limit}
-        offset={page.offset}
-        currentPage={page.currentPage}
         onSubmit={page.submitFilters}
         onStatusChange={page.changeStatus}
         onNameDraftChange={page.setNameDraft}

@@ -28,9 +28,9 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       executionNotFound: "指定された実行が見つかりませんでした。ID を確認してください。",
     },
     toasts: {
-      cancelAccepted: "CancelExecution accepted",
-      publishAccepted: "PublishEvent accepted",
-      resumeAccepted: "ResumeNode accepted",
+      cancelAccepted: "キャンセルを受け付けました。",
+      publishAccepted: "イベントを送信しました。",
+      resumeAccepted: "再開を受け付けました。",
     },
     replayDisabledReason: "リプレイ表示中は実行できません",
     operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
@@ -48,7 +48,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   },
   executionComparison: {
     title: "2実行の比較",
-    executionIdPlaceholder: "ex-2",
+    executionIdPlaceholder: "例: a1B2c3D4e5",
     executionABaselineLabel: (executionLabel: string) => `${executionLabel} A（基準）`,
     executionBLabel: (executionLabel: string) => `${executionLabel} B`,
     kind: {
@@ -82,20 +82,20 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       attempt: (attempt: number) => `試行回数: ${attempt}`,
       waitKey: (waitKey: string) => `Wait キー: ${waitKey}`,
       allowedEvents: (events: string) => `受付イベント: ${events}`,
-      canceledByExecution: (canceledByExecution: boolean) => `キャンセル: ${String(canceledByExecution)}`,
     },
     waiting: {
       title: "待機中 (Wait)",
-      reasonWaitByWaitKeyAndResumeWait: "理由: Wait キー により 再開 待ち",
-      resumeEventName: (eventName: string) => `再開 イベント名: ${eventName}`,
+      reasonWaitByWaitKeyAndResumeWait: "理由: 再開のイベントを Wait キーで待っています。",
+      resumeEventName: (eventName: string) => `再開イベント名: ${eventName}`,
       selectResumeEvent: "再開するイベント",
       selectInternalResumeEvent: "内部イベント名",
       subscribeOnlyHint: "この実行だけを、内部イベント名で再開します。\ntopic / key の集合配送ではありません。",
       subscribeResumeAction: "この実行だけ再開",
     },
     cancel: {
-      detailTitle: (cancelLabel: string) => `${cancelLabel} 詳細`,
-      convergedByExecutionCancel: "実行 キャンセル により収束",
+      detailTitle: (cancelLabel: string) => `${cancelLabel}の詳細`,
+      reason: (cancelReason: string) => `理由: ${cancelReason}`,
+      convergedByExecutionCancel: "実行のキャンセルで止まりました。",
     },
     failure: {
       title: "失敗情報",
@@ -138,7 +138,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
 
   },
   executionHeader: {
-    placeholderExecutionId: "ex-1",
+    placeholderExecutionId: "例: a1B2c3D4e5",
     executionIdLabel: (executionLabel: string) => `${executionLabel} ID`,
     compareLabel: "比較",
     realtimeSseLabel: "リアルタイム更新",
@@ -166,8 +166,8 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       statusFailed: "Failed",
       definitionInputHint: "定義 表示ID / UUID",
       definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel}（定義 表示ID / UUID）`,
-      definitionPlaceholder: "例: def-…",
-      nameInputHint: "name（execution 表示ID 部分一致、または execution UUID 完全一致）",
+      definitionPlaceholder: "例: a1B2c3D4e5",
+      nameInputHint: "実行の ID（部分一致）または UUID（完全一致）",
       search: "検索",
       clear: "クリア",
       sortByLabel: "ソート項目",
@@ -176,10 +176,9 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       sortByDisplayId: "表示ID",
       sortOrderDesc: "降順",
       sortOrderAsc: "昇順",
-      invalidName: "name は半角英数字と . - _ のみ、100文字以内で入力してください。",
+      invalidName: "実行の ID は半角英数字と . - _ のみ、100文字以内で入力してください。",
       invalidDefinitionId: "定義IDは半角英数字と - _ のみ、80文字以内で入力してください。",
-      pageInfo: (limit: number, offset: number, page: number) =>
-        `1 ページあたり: ${limit} 件。 offset: ${offset}（page ≈ ${page}）`,
+      pageInfo: (limit: number) => `1 ページに ${limit} 件まで表示します。`,
     },
     loading: "実行一覧を読み込み中です。",
     listSummary: (totalCount: number, page: number) => `合計 ${totalCount} 件（${page} ページ目）`,

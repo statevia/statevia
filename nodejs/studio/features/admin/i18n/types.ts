@@ -57,7 +57,11 @@ export type AdminFeatureUiText = {
       forbidden: string;
     };
     permissions: {
-      label: (displayKey: string | null | undefined, displayLabel: string) => string;
+      /**
+       * 権限カタログの `displayKey`（例: `permissions.definitionsRead`）から引く権限名。
+       * 辞書に無いキーは `resolvePermissionLabel` が API の `displayLabel` で補う。
+       */
+      names: Readonly<Record<string, string>>;
     };
     apiKeys: {
       title: string;
@@ -65,6 +69,8 @@ export type AdminFeatureUiText = {
       createTitle: string;
       nameLabel: string;
       nameInvalidFormat: string;
+      /** 一覧で許可スコープを並べるときの区切り。 */
+      scopeSeparator: string;
       scopesTitle: string;
       expiresAtLabel: string;
       expiresAtHint: string;

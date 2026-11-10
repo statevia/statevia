@@ -138,10 +138,10 @@ describe("NodeDetail", () => {
       };
       render(<NodeDetail {...defaultProps} node={node} />);
       expect(screen.getByText(uiText.nodeDetail.cancel.detailTitle(uiText.actions.cancel))).toBeInTheDocument();
-      expect(screen.getByText(/reason: user/)).toBeInTheDocument();
+      expect(screen.getByText(uiText.nodeDetail.cancel.reason("user"))).toBeInTheDocument();
     });
 
-    it("status が CANCELED で canceledByExecution が true のとき「実行 キャンセル により収束」を表示する", () => {
+    it("status が CANCELED で canceledByExecution が true のとき「実行のキャンセルで止まりました。」を表示する", () => {
       const node: ExecutionNodeDTO = {
         ...baseNode,
         status: "CANCELED",

@@ -100,7 +100,7 @@ describe("AdminGroupDetailPageClient", () => {
     });
     expect(await screen.findByRole("heading", { name: "Operators" })).toBeInTheDocument();
     expect(screen.getByText("member")).toBeInTheDocument();
-    expect(screen.getByLabelText("Read definitions (definitions.read)")).toBeInTheDocument();
+    expect(screen.getByLabelText(`${uiText.admin.permissions.names["permissions.definitionsRead"]} (definitions.read)`)).toBeInTheDocument();
     expect(screen.queryByLabelText(/tenant\.admin/)).toBeNull();
   });
 
@@ -130,7 +130,7 @@ describe("AdminGroupDetailPageClient", () => {
     renderWithUiText(<AdminGroupDetailPageClient groupId="group-1" />);
     await screen.findByRole("heading", { name: "Operators" });
 
-    fireEvent.click(screen.getByLabelText("Read definitions (definitions.read)"));
+    fireEvent.click(screen.getByLabelText(`${uiText.admin.permissions.names["permissions.definitionsRead"]} (definitions.read)`));
     fireEvent.click(screen.getByRole("button", { name: "権限を保存" }));
 
     await waitFor(() => {
