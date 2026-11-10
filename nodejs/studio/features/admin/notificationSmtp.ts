@@ -1,28 +1,44 @@
 /** 通知 SMTP の参照。パスワード本体は含まない。 */
 export type TenantNotificationSmtp = {
+  /** 設定済みか。未設定なら接続の項目は null。 */
   configured: boolean;
+  /** SMTP サーバーのホスト名。 */
   host: string | null;
+  /** SMTP サーバーのポート番号。 */
   port: number | null;
+  /** 認証のユーザー名。 */
   user: string | null;
+  /** 既定の送信元アドレス。 */
   defaultFrom: string | null;
+  /** パスワードが設定済みか。パスワード自体は返らない。 */
   passwordConfigured: boolean;
 };
 
 /** 全体置換の本文。パスワードは省略しない。 */
 export type NotificationSmtpPutBody = {
+  /** SMTP サーバーのホスト名（1〜255 文字）。 */
   host: string;
+  /** SMTP サーバーのポート番号（1〜65535）。 */
   port: number;
+  /** 認証のユーザー名。空ならパスワードも空にする。 */
   user: string;
+  /** パスワード。ユーザー名があるときは必須。 */
   password: string;
+  /** 既定の送信元アドレス。 */
   defaultFrom: string;
 };
 
 /** 画面の入力。パスワードは GET から埋めない。 */
 export type NotificationSmtpDraft = {
+  /** ホスト名の入力。 */
   host: string;
+  /** ポート番号の入力（文字列のまま）。 */
   port: string;
+  /** ユーザー名の入力。 */
   user: string;
+  /** パスワードの入力。GET の値では埋めない。 */
   password: string;
+  /** 既定の送信元アドレスの入力。 */
   defaultFrom: string;
 };
 

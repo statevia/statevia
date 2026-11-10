@@ -22,7 +22,7 @@ internal sealed class PermissionDefinitionRow
 {
     /// <summary>権限定義 ID。</summary>
     public Guid PermissionDefinitionId { get; set; }
-    /// <summary>権限キー（例: <c>workflow:start</c>）。テナント横断で一意。</summary>
+    /// <summary>権限キー（例: <c>executions.read</c>）。テナント横断で一意。</summary>
     public string PermissionKey { get; set; } = "";
     /// <summary>表示ラベル。</summary>
     public string DisplayLabel { get; set; } = "";

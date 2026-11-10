@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type AdminFeatureUiText = {
+  /** テナント管理画面の文言。 */
   admin: {
     users: {
       title: string;

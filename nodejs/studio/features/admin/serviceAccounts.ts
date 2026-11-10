@@ -7,27 +7,37 @@ import type { AdminServiceAccount } from "./types";
  * 契約は `docs/specifications/api-http.md` §4.1.3。API キーの入力は持たない。
  */
 export type CreateServiceAccountBody = {
+  /** サービスアカウントの名前。 */
   name: string;
+  /** 所属させるグループの ID。 */
   groupIds: string[];
 };
 
 /** `PATCH /v1/admin/service-accounts/{id}` の本文。変えた項目だけを持つ。 */
 export type UpdateServiceAccountBody = {
+  /** 有効にするか。 */
   isActive?: boolean;
+  /** 表示名。 */
   displayName?: string;
+  /** 所属させるグループの ID（全体を置き換える）。 */
   groupIds?: string[];
 };
 
 /** 作成フォームの入力（未加工）。 */
 export type ServiceAccountCreateInput = {
+  /** 名前の入力。 */
   name: string;
+  /** 選んだグループの ID。 */
   groupIds: readonly string[];
 };
 
 /** 詳細フォームの入力（未加工）。 */
 export type ServiceAccountUpdateInput = {
+  /** 有効かどうかの選択。 */
   isActive: boolean;
+  /** 名前の入力。 */
   name: string;
+  /** 選んだグループの ID。 */
   groupIds: readonly string[];
 };
 
