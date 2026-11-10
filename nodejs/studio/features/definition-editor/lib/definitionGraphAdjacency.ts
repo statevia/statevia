@@ -2,7 +2,9 @@ import type { DefinitionGraphDocument, DefinitionGraphNode } from "./types";
 
 /** グラフ上の有向辺（source → target）。 */
 export type GraphAdjacencyEdge = {
+  /** 始点のノード ID。 */
   sourceId: string;
+  /** 終点のノード ID。 */
   targetId: string;
 };
 

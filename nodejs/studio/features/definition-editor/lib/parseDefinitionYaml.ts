@@ -13,7 +13,9 @@ import type {
 
 /** YAML パースエラーメッセージのオプション。 */
 export type ParseDefinitionYamlMessageOptions = {
+  /** YAML のルートがオブジェクトでないのときのメッセージを返す。 */
   rootObjectRequired: () => string;
+  /** nodes が配列でないのときのメッセージを返す。 */
   nodesArrayRequired: () => string;
 };
 

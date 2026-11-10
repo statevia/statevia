@@ -9,6 +9,7 @@ export type DefinitionGraphNodeData = {
   label: string;
   /** React Flow の計測・ハンドル位置と一致させる（layoutGraph の w/h と同一）。 */
   width: number;
+  /** ノードの高さ（px）。 */
   height: number;
 };
 
@@ -37,14 +38,23 @@ export type AvailableNodeType = {
 
 /** キャンバス辺のメタデータ。インスペクタの選択復元に使う。 */
 export type GraphEdgeMeta = {
+  /** 辺の ID。 */
   id: string;
+  /** 始点のノード名。 */
   source: string;
+  /** 終点のノード名。 */
   target: string;
+  /** 辺の種類（next / edges / branches / error / wait の events / wait の subscribe）。 */
   edgeKind: "next" | "edge" | "branch" | "error" | "waitEvent" | "waitSubscribe";
+  /** edges のときの添字。 */
   edgeIndex?: number;
+  /** wait の events のときのイベント名。 */
   eventName?: string;
+  /** wait の subscribe のときの添字。 */
   subscribeIndex?: number;
+  /** 同じ 2 ノードを結ぶ辺の中での順番（0 始まり）。重ならないようにずらして描く。 */
   parallelIndex?: number;
+  /** 同じ 2 ノードを結ぶ辺の本数。 */
   parallelCount?: number;
 };
 

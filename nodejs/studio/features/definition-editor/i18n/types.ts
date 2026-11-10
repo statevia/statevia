@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type DefinitionEditorFeatureUiText = {
+  /** 定義エディタ画面の文言。 */
   definitionEditor: {
     backToDetail: string;
     descriptionCreating: string;

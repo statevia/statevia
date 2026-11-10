@@ -5,11 +5,17 @@ import type { DefinitionGraphWaitSubscribeEntry } from "../lib/types";
 
 /** Wait `subscribe` 行編集 UI 向けの i18n 文言。 */
 export type WaitSubscribeEditorLabels = {
+  /** 節の見出し。 */
   waitSubscribeSectionTitle: string;
+  /** topic の欄のラベル。 */
   waitSubscribeTopicLabel: string;
+  /** key の欄のラベル。 */
   waitSubscribeKeyLabel: string;
+  /** 遷移先の欄のラベル。 */
   waitSubscribeNextLabel: string;
+  /** 追加のボタンの文言。 */
   waitSubscribeAdd: string;
+  /** 削除のボタンの文言。 */
   waitSubscribeRemove: string;
 };
 
@@ -22,9 +28,13 @@ export type WaitSubscribeEditorLabels = {
  * @property onEntriesChange 配列確定時のコールバック
  */
 export type WaitSubscribeEditorProps = {
+  /** 購読の一覧。 */
   entries: readonly DefinitionGraphWaitSubscribeEntry[];
+  /** 画面の文言。 */
   labels: WaitSubscribeEditorLabels;
+  /** 編集できなくするか。 */
   disabled?: boolean;
+  /** 購読の一覧が変わったときに呼ぶ。 */
   onEntriesChange: (entries: DefinitionGraphWaitSubscribeEntry[]) => void;
 };
 
