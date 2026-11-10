@@ -4,10 +4,15 @@ import { useEffect, useRef, useState } from "react";
 
 /** Wait `events` 行編集 UI 向けの i18n 文言。 */
 export type WaitEventsEditorLabels = {
+  /** 節の見出し。 */
   waitEventsSectionTitle: string;
+  /** イベント名の欄のラベル。 */
   waitEventNameLabel: string;
+  /** 遷移先の欄のラベル。 */
   waitEventTargetLabel: string;
+  /** 追加のボタンの文言。 */
   waitEventsAdd: string;
+  /** 削除のボタンの文言。 */
   waitEventsRemove: string;
 };
 
@@ -20,9 +25,13 @@ export type WaitEventsEditorLabels = {
  * @property onEventsChange マップ確定時のコールバック
  */
 export type WaitEventsEditorProps = {
+  /** イベント名 → 遷移先のノード名。 */
   events: Record<string, string>;
+  /** 画面の文言。 */
   labels: WaitEventsEditorLabels;
+  /** 編集できなくするか。 */
   disabled?: boolean;
+  /** イベントの対応表が変わったときに呼ぶ。 */
   onEventsChange: (events: Record<string, string>) => void;
 };
 

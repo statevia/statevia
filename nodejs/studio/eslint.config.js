@@ -43,7 +43,7 @@ const exportMemberJsdocContexts = [
 
 /**
  * export した型の公開メンバーにも JSDoc を求めるファイル。埋め終えたディレクトリを足していく。
- * 残りの欠落は 2026-11-10 時点で 326 件（features/executions 183・definition-editor 143）。
+ * 残りの欠落は 2026-11-10 時点で 183 件（features/executions）。
  */
 const memberJsdocEnforcedFiles = [
     "app/**/*.{ts,tsx}",
@@ -51,6 +51,7 @@ const memberJsdocEnforcedFiles = [
     "features/admin/**/*.{ts,tsx}",
     "features/auth/**/*.{ts,tsx}",
     "features/dashboard/**/*.{ts,tsx}",
+    "features/definition-editor/**/*.{ts,tsx}",
     "features/definitions/**/*.{ts,tsx}",
     "features/projects/**/*.{ts,tsx}",
     "features/schedules/**/*.{ts,tsx}",

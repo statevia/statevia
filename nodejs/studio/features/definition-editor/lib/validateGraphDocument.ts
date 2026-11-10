@@ -5,45 +5,50 @@ import type {
   ValidateGraphDocumentResult
 } from "./types";
 import { validateForkRegionLight } from "./validateForkRegionLight";
+import type { DefinitionEditorFeatureUiText } from "../i18n/types";
+
+/** 定義エディタのグラフの文言の型。メッセージのオプションはここから必要な関数だけを取る。 */
+type DefinitionEditorGraphUiText = DefinitionEditorFeatureUiText["definitionEditor"]["graph"];
 
 /** グラフ検証メッセージのオプション。 */
-export type ValidateGraphDocumentMessageOptions = {
-  nodesRequired: () => string;
-  nodeNameRequired: () => string;
-  duplicateNodeName: (nodeName: string) => string;
-  startCountInvalid: (count: number) => string;
-  endCountInvalid: (count: number) => string;
-  startRequiresTransition: (nodeName: string) => string;
-  actionRequired: (nodeName: string) => string;
-  actionRequiresTransition: (nodeName: string) => string;
-  waitEventRequired: (nodeName: string) => string;
-  waitRequiresTransition: (nodeName: string) => string;
-  waitEventsAndEventTogether: (nodeName: string) => string;
-  waitEventsCannotHaveEdges: (nodeName: string) => string;
-  waitEventTargetRequired: (nodeName: string, eventName: string) => string;
-  waitEventsAndSubscribeTogether: (nodeName: string) => string;
-  waitSubscribeAndEventTogether: (nodeName: string) => string;
-  waitSubscribeCannotHaveEdges: (nodeName: string) => string;
-  waitSubscribeRequired: (nodeName: string) => string;
-  waitSubscribeTopicRequired: (nodeName: string, index: number) => string;
-  waitSubscribeNextRequired: (nodeName: string, index: number) => string;
-  forkBranchesRequired: (nodeName: string) => string;
-  joinRequiresTransition: (nodeName: string) => string;
-  joinModeInvalid: (nodeName: string) => string;
-  endCannotHaveTransition: (nodeName: string) => string;
-  edgeToRequired: (nodeName: string) => string;
-  edgeWhenPathRequired: (nodeName: string) => string;
-  edgeWhenOpRequired: (nodeName: string) => string;
-  edgeWhenValueRequired: (nodeName: string) => string;
-  edgeWhenValueInInvalid: (nodeName: string) => string;
-  edgeWhenValueBetweenInvalid: (nodeName: string) => string;
-  edgeDefaultMultiple: (nodeName: string) => string;
-  selfReferenceEdge: (nodeName: string) => string;
-  missingTargetNode: (nodeName: string, targetName: string) => string;
-  forkRegionIngressFromOutside: (fromName: string, toName: string) => string;
-  forkRegionEgressWithoutJoin: (fromName: string, toName: string, joinName: string) => string;
-  forkRegionWaitTargetOutside: (nodeName: string, toName: string) => string;
-};
+export type ValidateGraphDocumentMessageOptions = Pick<
+  DefinitionEditorGraphUiText,
+  | "nodesRequired"
+  | "nodeNameRequired"
+  | "duplicateNodeName"
+  | "startCountInvalid"
+  | "endCountInvalid"
+  | "startRequiresTransition"
+  | "actionRequired"
+  | "actionRequiresTransition"
+  | "waitEventRequired"
+  | "waitRequiresTransition"
+  | "waitEventsAndEventTogether"
+  | "waitEventsCannotHaveEdges"
+  | "waitEventTargetRequired"
+  | "waitEventsAndSubscribeTogether"
+  | "waitSubscribeAndEventTogether"
+  | "waitSubscribeCannotHaveEdges"
+  | "waitSubscribeRequired"
+  | "waitSubscribeTopicRequired"
+  | "waitSubscribeNextRequired"
+  | "forkBranchesRequired"
+  | "joinRequiresTransition"
+  | "joinModeInvalid"
+  | "endCannotHaveTransition"
+  | "edgeToRequired"
+  | "edgeWhenPathRequired"
+  | "edgeWhenOpRequired"
+  | "edgeWhenValueRequired"
+  | "edgeWhenValueInInvalid"
+  | "edgeWhenValueBetweenInvalid"
+  | "edgeDefaultMultiple"
+  | "selfReferenceEdge"
+  | "missingTargetNode"
+  | "forkRegionIngressFromOutside"
+  | "forkRegionEgressWithoutJoin"
+  | "forkRegionWaitTargetOutside"
+>;
 
 function collectConfiguredEdgeTargets(node: DefinitionGraphNode): string[] {
   return (node.edges ?? [])

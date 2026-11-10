@@ -1,11 +1,16 @@
 import type { DefinitionGraphNode } from "./types";
+import type { DefinitionEditorFeatureUiText } from "../i18n/types";
+
+/** 定義エディタのグラフの文言の型。メッセージのオプションはここから必要な関数だけを取る。 */
+type DefinitionEditorGraphUiText = DefinitionEditorFeatureUiText["definitionEditor"]["graph"];
 
 /** Studio の安い Fork 領域指摘メッセージ。 */
-export type ForkRegionLightMessageOptions = {
-  forkRegionIngressFromOutside: (fromName: string, toName: string) => string;
-  forkRegionEgressWithoutJoin: (fromName: string, toName: string, joinName: string) => string;
-  forkRegionWaitTargetOutside: (nodeName: string, toName: string) => string;
-};
+export type ForkRegionLightMessageOptions = Pick<
+  DefinitionEditorGraphUiText,
+  | "forkRegionIngressFromOutside"
+  | "forkRegionEgressWithoutJoin"
+  | "forkRegionWaitTargetOutside"
+>;
 
 type NameMap = Map<string, DefinitionGraphNode>;
 
