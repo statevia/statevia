@@ -28,7 +28,7 @@ describe("action binding ui text", () => {
     const japanese = actionBindingText("ja");
     const english = actionBindingText("en");
 
-    expect(japanese.title).toBe("Action バインディング");
+    expect(japanese.title).toBe("アクションバインディング");
     expect(english.title).toBe("Action bindings");
     expect(japanese.updatedAt("2026-06-01T00:00:00Z")).toBe("更新: 2026-06-01T00:00:00Z");
     expect(english.updatedAt("2026-06-01T00:00:00Z")).toBe("Updated: 2026-06-01T00:00:00Z");

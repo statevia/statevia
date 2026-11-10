@@ -88,7 +88,7 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
     title: "定義を実行",
     unspecifiedDefinitionId: "（未指定）",
     notMember: "この定義のプロジェクトに所属していないため、実行を開始できません。",
-    roleDenied: "実行開始には実行以上のロールが必要です。",
+    roleDenied: "実行を開始するには実行者以上のロールが必要です。",
     permissionDenied: "実行開始には、所属グループに executions.write 権限が必要です。テナント管理者に依頼してください。",
     definitionIdLine: (definitionIdLabel: string, definitionId: string) => `${definitionIdLabel}: ${definitionId}`,
     inputLabelWithHint: (inputLabel: string) => `${inputLabel}（任意・JSON）`,
@@ -107,7 +107,7 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
       startExecution: "実行開始",
     },
     help: {
-      redirectAfterStart: (runPath: string) => `開始後は実行画面（${runPath}）へ自動遷移します。`,
+      redirectAfterStart: (runPath: string) => `開始後は実行の操作画面（${runPath}）へ移ります。`,
     },
   },
 };

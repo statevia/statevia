@@ -36,13 +36,13 @@ const keyCandidate: ProjectGrantCandidate = { principalId: "key-module", display
 const unknownErrorMessage = "UNKNOWN: Unknown error";
 
 /**
- * 付与フォームの select を返す。並びは候補、ロールの順。
+ * 追加フォームの select を返す。並びは候補、ロールの順。
  * @returns 候補 select とロール select。
  */
 function grantSelects(): { candidateSelect: HTMLElement; roleSelect: HTMLElement } {
   const [candidateSelect, roleSelect] = screen.getAllByRole("combobox");
   if (!candidateSelect || !roleSelect) {
-    throw new Error("付与フォームの select が見つかりません");
+    throw new Error("追加フォームの select が見つかりません");
   }
   return { candidateSelect, roleSelect };
 }
@@ -65,14 +65,14 @@ describe("ProjectMembersPanel", () => {
     expect(await screen.findByText("alice（ユーザー）")).toBeInTheDocument();
     const { candidateSelect } = grantSelects();
     const optionLabels = Array.from(candidateSelect.querySelectorAll("option")).map((option) => option.textContent);
-    expect(optionLabels).toEqual(["bob（ユーザー）", "module（ServiceAccount）"]);
+    expect(optionLabels).toEqual(["bob（ユーザー）", "module（サービスアカウント）"]);
     expect(candidateSelect).toHaveValue("user-bob");
     expect(listProjectMembers).toHaveBeenCalledWith(projectId);
     expect(listGrantCandidates).toHaveBeenCalledWith(projectId);
     expect(screen.queryByText("user-alice")).not.toBeInTheDocument();
   });
 
-  it("メンバーも候補も無ければ空表示にし、付与ボタンを無効にする", async () => {
+  it("メンバーも候補も無ければ空表示にし、追加ボタンを無効にする", async () => {
     // Arrange
     vi.mocked(listProjectMembers).mockResolvedValue([]);
     vi.mocked(listGrantCandidates).mockResolvedValue([]);
@@ -82,8 +82,8 @@ describe("ProjectMembersPanel", () => {
 
     // Assert
     expect(await screen.findByText("メンバーはいません。")).toBeInTheDocument();
-    expect(screen.getByText("追加できるユーザーも ServiceAccount もありません。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "付与" })).toBeDisabled();
+    expect(screen.getByText("追加できるユーザーもサービスアカウントもありません。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "追加" })).toBeDisabled();
   });
 
   it("初回取得に失敗するとエラートーストを出す", async () => {
@@ -97,7 +97,7 @@ describe("ProjectMembersPanel", () => {
     expect(await screen.findByText(unknownErrorMessage)).toBeInTheDocument();
   });
 
-  it("選んだ候補とロールで付与し、再取得して成功トーストを出す", async () => {
+  it("選んだ候補とロールで追加し、再取得して成功トーストを出す", async () => {
     // Arrange
     vi.mocked(upsertProjectMember).mockResolvedValue(undefined);
     renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
@@ -107,7 +107,7 @@ describe("ProjectMembersPanel", () => {
     fireEvent.change(roleSelect, { target: { value: "executor" } });
 
     // Act
-    fireEvent.click(screen.getByRole("button", { name: "付与" }));
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
 
     // Assert
     expect(await screen.findByText("メンバーを更新しました。")).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("ProjectMembersPanel", () => {
     expect(listProjectMembers).toHaveBeenCalledTimes(2);
   });
 
-  it("ロール欄に未知の値が来ても付与ロールを変えない", async () => {
+  it("ロール欄に未知の値が来ても追加するロールを変えない", async () => {
     // Arrange
     vi.mocked(upsertProjectMember).mockResolvedValue(undefined);
     renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
@@ -124,25 +124,25 @@ describe("ProjectMembersPanel", () => {
     fireEvent.change(roleSelect, { target: { value: "owner" } });
 
     // Act
-    fireEvent.click(screen.getByRole("button", { name: "付与" }));
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
 
     // Assert
     await screen.findByText("メンバーを更新しました。");
     expect(upsertProjectMember).toHaveBeenCalledWith(projectId, "user-bob", "reader");
   });
 
-  it("付与に失敗するとエラートーストを出し、ボタンを戻す", async () => {
+  it("追加に失敗するとエラートーストを出し、ボタンを戻す", async () => {
     // Arrange
     vi.mocked(upsertProjectMember).mockRejectedValue(new Error("conflict"));
     renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
     await screen.findByText("alice（ユーザー）");
 
     // Act
-    fireEvent.click(screen.getByRole("button", { name: "付与" }));
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
 
     // Assert
     expect(await screen.findByText(unknownErrorMessage)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "付与" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "追加" })).toBeEnabled();
   });
 
   it("メンバーのロールを変えると更新して成功トーストを出す", async () => {
@@ -185,7 +185,7 @@ describe("ProjectMembersPanel", () => {
     await waitFor(() => expect(memberRoleSelect).toBeEnabled());
   });
 
-  it("剥奪すると再取得して成功トーストを出す", async () => {
+  it("メンバーから外すと再取得して成功トーストを出す", async () => {
     // Arrange
     vi.mocked(removeProjectMember).mockResolvedValue(undefined);
     renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
@@ -193,26 +193,26 @@ describe("ProjectMembersPanel", () => {
     vi.mocked(listProjectMembers).mockResolvedValue([]);
 
     // Act
-    fireEvent.click(screen.getByRole("button", { name: "剥奪" }));
+    fireEvent.click(screen.getByRole("button", { name: "メンバーから外す" }));
 
     // Assert
-    expect(await screen.findByText("メンバーを剥奪しました。")).toBeInTheDocument();
+    expect(await screen.findByText("メンバーから外しました。")).toBeInTheDocument();
     expect(removeProjectMember).toHaveBeenCalledWith(projectId, "user-alice");
     expect(screen.getByText("メンバーはいません。")).toBeInTheDocument();
   });
 
-  it("剥奪に失敗するとエラートーストを出し、ボタンを戻す", async () => {
+  it("メンバーから外すのに失敗するとエラートーストを出し、ボタンを戻す", async () => {
     // Arrange
     vi.mocked(removeProjectMember).mockRejectedValue(new Error("network"));
     renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
     await screen.findByText("alice（ユーザー）");
 
     // Act
-    fireEvent.click(screen.getByRole("button", { name: "剥奪" }));
+    fireEvent.click(screen.getByRole("button", { name: "メンバーから外す" }));
 
     // Assert
     expect(await screen.findByText(unknownErrorMessage)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "剥奪" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "メンバーから外す" })).toBeEnabled();
   });
 
   it("トーストを閉じると消える", async () => {

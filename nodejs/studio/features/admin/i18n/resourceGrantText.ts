@@ -12,47 +12,47 @@ type LocaleCopy = {
  * 英語と日本語は同じキーに並べ、locale ごとのオブジェクト複製を避ける。
  */
 const resourceGrantCopy = {
-  title: { en: "Resource grants", ja: "実行リソース許可" },
+  title: { en: "Definition access", ja: "操作できる定義" },
   backToUsers: { en: "Back to users", ja: "ユーザー一覧へ戻る" },
-  backToServiceAccount: { en: "Back to the service account", ja: "ServiceAccount 詳細へ戻る" },
+  backToServiceAccount: { en: "Back to the service account", ja: "サービスアカウントの詳細へ戻る" },
   description: {
-    en: "Limits which definitions this principal can view, start, resume and cancel (including scheduled runs). An empty list adds no limit within its project memberships; it never denies.",
-    ja: "このプリンシパルが閲覧・開始・再開・取消（定期実行を含む）できる定義を絞ります。空の種別は、所属の範囲で追加の制限がありません。禁止ではありません。"
+    en: "Limits which definitions this user or service account can view, start, resume and cancel (including schedules). An empty list adds no limit within its project memberships; it never denies.",
+    ja: "このユーザーまたはサービスアカウントが閲覧・開始・再開・キャンセル（定期実行を含む）できる定義を絞ります。空の種別は、所属の範囲で追加の制限がありません。禁止ではありません。"
   },
-  loadFailed: { en: "Could not load the resource grants.", ja: "実行リソース許可を読み込めませんでした。" },
-  notFound: { en: "The principal was not found.", ja: "対象のプリンシパルが見つかりません。" },
+  loadFailed: { en: "Could not load the definition access.", ja: "操作できる定義を読み込めませんでした。" },
+  notFound: { en: "The user or service account was not found.", ja: "対象のユーザーまたはサービスアカウントが見つかりません。" },
   retry: { en: "Retry", ja: "再試行" },
   candidatesLoadFailed: {
-    en: "Could not load the project or definition candidates. Saving is disabled so existing grants are not dropped.",
-    ja: "Project または定義の候補を読み込めませんでした。付与済みの許可を落とさないよう、保存できません。"
+    en: "Could not load the project or definition candidates. Saving is disabled so existing entries are not dropped.",
+    ja: "プロジェクトまたは定義の候補を読み込めませんでした。登録済みの項目を落とさないよう、保存できません。"
   },
   limitReason: {
-    en: "The limits exist because Start evaluates the grants in memory.",
-    ja: "上限は、Start が許可をメモリで評価する契約によるものです。"
+    en: "The limits exist because starting an execution checks these entries in memory.",
+    ja: "上限は、実行の開始時にこの一覧をメモリで確かめるためです。"
   },
-  projectsTitle: { en: "Projects", ja: "Project" },
+  projectsTitle: { en: "Projects", ja: "プロジェクト" },
   projectsEmpty: {
-    en: "No project grants. No additional limit by project.",
-    ja: "Project の許可はありません。Project による追加の制限はありません。"
+    en: "No projects. No additional limit by project.",
+    ja: "プロジェクトはありません。プロジェクトによる追加の制限はありません。"
   },
   projectsMembershipNote: {
-    en: "A project where this principal is not an executor or higher is rejected when saving.",
-    ja: "このプリンシパルが executor 以上で所属していない Project は、保存時に拒否されます。"
+    en: "A project where this user or service account is not an Executor or higher is rejected when saving.",
+    ja: "このユーザーまたはサービスアカウントが実行者以上で所属していないプロジェクトは、保存時に拒否されます。"
   },
-  projectAddLabel: { en: "Add a project", ja: "Project を追加" },
-  projectAddPlaceholder: { en: "Select a project", ja: "Project を選択" },
+  projectAddLabel: { en: "Add a project", ja: "プロジェクトを追加" },
+  projectAddPlaceholder: { en: "Select a project", ja: "プロジェクトを選択" },
   projectAddSubmit: { en: "Add", ja: "追加" },
-  noMoreProjects: { en: "No more projects to add.", ja: "追加できる Project はありません。" },
+  noMoreProjects: { en: "No more projects to add.", ja: "追加できるプロジェクトはありません。" },
   remove: { en: "Remove", ja: "外す" },
-  unknownProject: { en: "Project not in the list", ja: "一覧に無い Project" },
+  unknownProject: { en: "Project not in the list", ja: "一覧に無いプロジェクト" },
   definitionsTitle: { en: "Definitions", ja: "定義" },
   definitionsEmpty: {
-    en: "No definition grants. No additional limit by definition.",
-    ja: "定義の許可はありません。定義による追加の制限はありません。"
+    en: "No definitions. No additional limit by definition.",
+    ja: "定義はありません。定義による追加の制限はありません。"
   },
   definitionsScopeNote: {
     en: "Only definitions in projects you belong to are listed.",
-    ja: "候補は、あなたが所属する Project の定義だけです。"
+    ja: "候補は、あなたが所属するプロジェクトの定義だけです。"
   },
   definitionsTruncated: {
     en: "Some definitions are not listed because there are too many.",
@@ -61,19 +61,19 @@ const resourceGrantCopy = {
   definitionsUnassigned: { en: "Other definitions", ja: "その他の定義" },
   noDefinitionCandidates: { en: "No definitions to choose from.", ja: "選べる定義はありません。" },
   unknownDefinitionsTitle: {
-    en: "Granted definitions not in the list",
-    ja: "候補に無い付与済みの定義"
+    en: "Added definitions not in the list",
+    ja: "候補に無い登録済みの定義"
   },
   outsideProjectsWarning: {
     en: "Only definitions that satisfy both lists are allowed. These definitions are outside the selected projects:",
-    ja: "両方を満たす定義だけが許可されます。次の定義は、選んだ Project の外にあります:"
+    ja: "両方を満たす定義だけが許可されます。次の定義は、選んだプロジェクトの外にあります:"
   },
   saveSubmit: { en: "Save", ja: "保存" },
   saving: { en: "Saving…", ja: "保存中…" },
-  saved: { en: "Saved the resource grants.", ja: "実行リソース許可を保存しました。" },
+  saved: { en: "Saved the definition access.", ja: "操作できる定義を保存しました。" },
   clearConfirmTitle: { en: "Remove the limit?", ja: "制限を外しますか？" },
   clearConfirm: { en: "Save", ja: "保存する" },
-  cancel: { en: "Cancel", ja: "キャンセル" }
+  cancel: { en: "Cancel", ja: "やめる" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**

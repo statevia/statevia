@@ -138,7 +138,7 @@ describe("AdminNotificationSmtpPageClient", () => {
     await screen.findByText("設定済み");
 
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
-    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+    fireEvent.click(screen.getByRole("button", { name: "やめる" }));
 
     expect(apiDelete).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -81,7 +81,7 @@ describe("AdminServiceAccountsPageClient", () => {
     renderWithUiText(<AdminServiceAccountsPageClient />);
 
     // Assert
-    expect(await screen.findByText("ServiceAccount はまだありません。")).toBeInTheDocument();
+    expect(await screen.findByText("サービスアカウントはまだありません。")).toBeInTheDocument();
   });
 
   it("一覧に削除操作を出さない", async () => {
@@ -111,7 +111,7 @@ describe("AdminServiceAccountsPageClient", () => {
     fireEvent.click(retry);
 
     // Assert
-    expect(await screen.findByText("ServiceAccount はまだありません。")).toBeInTheDocument();
+    expect(await screen.findByText("サービスアカウントはまだありません。")).toBeInTheDocument();
     expect(listCallCount()).toBe(2);
   });
 
@@ -123,7 +123,7 @@ describe("AdminServiceAccountsPageClient", () => {
     renderWithUiText(<AdminServiceAccountsPageClient />);
 
     // Assert
-    expect(await screen.findByRole("heading", { name: "ServiceAccount を作成" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "サービスアカウントを作成" })).toBeInTheDocument();
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
     expect(screen.queryByLabelText(/API キー|有効期限|スコープ/)).not.toBeInTheDocument();
   });

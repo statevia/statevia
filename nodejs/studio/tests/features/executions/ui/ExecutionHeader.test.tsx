@@ -41,7 +41,7 @@ describe("ExecutionHeader", () => {
     fireEvent.change(screen.getByLabelText(/実行 ID/i), { target: { value: "ex-2" } });
     expect(onExecutionIdChange).toHaveBeenCalledWith("ex-2");
 
-    fireEvent.click(screen.getByRole("button", { name: "ロード" }));
+    fireEvent.click(screen.getByRole("button", { name: "読み込む" }));
     expect(onLoad).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));

@@ -41,7 +41,7 @@ describe("ProjectSwitcher", () => {
     // Assert
     const select = screen.getByRole("combobox", { name: "プロジェクト" });
     const optionLabels = Array.from(select.querySelectorAll("option")).map((option) => option.textContent);
-    expect(optionLabels).toEqual(["Alpha（管理）", "Beta（閲覧）"]);
+    expect(optionLabels).toEqual(["Alpha（管理者）", "Beta（閲覧者）"]);
     expect(select).toHaveValue("alpha");
   });
 

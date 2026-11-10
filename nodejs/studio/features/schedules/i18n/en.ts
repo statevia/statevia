@@ -6,7 +6,7 @@ import type { SchedulesFeatureUiText } from "./types";
 export const schedulesUiTextEn: SchedulesFeatureUiText = {
   schedules: {
     title: "Schedules",
-    description: "Runs a definition at set times. When a schedule fires, its run-as service account starts the execution.",
+    description: "Runs a definition at set times. Executions are started with the selected service account.",
     create: "Create schedule",
     empty: "There are no schedules to show. Only schedules for definitions in projects you belong to are shown.",
     joinProjectLink: "Manage project members",
@@ -18,9 +18,9 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
       definition: "Definition",
       cron: "Cron",
       timeZone: "Time zone",
-      overlap: "Overlap",
+      overlap: "Concurrent executions",
       status: "Status",
-      nextFireAt: "Next run",
+      nextFireAt: "Next execution",
       actions: "Actions"
     },
     overlap: {
@@ -48,7 +48,7 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
       editTitle: "Edit schedule",
       backToList: "Back to schedules",
       notFound: "This schedule was not found. It was deleted, or it belongs to a definition in a project you are not a member of.",
-      forbidden: "You do not have the resource grant to view this schedule.",
+      forbidden: "This schedule's definition is not in your definition access.",
       loadFailed: "Failed to load the schedule.",
       nameLabel: "Name",
       nameHint: "ASCII letters or digits. Space, hyphen, underscore, and dot are allowed only between them.",
@@ -61,14 +61,14 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
       cronHint: "Five fields (minute hour day month weekday). Example: 0 9 * * 1-5",
       timeZoneLabel: "Time zone",
       timeZoneHint: "An IANA time zone name, such as Asia/Tokyo. An empty value is not treated as UTC.",
-      overlapLabel: "Overlap",
-      runAsLabel: "Run-as (service account)",
+      overlapLabel: "Concurrent executions",
+      runAsLabel: "Execution service account",
       runAsPlaceholder: "Select a service account",
       runAsLoadFailed: "Failed to load service accounts.",
       runAsEmpty: "There are no active service accounts. Create one on the Service accounts page first.",
-      currentRunAsOption: (principalId) => `Current run-as (${principalId})`,
+      currentRunAsOption: (principalId) => `Current service account (${principalId})`,
       versionLabel: "Version (optional)",
-      versionHintCreate: "Leave empty to run the latest version at fire time.",
+      versionHintCreate: "Leave empty to run the latest version when the execution starts.",
       versionHintEdit: "Leave empty to keep the current version setting.",
       inputLabel: "Input (optional, JSON)",
       inputHint: "Input passed when the execution starts. Left out when empty.",
@@ -92,15 +92,15 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
     },
     serverErrors: {
       runAsUnusable:
-        "This run-as cannot run the schedule. It must be an active service account with executor or higher in the definition's project.",
+        "This service account cannot run the schedule. It must be an active service account with Executor or higher in the definition's project.",
       membersLink: "Manage project members",
       runAsMissingPermission:
-        "This run-as does not have permission to start executions. Add the service account to a group that has the permission.",
+        "This service account does not have permission to start executions. Add the service account to a group that has the permission.",
       serviceAccountsLink: "Manage service accounts",
       definitionUnavailable: "This definition has been deleted, so it cannot run.",
       disableHint: "You can save it if you disable it.",
-      runAsGrantDenied: "The run-as service account's resource grants do not include this definition.",
-      projectAccessDenied: "You need executor or higher in the definition's project.",
+      runAsGrantDenied: "This definition is not in the execution service account's definition access.",
+      projectAccessDenied: "You need Executor or higher in the definition's project.",
       notFound: "The schedule or definition was not found. It was deleted, or it is in a project you are not a member of."
     }
   }

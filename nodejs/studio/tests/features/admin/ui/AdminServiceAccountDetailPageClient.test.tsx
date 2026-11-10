@@ -60,7 +60,7 @@ describe("AdminServiceAccountDetailPageClient", () => {
     vi.clearAllMocks();
   });
 
-  it("詳細から実行リソース許可の画面へ進むリンクを出す", async () => {
+  it("詳細から操作できる定義の画面へ進むリンクを出す", async () => {
     // Arrange
     mockGets(async () => serviceAccount);
 
@@ -68,7 +68,7 @@ describe("AdminServiceAccountDetailPageClient", () => {
     await renderReady();
 
     // Assert
-    expect(screen.getByRole("link", { name: "実行リソース許可" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "操作できる定義" })).toHaveAttribute(
       "href",
       "/admin/service-accounts/sa-1/resource-grants"
     );
@@ -99,7 +99,7 @@ describe("AdminServiceAccountDetailPageClient", () => {
     await renderReady();
 
     // Assert
-    expect(screen.getByText(/スケジュールは自動では止まらない/)).toBeInTheDocument();
+    expect(screen.getByText(/定期実行は自動では止まらない/)).toBeInTheDocument();
     expect(screen.getByText(/API キーの失効とは別の操作です/)).toBeInTheDocument();
   });
 
@@ -191,8 +191,8 @@ describe("AdminServiceAccountDetailPageClient", () => {
     renderWithUiText(<AdminServiceAccountDetailPageClient serviceAccountId="sa-1" />);
 
     // Assert
-    expect(await screen.findByText(/この ServiceAccount は見つかりません/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ServiceAccount 一覧へ戻る" })).toHaveAttribute(
+    expect(await screen.findByText(/このサービスアカウントは見つかりません/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "サービスアカウント一覧へ戻る" })).toHaveAttribute(
       "href",
       "/admin/service-accounts"
     );

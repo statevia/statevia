@@ -17,7 +17,7 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
     },
     members: {
       title: "Project members",
-      description: "Grant a role to a user or a service account.",
+      description: "Add users and service accounts as members and choose their roles.",
       forbidden: "Project admin role is required to manage members.",
       emptyProject: "You are not a member of any project.",
       candidateLabel: "Add",
@@ -31,14 +31,14 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
       label: (displayName, kindLabel) =>
         displayName.trim().length > 0 ? `${displayName} (${kindLabel})` : kindLabel,
       roleLabel: "Role",
-      grant: "Grant",
-      granting: "Granting...",
+      grant: "Add",
+      granting: "Adding...",
       change: "Change",
-      revoke: "Revoke",
-      revoking: "Revoking...",
+      revoke: "Remove",
+      revoking: "Removing...",
       empty: "No members.",
       granted: "Member updated.",
-      revoked: "Member revoked.",
+      revoked: "Member removed.",
     },
     admin: {
       title: "Tenant projects",
@@ -52,7 +52,7 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
     create: {
       title: "Create project",
       description: "You become the admin of the project you create. Projects cannot be deleted.",
-      noPermission: "Creating a project requires the projects.create permission.",
+      noPermission: "Creating a project requires the \"Create projects\" permission.",
       slugLabel: "Project key",
       slugHint: "A name unique within the tenant. Use it to refer to this project from the API or CLI. Screens show the display name.",
       displayNameLabel: "Display name",
