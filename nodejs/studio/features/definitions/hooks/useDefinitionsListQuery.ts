@@ -42,11 +42,17 @@ export function readDefinitionsListQuery(searchParams: {
 
 /** 定義一覧 URL 同期の戻り値。 */
 export type UseDefinitionsListQueryResult = {
+  /** URL から読んだ一覧のクエリ。 */
   listQuery: DefinitionsListQuery;
+  /** 今のページ番号（1 始まり）。 */
   currentPage: number;
+  /** 実際に使う並び替えの項目（name 以外は createdAt）。 */
   effectiveSortBy: DefinitionsSortBy;
+  /** 実際に使う並び順（未指定なら desc）。 */
   effectiveSortOrder: SortOrder;
+  /** 論理削除済みの定義も含めるか。 */
   includeDeleted: boolean;
+  /** クエリを URL に反映する（履歴は積まない）。 */
   goTo: (query: DefinitionsListQuery) => void;
 };
 

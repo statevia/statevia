@@ -5,6 +5,7 @@ import type { ProjectRole } from "@/shared/project/types";
  * shared の UiText が合成時に取り込む。
  */
 export type ProjectsFeatureUiText = {
+  /** Project 画面の文言。 */
   projects: {
     switcher: {
       label: string;

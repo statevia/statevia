@@ -11,8 +11,11 @@ export type { PaginationQuery, SortOrder, SortQuery } from "@/shared/api";
 
 /** 定義一覧 API / 画面 URL のクエリパラメータ。 */
 export type DefinitionsListQuery = {
+  /** ページングの指定。 */
   pagination: PaginationQuery;
+  /** 並び順の指定。 */
   sort: SortQuery;
+  /** 定義名で絞り込む文字列。未指定なら絞り込まない。 */
   name?: string;
   /** 指定時はその Project の定義だけ。未指定は所属の和。 */
   projectId?: string;
@@ -74,6 +77,7 @@ export async function restoreDefinition(displayId: string): Promise<DefinitionDT
 
 /** 定義起点の実行開始 API が返す最小結果（遷移に必要な displayId のみ）。 */
 export type StartExecutionFromDefinitionResult = {
+  /** 開始した実行の表示用 ID。 */
   displayId: string;
 };
 

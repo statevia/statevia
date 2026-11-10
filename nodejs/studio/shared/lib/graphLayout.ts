@@ -5,11 +5,17 @@ import dagre from "dagre";
  * `features/executions/graphs` の `GraphDefinitionMeta` と構造互換（shared が feature に依存しない）。
  */
 export type GraphLayoutHints = {
+  /** ノード名 → 保存済みのキャンバス座標。 */
   layout?: Record<string, { x: number; y: number }>;
+  /** dagre の向き（LR = 左から右、TB = 上から下）。 */
   direction?: "LR" | "TB" | "RL" | "BT";
+  /** 分岐を並べる順（branch の名前）。未指定なら出てきた順。 */
   branchOrder?: string[];
+  /** ノード名 → 個別の幅と高さ。 */
   nodeSizeOverrides?: Record<string, { w: number; h: number }>;
+  /** 種別の既定より先に使う、通常ノードの幅と高さ。 */
   defaultNodeSize?: { w: number; h: number };
+  /** グループの余白（左右・上下・見出し）。 */
   groupPadding?: { x: number; y: number; header: number };
 };
 
@@ -17,20 +23,31 @@ export type GraphLayoutHints = {
 export type LayoutNodeInput = {
   /** グラフ定義上のノード名（一意）。実行時 UUID（nodeId）とは異なる。 */
   name: string;
+  /** ノードの種別。 */
   nodeType: string;
+  /** 属する分岐の名前。無ければ分岐の外。 */
   branch?: string;
 };
 
 /** レイアウト計算への辺入力。 */
 export type LayoutEdgeInput = {
+  /** 辺の ID。 */
   id: string;
+  /** 始点のノード名。 */
   from: string;
+  /** 終点のノード名。 */
   to: string;
+  /** 辺の種類（通常・fork・join）。 */
   kind?: "normal" | "fork" | "join";
+  /** 遷移の種類。省略時は Next。 */
   edgeType?: "Next" | "Resume" | "Cancel";
+  /** Resume の辺に表示するイベント名。 */
   eventName?: string;
+  /** Cancel の辺に表示する reason。 */
   cancelReason?: string;
+  /** Cancel の辺に表示する cause。 */
   cancelCause?: string;
+  /** 実行で通った辺か。 */
   traversed?: boolean;
 };
 

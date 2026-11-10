@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type DefinitionsFeatureUiText = {
+  /** 定義一覧画面の文言。 */
   definitionsPage: {
     description: string;
     pagination: {
@@ -50,6 +51,7 @@ export type DefinitionsFeatureUiText = {
     };
     error: string;
   };
+  /** 定義の詳細画面の文言。 */
   definitionDetail: {
     title: string;
     urlPrefix: string;
@@ -82,6 +84,7 @@ export type DefinitionsFeatureUiText = {
       backToDefinitions: string;
     };
   };
+  /** 定義から実行を開始する画面の文言。 */
   definitionRunPage: {
     title: string;
     unspecifiedDefinitionId: string;

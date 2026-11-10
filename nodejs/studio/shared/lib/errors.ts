@@ -4,7 +4,9 @@ import { getUiText } from "@/shared/i18n/uiTextLocale";
 
 /** トースト通知の表示状態。 */
 export type ToastState = {
+  /** トーストの色合い。 */
   tone: "success" | "error" | "info";
+  /** 表示する文言。 */
   message: string;
 };
 
