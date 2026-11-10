@@ -16,10 +16,15 @@ export type { PaginationQuery, SortOrder, SortQuery } from "@/shared/api";
 
 /** 実行一覧 API / 画面 URL のクエリパラメータ。 */
 export type ExecutionsListQuery = {
+  /** ページングの指定。 */
   pagination: PaginationQuery;
+  /** 並び順の指定。 */
   sort: SortQuery;
+  /** ステータスで絞り込む。未指定なら絞り込まない。 */
   status?: string;
+  /** 定義名で絞り込む。未指定なら絞り込まない。 */
   name?: string;
+  /** 定義で絞り込む。未指定なら絞り込まない。 */
   definitionId?: string;
   /** 指定時はその Project の実行だけ。未指定は所属の和。 */
   projectId?: string;
@@ -80,12 +85,15 @@ export async function cancelExecution(displayId: string): Promise<CommandAccepte
 
 /** テナント内の一意な購読候補。 */
 export type EventSubscriptionCandidate = {
+  /** 購読の topic。 */
   topic: string;
+  /** 購読の key。 */
   key: string;
 };
 
 /** `GET /v1/event-subscriptions` の応答。 */
 export type EventSubscriptionListResponse = {
+  /** 購読候補の一覧。 */
   subscriptions: EventSubscriptionCandidate[];
 };
 

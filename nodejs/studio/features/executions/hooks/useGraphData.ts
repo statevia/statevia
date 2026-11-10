@@ -12,11 +12,17 @@ import type { GraphDefinition } from "@/features/executions/graphs/types";
 
 /** GraphData の型定義。 */
 export type GraphData = {
+  /** グラフ ID。 */
   graphId: string;
+  /** 定義のグラフを元に組み立てたか（false なら実行のノードだけ）。 */
   definitionBased: boolean;
+  /** 実行と定義をマージしたノード。 */
   mergedNodes: MergedGraphNode[];
+  /** 配置を計算したノード。 */
   nodes: Array<PositionedNode<MergedGraphNode>>;
+  /** 描画する辺。 */
   edges: LayoutEdgeInput[];
+  /** グループの矩形。 */
   groups: GroupBounds[];
 };
 

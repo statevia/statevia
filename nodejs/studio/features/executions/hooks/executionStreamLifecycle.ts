@@ -12,9 +12,13 @@ export function getReconnectDelayMs(attempt: number, baseMs: number, maxMs: numb
 
 /** SSE 接続のライフサイクル制御に渡す依存。 */
 export type ExecutionStreamLifecycleOptions = {
+  /** 購読する実行の表示用 ID。 */
   displayId: string;
+  /** SSE のイベントを受けてから取得し直すまでの待ち時間（ms）。 */
   streamRefreshDebounceMs: number;
+  /** 実行を取得し直す。 */
   refreshSnapshot: (displayId: string) => Promise<void>;
+  /** 開いている EventSource。閉じるときと二重に開かないために使う。 */
   activeStreamRef: MutableRefObject<EventSource | null>;
 };
 

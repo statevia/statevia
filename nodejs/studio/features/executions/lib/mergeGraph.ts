@@ -10,39 +10,61 @@ export type MergedGraphNode = {
   nodeId: string;
   /** 定義グラフ・API の状態名（実行ノードに nodeName があればそれを優先） */
   nodeName: string;
+  /** ノードの種別。 */
   nodeType: string;
+  /** 表示ラベル。 */
   label: string;
+  /** 属する分岐の名前。無ければ分岐の外。 */
   branch?: string;
+  /** ノードのステータス。定義だけのノードは IDLE。 */
   status: NodeStatus;
+  /** 試行回数。 */
   attempt: number;
   /** ランタイム行がマージされたときのワーカー ID（定義のみの IDLE 行では null）。 */
   workerId: string | null;
+  /** Wait の待機キー。無ければ null。 */
   waitKey: string | null;
   /** Wait が受付可能なイベント名一覧（任意）。 */
   allowedEvents?: string[] | null;
+  /** 実行のキャンセルで止まったノードか。 */
   canceledByExecution: boolean;
 };
 
 /** 実行＋定義をマージしたグラフ辺。 */
 export type MergedGraphEdge = {
+  /** 辺の ID。 */
   id: string;
+  /** 始点のノード名。 */
   from: string;
+  /** 終点のノード名。 */
   to: string;
+  /** 辺の種類（通常・fork・join）。 */
   kind?: "normal" | "fork" | "join";
+  /** 遷移の種類。省略時は Next。 */
   edgeType?: "Next" | "Resume" | "Cancel";
+  /** Resume の辺に表示するイベント名。 */
   eventName?: string;
+  /** Cancel の辺に表示する reason。 */
   cancelReason?: string;
+  /** Cancel の辺に表示する cause。 */
   cancelCause?: string;
+  /** 実行で通った辺か。 */
   traversed?: boolean;
 };
 
 /** マージ済みグラフ全体。 */
 export type MergedGraph = {
+  /** グラフ ID。 */
   graphId: string;
+  /** マージしたノード。 */
   nodes: MergedGraphNode[];
+  /** マージした辺。 */
   edges: MergedGraphEdge[];
+  /** ノードのグループ。 */
   groups?: GraphGroupDef[];
+  /** 配置のメタ情報。 */
   meta?: GraphDefinitionMeta;
+  /** 定義のグラフを元に組み立てたか（false なら実行のノードだけ）。 */
   isDefinitionBased: boolean;
 };
 

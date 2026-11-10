@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type ExecutionsFeatureUiText = {
+  /** 実行ダッシュボードの文言。 */
   executionDashboard: {
     /** 操作画面だが executions.write が無いため、取消などを出していないときの案内。 */
     operationsPermissionDenied: string;
@@ -35,6 +36,7 @@ export type ExecutionsFeatureUiText = {
     operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) => string;
 
   },
+  /** 実行のタイムラインの文言。 */
   executionTimeline: {
     title: string;
     backToCurrent: string;
@@ -44,6 +46,7 @@ export type ExecutionsFeatureUiText = {
     errorUnknown: string;
 
   },
+  /** 実行の比較の文言。 */
   executionComparison: {
     title: string;
     executionIdPlaceholder: string;
@@ -66,6 +69,7 @@ export type ExecutionsFeatureUiText = {
     };
 
   },
+  /** ノードの詳細の文言。 */
   nodeDetail: {
     prompts: {
       loadExecution: (executionLabel: string) => string;
@@ -125,6 +129,7 @@ export type ExecutionsFeatureUiText = {
     };
 
   },
+  /** グラフの凡例の文言。 */
   graphLegend: {
     heading: {
       nodeStatus: string;
@@ -141,6 +146,7 @@ export type ExecutionsFeatureUiText = {
     };
 
   },
+  /** 実行のヘッダーの文言。 */
   executionHeader: {
     placeholderExecutionId: string;
     executionIdLabel: (executionLabel: string) => string;
@@ -151,6 +157,7 @@ export type ExecutionsFeatureUiText = {
     cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) => string;
 
   },
+  /** 実行一覧画面の文言。 */
   executionsPage: {
     pagination: {
       ariaLabel: string;
@@ -207,6 +214,7 @@ export type ExecutionsFeatureUiText = {
     error: string;
 
   },
+  /** 実行の詳細画面の文言。 */
   executionDetailPage: {
     title: string;
     missingExecutionId: string;
@@ -214,6 +222,7 @@ export type ExecutionsFeatureUiText = {
     navGraph: string;
 
   },
+  /** 実行のグラフ画面の文言。 */
   executionGraphPage: {
     title: string;
     missingExecutionId: string;
@@ -221,6 +230,7 @@ export type ExecutionsFeatureUiText = {
     navRun: string;
 
   },
+  /** 実行を開始する画面の文言。 */
   executionRunPage: {
     title: string;
     missingExecutionId: string;
@@ -228,11 +238,13 @@ export type ExecutionsFeatureUiText = {
     navGraph: string;
 
   },
+  /** 実行のステータスの帯の文言。 */
   executionStatusBanner: {
     cancelRequestedNotice: (cancelLabel: string, resumeLabel: string) => string;
     terminalNotice: (executionLabel: string) => string;
 
   },
+  /** ノード一覧の文言。 */
   nodeList: {
     title: string;
     /** 状態数と、まとめ前の訪問数。同数なら件数だけを出す。 */
@@ -258,6 +270,7 @@ export type ExecutionsFeatureUiText = {
     };
 
   },
+  /** ノードのグラフの文言。 */
   nodeGraph: {
     meta: {
       type: (nodeType: string) => string;
@@ -270,6 +283,7 @@ export type ExecutionsFeatureUiText = {
     };
 
   },
+  /** ノードの操作の文言。 */
   nodeCommands: {
     resumeDisabledReason: {
       runOnly: string;

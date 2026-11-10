@@ -43,8 +43,11 @@ export function getResumeDisabledReason(
 
 /** useNodeCommands のオプション。 */
 export type UseNodeCommandsOptions = {
+  /** 操作に成功したときに呼ぶ。 */
   onSuccess?: () => void;
+  /** 操作に失敗したときに呼ぶ。 */
   onError?: (error: unknown) => void;
+  /** 操作を有効にするか（Run 画面などだけ true）。既定は true。 */
   commandsEnabled?: boolean;
 };
 

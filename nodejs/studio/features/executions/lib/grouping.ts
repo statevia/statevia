@@ -4,12 +4,19 @@ import type { ExecutionView } from "../types";
 
 /** グループ矩形の境界。 */
 export type GroupBounds = {
+  /** グループ ID。 */
   groupId: string;
+  /** グループの表示名。 */
   label: string;
+  /** グループに入るノード名。 */
   nodeNames: string[];
+  /** 矩形の左端の x 座標。 */
   x: number;
+  /** 矩形の上端の y 座標。 */
   y: number;
+  /** 矩形の幅。 */
   w: number;
+  /** 矩形の高さ。 */
   h: number;
 };
 

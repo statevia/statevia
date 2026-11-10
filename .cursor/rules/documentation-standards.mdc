@@ -43,13 +43,13 @@ alwaysApply: true
 
 欠落は既存のビルドと lint で止める。**ドキュメント専用の CI ジョブ、コメント検査のためだけのビルド、Sonar の未ドキュメント API 規則は足さない。** 空タグや英語の繰り返しは機械では見ないので、レビューで拒否する。
 
-| 対象 | 手段 | 現状（2026-11-09） |
+| 対象 | 手段 | 現状（2026-11-10） |
 |------|------|------|
 | C# `public` | `GenerateDocumentationFile` と CS1591。6 sln の Warning 0 に乗せる | CS1591 を抑制しているプロダクトプロジェクトは無い。プロダクト csproj はすべて `GenerateDocumentationFile=true` |
 | C# `public` / `internal` | StyleCop.Analyzers のドキュメント欠落・空文の規則だけを warning にする（`dotnet/build/Documentation.targets`）。英語の定型文を求める規則と、それ以外の StyleCop 規則は有効にしない。埋め終えたプロジェクトの csproj に `StateviaDocumentationRulesEnabled=true` と `GenerateDocumentationFile=true` を書くと有効になる | C# のプロダクトプロジェクトはすべて有効。新しく足すプロダクトプロジェクトも、csproj に 2 つの設定を書いてから欠落を埋める |
-| TS `export` と公開メンバー | ESLint の `jsdoc/require-jsdoc`（`npm run lint`、GitHub CI の UI lint ジョブ） | export 宣言と説明文の有無は全体で検出済み。公開メンバーは `nodejs/studio/eslint.config.js` の `memberJsdocEnforcedFiles` に挙げたディレクトリだけ（埋め終えたら足す） |
+| TS `export` と公開メンバー | ESLint の `jsdoc/require-jsdoc`（`npm run lint`、GitHub CI の UI lint ジョブ） | export 宣言・説明文・export した型の公開メンバーを、プロダクトコード全体（`app/`・`features/`・`shared/`・`middleware.ts`）で検出する（`nodejs/studio/eslint.config.js` の `memberJsdocEnforcedFiles`） |
 
-新しいプロジェクトや、まだ埋めていない TS のディレクトリで検出を有効にするのは、欠落を埋めてからにする。先にすると Warning 0 が崩れる。
+新しい C# のプロダクトプロジェクトで検出を有効にするのは、欠落を埋めてからにする。先にすると Warning 0 が崩れる。TS は新しいディレクトリも最初から検出の対象になるので、書いたときに付ける。
 
 ## 検索の索引（Melore）
 
