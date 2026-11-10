@@ -32,8 +32,8 @@ describe("AdminServiceAccountResourceGrantsPageClient", () => {
     await screen.findByRole("button", { name: "保存" });
 
     // Assert
-    expect(screen.getByRole("heading", { name: "実行リソース許可" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ServiceAccount 詳細へ戻る" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "操作できる定義" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "サービスアカウントの詳細へ戻る" })).toHaveAttribute(
       "href",
       "/admin/service-accounts/sa%2F1"
     );

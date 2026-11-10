@@ -69,7 +69,7 @@ describe("ExecutionTimeline", () => {
     act(() => {
       vi.advanceTimersByTime(DEFAULT_LOADING_INDICATOR_DELAY_MS);
     });
-    expect(screen.getByText(/ローディング/)).toBeInTheDocument();
+    expect(screen.getByText(/読み込み中/)).toBeInTheDocument();
     vi.useRealTimers();
 
     rerender(

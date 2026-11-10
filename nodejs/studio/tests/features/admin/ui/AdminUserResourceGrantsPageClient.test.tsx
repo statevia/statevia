@@ -32,7 +32,7 @@ describe("AdminUserResourceGrantsPageClient", () => {
     await screen.findByRole("button", { name: "保存" });
 
     // Assert
-    expect(screen.getByRole("heading", { name: "実行リソース許可" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "操作できる定義" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "ユーザー一覧へ戻る" })).toHaveAttribute("href", "/admin/users");
     expect(api.apiGet).toHaveBeenCalledWith("/admin/users/user%2F1/resource-grants");
   });

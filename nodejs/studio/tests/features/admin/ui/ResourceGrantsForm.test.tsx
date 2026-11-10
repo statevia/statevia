@@ -97,7 +97,7 @@ describe("ResourceGrantsForm", () => {
     const grantedRow = within(screen.getByRole("list")).getByRole("listitem");
     expect(grantedRow).toHaveTextContent("Billing");
     expect(grantedRow).toHaveTextContent("billing");
-    expect(screen.getByRole("combobox", { name: "Project を追加" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "プロジェクトを追加" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
@@ -129,7 +129,7 @@ describe("ResourceGrantsForm", () => {
       error: { code: "VALIDATION_ERROR", message: "projectIds is invalid." }
     });
     await renderReady();
-    fireEvent.change(screen.getByRole("combobox", { name: "Project を追加" }), { target: { value: "p-1" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "プロジェクトを追加" }), { target: { value: "p-1" } });
     fireEvent.click(screen.getByRole("button", { name: "追加" }));
 
     // Act
@@ -148,7 +148,7 @@ describe("ResourceGrantsForm", () => {
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
-    fireEvent.click(await screen.findByRole("button", { name: "キャンセル" }));
+    fireEvent.click(await screen.findByRole("button", { name: "やめる" }));
 
     // Assert
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

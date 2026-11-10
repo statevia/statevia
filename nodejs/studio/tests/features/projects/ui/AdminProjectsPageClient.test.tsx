@@ -72,7 +72,7 @@ describe("AdminProjectsPageClient", () => {
     renderWithUiText(<AdminProjectsPageClient />);
 
     // Assert
-    expect(screen.getByText("ローディング...")).toBeInTheDocument();
+    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
     expect(screen.getByText("未所属のプロジェクトでは定義の詳細とエディタを開きません。")).toBeInTheDocument();
   });
 

@@ -183,9 +183,9 @@ export const uiText: UiText = {
     adminUsers: "ユーザー管理",
     adminGroups: "グループ管理",
     adminApiKeys: "API キー",
-    adminServiceAccounts: "ServiceAccount",
-    adminActionBindings: "Action バインディング",
-    adminNotificationSmtp: "通知 SMTP",
+    adminServiceAccounts: "サービスアカウント",
+    adminActionBindings: "アクションバインディング",
+    adminNotificationSmtp: "通知メールの設定",
     adminProjects: "プロジェクト",
     account: "アカウント",
     logout: "ログアウト",
@@ -216,9 +216,9 @@ export const uiText: UiText = {
 
   },
   actions: {
-    load: "ロード",
-    loading: "ローディング...",
-    reload: "リロード",
+    load: "読み込む",
+    loading: "読み込み中...",
+    reload: "再読み込み",
     cancel: "キャンセル",
     resume: "再開",
     retry: "再試行",
@@ -239,8 +239,8 @@ export const uiText: UiText = {
     status: "ステータス",
     nodeId: "ノードID",
     definitionId: "定義ID",
-    displayId: "表示ID",
-    resourceId: "リソースID",
+    displayId: "ID",
+    resourceId: "UUID",
     graphId: "グラフID",
     input: "入力データ",
     definitionEditor: "定義エディタ",
@@ -255,7 +255,7 @@ export const uiText: UiText = {
 
   },
   pageState: {
-    loading: "ローディング...",
+    loading: "読み込み中...",
     empty: "表示できるデータがありません。",
     error: "データの取得に失敗しました。",
 
@@ -277,7 +277,6 @@ export const uiText: UiText = {
 
   },
 };
-;
 
 export const uiTextJa: UiText = uiText;
 
@@ -290,38 +289,3 @@ export type AdminGroupsUiText = UiText["admin"]["groupManagement"];
 export function getAdminGroupManagementUiText(text: UiText): AdminGroupsUiText {
   return text.admin.groupManagement;
 }
-
-export type MappingEntry = {
-  source: string;
-  target: string;
-  note: string;
-};
-
-/**
- * Confirmed Mapping Table と 1:1 で対応する i18n 対応表。
- * 各 source がどのキーへマッピングされるかの確認に利用する。
- */
-export const confirmedMappingTable: MappingEntry[] = [
-  { source: "Workflow", target: uiText.entities.execution, note: "実行インスタンスの画面表示は execution 語彙で統一（定義 DSL の workflow: とは別）" },
-  { source: "Definition", target: uiText.entities.definition, note: "一覧/詳細/説明文で統一" },
-  { source: "Execution", target: uiText.entities.execution, note: "見出し・ラベルで統一" },
-  { source: "Execution 一覧", target: uiText.lists.executions, note: "一覧名の英日混在を解消" },
-  { source: "Definition 一覧", target: uiText.lists.definitions, note: "一覧名の英日混在を解消" },
-  { source: "Load", target: uiText.actions.load, note: "操作語をカタカナに統一" },
-  { source: "Loading... / 読み込み中...", target: uiText.actions.loading, note: "読み込み状態文言を統一" },
-  { source: "Cancel", target: uiText.actions.cancel, note: "操作語を統一" },
-  { source: "Resume", target: uiText.actions.resume, note: "操作語を統一" },
-  { source: "Event 送信", target: uiText.actions.sendEvent, note: "和英混在を解消" },
-  { source: "Cancelled / Canceled / CANCELED", target: uiText.status.cancelledDisplay, note: "表示用語を1つに固定（値変換は別管理）" },
-  { source: "Nodes / {n} nodes", target: "ノード / {n} 件", note: "一覧系ラベルを日本語化" },
-  { source: "nodeId", target: uiText.labels.nodeId, note: "IDラベル統一" },
-  { source: "status", target: uiText.labels.status, note: "項目ラベル統一" },
-  { source: "definitionId", target: uiText.labels.definitionId, note: "ユーザー向けラベル統一" },
-  { source: "displayId", target: uiText.labels.displayId, note: "ユーザー向けIDラベルを統一" },
-  { source: "graphId", target: uiText.labels.graphId, note: "ユーザー向けラベル統一" },
-  { source: "close toast", target: uiText.actions.closeToast, note: "アクセシビリティラベルを日本語化" },
-  { source: "List / Graph", target: `${uiText.actions.viewList} / ${uiText.actions.viewGraph}`, note: "表示切替文言を日本語化" },
-  { source: "input", target: uiText.labels.input, note: "Start API の input 欄ラベルを日本語化" },
-  { source: "Definition Editor", target: uiText.labels.definitionEditor, note: "画面タイトルを日本語化" },
-  { source: "再読み込み", target: uiText.actions.reload, note: "再取得操作の表記を統一" },
-];

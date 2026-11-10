@@ -54,7 +54,7 @@ describe("AdminActionBindingsPageClient", () => {
   it("空の一覧と作成フォームを表示する", async () => {
     renderWithUiText(<AdminActionBindingsPageClient />);
 
-    expect(await screen.findByRole("heading", { name: "Action バインディング" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "アクションバインディング" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "バインディングを作成" })).toBeInTheDocument();
     expect(screen.getByText("バインディングはまだありません。")).toBeInTheDocument();
     expect(apiGet).toHaveBeenCalledWith("/admin/action-bindings");
@@ -106,7 +106,7 @@ describe("AdminActionBindingsPageClient", () => {
 
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: " order-db " } });
     fireEvent.change(screen.getByLabelText("値"), { target: { value: "secret-value" } });
-    fireEvent.change(screen.getByLabelText(/^許可する Action/), {
+    fireEvent.change(screen.getByLabelText(/^許可するアクション/), {
       target: { value: " acme.order.query \n\nacme.order.other" }
     });
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
@@ -135,7 +135,7 @@ describe("AdminActionBindingsPageClient", () => {
 
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: "order-db" } });
     fireEvent.change(screen.getByLabelText("値"), { target: { value: "secret-value" } });
-    fireEvent.change(screen.getByLabelText(/^許可する Action/), { target: { value: "acme.order.query" } });
+    fireEvent.change(screen.getByLabelText(/^許可するアクション/), { target: { value: "acme.order.query" } });
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
 
     expect(await screen.findByText("create failed")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("AdminActionBindingsPageClient", () => {
 
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: "order-db" } });
     fireEvent.change(screen.getByLabelText("値"), { target: { value: "secret-value" } });
-    fireEvent.change(screen.getByLabelText(/^許可する Action/), { target: { value: "acme.order.query" } });
+    fireEvent.change(screen.getByLabelText(/^許可するアクション/), { target: { value: "acme.order.query" } });
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
 
     expect(await screen.findByText("Failed to create action binding.")).toBeInTheDocument();
@@ -195,7 +195,7 @@ describe("AdminActionBindingsPageClient", () => {
 
     const variableForm = formByHeading("page-size");
     fireEvent.change(within(variableForm).getByLabelText("値"), { target: { value: "" } });
-    fireEvent.change(within(variableForm).getByLabelText("許可する Action"), {
+    fireEvent.change(within(variableForm).getByLabelText("許可するアクション"), {
       target: { value: "acme.order.query" }
     });
     fireEvent.click(within(variableForm).getByRole("button", { name: "保存" }));

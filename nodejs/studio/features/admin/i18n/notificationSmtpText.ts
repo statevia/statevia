@@ -12,10 +12,10 @@ type LocaleCopy = {
  * 英語と日本語は同じキーに並べ、locale ごとのオブジェクト複製を避ける。
  */
 const notificationSmtpCopy = {
-  title: { en: "Notification SMTP", ja: "通知 SMTP" },
+  title: { en: "Notification email", ja: "通知メールの設定" },
   description: {
-    en: "Replace or delete the SMTP settings used by notification.send. The password is never shown again.",
-    ja: "notification.send が使う SMTP を置換または削除します。パスワードは再表示しません。"
+    en: "Replace or delete the SMTP settings used to send notification emails. The password is never shown again.",
+    ja: "通知メールの送信に使う SMTP の設定を置換または削除します。パスワードは再表示しません。"
   },
   notConfigured: { en: "Not configured", ja: "未設定" },
   configured: { en: "Configured", ja: "設定済み" },
@@ -42,7 +42,7 @@ const notificationSmtpCopy = {
     ja: "このテナントに保存した SMTP 設定を削除します。"
   },
   deleteConfirm: { en: "Delete", ja: "削除する" },
-  cancel: { en: "Cancel", ja: "キャンセル" },
+  cancel: { en: "Cancel", ja: "やめる" },
   hostInvalid: { en: "Host must be 1 to 255 characters.", ja: "ホストは 1〜255 文字です。" },
   portInvalid: { en: "Port must be an integer from 1 to 65535.", ja: "ポートは 1〜65535 の整数です。" },
   userInvalid: { en: "User must be at most 256 characters.", ja: "ユーザーは 256 文字までです。" },

@@ -175,7 +175,7 @@ describe("ExecutionDashboard", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "比較" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "リアルタイム更新" }));
     fireEvent.change(screen.getByLabelText(/B$/), { target: { value: "ex-2" } });
-    const loadButtons = screen.getAllByRole("button", { name: "ロード" });
+    const loadButtons = screen.getAllByRole("button", { name: "読み込む" });
     fireEvent.click(loadButtons[loadButtons.length - 1]);
 
     await waitFor(() => {

@@ -12,23 +12,23 @@ type LocaleCopy = {
  * 英語と日本語は同じキーに並べ、locale ごとのオブジェクト複製を避ける。
  */
 const serviceAccountCopy = {
-  title: { en: "Service accounts", ja: "ServiceAccount" },
+  title: { en: "Service accounts", ja: "サービスアカウント" },
   description: {
-    en: "Principals without credentials, used as run-as for schedules. Accounts are disabled instead of deleted. API keys are issued on the API keys page.",
-    ja: "資格を持たないプリンシパルです。定期実行の run-as に使います。削除の代わりに無効化します。API キーの発行は API キー画面で行います。"
+    en: "Accounts that are not people. A schedule uses one to start its executions. Accounts are disabled instead of deleted. API keys are issued on the API keys page.",
+    ja: "人ではないアカウントです。定期実行が実行を開始するときに使います。削除の代わりに無効化します。API キーの発行は API キー画面で行います。"
   },
-  empty: { en: "No service accounts yet.", ja: "ServiceAccount はまだありません。" },
+  empty: { en: "No service accounts yet.", ja: "サービスアカウントはまだありません。" },
   active: { en: "Active", ja: "有効" },
   inactive: { en: "Inactive", ja: "無効" },
   hasApiKey: { en: "Has API key", ja: "API キーあり" },
   noApiKey: { en: "No API key", ja: "API キーなし" },
   openDetail: { en: "Details", ja: "詳細" },
-  loadFailed: { en: "Failed to load service accounts.", ja: "ServiceAccount の読み込みに失敗しました。" },
+  loadFailed: { en: "Failed to load service accounts.", ja: "サービスアカウントの読み込みに失敗しました。" },
   retry: { en: "Retry", ja: "再試行" },
-  createTitle: { en: "Create service account", ja: "ServiceAccount を作成" },
+  createTitle: { en: "Create service account", ja: "サービスアカウントを作成" },
   createDescription: {
-    en: "Creates a principal without an API key. Permissions come from the selected groups.",
-    ja: "API キーを持たないプリンシパルを作ります。権限は選んだグループから付きます。"
+    en: "Creates a service account without an API key. Permissions come from the selected groups.",
+    ja: "API キーを持たないサービスアカウントを作ります。権限は選んだグループから付きます。"
   },
   nameLabel: { en: "Name", ja: "名前" },
   nameHint: {
@@ -49,28 +49,28 @@ const serviceAccountCopy = {
     ja: "名前は英数字のみです。スペース・ハイフン・アンダースコア・ドットは途中だけ使えます。"
   },
   groupsRequired: { en: "Select at least one group.", ja: "グループを 1 件以上選んでください。" },
-  backToList: { en: "Back to service accounts", ja: "ServiceAccount 一覧へ戻る" },
+  backToList: { en: "Back to service accounts", ja: "サービスアカウント一覧へ戻る" },
   notFound: {
     en: "This service account was not found. It may belong to another tenant or the ID may be wrong.",
-    ja: "この ServiceAccount は見つかりません。ID が違うか、別のテナントのプリンシパルです。"
+    ja: "このサービスアカウントは見つかりません。ID が違うか、別のテナントのサービスアカウントです。"
   },
-  detailLoadFailed: { en: "Failed to load the service account.", ja: "ServiceAccount の読み込みに失敗しました。" },
-  principalIdLabel: { en: "Principal ID", ja: "Principal ID" },
+  detailLoadFailed: { en: "Failed to load the service account.", ja: "サービスアカウントの読み込みに失敗しました。" },
+  principalIdLabel: { en: "ID", ja: "ID" },
   editTitle: { en: "Edit", ja: "編集" },
   activeLabel: { en: "Active", ja: "有効にする" },
   deactivationNote: {
-    en: "Deactivating disables the principal, so it can no longer run as run-as. Schedules that use it are not stopped automatically; stop them separately. This is separate from revoking an API key.",
-    ja: "無効にするとプリンシパルが無効になり、run-as として実行できなくなります。このプリンシパルを使うスケジュールは自動では止まらないため、別に止めてください。API キーの失効とは別の操作です。"
+    en: "Once deactivated, schedules can no longer start executions with this account. Schedules that use it are not stopped automatically; stop them separately. This is separate from revoking an API key.",
+    ja: "無効にすると、定期実行はこのアカウントで実行を開始できなくなります。このアカウントを使う定期実行は自動では止まらないため、別に止めてください。API キーの失効とは別の操作です。"
   },
   apiKeyNote: {
     en: "This account has an API key. Revoke the key on the API keys page.",
-    ja: "このプリンシパルは API キーを持っています。キーの失効は API キー画面で行います。"
+    ja: "このサービスアカウントは API キーを持っています。キーの失効は API キー画面で行います。"
   },
   saveSubmit: { en: "Save", ja: "保存" },
   saving: { en: "Saving…", ja: "保存中…" },
   saved: { en: "Saved.", ja: "保存しました。" },
   unchanged: { en: "There are no changes to save.", ja: "変更はありません。" },
-  resourceGrants: { en: "Resource grants", ja: "実行リソース許可" }
+  resourceGrants: { en: "Definition access", ja: "操作できる定義" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**

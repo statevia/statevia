@@ -48,7 +48,7 @@ describe("ProjectMembersPageClient", () => {
     renderWithUiText(<ProjectMembersPageClient />);
 
     // Assert
-    expect(screen.getByText("ローディング...")).toBeInTheDocument();
+    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
     expect(screen.queryByText(/members-panel/)).not.toBeInTheDocument();
   });
 

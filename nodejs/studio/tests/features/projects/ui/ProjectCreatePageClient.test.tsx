@@ -68,7 +68,7 @@ describe("ProjectCreatePageClient", () => {
     renderWithUiText(<ProjectCreatePageClient />, { projects: [], permissions: ["definitions.read"] });
 
     // Assert
-    expect(screen.getByText("プロジェクトの作成には projects.create 権限が必要です。")).toBeInTheDocument();
+    expect(screen.getByText("プロジェクトを作成するには「プロジェクトの作成」の権限が必要です。")).toBeInTheDocument();
     expect(screen.queryByLabelText("プロジェクトキー")).not.toBeInTheDocument();
   });
 

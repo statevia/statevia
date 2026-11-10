@@ -110,7 +110,7 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
       executionStarted: (executionDisplayId: string) => `Execution started: ${executionDisplayId}`,
     },
     help: {
-      redirectAfterStart: (runPath: string) => `After starting, you will be redirected to ${runPath}.`,
+      redirectAfterStart: (runPath: string) => `After starting, you will be taken to the execution operations screen (${runPath}).`,
     },
   },
 };

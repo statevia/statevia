@@ -12,10 +12,10 @@ type LocaleCopy = {
  * 英語と日本語は同じキーに並べ、locale ごとのオブジェクト複製を避ける。
  */
 const actionBindingCopy = {
-  title: { en: "Action bindings", ja: "Action バインディング" },
+  title: { en: "Action bindings", ja: "アクションバインディング" },
   description: {
     en: "Store variables and secrets for custom actions outside the definition.",
-    ja: "独自 Action に渡す変数とシークレットを、定義の外に保存します。"
+    ja: "独自のアクションに渡す変数とシークレットを、定義の外に保存します。"
   },
   createTitle: { en: "Create binding", ja: "バインディングを作成" },
   nameLabel: { en: "Name", ja: "名前" },
@@ -27,10 +27,10 @@ const actionBindingCopy = {
     en: "Secret values are not shown again. Leave the field empty to keep the current value.",
     ja: "シークレットの値は保存後に再表示しません。空のまま更新すると、今の値を維持します。"
   },
-  allowedActionIdsLabel: { en: "Allowed actions", ja: "許可する Action" },
+  allowedActionIdsLabel: { en: "Allowed actions", ja: "許可するアクション" },
   allowedActionIdsHint: {
-    en: "One canonical action ID per line. 1 to 8.",
-    ja: "canonical actionId を 1 行に 1 つ。1〜8 個。"
+    en: "One action ID per line. 1 to 8.",
+    ja: "アクションの ID を 1 行に 1 つ。1〜8 個。"
   },
   createSubmit: { en: "Create", ja: "作成" },
   creating: { en: "Creating…", ja: "作成中…" },
