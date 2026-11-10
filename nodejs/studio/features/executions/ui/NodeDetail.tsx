@@ -258,7 +258,6 @@ export function NodeDetail({
           <div>{uiText.nodeDetail.meta.attempt(node.attempt)}</div>
           <div>{uiText.nodeDetail.meta.waitKey(node.waitKey ?? "—")}</div>
           <div>{uiText.nodeDetail.meta.allowedEvents(fields.allowedEventsLabel)}</div>
-          <div>{uiText.nodeDetail.meta.canceledByExecution(node.canceledByExecution)}</div>
 
           {fields.showTracePanel && (
             <NodeDetailTraceSection

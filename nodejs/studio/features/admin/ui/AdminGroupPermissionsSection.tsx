@@ -1,6 +1,7 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { resolvePermissionLabel } from "../permissionLabel";
 import type { PermissionDefinitionDto } from "../types";
 
 /**
@@ -50,7 +51,7 @@ export function AdminGroupPermissionsSection({
       <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
         {permissions.map((permission) => {
           const inputId = checkboxInputId("group-permission", permission.permissionKey);
-          const labelText = `${permission.displayLabel} (${permission.permissionKey})`;
+          const labelText = `${resolvePermissionLabel(permission, uiText.admin.permissions.names)} (${permission.permissionKey})`;
           return (
             <li key={permission.permissionKey} className="flex items-start gap-2 text-sm">
               <input

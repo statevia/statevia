@@ -54,6 +54,8 @@ describe("AdminApiKeysPageClient", () => {
     });
     expect(await screen.findByText("CI Runner")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "API キーを発行" })).toBeInTheDocument();
+    expect(screen.getByLabelText("実行の閲覧")).toBeInTheDocument();
+    expect(screen.queryByText("permissions.executionsRead")).not.toBeInTheDocument();
   });
 
   it("API キーを発行すると平文キーを一度だけ表示する", async () => {

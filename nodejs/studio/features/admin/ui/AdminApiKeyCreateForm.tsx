@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { resolvePermissionLabel } from "../permissionLabel";
 import type { PermissionDefinitionDto } from "../types";
 
 /**
@@ -113,7 +114,7 @@ export function AdminApiKeyCreateForm({
                 checked={selectedScopes.has(permission.permissionKey)}
                 onChange={() => onToggleScope(permission.permissionKey)}
               />
-              {uiText.admin.permissions.label(permission.displayKey, permission.displayLabel)}
+              {resolvePermissionLabel(permission, uiText.admin.permissions.names)}
             </label>
           ))}
         </div>

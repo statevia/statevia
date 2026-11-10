@@ -21,10 +21,6 @@ export type ExecutionsFilterFormProps = {
   loading: boolean;
   /** 1 ページの件数。 */
   limit: number;
-  /** 現在ページの先頭オフセット。 */
-  offset: number;
-  /** 1 始まりのページ番号。 */
-  currentPage: number;
   /**
    * フォーム送信。
    * @param event フォームの submit。
@@ -72,8 +68,6 @@ export function ExecutionsFilterForm({
   definitionDraft,
   loading,
   limit,
-  offset,
-  currentPage,
   onSubmit,
   onStatusChange,
   onNameDraftChange,
@@ -163,7 +157,7 @@ export function ExecutionsFilterForm({
         </button>
       </div>
       <p className="text-xs text-md-on-surface-variant">
-        {filterText.pageInfo(limit, offset, currentPage)}
+        {filterText.pageInfo(limit)}
       </p>
     </form>
   );

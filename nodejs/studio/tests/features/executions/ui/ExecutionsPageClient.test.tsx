@@ -116,7 +116,7 @@ describe("ExecutionsPageClient", () => {
     renderWithUiText(<ExecutionsPageClient />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
 
-    const nameInput = screen.getByLabelText(/name（execution/);
+    const nameInput = screen.getByLabelText("実行の ID（部分一致）または UUID（完全一致）");
     fireEvent.change(nameInput, { target: { value: "demo" } });
     const form = screen.getByRole("button", { name: "検索" }).closest("form");
     if (!(form instanceof HTMLFormElement)) {
@@ -208,9 +208,9 @@ describe("ExecutionsPageClient", () => {
     fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });
     fireEvent.click(screen.getAllByRole("button", { name: "次へ" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "クリア" }));
-    fireEvent.change(screen.getByLabelText(/name（execution/), { target: { value: "名前" } });
+    fireEvent.change(screen.getByLabelText("実行の ID（部分一致）または UUID（完全一致）"), { target: { value: "名前" } });
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
-    expect(await screen.findByText(/name は半角英数字/)).toBeInTheDocument();
+    expect(await screen.findByText(/実行の ID は半角英数字/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "詳細" }));
     expect(push).toHaveBeenCalledWith("/executions/ex-1");

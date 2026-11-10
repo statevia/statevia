@@ -61,7 +61,16 @@ export const adminUiTextJa: AdminFeatureUiText = {
       forbidden: "テナント管理者のみ利用できます。",
     },
     permissions: {
-      label: (displayKey: string | null | undefined, displayLabel: string) => displayKey ?? displayLabel,
+      names: {
+        "permissions.definitionsRead": "定義の閲覧",
+        "permissions.definitionsWrite": "定義の編集",
+        "permissions.executionsRead": "実行の閲覧",
+        "permissions.executionsWrite": "実行の操作",
+        "permissions.tenantAdmin": "テナントの管理",
+        "permissions.modulesReload": "アクションモジュールの再読み込み",
+        "permissions.modulesRead": "アクションモジュールの閲覧",
+        "permissions.projectsCreate": "プロジェクトの作成",
+      },
     },
     apiKeys: {
       title: "API キー管理",
@@ -69,6 +78,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       createTitle: "API キーを発行",
       nameLabel: "表示名",
       nameInvalidFormat: "表示名は英数字のみです。スペース・ハイフン・アンダースコア・ドットは途中だけ使えます。",
+      scopeSeparator: "、",
       scopesTitle: "許可スコープ",
       expiresAtLabel: "有効期限（任意）",
       expiresAtHint: "未指定の場合は無期限です。",

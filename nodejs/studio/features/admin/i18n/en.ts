@@ -62,7 +62,16 @@ export const adminUiTextEn: AdminFeatureUiText = {
       forbidden: "Tenant administrators only.",
     },
     permissions: {
-      label: (displayKey: string | null | undefined, displayLabel: string) => displayKey ?? displayLabel,
+      names: {
+        "permissions.definitionsRead": "Read definitions",
+        "permissions.definitionsWrite": "Write definitions",
+        "permissions.executionsRead": "Read executions",
+        "permissions.executionsWrite": "Write executions",
+        "permissions.tenantAdmin": "Tenant administration",
+        "permissions.modulesReload": "Reload action modules",
+        "permissions.modulesRead": "Read action modules",
+        "permissions.projectsCreate": "Create projects",
+      },
     },
     apiKeys: {
       title: "API key management",
@@ -71,6 +80,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       nameLabel: "Display name",
       nameInvalidFormat:
         "Display name must be ASCII letters or digits; space, hyphen, underscore, and dot are allowed only between them.",
+      scopeSeparator: ", ",
       scopesTitle: "Allowed scopes",
       expiresAtLabel: "Expires at (optional)",
       expiresAtHint: "Leave empty for no expiry.",

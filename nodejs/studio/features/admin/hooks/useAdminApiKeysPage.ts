@@ -30,6 +30,8 @@ export type AdminApiKeysPageModel = {
   expiresAt: string;
   /** 選択中のスコープ。 */
   selectedScopes: ReadonlySet<string>;
+  /** 権限カタログ全体。発行済みキーの許可スコープの表示名を引くのに使う（非推奨の権限も含む）。 */
+  permissions: PermissionDefinitionDto[];
   /** テナント管理者と非推奨を除いた権限。 */
   assignablePermissions: PermissionDefinitionDto[];
   /** 発行送信中か。 */
@@ -221,6 +223,7 @@ export function useAdminApiKeysPage(): AdminApiKeysPageModel {
     name,
     expiresAt,
     selectedScopes,
+    permissions,
     assignablePermissions,
     submitting,
     revokingId,

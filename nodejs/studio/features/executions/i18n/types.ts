@@ -85,7 +85,6 @@ export type ExecutionsFeatureUiText = {
       waitKey: (waitKey: string) => string;
       /** 受付イベント一覧の表示（カンマ区切り文字列）。 */
       allowedEvents: (events: string) => string;
-      canceledByExecution: (canceledByExecution: boolean) => string;
     };
     waiting: {
       title: string;
@@ -102,6 +101,8 @@ export type ExecutionsFeatureUiText = {
     };
     cancel: {
       detailTitle: (cancelLabel: string) => string;
+      /** キャンセルの理由（API の `cancelReason`）の表示。 */
+      reason: (cancelReason: string) => string;
       convergedByExecutionCancel: string;
     };
     failure: {
@@ -188,7 +189,8 @@ export type ExecutionsFeatureUiText = {
       sortOrderAsc: string;
       invalidName: string;
       invalidDefinitionId: string;
-      pageInfo: (limit: number, offset: number, page: number) => string;
+      /** 1 ページの表示件数の説明。 */
+      pageInfo: (limit: number) => string;
     };
     loading: string;
     listSummary: (totalCount: number, page: number) => string;
