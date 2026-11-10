@@ -11,8 +11,11 @@ export type GraphDefinitionSource = "api" | "registry" | "none";
 
 /** UseGraphDefinitionResult の型定義。 */
 export type UseGraphDefinitionResult = {
+  /** グラフの定義。未取得か取得できなければ null。 */
   definition: GraphDefinition | null;
+  /** 取得中か。 */
   loading: boolean;
+  /** 取得の失敗。無ければ null。 */
   error: unknown;
   /** 最終的にどの経路の定義を使ったか */
   source: GraphDefinitionSource;

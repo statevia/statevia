@@ -28,7 +28,7 @@ const exportJsdocContexts = [
 /**
  * export した型の公開メンバー（interface / type のプロパティとメソッド、class の private でないメンバー、enum）。
  * 規約（docs/development-guidelines.md §4.3）では明白でも日本語の JSDoc を必須にしている。
- * 既存の欠落が多いため、埋め終えたディレクトリから memberJsdocEnforcedFiles に足して有効にする。
+ * 対象は memberJsdocEnforcedFiles（プロダクトコード全体。tests/ は含めない）。
  * 直下のメンバーだけを見る（入れ子のオブジェクト型の中までは見ない）。
  */
 const exportMemberJsdocContexts = [
@@ -42,26 +42,11 @@ const exportMemberJsdocContexts = [
 ];
 
 /**
- * export した型の公開メンバーにも JSDoc を求めるファイル。埋め終えたディレクトリを足していく。
- * 残りの欠落は 2026-11-10 時点で 183 件（features/executions）。
+ * export した型の公開メンバーにも JSDoc を求めるファイル。
+ * 2026-11-10 にすべてのディレクトリの欠落を埋め終えたので、ディレクトリを並べずにプロダクトコード全体を対象にする。
+ * 範囲は SonarQube の解析対象（下の sonarjs のブロック）と同じ。新しいディレクトリも自動で対象になる。
  */
-const memberJsdocEnforcedFiles = [
-    "app/**/*.{ts,tsx}",
-    "middleware.ts",
-    "features/admin/**/*.{ts,tsx}",
-    "features/auth/**/*.{ts,tsx}",
-    "features/dashboard/**/*.{ts,tsx}",
-    "features/definition-editor/**/*.{ts,tsx}",
-    "features/definitions/**/*.{ts,tsx}",
-    "features/projects/**/*.{ts,tsx}",
-    "features/schedules/**/*.{ts,tsx}",
-    "shared/api/**/*.{ts,tsx}",
-    "shared/auth/**/*.{ts,tsx}",
-    "shared/i18n/**/*.{ts,tsx}",
-    "shared/lib/**/*.{ts,tsx}",
-    "shared/project/**/*.{ts,tsx}",
-    "shared/ui/**/*.{ts,tsx}",
-];
+const memberJsdocEnforcedFiles = ["app/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}", "middleware.ts"];
 
 /** AST selector fragment: literal value contains hiragana or katakana. */
 const japaneseCharClassInLiteral = String.raw `[value=/[\u3040-\u309F\u30A0-\u30FF]/]`;
@@ -201,7 +186,7 @@ export default defineConfig({
         ],
     },
 }, {
-    // export した型の公開メンバーの JSDoc。埋め終えたディレクトリだけ（memberJsdocEnforcedFiles）。
+    // export した型の公開メンバーの JSDoc（memberJsdocEnforcedFiles）。
     files: memberJsdocEnforcedFiles,
     rules: {
         "jsdoc/require-jsdoc": [

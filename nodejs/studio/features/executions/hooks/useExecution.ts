@@ -20,8 +20,11 @@ function isTerminalExecution(status: ExecutionView["status"]): boolean {
 
 /** useExecution のコールバックオプション。 */
 export type UseExecutionOptions = {
+  /** 取得や操作に失敗したときに呼ぶ。 */
   onError?: (error: unknown) => void;
+  /** キャンセルに成功したときに呼ぶ。 */
   onCancelSuccess?: () => void;
+  /** イベントの発行に成功したときに呼ぶ。 */
   onPublishSuccess?: () => void;
   /** false のとき EventSource を開かず、Running 中はポーリングで更新する。既定 true。 */
   streamEnabled?: boolean;
@@ -31,14 +34,23 @@ export type UseExecutionOptions = {
 
 /** useExecution の戻り値。 */
 export type UseExecutionResult = {
+  /** 実行のビュー。未取得なら null。 */
   execution: ExecutionView | null;
+  /** 取得中か。 */
   loading: boolean;
+  /** キャンセルできるか（取得済みで終端でない）。 */
   canCancel: boolean;
+  /** 終端の状態か。 */
   terminal: boolean;
+  /** 実行を取得し直す。 */
   loadExecution: () => Promise<void>;
+  /** 実行をキャンセルする。 */
   cancelExecution: () => Promise<void>;
+  /** 名前付きのイベントを発行する。 */
   publishEvent: (eventName: string) => Promise<void>;
+  /** 選択中のノード ID。無ければ null。 */
   selectedNodeId: string | null;
+  /** 選択中のノード ID を設定する。 */
   setSelectedNodeId: Dispatch<SetStateAction<string | null>>;
 };
 

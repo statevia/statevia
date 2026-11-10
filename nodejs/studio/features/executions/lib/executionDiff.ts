@@ -11,9 +11,13 @@ export type NodeDiffKind = "status_diff" | "only_in_left" | "only_in_right";
 
 /** 実行比較の1ノード分の差分。 */
 export type NodeDiffItem = {
+  /** ノード ID。 */
   nodeId: string;
+  /** 差分の種別。 */
   kind: NodeDiffKind;
+  /** 左の実行でのステータス。無ければ null。 */
   statusLeft: NodeStatus | null;
+  /** 右の実行でのステータス。無ければ null。 */
   statusRight: NodeStatus | null;
   /** どちらかが FAILED/CANCELED で差がある、または片方のみでそのノードが FAILED/CANCELED */
   isFailureOrCancel: boolean;
