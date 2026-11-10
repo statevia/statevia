@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.25
+Version: 1.26
 Project: 実行型ステートマシン
+
+**Version 1.26（2026-11-10）**: `permission_definitions.permission_key` の例を、実装の形式（`executions.read`）に直した。
 
 **Version 1.25（2026-10-25）**: `projects.tenant_id` と `project_accesses.principal_id`。`visibility` とオーナー一括 Admin は現行スキーマに無い。`principal_resource_grants` は閲覧・開始・再開・取消に使う。
 
@@ -472,7 +474,7 @@ Hosted Runtime が Fork を物理子 execution に展開したときの親子リ
 | カラム | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
 | permission_definition_id | uuid | PK, NOT NULL | 行 ID |
-| permission_key | varchar(128) | NOT NULL, UNIQUE | 権限キー（例: `workflow:start`） |
+| permission_key | varchar(128) | NOT NULL, UNIQUE | 権限キー（例: `executions.read`） |
 | display_label | varchar(256) | NOT NULL | 表示ラベル |
 | display_key | varchar(128) | NULL | UI 表示用キー |
 | owner_type | varchar(64) | NULL | 所有者種別 |

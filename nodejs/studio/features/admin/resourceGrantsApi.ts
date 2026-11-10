@@ -10,6 +10,7 @@ import {
 
 /** 定義候補の 1 ページ。 */
 export type ResourceGrantDefinitionCandidatePage = {
+  /** ページ内の定義候補。 */
   candidates: ResourceGrantDefinitionCandidate[];
   /** 1 ページに収まらない定義があるか。true のとき候補は欠けている。 */
   hasMore: boolean;

@@ -27,14 +27,19 @@ export type ResourceGrantSubject =
 
 /** Principal の実行リソース許可（GET の応答、PUT の本文と同形）。 */
 export type PrincipalResourceGrants = {
+  /** 実行を許可する Project の ID。 */
   projectIds: string[];
+  /** 実行を許可する定義の ID。 */
   definitionIds: string[];
 };
 
 /** 定義候補 1 件。`GET /v1/definitions` から画面で使う項目だけを写したもの。 */
 export type ResourceGrantDefinitionCandidate = {
+  /** 定義のリソース UUID。 */
   resourceId: string;
+  /** 定義名。 */
   name: string;
+  /** 定義の表示用 ID。 */
   displayId: string;
   /** 所属 Project。API が返さないときは null（Project 名でまとめられない）。 */
   projectId: string | null;
@@ -53,7 +58,9 @@ export type ResourceGrantsBuildResult =
 
 /** 本文を作るための選択（未加工）。 */
 export type ResourceGrantsSelection = {
+  /** 選んだ Project の ID。 */
   projectIds: Iterable<string>;
+  /** 選んだ定義の ID。 */
   definitionIds: Iterable<string>;
 };
 
@@ -93,12 +100,15 @@ export type ResourceGrantDefinitionGroup = {
   projectId: string | null;
   /** 組の見出しに使う Project の表示名。所属が分からない組は null（画面の辞書で出す）。 */
   projectName: string | null;
+  /** 組に入る定義候補。 */
   definitions: ResourceGrantDefinitionCandidate[];
 };
 
 /** Project の名前解決に使う最小の形。 */
 export type ResourceGrantProjectName = {
+  /** Project ID。 */
   projectId: string;
+  /** Project の表示名。 */
   displayName: string;
 };
 
