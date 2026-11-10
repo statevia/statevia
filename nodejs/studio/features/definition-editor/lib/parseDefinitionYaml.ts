@@ -10,14 +10,17 @@ import type {
   NodeType,
   ParseDefinitionYamlResult
 } from "./types";
+import type { DefinitionEditorFeatureUiText } from "../i18n/types";
+
+/** 定義エディタのグラフの文言の型。メッセージのオプションはここから必要な関数だけを取る。 */
+type DefinitionEditorGraphUiText = DefinitionEditorFeatureUiText["definitionEditor"]["graph"];
 
 /** YAML パースエラーメッセージのオプション。 */
-export type ParseDefinitionYamlMessageOptions = {
-  /** YAML のルートがオブジェクトでないのときのメッセージを返す。 */
-  rootObjectRequired: () => string;
-  /** nodes が配列でないのときのメッセージを返す。 */
-  nodesArrayRequired: () => string;
-};
+export type ParseDefinitionYamlMessageOptions = Pick<
+  DefinitionEditorGraphUiText,
+  | "rootObjectRequired"
+  | "nodesArrayRequired"
+>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

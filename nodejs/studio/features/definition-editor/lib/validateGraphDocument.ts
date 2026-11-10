@@ -5,80 +5,50 @@ import type {
   ValidateGraphDocumentResult
 } from "./types";
 import { validateForkRegionLight } from "./validateForkRegionLight";
+import type { DefinitionEditorFeatureUiText } from "../i18n/types";
+
+/** 定義エディタのグラフの文言の型。メッセージのオプションはここから必要な関数だけを取る。 */
+type DefinitionEditorGraphUiText = DefinitionEditorFeatureUiText["definitionEditor"]["graph"];
 
 /** グラフ検証メッセージのオプション。 */
-export type ValidateGraphDocumentMessageOptions = {
-  /** nodes が空のときのメッセージを返す。 */
-  nodesRequired: () => string;
-  /** node.name が無いのときのメッセージを返す。 */
-  nodeNameRequired: () => string;
-  /** node.name が重複しているのときのメッセージを返す。 */
-  duplicateNodeName: (nodeName: string) => string;
-  /** start ノードが 1 件でないのときのメッセージを返す。 */
-  startCountInvalid: (count: number) => string;
-  /** end ノードが 1 件でないのときのメッセージを返す。 */
-  endCountInvalid: (count: number) => string;
-  /** start に next も edges も無いのときのメッセージを返す。 */
-  startRequiresTransition: (nodeName: string) => string;
-  /** action ノードに action が無いのときのメッセージを返す。 */
-  actionRequired: (nodeName: string) => string;
-  /** action に next も edges も無いのときのメッセージを返す。 */
-  actionRequiresTransition: (nodeName: string) => string;
-  /** wait ノードに events も event も無いのときのメッセージを返す。 */
-  waitEventRequired: (nodeName: string) => string;
-  /** 旧形式（event）の wait に next も edges も無いのときのメッセージを返す。 */
-  waitRequiresTransition: (nodeName: string) => string;
-  /** wait に events と event を併用しているのときのメッセージを返す。 */
-  waitEventsAndEventTogether: (nodeName: string) => string;
-  /** wait に events と edges を併用しているのときのメッセージを返す。 */
-  waitEventsCannotHaveEdges: (nodeName: string) => string;
-  /** wait の events のイベントに遷移先が無いのときのメッセージを返す。 */
-  waitEventTargetRequired: (nodeName: string, eventName: string) => string;
-  /** wait に events と subscribe を併用しているのときのメッセージを返す。 */
-  waitEventsAndSubscribeTogether: (nodeName: string) => string;
-  /** wait に subscribe と event を併用しているのときのメッセージを返す。 */
-  waitSubscribeAndEventTogether: (nodeName: string) => string;
-  /** wait に subscribe と edges を併用しているのときのメッセージを返す。 */
-  waitSubscribeCannotHaveEdges: (nodeName: string) => string;
-  /** wait の subscribe が空のときのメッセージを返す。 */
-  waitSubscribeRequired: (nodeName: string) => string;
-  /** subscribe の要素に topic が無いのときのメッセージを返す。 */
-  waitSubscribeTopicRequired: (nodeName: string, index: number) => string;
-  /** subscribe の要素に next が無いのときのメッセージを返す。 */
-  waitSubscribeNextRequired: (nodeName: string, index: number) => string;
-  /** fork の branches が 2 件未満のときのメッセージを返す。 */
-  forkBranchesRequired: (nodeName: string) => string;
-  /** join に next も edges も無いのときのメッセージを返す。 */
-  joinRequiresTransition: (nodeName: string) => string;
-  /** join.mode が all 以外のときのメッセージを返す。 */
-  joinModeInvalid: (nodeName: string) => string;
-  /** end に next か edges があるのときのメッセージを返す。 */
-  endCannotHaveTransition: (nodeName: string) => string;
-  /** edge.to が無いのときのメッセージを返す。 */
-  edgeToRequired: (nodeName: string) => string;
-  /** edge.when.path が無いのときのメッセージを返す。 */
-  edgeWhenPathRequired: (nodeName: string) => string;
-  /** edge.when.op が無いのときのメッセージを返す。 */
-  edgeWhenOpRequired: (nodeName: string) => string;
-  /** EXISTS 以外の演算子で edge.when.value が無いのときのメッセージを返す。 */
-  edgeWhenValueRequired: (nodeName: string) => string;
-  /** IN の edge.when.value が空でない配列でないのときのメッセージを返す。 */
-  edgeWhenValueInInvalid: (nodeName: string) => string;
-  /** BETWEEN の edge.when.value が要素 2 件以上の配列でないのときのメッセージを返す。 */
-  edgeWhenValueBetweenInvalid: (nodeName: string) => string;
-  /** default=true の edge が 2 つ以上あるのときのメッセージを返す。 */
-  edgeDefaultMultiple: (nodeName: string) => string;
-  /** 自分自身へ向かう edge があるのときのメッセージを返す。 */
-  selfReferenceEdge: (nodeName: string) => string;
-  /** 参照先のノードが無いのときのメッセージを返す。 */
-  missingTargetNode: (nodeName: string, targetName: string) => string;
-  /** Fork 領域の外から枝の中へ入る遷移があるのときのメッセージを返す。 */
-  forkRegionIngressFromOutside: (fromName: string, toName: string) => string;
-  /** Join を通らずに Fork 領域の外へ出る遷移があるのときのメッセージを返す。 */
-  forkRegionEgressWithoutJoin: (fromName: string, toName: string, joinName: string) => string;
-  /** wait の遷移先が Fork 領域の外にあるのときのメッセージを返す。 */
-  forkRegionWaitTargetOutside: (nodeName: string, toName: string) => string;
-};
+export type ValidateGraphDocumentMessageOptions = Pick<
+  DefinitionEditorGraphUiText,
+  | "nodesRequired"
+  | "nodeNameRequired"
+  | "duplicateNodeName"
+  | "startCountInvalid"
+  | "endCountInvalid"
+  | "startRequiresTransition"
+  | "actionRequired"
+  | "actionRequiresTransition"
+  | "waitEventRequired"
+  | "waitRequiresTransition"
+  | "waitEventsAndEventTogether"
+  | "waitEventsCannotHaveEdges"
+  | "waitEventTargetRequired"
+  | "waitEventsAndSubscribeTogether"
+  | "waitSubscribeAndEventTogether"
+  | "waitSubscribeCannotHaveEdges"
+  | "waitSubscribeRequired"
+  | "waitSubscribeTopicRequired"
+  | "waitSubscribeNextRequired"
+  | "forkBranchesRequired"
+  | "joinRequiresTransition"
+  | "joinModeInvalid"
+  | "endCannotHaveTransition"
+  | "edgeToRequired"
+  | "edgeWhenPathRequired"
+  | "edgeWhenOpRequired"
+  | "edgeWhenValueRequired"
+  | "edgeWhenValueInInvalid"
+  | "edgeWhenValueBetweenInvalid"
+  | "edgeDefaultMultiple"
+  | "selfReferenceEdge"
+  | "missingTargetNode"
+  | "forkRegionIngressFromOutside"
+  | "forkRegionEgressWithoutJoin"
+  | "forkRegionWaitTargetOutside"
+>;
 
 function collectConfiguredEdgeTargets(node: DefinitionGraphNode): string[] {
   return (node.edges ?? [])
