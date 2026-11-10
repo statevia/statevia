@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type DashboardFeatureUiText = {
+  /** ダッシュボード画面の文言。 */
   dashboard: {
     title: string;
     descriptionRecent: string;

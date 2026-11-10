@@ -6,17 +6,25 @@ export const AUTH_COOKIE_TENANT_KEY = "statevia-tenant-key";
 
 /** Service API `LoginResponse`（camelCase JSON）。 */
 export type LoginResponseBody = {
+  /** JWT アクセストークン。 */
   accessToken: string;
+  /** アクセストークンの有効期限（ISO 8601）。 */
   expiresAt: string;
+  /** テナントの内部 ID。 */
   tenantId: string;
+  /** テナントキー。 */
   tenantKey: string;
+  /** Principal ID。 */
   principalId: string;
 };
 
 /** UI ログイン API 要求 body。 */
 export type LoginRequestBody = {
+  /** テナントキー。 */
   tenantKey: string;
+  /** ユーザー名。 */
   username: string;
+  /** パスワード。 */
   password: string;
 };
 

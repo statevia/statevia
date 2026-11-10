@@ -3,6 +3,7 @@
  * shared の UiText が合成時に取り込む。
  */
 export type SchedulesFeatureUiText = {
+  /** 定期実行画面の文言。 */
   schedules: {
     title: string;
     description: string;

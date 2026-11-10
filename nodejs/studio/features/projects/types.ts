@@ -8,16 +8,24 @@ export const PROJECT_MEMBER_KINDS = ["user", "serviceAccount", "system"] as cons
 
 /** GET /v1/projects/{id}/members の 1 件。principalId は付与 API の識別子で、画面には出さない。 */
 export type ProjectMember = {
+  /** Principal ID。 */
   principalId: string;
+  /** 表示名（ユーザー表示名または ServiceAccount 名）。 */
   displayName: string;
+  /** メンバーの種別。 */
   kind: ProjectMemberKind;
+  /** Project のロール。 */
   role: ProjectRole;
+  /** 付与日時（ISO 8601）。 */
   createdAt: string;
 };
 
 /** GET /v1/projects/{id}/member-candidates の 1 件。 */
 export type ProjectGrantCandidate = {
+  /** Principal ID。 */
   principalId: string;
+  /** 表示名。 */
   displayName: string;
+  /** 候補の種別。 */
   kind: ProjectMemberKind;
 };

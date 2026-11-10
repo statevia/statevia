@@ -45,11 +45,17 @@ export type StatusLike = ExecutionStatus | NodeStatus;
 
 /** ステータス表示の色・ラベル。 */
 export type StatusStyle = {
+  /** バッジの CSS クラス。 */
   badgeClass: string;
+  /** 枠線の CSS クラス。 */
   borderClass: string;
+  /** 背景の CSS クラス。 */
   bgClass: string;
+  /** 文字色の CSS クラス。 */
   textClass: string;
+  /** アイコン。 */
   icon: string;
+  /** 強調の度合い。値が大きいほど目立たせる。 */
   emphasisRank: number;
 };
 

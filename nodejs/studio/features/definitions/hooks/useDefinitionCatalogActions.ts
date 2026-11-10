@@ -15,17 +15,25 @@ export type UseDefinitionCatalogActionsOptions = {
   reload: (options?: { clearToast?: boolean }) => Promise<void>;
   /** 成功・失敗トーストを親に伝える。 */
   setToast: (toast: ToastState | null) => void;
+  /** 削除に成功したときのトースト文言。 */
   deletedMessage: string;
+  /** 復元に成功したときのトースト文言。 */
   restoredMessage: string;
 };
 
 /** useDefinitionCatalogActions の戻り値。 */
 export type UseDefinitionCatalogActionsResult = {
+  /** 確認待ちの操作。無ければ null。 */
   pendingConfirm: PendingConfirm | null;
+  /** 確認待ちの操作を設定する。null で取り消す。 */
   setPendingConfirm: (value: PendingConfirm | null) => void;
+  /** 削除中の定義の表示用 ID。無ければ null。 */
   deletingId: string | null;
+  /** 復元中の定義の表示用 ID。無ければ null。 */
   restoringId: string | null;
+  /** 削除のボタンを押したときの処理。1 回目で確認待ちにし、同じ定義で 2 回目に削除する。 */
   handleDeleteClick: (displayId: string) => void;
+  /** 復元のボタンを押したときの処理。1 回目で確認待ちにし、同じ定義で 2 回目に復元する。 */
   handleRestoreClick: (displayId: string) => void;
 };
 

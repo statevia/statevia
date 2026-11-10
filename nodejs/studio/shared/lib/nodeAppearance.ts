@@ -3,8 +3,11 @@ export type NodeShapeKind = "stadium" | "roundedRect" | "gatewayFork" | "gateway
 
 /** ノード種別ごとの見た目属性。 */
 export type NodeAppearance = {
+  /** 表示ラベル。 */
   label: string;
+  /** アイコン。 */
   icon: string;
+  /** ノードの形。 */
   shapeKind: NodeShapeKind;
 };
 

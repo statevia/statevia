@@ -8,15 +8,21 @@ export const PROJECT_DISPLAY_NAME_MAX_LENGTH = 256;
 
 /** 作成フォームの入力（未加工）。 */
 export type ProjectCreateInput = {
+  /** slug の入力。 */
   slug: string;
+  /** 表示名の入力。 */
   displayName: string;
+  /** 説明の入力。空でもよい。 */
   description: string;
 };
 
 /** `POST /v1/projects` の本文。説明が空白だけのときは項目ごと省く。 */
 export type CreateProjectBody = {
+  /** テナント内 slug。 */
   slug: string;
+  /** 表示名。 */
   displayName: string;
+  /** 説明。空なら送らない。 */
   description?: string;
 };
 

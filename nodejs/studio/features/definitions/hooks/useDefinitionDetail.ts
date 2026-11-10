@@ -18,17 +18,27 @@ export type UseDefinitionDetailOptions = {
 
 /** useDefinitionDetail の戻り値。 */
 export type UseDefinitionDetailResult = {
+  /** 取得した定義。未取得なら null。 */
   row: DefinitionDTO | null;
   /** 未所属などで 404 のとき true。 */
   notFound: boolean;
+  /** 取得中か。 */
   loading: boolean;
+  /** ローディング表示を出すか（取得が少し長引いたときだけ true）。 */
   showLoading: boolean;
+  /** 表示中のトースト。無ければ null。 */
   toast: ToastState | null;
+  /** トーストを設定する。null で消す。 */
   setToast: (toast: ToastState | null) => void;
+  /** 削除の確認待ちか。 */
   confirmDelete: boolean;
+  /** 削除の確認待ちを設定する。 */
   setConfirmDelete: (value: boolean) => void;
+  /** 削除中か。 */
   deleting: boolean;
+  /** 定義を取得し直す。 */
   load: () => Promise<void>;
+  /** 削除のボタンを押したときの処理。1 回目で確認待ちにし、2 回目に削除して一覧へ移る。 */
   handleDeleteClick: () => Promise<void>;
 };
 

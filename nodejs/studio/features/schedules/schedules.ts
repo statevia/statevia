@@ -7,13 +7,19 @@ import type { ScheduleDetail, ScheduleOverlapPolicy } from "./types";
  * `timeZone` は必須で、空を UTC で埋めない。
  */
 export type CreateScheduleBody = {
+  /** スケジュール名。 */
   name: string;
   /** 定義のリソース UUID（API は display ID も受け付ける）。 */
   definitionId: string;
+  /** cron 式（5 フィールド）。 */
   cronExpression: string;
+  /** タイムゾーン（IANA 名）。 */
   timeZone: string;
+  /** 重なりの扱い。 */
   overlapPolicy: ScheduleOverlapPolicy;
+  /** run-as の Principal ID。 */
   runAsPrincipalId: string;
+  /** 有効か。 */
   enabled: boolean;
   /** 版番号。省略時は発火時点の最新版。 */
   definitionVersion?: number;
@@ -26,16 +32,23 @@ export type UpdateScheduleBody = Partial<CreateScheduleBody>;
 
 /** 作成・編集フォームの入力（未加工）。 */
 export type ScheduleFormValues = {
+  /** スケジュール名の入力。 */
   name: string;
+  /** 定義の入力。 */
   definitionId: string;
+  /** cron 式の入力。 */
   cronExpression: string;
+  /** タイムゾーンの入力。 */
   timeZone: string;
+  /** 重なりの扱いの選択。 */
   overlapPolicy: ScheduleOverlapPolicy;
+  /** run-as の Principal ID の選択。 */
   runAsPrincipalId: string;
   /** 版番号の文字列。空なら送らない。 */
   definitionVersion: string;
   /** input の JSON テキスト。空なら送らない。 */
   inputText: string;
+  /** 有効かどうかの選択。 */
   enabled: boolean;
 };
 
