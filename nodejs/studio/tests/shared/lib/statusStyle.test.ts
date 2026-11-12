@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getStatusStyle, getNodeSortWeight } from "@/shared/lib/statusStyle";
 
 describe("getStatusStyle", () => {
-  it("Execution status Running のスタイルを返す", () => {
-    // Arrange (v2)
-    const status = "Running";
+  it("Execution status ACTIVE のスタイルを返す", () => {
+    // Arrange
+    const status = "ACTIVE";
 
     // Act
     const result = getStatusStyle(status);
@@ -14,9 +14,9 @@ describe("getStatusStyle", () => {
     expect(result.emphasisRank).toBe(20);
   });
 
-  it("Execution status Completed のスタイルを返す", () => {
-    // Arrange (v2)
-    const status = "Completed";
+  it("Execution status COMPLETED のスタイルを返す", () => {
+    // Arrange
+    const status = "COMPLETED";
 
     // Act
     const result = getStatusStyle(status);
@@ -120,8 +120,8 @@ describe("getNodeSortWeight", () => {
 
 describe("getStatusStyle / getNodeSortWeight (境界値)", () => {
   it("getStatusStyle は全 ExecutionStatus でスタイルを返す", () => {
-    // Arrange (v2: C# API の status 値)
-    const statuses = ["Running", "Completed", "Failed", "Cancelled"] as const;
+    // Arrange（Service API の HTTP の契約の値）
+    const statuses = ["ACTIVE", "COMPLETED", "FAILED", "CANCELED", "UNKNOWN"] as const;
 
     // Act & Assert
     statuses.forEach((status) => {

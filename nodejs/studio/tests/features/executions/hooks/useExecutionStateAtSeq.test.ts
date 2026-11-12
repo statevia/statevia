@@ -21,7 +21,7 @@ describe("useExecutionStateAtSeq", () => {
   });
 
   it("atSeq 指定時は state エンドポイントを取得する", async () => {
-    const view = { displayId: "ex-1", status: "Running" } as ExecutionView;
+    const view = { displayId: "ex-1", status: "ACTIVE" } as ExecutionView;
     vi.mocked(api.apiGet).mockResolvedValue(view);
 
     const { result } = renderHook(() => useExecutionStateAtSeq("ex-1", 3));

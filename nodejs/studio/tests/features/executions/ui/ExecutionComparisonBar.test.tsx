@@ -8,7 +8,7 @@ import { uiText } from "@/shared/i18n/uiText";
 function exec(
   displayId: string,
   nodes: ExecutionView["nodes"],
-  status: ExecutionView["status"] = "Running"
+  status: ExecutionView["status"] = "ACTIVE"
 ): ExecutionView {
   return {
     displayId,

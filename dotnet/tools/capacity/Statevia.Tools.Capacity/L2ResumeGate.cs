@@ -9,15 +9,15 @@ internal static class L2ResumeGate
 {
     /// <summary>すでに完了している。Resume は送らずスキップする。</summary>
     /// <param name="status">GET execution の status。null は未取得。</param>
-    /// <returns>Completed なら true。</returns>
+    /// <returns>契約の値の COMPLETED なら true。</returns>
     public static bool IsCompleted(string? status)
-        => string.Equals(status, "Completed", StringComparison.Ordinal);
+        => string.Equals(status, "COMPLETED", StringComparison.Ordinal);
 
     /// <summary>失敗またはキャンセル。Resume しない。</summary>
     /// <param name="status">GET execution の status。</param>
-    /// <returns>Failed / Cancelled なら true。</returns>
+    /// <returns>契約の値の FAILED / CANCELED なら true。</returns>
     public static bool IsFailedOrCancelled(string? status)
-        => status is "Failed" or "Cancelled";
+        => status is "FAILED" or "CANCELED";
 
     /// <summary>終端状態。待ちポーリングを打ち切る。</summary>
     /// <param name="status">GET execution の status。</param>

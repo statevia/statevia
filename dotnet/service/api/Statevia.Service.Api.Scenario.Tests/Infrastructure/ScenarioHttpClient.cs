@@ -61,7 +61,7 @@ public sealed class ScenarioHttpClient(StateviaScenarioWebApplicationFactory fac
     /// </summary>
     /// <param name="client">認証済み <see cref="HttpClient"/>。</param>
     /// <param name="executionDisplayId">実行 display ID。</param>
-    /// <param name="expectedStatus">待機するステータス文字列（例: "Cancelled"）。</param>
+    /// <param name="expectedStatus">待機するステータス（HTTP の契約の値。例: "CANCELED"）。</param>
     /// <param name="timeout">タイムアウト（既定 15 秒）。</param>
     /// <returns>最終取得した実行 JSON ドキュメント。</returns>
     /// <exception cref="TimeoutException">タイムアウト内に期待ステータスに達しない場合。</exception>

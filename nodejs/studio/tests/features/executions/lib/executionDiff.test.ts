@@ -21,7 +21,7 @@ function node(
 function exec(
   displayId: string,
   nodes: ExecutionNodeDTO[],
-  status: ExecutionStatus = "Running"
+  status: ExecutionStatus = "ACTIVE"
 ): ExecutionView {
   return {
     displayId,

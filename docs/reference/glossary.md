@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.3 |
-| 更新日 | 2026-11-12 |
+| Version | 1.4 |
+| 更新日 | 2026-11-13 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -39,7 +39,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | --- | --- | --- | --- | --- |
 | Execution | 実行 | 定義の 1 つの版に従って進む状態機械のインスタンス | `/v1/executions`、`executionId`、`executions` テーブル、`Execution*` | Workflow / Run は使わない。Instance は Engine がメモリ上に持つ実行状態 `ExecutionInstance` だけに使う |
 | displayId / resourceId | ID / UUID | 定義と実行を識別する 2 つの ID。displayId は短い英数字、resourceId は UUID | `displayId`、`resourceId` | 画面で「表示ID」「リソースID」は使わない |
-| 実行ステータス | ステータス | Execution のライフサイクル。内部の投影値と HTTP の値で綴りが違う | 投影（`executions.status`）は `Running` / `Completed` / `Failed` / `Cancelled` / `Unknown`（`ExecutionProjectionStatuses`）。HTTP は `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`（`ExecutionStatusMapper`） | 投影の `Running` は HTTP では `ACTIVE`、`Cancelled` は `CANCELED`。Fact の `Cancelled` は遷移のキーで、実行ステータスではない。画面は値を訳さず、大文字にそろえて出す（`Running` → `RUNNING`）。綴りは `CANCELED` にそろえる |
+| 実行ステータス | ステータス | Execution のライフサイクル。内部の投影値と HTTP の値で綴りが違う | 投影（`executions.status`）は `Running` / `Completed` / `Failed` / `Cancelled` / `Unknown`（`ExecutionProjectionStatuses`）。HTTP は `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`（`ExecutionContractStatuses`。変換は `ExecutionStatusMapper`） | 投影の値を HTTP に出さない。投影の `Running` は HTTP では `ACTIVE`、`Cancelled` は `CANCELED`。Fact の `Cancelled` は遷移のキーで、実行ステータスではない。画面は HTTP の値を訳さずに出す |
 | Execution Context | 実行のデータ | 1 つの Execution の実行時データ。定義 YAML のパス式（`$.input` / `$.vars` / `$.states` など）の評価の起点になる | `WorkflowExecutionContext`（.NET の `ExecutionContext` と衝突しないための型名） | Execution そのものではない。型名の `Workflow` は旧語ではない |
 | Fact | — | 完了・失敗・キャンセル・合流など、状態で実際に起きた結果。遷移は Fact だけで確定する | `Fact.Completed` / `Failed` / `Cancelled` / `Joined`、定義 YAML の `on`、`CompiledFactTransition` | キャンセル**要求**は Fact ではない。監査イベント・待機イベントとも別（[Command・Event・Fact](#commandeventfact)） |
 | Fork / Join | 並列分岐 / 合流（Parallel / Join） | 並列分岐と合流を表す制御ノード。状態そのものではない | 定義 YAML の `fork` / `join` | — |

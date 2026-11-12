@@ -7,7 +7,7 @@ import type { ExecutionNodeDTO, ExecutionView } from "@/features/executions/type
 const baseExecution: ExecutionView = {
   displayId: "ex-1",
   resourceId: "res-1",
-  status: "Running",
+  status: "ACTIVE",
   startedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
   restartLost: false,

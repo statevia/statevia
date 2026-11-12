@@ -84,10 +84,13 @@ public sealed class ExecutionsControllerTests
             return StartResult;
         }
 
+        public ExecutionListPageQuery? LastListQuery { get; private set; }
+
         public async Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct)
         {
             await Task.Yield(); // async boundary for coverage
             if (ExceptionToThrow is { } ex) throw ex;
+            LastListQuery = query;
             return ListPagedResult;
         }
 
@@ -305,7 +308,7 @@ public sealed class ExecutionsControllerTests
             {
                 Items =
                 [
-                    new ExecutionResponse { DisplayId = "D2", ResourceId = Guid.NewGuid(), Status = "Completed", StartedAt = DateTime.UtcNow }
+                    new ExecutionResponse { DisplayId = "D2", ResourceId = Guid.NewGuid(), Status = "COMPLETED", StartedAt = DateTime.UtcNow }
                 ],
                 TotalCount = 1,
                 Offset = 0,
@@ -342,6 +345,99 @@ public sealed class ExecutionsControllerTests
         // Assert
         Assert.False(valid);
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(ExecutionListQuery.Limit)));
+    }
+
+    /// <summary>
+    /// status は契約の 4 値なら検証を通る。
+    /// </summary>
+    [Theory]
+    [InlineData("ACTIVE")]
+    [InlineData("COMPLETED")]
+    [InlineData("FAILED")]
+    [InlineData("CANCELED")]
+    public void ExecutionListQuery_WhenStatusIsFilterableContractValue_PassesValidation(string status)
+    {
+        // Arrange
+        var query = new ExecutionListQuery { Limit = 1, Status = status };
+        var context = new System.ComponentModel.DataAnnotations.ValidationContext(query);
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+
+        // Act
+        var valid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(query, context, results, validateAllProperties: true);
+
+        // Assert
+        Assert.True(valid);
+        Assert.Empty(results);
+    }
+
+    /// <summary>
+    /// status の投影の値・UNKNOWN・小文字・それ以外は検証失敗になる（パイプラインでは 422）。
+    /// </summary>
+    [Theory]
+    [InlineData("Running")]
+    [InlineData("Cancelled")]
+    [InlineData("UNKNOWN")]
+    [InlineData("active")]
+    [InlineData("WAITING")]
+    public void ExecutionListQuery_WhenStatusIsNotFilterable_FailsValidation(string status)
+    {
+        // Arrange
+        var query = new ExecutionListQuery { Limit = 1, Status = status };
+        var context = new System.ComponentModel.DataAnnotations.ValidationContext(query);
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+
+        // Act
+        var valid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(query, context, results, validateAllProperties: true);
+
+        // Assert
+        Assert.False(valid);
+        var error = Assert.Single(results);
+        Assert.Contains(nameof(ExecutionListQuery.Status), error.MemberNames);
+        Assert.Equal("status must be one of ACTIVE, COMPLETED, FAILED, CANCELED", error.ErrorMessage);
+    }
+
+    /// <summary>
+    /// status の契約の値は、投影の値に戻してサービスへ渡す。
+    /// </summary>
+    [Theory]
+    [InlineData("ACTIVE", "Running")]
+    [InlineData("CANCELED", "Cancelled")]
+    public async Task List_WhenStatusIsContractValue_PassesProjectionStatusFilter(string status, string expectedFilter)
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var executions = new FakeExecutionService();
+        var stream = new ExecutionStreamService(executions, new FakeDisplayIdService { ResolveResult = null });
+        var controller = CreateController(http, executions, stream);
+
+        // Act
+        await controller.List(new ExecutionListQuery { Limit = 1, Status = status }, ct: CancellationToken.None);
+
+        // Assert
+        Assert.Equal(expectedFilter, executions.LastListQuery?.StatusFilter);
+    }
+
+    /// <summary>
+    /// status が空なら絞り込まない。
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task List_WhenStatusIsBlank_PassesNoStatusFilter(string? status)
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var executions = new FakeExecutionService();
+        var stream = new ExecutionStreamService(executions, new FakeDisplayIdService { ResolveResult = null });
+        var controller = CreateController(http, executions, stream);
+
+        // Act
+        await controller.List(new ExecutionListQuery { Limit = 1, Status = status }, ct: CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(executions.LastListQuery);
+        Assert.Null(executions.LastListQuery.StatusFilter);
     }
 
     /// <summary>

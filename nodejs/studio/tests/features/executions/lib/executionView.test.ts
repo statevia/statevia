@@ -9,7 +9,7 @@ describe("buildExecutionView", () => {
       displayId: "ex-1",
       resourceId: "r-1",
       graphId: "def-1",
-      status: "Running",
+      status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
       restartLost: false
@@ -54,7 +54,7 @@ describe("buildExecutionView", () => {
       displayId: "ex-1",
       resourceId: "r-1",
       graphId: "def-1",
-      status: "Running",
+      status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
       restartLost: false
@@ -96,7 +96,7 @@ describe("buildExecutionView", () => {
       displayId: "ex-1",
       resourceId: "r-1",
       graphId: "def-1",
-      status: "Running",
+      status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
       restartLost: false

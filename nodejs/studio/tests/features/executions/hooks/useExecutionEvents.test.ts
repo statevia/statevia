@@ -42,7 +42,7 @@ describe("useExecutionEvents", () => {
   it("loadMore で afterSeq 付きの追加取得を行う", async () => {
     vi.mocked(api.apiGet)
       .mockResolvedValueOnce({
-        events: [{ seq: 1, type: "ExecutionStatusChanged", executionId: "ex-1", to: "Running" }],
+        events: [{ seq: 1, type: "ExecutionStatusChanged", executionId: "ex-1", to: "ACTIVE" }],
         hasMore: true
       })
       .mockResolvedValueOnce({

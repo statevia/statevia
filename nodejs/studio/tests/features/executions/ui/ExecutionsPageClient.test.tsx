@@ -11,7 +11,7 @@ const runningExecution = {
   displayId: "ex-1",
   resourceId: "res-1",
   graphId: "g-1",
-  status: "Running",
+  status: "ACTIVE",
   startedAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
@@ -202,7 +202,7 @@ describe("ExecutionsPageClient", () => {
     renderWithUiText(<ExecutionsPageClient />);
     expect(await screen.findByRole("button", { name: "詳細" })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "Failed" } });
+    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "FAILED" } });
     fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "displayId" } });
     fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "asc" } });
     fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });

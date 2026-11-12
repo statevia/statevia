@@ -120,7 +120,7 @@ public sealed class SchedulerHostStartAcceptanceTests
             CancellationToken.None);
 
         // Assert
-        Assert.Equal(ExecutionProjectionStatuses.Running, started.Status);
+        Assert.Equal(ExecutionContractStatuses.Active, started.Status);
         await using var verify = database.Factory.CreateDbContext();
         var item = Assert.Single(await verify.ExecutionWorkItems.ToListAsync());
         Assert.Equal(ExecutionWorkItemKinds.Start, item.Kind);

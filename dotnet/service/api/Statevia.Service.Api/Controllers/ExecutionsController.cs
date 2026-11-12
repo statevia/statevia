@@ -93,7 +93,7 @@ public class ExecutionsController : ControllerBase
         var pageQuery = new ExecutionListPageQuery(
             Page: new PageQuery(offset, query.Limit!.Value),
             Sort: new SortQuery(query.SortBy, query.SortOrder),
-            StatusFilter: query.Status,
+            StatusFilter: query.ResolveProjectionStatusFilter(),
             DefinitionIdFilter: definitionIdFilter,
             NameContains: string.IsNullOrWhiteSpace(query.Name) ? null : query.Name.Trim(),
             ProjectId: query.ProjectId is Guid projectId && projectId != Guid.Empty ? projectId : null);

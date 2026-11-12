@@ -362,12 +362,12 @@ describe("buildExecutionsListPath", () => {
     const a = buildExecutionsListPath({
       pagination: { limit: 20, offset: 40 },
       sort: {},
-      status: "Running",
+      status: "ACTIVE",
       name: "x",
       definitionId: "def-1"
     });
     // Assert
-    expect(a).toBe("/executions?limit=20&offset=40&status=Running&name=x&definitionId=def-1");
+    expect(a).toBe("/executions?limit=20&offset=40&status=ACTIVE&name=x&definitionId=def-1");
   });
 });
 

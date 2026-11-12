@@ -2,26 +2,26 @@ import { describe, expect, it } from "vitest";
 import { toDisplayValue } from "@/shared/lib/displayValue";
 
 describe("toDisplayValue", () => {
-  it("実行の状態を大文字にする", () => {
+  it("実行の状態（契約の値）はそのままの綴りで出す", () => {
     // Arrange
-    const values = ["Running", "Completed", "Failed"];
+    const values = ["ACTIVE", "COMPLETED", "FAILED", "CANCELED", "UNKNOWN"];
 
     // Act
     const displayed = values.map(toDisplayValue);
 
     // Assert
-    expect(displayed).toEqual(["RUNNING", "COMPLETED", "FAILED"]);
+    expect(displayed).toEqual(["ACTIVE", "COMPLETED", "FAILED", "CANCELED", "UNKNOWN"]);
   });
 
-  it("実行の Cancelled とノードの CANCELED を同じ CANCELED にそろえる", () => {
+  it("綴りの読み替えはせず、大文字にするだけにする", () => {
     // Arrange
-    const values = ["Cancelled", "CANCELED", "cancelled"];
+    const values = ["cancelled", "Running"];
 
     // Act
     const displayed = values.map(toDisplayValue);
 
     // Assert
-    expect(displayed).toEqual(["CANCELED", "CANCELED", "CANCELED"]);
+    expect(displayed).toEqual(["CANCELLED", "RUNNING"]);
   });
 
   it("ノードのタイプを大文字にする", () => {

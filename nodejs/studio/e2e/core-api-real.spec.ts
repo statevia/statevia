@@ -69,7 +69,7 @@ test.describe("Service API (direct)", () => {
     });
     expect(start.status(), await start.text()).toBe(201);
     const execution = (await start.json()) as { displayId: string; status: string };
-    expect(execution.status).toBe("Running");
+    expect(execution.status).toBe("ACTIVE");
 
     const cancel = await request.post(`${apiBase}/v1/executions/${encodeURIComponent(execution.displayId)}/cancel`, {
       headers: tenantHeaders,
@@ -77,7 +77,7 @@ test.describe("Service API (direct)", () => {
     });
     expect(cancel.status()).toBe(204);
 
-    await waitForExecutionStatus(request, execution.displayId, "Cancelled", 15_000);
+    await waitForExecutionStatus(request, execution.displayId, "CANCELED", 15_000);
   });
 
   test("同一 X-Idempotency-Key + 同一ボディの再送は同一実行を返す", async ({ request }) => {

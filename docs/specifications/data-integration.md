@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.9 |
-| 更新日 | 2026-10-07 |
+| Version | 1.10 |
+| 更新日 | 2026-11-13 |
 | Scope | Core-Engine / Service API / UI |
 | 関連 | [concepts/durability.md](../concepts/durability.md), [api-http.md](api-http.md) |
 
@@ -21,6 +21,8 @@
 責務の背景は [Concept: 永続化](../concepts/durability.md) を参照。
 
 ---
+
+**Version 1.10（2026-11-13）**: §2.1 を実際の応答（`ExecutionResponse` と `ExecutionViewDto`）に合わせた。呼び出し元の無かった Execution Read Model の形（`executionId` / `canceledAt` など）を外した。実行ステータスは HTTP の契約の値（`ACTIVE` など）で返る（[api-http.md](api-http.md) §3.2.1）。
 
 **Version 1.9（2026-10-07）**: `GET /v1/executions` の一覧と件数は、`execution_branches.execution_id` に無いルートのみ。
 
@@ -87,17 +89,30 @@
 
 ### 2.1 Execution Read Model（UI向け正規形）
 
-UIが依存してよいレスポンス形を固定する。
+UI が依存してよいレスポンス形を固定する。実行は `GET /v1/executions` / `GET /v1/executions/{id}` の `ExecutionResponse` で読む。
 
 ```json
 {
-  "executionId": "ex-1",
-  "graphId": "hello",
-  "status": "ACTIVE|COMPLETED|FAILED|CANCELED",
-  "cancelRequestedAt": "2026-02-28T00:00:00Z|null",
-  "canceledAt": "2026-02-28T00:00:00Z|null",
-  "failedAt": "2026-02-28T00:00:00Z|null",
-  "completedAt": "2026-02-28T00:00:00Z|null",
+  "displayId": "ex-1",
+  "resourceId": "uuid",
+  "graphId": "def-1",
+  "status": "ACTIVE|COMPLETED|FAILED|CANCELED|UNKNOWN",
+  "startedAt": "2026-02-28T00:00:00Z",
+  "updatedAt": "2026-02-28T00:00:00Z|null",
+  "cancelRequested": false,
+  "restartLost": false
+}
+```
+
+- **`status`**: 実行ステータスの契約の値。投影の値（`Running` / `Cancelled` など）は返さない（[api-http.md](api-http.md) §3.2.1）。
+- キャンセルの要求を受けたかどうかは `status` ではなく `cancelRequested` で表す。
+
+ノードは `GET /v1/executions/{id}/state` の `ExecutionViewDto.nodes`、または `GET /v1/executions/{id}/graph` で読む。`ExecutionViewDto` の主な形は次のとおり。
+
+```json
+{
+  "displayId": "ex-1",
+  "status": "ACTIVE|COMPLETED|FAILED|CANCELED|UNKNOWN",
   "nodes": [
     {
       "nodeId": "task-1",
@@ -254,7 +269,7 @@ SSE でサーバから UI へ「再取得のきっかけ」を送ると、ポー
 
 - **`GET /v1/executions/{id}/stream`**（`{id}` は **display_id または resource_id（UUID）**。`X-Tenant-Id` は他 Read API と同様。UI からは `EventSource` 等でプロキシ URL に接続し、テナントは [ui-auth-tenant-config.md](../guides/ui-auth-tenant-config.md) に従う）
 - 応答ヘッダ: `Content-Type: text/event-stream`、`Cache-Control: no-cache, no-transform` 等
-- **サーバ側挙動**: 約 **2 秒**間隔で snapshot の `UpdatedAt` を読む。前回送った時刻と同じなら `GraphJson` は読まず、`data:` も書かない。変わったときだけ `GraphJson` を 1 回読み、**1 行の `data:`**（`GraphUpdated`）を書く。接続を閉じるのは実行 status が `Completed` / `Cancelled` / `Failed` のときだけである。ノードが完了しているだけでは閉じない。
+- **サーバ側挙動**: 約 **2 秒**間隔で snapshot の `UpdatedAt` を読む。前回送った時刻と同じなら `GraphJson` は読まず、`data:` も書かない。変わったときだけ `GraphJson` を 1 回読み、**1 行の `data:`**（`GraphUpdated`）を書く。接続を閉じるのは実行が終端（HTTP の `COMPLETED` / `CANCELED` / `FAILED`。投影の `Completed` / `Cancelled` / `Failed`）のときだけである。ノードが完了しているだけでは閉じない。
 
 #### 5.1.1 `data:` 行の JSON 形（`GraphUpdated`）
 

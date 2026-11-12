@@ -7,13 +7,13 @@ import type { ExecutionSortBy, ExecutionStatusFilter } from "../hooks/useExecuti
 import { toDisplayValue } from "@/shared/lib/displayValue";
 
 /**
- * ステータスの絞り込みで選べる値。API に送る値なので変えず、表示だけ `toDisplayValue` で大文字にそろえる（訳さない）。
+ * ステータスの絞り込みで選べる値。API の契約の値をそのまま送り、そのまま出す（訳さない）。
  */
 const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, "">[] = [
-  "Running",
-  "Completed",
-  "Cancelled",
-  "Failed"
+  "ACTIVE",
+  "COMPLETED",
+  "FAILED",
+  "CANCELED"
 ];
 
 /** 実行一覧フィルタ欄の入力。 */

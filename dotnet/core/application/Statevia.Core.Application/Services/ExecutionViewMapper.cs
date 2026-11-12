@@ -27,7 +27,7 @@ internal static class ExecutionViewMapper
             DisplayId = displayId,
             ResourceId = execution.ExecutionId.ToString("D"),
             GraphId = graphIdDisplay,
-            Status = execution.Status,
+            Status = ExecutionStatusMapper.ToContract(execution.Status),
             StartedAt = execution.StartedAt,
             UpdatedAt = execution.UpdatedAt,
             CancelRequested = execution.CancelRequested,

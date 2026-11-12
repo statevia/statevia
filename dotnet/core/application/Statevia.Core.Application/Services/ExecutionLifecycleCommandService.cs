@@ -245,7 +245,7 @@ internal sealed class ExecutionLifecycleCommandService(
                     DisplayId = displayId,
                     ResourceId = executionId,
                     GraphId = graphId,
-                    Status = ExecutionProjectionStatuses.Running,
+                    Status = ExecutionContractStatuses.Active,
                     StartedAt = createdAt
                 };
 
@@ -419,7 +419,7 @@ internal sealed class ExecutionLifecycleCommandService(
                             DisplayId = displayId,
                             ResourceId = resolvedExecutionId,
                             GraphId = graphId,
-                            Status = status,
+                            Status = ExecutionStatusMapper.ToContract(status),
                             StartedAt = createdAt
                         };
 
@@ -470,7 +470,7 @@ internal sealed class ExecutionLifecycleCommandService(
                             DisplayId = displayId,
                             ResourceId = resolvedExecutionId,
                             GraphId = graphId,
-                            Status = status,
+                            Status = ExecutionStatusMapper.ToContract(status),
                             StartedAt = existing.StartedAt
                         };
                         await executions
@@ -1004,7 +1004,7 @@ internal sealed class ExecutionLifecycleCommandService(
             DisplayId = displayId,
             ResourceId = execution.ExecutionId,
             GraphId = graphId,
-            Status = execution.Status,
+            Status = ExecutionStatusMapper.ToContract(execution.Status),
             StartedAt = execution.StartedAt,
             UpdatedAt = execution.UpdatedAt,
             CancelRequested = execution.CancelRequested,

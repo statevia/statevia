@@ -18,8 +18,8 @@ import type { ExecutionDTO, PagedExecutions } from "../types";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 500;
 
-/** 一覧フィルタの状態セレクト値。空文字は未指定。 */
-export type ExecutionStatusFilter = "" | "Running" | "Completed" | "Cancelled" | "Failed";
+/** 一覧フィルタの状態セレクト値（API の契約の値）。空文字は未指定。`UNKNOWN` は API が受けないので含めない。 */
+export type ExecutionStatusFilter = "" | "ACTIVE" | "COMPLETED" | "FAILED" | "CANCELED";
 
 /** 一覧のソートキー。URL の未知値は更新日時に寄せる。 */
 export type ExecutionSortBy = "updatedAt" | "displayId";
@@ -141,10 +141,10 @@ function readListQuery(searchParams: { get: (name: string) => string | null }): 
  */
 function toStatusFilter(value: string): ExecutionStatusFilter {
   switch (value) {
-    case "Running":
-    case "Completed":
-    case "Cancelled":
-    case "Failed":
+    case "ACTIVE":
+    case "COMPLETED":
+    case "FAILED":
+    case "CANCELED":
       return value;
     default:
       return "";
