@@ -3,9 +3,11 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { DefinitionRunStartPage } from "@/features/definitions/ui/DefinitionRunStartPage";
 import { renderWithUiText, testProjectId } from "@/tests/testUtils";
 
+const routerPush = vi.hoisted(() => vi.fn());
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ definitionId: "def-1" }),
-  useRouter: () => ({ push: vi.fn() })
+  useRouter: () => ({ push: routerPush })
 }));
 
 vi.mock("@/shared/api", async (importOriginal) => {
@@ -17,6 +19,7 @@ import { apiGet, apiPost } from "@/shared/api";
 
 describe("DefinitionRunStartPage", () => {
   beforeEach(() => {
+    routerPush.mockClear();
     vi.mocked(apiGet).mockResolvedValue({
       displayId: "def-1",
       resourceId: "res-1",
@@ -43,6 +46,19 @@ describe("DefinitionRunStartPage", () => {
 
     await waitFor(() => {
       expect(apiPost).toHaveBeenCalledWith("/executions", { definitionId: "def-1" });
+    });
+  });
+
+  it("開始後は実行詳細へ移る", async () => {
+    // Arrange
+    renderWithUiText(<DefinitionRunStartPage />);
+
+    // Act
+    fireEvent.click(await screen.findByRole("button", { name: "実行開始" }));
+
+    // Assert
+    await waitFor(() => {
+      expect(routerPush).toHaveBeenCalledWith("/executions/ex-new");
     });
   });
 

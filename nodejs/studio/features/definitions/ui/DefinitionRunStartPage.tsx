@@ -17,7 +17,7 @@ import { Toast } from "@/shared/ui/Toast";
 
 /**
  * Definition 起点で新規実行を開始する。
- * 開始成功時は `/executions/[executionId]/run` へ遷移する。
+ * 開始成功時は実行詳細（`/executions/[executionId]`）へ遷移する。
  */
 export function DefinitionRunStartPage() {
   const uiText = useUiText();
@@ -96,7 +96,7 @@ export function DefinitionRunStartPage() {
         tone: "success",
         message: uiText.definitionRunPage.toasts.executionStarted(created.displayId),
       });
-      router.push(`/executions/${encodeURIComponent(created.displayId)}/run`);
+      router.push(`/executions/${encodeURIComponent(created.displayId)}`);
     } catch (error) {
       setToast(toToastError(error));
     } finally {
@@ -157,7 +157,7 @@ export function DefinitionRunStartPage() {
             : uiText.definitionRunPage.actions.startExecution}
         </button>
         <p className="text-xs text-md-on-surface-variant">
-          {uiText.definitionRunPage.help.redirectAfterStart("/executions/[executionId]/run")}
+          {uiText.definitionRunPage.help.redirectAfterStart}
         </p>
       </section>
       )}

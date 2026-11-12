@@ -61,12 +61,10 @@ function ExecutionDashboardView({
   execution,
   viewMode,
   onViewModeChange,
-  showViewToggle,
   compareMode,
   onCompareModeChange,
   comparisonEnabled,
   operationsEnabled,
-  operationsPermissionDenied,
   streamEnabled,
   onStreamEnabledChange,
   showExecutionPanels,
@@ -152,7 +150,6 @@ function ExecutionDashboardView({
             execution={execution}
             viewMode={viewMode}
             onViewModeChange={onViewModeChange}
-            showViewToggle={showViewToggle}
             compareMode={compareMode}
             onCompareModeChange={comparisonEnabled ? onCompareModeChange : undefined}
             streamEnabled={streamEnabled}
@@ -161,10 +158,6 @@ function ExecutionDashboardView({
           />
 
           <Toast toast={toast} onClose={onCloseToast} />
-
-          {operationsPermissionDenied && (
-            <p className="text-sm text-md-on-surface-variant">{uiText.executionDashboard.operationsPermissionDenied}</p>
-          )}
 
           {operationsEnabled && showExecutionPanels && isPublishEventAvailable(execution) && (
             <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
@@ -195,13 +188,6 @@ function ExecutionDashboardView({
               {eventNameValidationMessage && (
                 <p className="mt-2 text-xs text-rose-600">{eventNameValidationMessage}</p>
               )}
-              <p className="mt-2 text-xs text-md-on-surface-variant">
-                {uiText.executionDashboard.operationsAggregatedInRun(
-                  uiText.actions.cancel,
-                  uiText.actions.resume,
-                  uiText.actions.sendEvent
-                )}
-              </p>
             </section>
           )}
 
@@ -283,6 +269,7 @@ function ExecutionDashboardView({
                       onSelectNode={onSelectNode}
                       onResumeNode={onResumeNode}
                       getResumeDisabledReason={getResumeDisabledReasonForNode}
+                      showResumeAction={operationsEnabled}
                       defaultViewport={savedGraphViewport}
                       onViewportChange={onGraphViewportChange}
                       heightClassName={graphFullscreen ? "h-full min-h-[360px]" : undefined}

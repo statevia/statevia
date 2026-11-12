@@ -107,7 +107,7 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
       startExecution: "実行開始",
     },
     help: {
-      redirectAfterStart: (runPath: string) => `開始後は実行の操作画面（${runPath}）へ移ります。`,
+      redirectAfterStart: "開始後は実行詳細の画面へ移ります。",
     },
   },
 };

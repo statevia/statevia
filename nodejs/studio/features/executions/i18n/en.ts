@@ -8,7 +8,6 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   ...executionsUiTextJa,
   executionDashboard: {
     ...executionsUiTextJa.executionDashboard,
-    operationsPermissionDenied: "Canceling, resuming, and sending events require the \"Write executions\" permission on one of your groups. Ask a tenant administrator.",
     header: {
       titleDefault: "Execution detail",
     },
@@ -35,8 +34,6 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       resumeAccepted: "Resume requested.",
     },
     replayDisabledReason: "Actions are disabled while replaying.",
-    operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
-      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} are on the Operations screen.`,
 
   },
   executionTimeline: {
@@ -212,24 +209,6 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     ...executionsUiTextJa.executionDetailPage,
     title: "Execution detail",
     missingExecutionId: "Execution ID is missing.",
-    navRun: "Operations",
-    navGraph: "Graph",
-
-  },
-  executionGraphPage: {
-    ...executionsUiTextJa.executionGraphPage,
-    title: "Execution graph",
-    missingExecutionId: "Execution ID is missing.",
-    navDetail: "Detail",
-    navRun: "Operations",
-
-  },
-  executionRunPage: {
-    ...executionsUiTextJa.executionRunPage,
-    title: "Execution operations",
-    missingExecutionId: "Execution ID is missing.",
-    navDetail: "Detail",
-    navGraph: "Graph",
 
   },
   executionStatusBanner: {
@@ -274,8 +253,6 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   },
   nodeCommands: {
     resumeDisabledReason: {
-      runOnly: "Resume is available only on the Operations screen.",
-      permissionDenied: "Resuming requires the \"Write executions\" permission on one of your groups.",
       executionNotLoaded: "The execution is not loaded.",
       nodeNotSelected: "Please select a node.",
       executionTerminal: "The execution has already finished.",

@@ -41,12 +41,6 @@ export type UseExecutionDashboardOptions = {
   executionIdEditable?: boolean;
   /** false のとき比較モード UI を出さない。 */
   comparisonEnabled?: boolean;
-  /** false のとき Cancel / Resume / Event などの実行操作を無効化する。 */
-  operationsEnabled?: boolean;
-  /** 初期の表示モード。 */
-  initialViewMode?: ViewMode;
-  /** true のとき View モード切り替えを固定し、UI から変更不可にする。 */
-  lockViewMode?: boolean;
 };
 
 /** 実行ダッシュボードの描画用状態。ReactNode は含まない。 */
@@ -86,12 +80,10 @@ export type ExecutionDashboardModel = {
   /** 一覧かグラフか。 */
   viewMode: ViewMode;
   /**
-   * 表示モードを変える。固定中は無視する。
+   * 表示モードを変える。
    * @param mode 一覧またはグラフ。
    */
   onViewModeChange: (mode: ViewMode) => void;
-  /** 表示モードの切り替えを出すか。 */
-  showViewToggle: boolean;
   /** 比較モードか。 */
   compareMode: boolean;
   /**
@@ -101,10 +93,11 @@ export type ExecutionDashboardModel = {
   onCompareModeChange: (compareMode: boolean) => void;
   /** 比較 UI を出すか。 */
   comparisonEnabled: boolean;
-  /** 実行操作を出すか。画面が操作を許し、かつ executions.write を持つときだけ true。 */
+  /**
+   * 実行操作（キャンセル・再開・イベント送信）を出すか。executions.write を持つときだけ true。
+   * @remarks 権限の読み込み前と読み込みの失敗時は false。閲覧の利用者には、操作も権限が無いことの案内も出さない。
+   */
   operationsEnabled: boolean;
-  /** 操作画面なのに executions.write が無いため、操作を出していないか。 */
-  operationsPermissionDenied: boolean;
   /** 実行のストリームを受けるか。 */
   streamEnabled: boolean;
   /**
@@ -224,7 +217,7 @@ export type ExecutionDashboardModel = {
  *
  * 画面は戻り値を `ExecutionDashboardView` へ渡す。全画面でないときの見出しや、イベント名入力は画面側に残す。
  *
- * @param options 初期実行 ID と、比較・操作・表示モードの有無。
+ * @param options 初期実行 ID と、比較の有無。操作の可否は executions.write から決める。
  * @returns 描画用の状態とコマンド。
  */
 export function useExecutionDashboard({
@@ -232,22 +225,16 @@ export function useExecutionDashboard({
   autoLoadOnMount = false,
   headerTitle,
   executionIdEditable = true,
-  comparisonEnabled = true,
-  operationsEnabled = true,
-  initialViewMode = "list",
-  lockViewMode = false
+  comparisonEnabled = true
 }: UseExecutionDashboardOptions): ExecutionDashboardModel {
   const { uiText, locale } = useI18n();
   const permissions = usePermissions();
   // 取消・Resume・イベント送信は、API が executions.write を要求する。Project ロールは実行応答に無いため API に任せる。
-  const canWriteExecutions = permissions.has(EXECUTIONS_WRITE_PERMISSION);
-  const commandsAllowed = operationsEnabled && canWriteExecutions;
-  const permissionResumeReason = operationsEnabled && !canWriteExecutions
-    ? uiText.nodeCommands.resumeDisabledReason.permissionDenied
-    : null;
+  // 読み込み前と読み込みの失敗時は has() が false なので、操作を出さない側に倒れる。
+  const commandsAllowed = permissions.has(EXECUTIONS_WRITE_PERMISSION);
   const effectiveHeaderTitle = headerTitle ?? uiText.executionDashboard.header.titleDefault;
   const [executionId, setExecutionId] = useState(initialExecutionId);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [graphFullscreen, setGraphFullscreen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [graphViewportByExecutionId, setGraphViewportByExecutionId] = useState<GraphViewportByExecutionId>({});
@@ -261,10 +248,6 @@ export function useExecutionDashboard({
   useEffect(() => {
     setExecutionId(initialExecutionId);
   }, [initialExecutionId]);
-
-  useEffect(() => {
-    if (lockViewMode) setViewMode(initialViewMode);
-  }, [initialViewMode, lockViewMode]);
 
   useEffect(() => {
     try {
@@ -455,7 +438,7 @@ export function useExecutionDashboard({
 
   const selectedResumeDisabledReason = isReplaying
     ? uiText.executionDashboard.replayDisabledReason
-    : permissionResumeReason ?? getResumeDisabledReason(execution, selectedNode, operationsEnabled, locale);
+    : getResumeDisabledReason(execution, selectedNode, locale);
 
   const resumeEventName = useMemo(() => {
     if (!selectedNodeId || !graphData?.edges) return null;
@@ -511,7 +494,7 @@ export function useExecutionDashboard({
       const node = targetId ? getNodeWithFallback(displayExecution, graphData, targetId) : null;
       return isReplaying
         ? uiText.executionDashboard.replayDisabledReason
-        : permissionResumeReason ?? getResumeDisabledReason(execution, node, operationsEnabled, locale);
+        : getResumeDisabledReason(execution, node, locale);
     },
     [
       displayExecution,
@@ -519,8 +502,6 @@ export function useExecutionDashboard({
       selectedNode,
       isReplaying,
       execution,
-      operationsEnabled,
-      permissionResumeReason,
       locale,
       uiText.executionDashboard.replayDisabledReason
     ]
@@ -585,14 +566,6 @@ export function useExecutionDashboard({
     [displayExecution, isReplaying, resumeNode, selectedNode]
   );
 
-  const changeViewMode = useCallback(
-    (mode: ViewMode) => {
-      if (lockViewMode) return;
-      setViewMode(mode);
-    },
-    [lockViewMode]
-  );
-
   return {
     graphFullscreen,
     headerTitle: effectiveHeaderTitle,
@@ -608,13 +581,11 @@ export function useExecutionDashboard({
     onPublishEvent: requestPublishEvent,
     execution,
     viewMode,
-    onViewModeChange: changeViewMode,
-    showViewToggle: !lockViewMode,
+    onViewModeChange: setViewMode,
     compareMode,
     onCompareModeChange: setCompareMode,
     comparisonEnabled,
     operationsEnabled: commandsAllowed,
-    operationsPermissionDenied: operationsEnabled && permissions.loaded && !canWriteExecutions,
     streamEnabled,
     onStreamEnabledChange: handleStreamEnabledChange,
     showExecutionPanels,

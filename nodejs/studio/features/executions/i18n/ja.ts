@@ -5,7 +5,6 @@ import type { ExecutionsFeatureUiText } from "./types";
  */
 export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDashboard: {
-    operationsPermissionDenied: "キャンセル・再開・イベント送信には、所属グループに「実行の操作」の権限が必要です。テナント管理者に依頼してください。",
     header: {
       titleDefault: "実行の詳細",
     },
@@ -32,8 +31,6 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       resumeAccepted: "再開を受け付けました。",
     },
     replayDisabledReason: "リプレイ表示中は実行できません",
-    operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
-      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} は操作画面にまとめています。`,
 
   },
   executionTimeline: {
@@ -200,22 +197,6 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDetailPage: {
     title: "実行詳細",
     missingExecutionId: "実行 ID が指定されていません。",
-    navRun: "操作",
-    navGraph: "グラフ",
-
-  },
-  executionGraphPage: {
-    title: "実行グラフ",
-    missingExecutionId: "実行 ID が指定されていません。",
-    navDetail: "詳細",
-    navRun: "操作",
-
-  },
-  executionRunPage: {
-    title: "実行の操作",
-    missingExecutionId: "実行 ID が指定されていません。",
-    navDetail: "詳細",
-    navGraph: "グラフ",
 
   },
   executionStatusBanner: {
@@ -259,8 +240,6 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   },
   nodeCommands: {
     resumeDisabledReason: {
-      runOnly: "操作画面でのみ再開できます。",
-      permissionDenied: "再開には、所属グループに「実行の操作」の権限が必要です。",
       executionNotLoaded: "実行が読み込まれていません。",
       nodeNotSelected: "ノードを選択してください。",
       executionTerminal: "実行は終了しています。",

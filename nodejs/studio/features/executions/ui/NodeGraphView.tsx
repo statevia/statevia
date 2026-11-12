@@ -52,6 +52,8 @@ type ExecutionNodeData = {
   /** Resume API 呼び出し（nodeId + イベント名）。 */
   onResume: (nodeId: string, eventName: string) => void;
   resumeDisabledReason: string | null;
+  /** 待機中のノードに再開の操作を出すか。executions.write を持たない利用者には出さない。 */
+  showResumeAction: boolean;
   /** 比較モード時の差分ハイライト（該当時のみ ring 表示） */
   diffHighlight?: { isFailureOrCancel: boolean } | null;
 };
@@ -111,7 +113,7 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   );
 
   const waitingResumeSection =
-    data.status === "WAITING" ? (
+    data.status === "WAITING" && data.showResumeAction ? (
       <WaitingResumeControls data={data} isGateway={isGateway} />
     ) : null;
 
@@ -260,6 +262,8 @@ type NodeGraphViewProps = {
   onSelectNode: (nodeId: string | null) => void;
   onResumeNode: (nodeId: string, eventName: string) => void;
   getResumeDisabledReason: (nodeId: string) => string | null;
+  /** 待機中のノードに再開の操作を出すか。executions.write を持たない利用者には false を渡す。 */
+  showResumeAction: boolean;
   heightClassName?: string;
   /** 復元する viewport（指定時は fitView を行わずこの位置・ズームで表示） */
   defaultViewport?: GraphViewport;
@@ -279,6 +283,7 @@ export function NodeGraphView({
   onSelectNode,
   onResumeNode,
   getResumeDisabledReason,
+  showResumeAction,
   heightClassName,
   defaultViewport,
   onViewportChange,
@@ -321,6 +326,7 @@ export function NodeGraphView({
           onSelect: (id: string) => onSelectNode(id),
           onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
           resumeDisabledReason: getResumeDisabledReason(node.name),
+          showResumeAction,
           diffHighlight: nodeDiffHighlight?.[node.nodeId] ?? null
         },
         style: sizedToContent ? { width: node.w } : { width: node.w, height: node.h }
@@ -328,7 +334,7 @@ export function NodeGraphView({
     });
 
     return [...groupNodes, ...executionNodes];
-  }, [groups, nodes, onResumeNode, onSelectNode, getResumeDisabledReason, nodeDiffHighlight]);
+  }, [groups, nodes, onResumeNode, onSelectNode, getResumeDisabledReason, showResumeAction, nodeDiffHighlight]);
 
   const [rfNodes, setRfNodes] = useState<Array<Node<ExecutionNodeData | GroupNodeData>>>([]);
 
@@ -357,13 +363,14 @@ export function NodeGraphView({
             selectedNodeName
           ),
           resumeDisabledReason: getResumeDisabledReason(d.name),
+          showResumeAction,
           onSelect: (id: string) => onSelectNode(id),
           onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
           diffHighlight: nodeDiffHighlight?.[d.nodeId] ?? null
         }
       };
     });
-  }, [syncedNodes, selectedNodeId, selectedNodeName, onSelectNode, onResumeNode, getResumeDisabledReason, nodeDiffHighlight]);
+  }, [syncedNodes, selectedNodeId, selectedNodeName, onSelectNode, onResumeNode, getResumeDisabledReason, showResumeAction, nodeDiffHighlight]);
 
   const graphEdges = useMemo(() => buildGraphEdges(edges), [edges]);
 

@@ -15,21 +15,19 @@ function isTerminalExecution(status: ExecutionView["status"]): boolean {
 
 /**
  * Resume ボタンを無効化すべき理由を返す（操作可能なら null）。
+ * 権限（executions.write）は見ない。権限が無い利用者には、呼び出し側が再開の操作そのものを出さない。
  *
  * @param execution 実行ビュー（未読込なら null）。
  * @param node 対象ノード（未選択なら null）。
- * @param commandsEnabled Run 画面などで操作が有効か。
  * @param locale UI 文言ロケール。
  * @returns 無効化理由。操作可能なら null。
  */
 export function getResumeDisabledReason(
   execution: ExecutionView | null,
   node: ExecutionNodeDTO | null,
-  commandsEnabled = true,
   locale: Locale = DEFAULT_LOCALE
 ): string | null {
   const uiText = getUiText(locale);
-  if (!commandsEnabled) return uiText.nodeCommands.resumeDisabledReason.runOnly;
   if (!execution) return uiText.nodeCommands.resumeDisabledReason.executionNotLoaded;
   if (!node) return uiText.nodeCommands.resumeDisabledReason.nodeNotSelected;
   if (isTerminalExecution(execution.status)) return uiText.nodeCommands.resumeDisabledReason.executionTerminal;
@@ -47,7 +45,7 @@ export type UseNodeCommandsOptions = {
   onSuccess?: () => void;
   /** 操作に失敗したときに呼ぶ。 */
   onError?: (error: unknown) => void;
-  /** 操作を有効にするか（Run 画面などだけ true）。既定は true。 */
+  /** 操作を有効にするか。executions.write を持つときだけ true にする。既定は true。 */
   commandsEnabled?: boolean;
 };
 

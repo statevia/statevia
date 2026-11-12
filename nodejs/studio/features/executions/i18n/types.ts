@@ -5,8 +5,6 @@
 export type ExecutionsFeatureUiText = {
   /** 実行ダッシュボードの文言。 */
   executionDashboard: {
-    /** 操作画面だが executions.write が無いため、取消などを出していないときの案内。 */
-    operationsPermissionDenied: string;
     header: {
       titleDefault: string;
     };
@@ -33,7 +31,6 @@ export type ExecutionsFeatureUiText = {
       resumeAccepted: string;
     };
     replayDisabledReason: string;
-    operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) => string;
 
   },
   /** 実行のタイムラインの文言。 */
@@ -214,24 +211,6 @@ export type ExecutionsFeatureUiText = {
   executionDetailPage: {
     title: string;
     missingExecutionId: string;
-    navRun: string;
-    navGraph: string;
-
-  },
-  /** 実行のグラフ画面の文言。 */
-  executionGraphPage: {
-    title: string;
-    missingExecutionId: string;
-    navDetail: string;
-    navRun: string;
-
-  },
-  /** 実行を開始する画面の文言。 */
-  executionRunPage: {
-    title: string;
-    missingExecutionId: string;
-    navDetail: string;
-    navGraph: string;
 
   },
   /** 実行のステータスの帯の文言。 */
@@ -282,9 +261,6 @@ export type ExecutionsFeatureUiText = {
   /** ノードの操作の文言。 */
   nodeCommands: {
     resumeDisabledReason: {
-      runOnly: string;
-      /** 操作画面だが executions.write が無いとき。 */
-      permissionDenied: string;
       executionNotLoaded: string;
       nodeNotSelected: string;
       executionTerminal: string;
