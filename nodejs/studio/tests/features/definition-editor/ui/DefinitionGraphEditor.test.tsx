@@ -143,7 +143,7 @@ describe("DefinitionGraphEditor", () => {
     );
     await settleGraphInspectorSchemaIndex();
 
-    fireEvent.click(screen.getByRole("button", { name: "wait" }));
+    fireEvent.click(screen.getByRole("button", { name: "WAIT" }));
     expect(onDocumentChange).toHaveBeenCalled();
     const nextDocument = onDocumentChange.mock.calls.at(-1)?.[0] as DefinitionGraphDocument;
     const waitNode = nextDocument.nodes.find((node) => node.type === "wait");
@@ -577,9 +577,9 @@ nodes:
     );
     await settleGraphInspectorSchemaIndex();
 
-    fireEvent.click(screen.getByRole("button", { name: "action" }));
-    fireEvent.click(screen.getByRole("button", { name: "fork" }));
-    fireEvent.click(screen.getByRole("button", { name: "join" }));
+    fireEvent.click(screen.getByRole("button", { name: "ACTION" }));
+    fireEvent.click(screen.getByRole("button", { name: "FORK" }));
+    fireEvent.click(screen.getByRole("button", { name: "JOIN" }));
     expect(screen.getByText(definitionGraphEditorTestLabels.title)).toBeInTheDocument();
   });
 });

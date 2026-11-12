@@ -13,6 +13,7 @@ import ReactFlow, {
 } from "reactflow";
 import type { NodeProps, NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getNodeAppearance } from "@/shared/lib/nodeAppearance";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { renameNodeNameInDocument } from "../lib/renameNodeNameInDocument";
@@ -194,6 +195,14 @@ type DefinitionGraphEditorProps = {
   /** Compiler 422 の action input 詳細（インライン表示用）。 */
   actionValidationDetails?: ActionInputValidationDetail[];
   labels: {
+    fieldName: string;
+    fieldAction: string;
+    fieldBranches: string;
+    fieldTo: string;
+    fieldDefault: string;
+    fieldWhenPath: string;
+    fieldWhenOp: string;
+    fieldWhenValue: string;
     title: string;
     empty: string;
     addNode: string;
@@ -396,7 +405,7 @@ export function DefinitionGraphEditor({
                   onClick={() => canvas.addNode(entry.type)}
                   title={entry.reason}
                 >
-                  {entry.type}
+                  {toDisplayValue(entry.type)}
                 </button>
               ))}
             </div>
@@ -599,7 +608,7 @@ function GraphNodeInspector({
     <section className="space-y-2 rounded-sm border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.nodeInspectorTitle}</p>
       <label className="block text-xs">
-        <span className="block">name</span>
+        <span className="block">{labels.fieldName}</span>
         <input
           className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
           value={node.name}
@@ -613,7 +622,7 @@ function GraphNodeInspector({
       {(node.type === "action" || (node.type === "wait" && waitEditMode === "legacy")) && (
         <label className="block text-xs">
           <span className="block">
-            {node.type === "action" ? "action" : labels.waitLegacyEventLabel}
+            {node.type === "action" ? labels.fieldAction : labels.waitLegacyEventLabel}
           </span>
           {node.type === "action" ? (
             <ActionIdCombobox
@@ -826,7 +835,7 @@ function GraphNodeInspector({
       )}
       {node.type === "fork" && (
         <label className="block text-xs">
-          <span className="block">branches (comma separated)</span>
+          <span className="block">{labels.fieldBranches}</span>
           <input
             className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
             value={(node.branches ?? []).join(", ")}
@@ -1076,7 +1085,7 @@ function GraphEdgeInspector({
     <section className="space-y-2 rounded-sm border border-md-outline-variant bg-md-surface-container p-3">
       <p className="text-sm font-medium">{labels.edgeInspectorTitle}</p>
       <label className="block text-xs">
-        <span className="block">to</span>
+        <span className="block">{labels.fieldTo}</span>
         <input
           className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
           value={targetEdge.to}
@@ -1111,11 +1120,11 @@ function GraphEdgeInspector({
                 );
               }}
             />
-            <span>default</span>
+            <span>{labels.fieldDefault}</span>
           </label>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <label className="block text-xs">
-              <span className="block">when.path</span>
+              <span className="block">{labels.fieldWhenPath}</span>
               <input
                 className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={conditionalEdge?.when?.path ?? ""}
@@ -1148,7 +1157,7 @@ function GraphEdgeInspector({
               </span>
             </label>
             <label className="block text-xs">
-              <span className="block">when.op</span>
+              <span className="block">{labels.fieldWhenOp}</span>
               <select
                 className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={selectedWhenOp}
@@ -1185,7 +1194,7 @@ function GraphEdgeInspector({
               </select>
             </label>
             <label className="block text-xs">
-              <span className="block">when.value</span>
+              <span className="block">{labels.fieldWhenValue}</span>
               <input
                 className="mt-1 w-full rounded-sm border border-md-outline px-2 py-1"
                 value={formatWhenValue(conditionalEdge?.when?.value)}

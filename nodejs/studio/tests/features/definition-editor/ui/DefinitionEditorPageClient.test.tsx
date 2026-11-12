@@ -124,7 +124,7 @@ describe("DefinitionEditorPageClient", () => {
     renderWithUiText(<DefinitionEditorPageClient />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole("button", { name: "Graph" }));
+    fireEvent.click(screen.getByRole("button", { name: "グラフ" }));
 
     await waitFor(() => {
       expect(screen.getByText("グラフ編集")).toBeInTheDocument();
@@ -268,13 +268,13 @@ describe("DefinitionEditorPageClient", () => {
     expect(apiPut).not.toHaveBeenCalled();
   });
 
-  it("未保存の上書き確認をキャンセルすると YAML は変わらない", async () => {
+  it("未保存の上書き確認でやめると YAML は変わらない", async () => {
     renderWithUiText(<DefinitionEditorPageClient />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
     fireEvent.change(screen.getByLabelText(/定義名/i), { target: { value: "DirtyName" } });
 
     selectDefinitionYamlFile("sample.yaml", "uploaded-marker: true\n");
-    fireEvent.click(await screen.findByRole("button", { name: "キャンセル" }));
+    fireEvent.click(await screen.findByRole("button", { name: "やめる" }));
 
     expect(screen.queryByText("uploaded-marker: true")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "上書きする" })).not.toBeInTheDocument();
@@ -332,7 +332,7 @@ describe("DefinitionEditorPageClient", () => {
 
     // Assert
     expect(
-      await screen.findByText("定義の作成と編集には、所属グループに definitions.write 権限が必要です。テナント管理者に依頼してください。"),
+      await screen.findByText("定義の作成と編集には、所属グループに「定義の編集」の権限が必要です。テナント管理者に依頼してください。"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "保存" })).not.toBeInTheDocument();
   });
