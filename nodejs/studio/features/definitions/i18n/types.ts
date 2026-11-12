@@ -109,7 +109,7 @@ export type DefinitionsFeatureUiText = {
       startExecution: string;
     };
     help: {
-      redirectAfterStart: (runPath: string) => string;
+      redirectAfterStart: string;
     };
   };
 };

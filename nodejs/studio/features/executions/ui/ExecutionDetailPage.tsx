@@ -9,7 +9,9 @@ import { PageState } from "@/shared/ui/PageState";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
 /**
- * 実行単体（URL 表示 ID 確定）の参照画面。
+ * 1 つの実行を見る唯一の画面（実行詳細）。
+ * @remarks 操作（キャンセル・再開・イベント送信）は executions.write を持つ利用者にだけ出す。
+ * 閲覧の利用者には操作も権限が無いことの案内も出さない。出し分けは案内で、認可の正本は Service API である。
  */
 export function ExecutionDetailPage() {
   const uiText = useUiText();
@@ -43,16 +45,9 @@ export function ExecutionDetailPage() {
       headerTitle={uiText.executionDetailPage.title}
       executionIdEditable={false}
       comparisonEnabled={false}
-      operationsEnabled={false}
       headerNav={
         <ActionLinkGroup
-          links={[
-            {
-              label: uiText.executionDetailPage.navRun,
-              href: `/executions/${encodeURIComponent(executionId)}/run`,
-              priority: "primary",
-            },
-          ]}
+          links={[{ label: uiText.lists.executions, href: "/executions", priority: "primary" }]}
         />
       }
     />

@@ -38,6 +38,7 @@ describe("NodeGraphView", () => {
         onSelectNode={onSelectNode}
         onResumeNode={onResumeNode}
         getResumeDisabledReason={() => null}
+        showResumeAction
         heightClassName="h-[320px]"
       />
     );
@@ -71,6 +72,7 @@ describe("NodeGraphView", () => {
         onSelectNode={vi.fn()}
         onResumeNode={vi.fn()}
         getResumeDisabledReason={() => null}
+        showResumeAction
         heightClassName="h-[320px]"
       />
     );
@@ -108,6 +110,7 @@ describe("NodeGraphView", () => {
         onSelectNode={vi.fn()}
         onResumeNode={vi.fn()}
         getResumeDisabledReason={() => null}
+        showResumeAction
         heightClassName="h-[320px]"
       />
     );
@@ -120,5 +123,35 @@ describe("NodeGraphView", () => {
     expect(flowNode).toBeInstanceOf(HTMLElement);
     if (!(flowNode instanceof HTMLElement)) return;
     expect(flowNode.style.height).not.toBe("150px");
+  });
+
+  it("showResumeAction が false なら待機中のノードに再開の操作と理由を出さない", async () => {
+    // Arrange
+    const waiting = positionedNode({
+      nodeType: "Wait",
+      status: "WAITING",
+      label: "Wait 1",
+      allowedEvents: ["approved"],
+    });
+
+    // Act
+    renderWithUiText(
+      <NodeGraphView
+        nodes={[waiting]}
+        edges={[]}
+        groups={[]}
+        selectedNodeId={null}
+        onSelectNode={vi.fn()}
+        onResumeNode={vi.fn()}
+        getResumeDisabledReason={() => "理由"}
+        showResumeAction={false}
+        heightClassName="h-[320px]"
+      />
+    );
+
+    // Assert
+    expect(await screen.findByText("Wait 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: uiText.actions.resume })).not.toBeInTheDocument();
+    expect(screen.queryByText("理由")).not.toBeInTheDocument();
   });
 });

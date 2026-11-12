@@ -133,9 +133,7 @@ describe("ExecutionDashboard", () => {
       setSelectedNodeId: vi.fn()
     });
 
-    renderWithUiText(
-      <ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} operationsEnabled />
-    );
+    renderWithUiText(<ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} />);
 
     fireEvent.click(await screen.findByRole("button", { name: /キャンセル/i }));
     expect(cancelExecution).toHaveBeenCalled();

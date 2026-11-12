@@ -72,10 +72,58 @@ describe("ExecutionDetailPage", () => {
   });
 
   it("実行 ID 付きで実行ダッシュボードを描画する", async () => {
+    // Arrange / Act
     renderWithUiText(<ExecutionDetailPage />);
 
+    // Assert
     await waitFor(() => {
       expect(screen.getByText("ex-1")).toBeInTheDocument();
     });
+  });
+
+  it("見出しは日本語の画面で「実行詳細」である", () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDetailPage />);
+
+    // Assert
+    expect(screen.getByRole("heading", { level: 1, name: "実行詳細" })).toBeInTheDocument();
+  });
+
+  it("見出しは英語の画面で「Execution detail」である", () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDetailPage />, { locale: "en" });
+
+    // Assert
+    expect(screen.getByRole("heading", { level: 1, name: "Execution detail" })).toBeInTheDocument();
+  });
+
+  it("詳細と操作を行き来するナビを出さない", () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDetailPage />);
+
+    // Assert
+    expect(screen.queryByRole("link", { name: "操作" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "実行一覧" })).toHaveAttribute("href", "/executions");
+  });
+
+  it("executions.write があればキャンセルボタンを出す", async () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDetailPage />);
+
+    // Assert
+    expect(await screen.findByRole("button", { name: "キャンセル" })).toBeInTheDocument();
+  });
+
+  it("executions.write が無ければ操作も権限が無いことの案内も出さない", async () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDetailPage />, { permissions: ["executions.read"] });
+
+    // Assert
+    await waitFor(() => {
+      expect(screen.getByText("ex-1")).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: "キャンセル" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "イベント送信" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/権限が必要です/)).not.toBeInTheDocument();
   });
 });
