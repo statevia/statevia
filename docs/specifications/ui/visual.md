@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2 |
-| 更新日 | 2026-10-26 |
+| Version | 1.3 |
+| 更新日 | 2026-11-12 |
 | 関連 | [execution-graph.md](../execution/execution-graph.md), [guides/ui-user-guide.md](../../guides/ui-user-guide.md) |
 
 ---
@@ -66,6 +66,11 @@
 - Waiting / Cancelled / Failed はユーザーの注意・操作対象となるため強調する  
 - Running は一時的状態のため主張しすぎない  
 - Completed は履歴として参照可能であればよい  
+
+表示ラベル:
+
+- 実行とノードの状態、ノードのタイプは訳さず、API の値を大文字にして出す（`Running` → `RUNNING`、`Task` → `TASK`）。実行の `Cancelled` はノードと同じ `CANCELED` と出す。
+- 大文字にするのは表示だけで、色の判定・比較・フィルタの送信値には API の値をそのまま使う。
 
 ---
 

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.39 |
-| 更新日 | 2026-11-09 |
+| Version | 1.40 |
+| 更新日 | 2026-11-12 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -26,6 +26,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.40（2026-11-12）**: Studio の画面の説明を画面の語にそろえる（run-as の欄は「実行するサービスアカウント」、実行リソース許可の画面は「操作できる定義」、通知 SMTP の画面は「通知メールの設定」）。HTTP の契約は変えない。
 
 **Version 1.39（2026-11-09）**: 定義と Execution のパス引数の名前を `{id}` から `{definitionId}` / `{executionId}` に変える。URL の形と成否は変えない。OpenAPI の引数名とパスのキーが変わる。
 
@@ -593,8 +595,8 @@ Studio の画面は `/schedules`（一覧）、`/schedules/new`（作成）、`/
 
 - 画面を使えるのはテナント管理者だけ。run-as の候補を `GET /v1/admin/service-accounts`（管理者専用）から取るため。`executions.write` だけを持つ利用者は HTTP を使う。上記の HTTP の権限と所属の判定はそのまま効くので、テナント管理者でも所属の無い Project の定義のスケジュールは画面に出ない。
 - 一覧は `GET /v1/schedules` だけを使い、`input` を出さない。`input` は編集画面で単票を読んだときだけフォームに出す。
-- run-as の候補は有効な ServiceAccount で、定義の Project のメンバーには絞らない。所属が足りないときは保存時の 422（`field=runAsPrincipalId`）を run-as の欄に出し、Project のメンバーを管理する画面（`/admin/projects`）へのリンクを添える。
-- run-as の候補は権限でも絞らない。権限が足りないときは 422（`reason=missingExecutionsWrite`）を run-as の欄に出し、ServiceAccount の画面（`/admin/service-accounts`）へのリンクを添える。手動実行の失敗にも同じ文言とリンクを出す。
+- run-as の候補は有効な ServiceAccount で、定義の Project のメンバーには絞らない。所属が足りないときは保存時の 422（`field=runAsPrincipalId`）を run-as の欄（画面の「実行するサービスアカウント」）に出し、Project のメンバーを管理する画面（`/admin/projects`）へのリンクを添える。
+- run-as の候補は権限でも絞らない。権限が足りないときは 422（`reason=missingExecutionsWrite`）を同じ欄に出し、サービスアカウントの画面（`/admin/service-accounts`）へのリンクを添える。手動実行の失敗にも同じ文言とリンクを出す。
 - タイムゾーンが空のときは送らない（UTC で埋めない）。`queue` と版 UUID は画面に出さない。
 - 手動実行は確認後に 1 回だけ送り、無効なスケジュールには出さない。
 
@@ -684,11 +686,11 @@ Request:
 | PUT | `/action-bindings/{name}` | 許可一覧を全体置換。変数は `value` 必須。シークレットは `value` を省略すると暗号文を維持し、送ると置換する。名前と種別の変更は **422**。行が無いときも **422** |
 | DELETE | `/action-bindings/{name}` | 行を削除。行が無くても **204** |
 
-Studio の `/admin/notification-smtp` は、通知 SMTP の GET / PUT / DELETE で全体置換と削除を行う。パスワードは画面の初期値にも保存後の再表示にも出さない。未入力のパスワードで前回値は残さない。疎通確認の操作は無い。
+Studio の `/admin/notification-smtp`（画面名は「通知メールの設定」）は、通知 SMTP の GET / PUT / DELETE で全体置換と削除を行う。パスワードは画面の初期値にも保存後の再表示にも出さない。未入力のパスワードで前回値は残さない。疎通確認の操作は無い。
 
 Studio の `/admin/service-accounts` は、ServiceAccount の一覧・作成・詳細の部分更新を行う。作成は `name` と `groupIds` だけを送り、API キーの入力は置かない。詳細の `PATCH` は変えた項目だけを送り、空の `groupIds` は送らない。止めるときは無効化する（紐づくスケジュールは自動では止まらない）。削除の操作は無い（API にも無い）。API キーの発行と失効は `/admin/api-keys` で行う。
 
-Studio の `/admin/users/{userId}/resource-grants` と `/admin/service-accounts/{serviceAccountId}/resource-grants` は、実行リソース許可の GET と PUT で両種別をまとめて置換する。入口はユーザー一覧の各行と ServiceAccount 詳細である。保存は常に `projectIds` と `definitionIds` の両方を送り、project 32 件・定義 128 件を超える選択は送らない。付いていた種別を空にするときは、所属の範囲で追加制限が無くなることを確認してから送る。
+Studio の `/admin/users/{userId}/resource-grants` と `/admin/service-accounts/{serviceAccountId}/resource-grants` は、実行リソース許可の GET と PUT で両種別をまとめて置換する（画面名は「操作できる定義」）。入口はユーザー一覧の各行とサービスアカウントの詳細である。保存は常に `projectIds` と `definitionIds` の両方を送り、project 32 件・定義 128 件を超える選択は送らない。付いていた種別を空にするときは、所属の範囲で追加制限が無くなることを確認してから送る。
 
 - **project**: 候補は `GET /v1/admin/projects`（テナント内の全 Project）で、名前で追加・解除する。付与先 Principal の所属では絞らない。executor 以上で所属していない project は保存時の **422** で分かり、既存の許可は残る。
 - **定義**: 候補は `GET /v1/definitions` の 1 ページ（最大 500 件、名前順）で、Project ごとにまとめて選ぶ。一覧は操作する管理者自身の所属と許可で絞られるため、管理者が所属していない Project の定義は候補に出ない。500 件を超えるときは候補が欠けていることを画面に出す。
