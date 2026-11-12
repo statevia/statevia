@@ -15,6 +15,8 @@ type YamlCodeEditorProps = {
   completionKeywords: readonly string[];
   onLintChange?: (hasErrors: boolean) => void;
   onDiagnosticsChange?: (messages: string[]) => void;
+  /** エディタの aria-label。画面の言語に合わせて呼び出し側が辞書から渡す。 */
+  ariaLabel: string;
 };
 
 const DEFAULT_KEYWORDS = [
@@ -192,7 +194,8 @@ export function YamlCodeEditor({
   onChange,
   completionKeywords,
   onLintChange,
-  onDiagnosticsChange
+  onDiagnosticsChange,
+  ariaLabel
 }: Readonly<YamlCodeEditorProps>) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -319,7 +322,7 @@ export function YamlCodeEditor({
     <div
       ref={hostRef}
       className="mt-1 min-h-104 overflow-hidden rounded-sm border border-md-outline-variant bg-md-surface-container text-xs"
-      aria-label="YAML editor"
+      aria-label={ariaLabel}
     />
   );
 }

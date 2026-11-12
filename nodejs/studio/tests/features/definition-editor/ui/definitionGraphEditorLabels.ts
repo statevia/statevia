@@ -3,6 +3,14 @@ import type { DefinitionGraphEditor } from "@/features/definition-editor/ui/Defi
 
 /** DefinitionGraphEditor テスト用の最小ラベルセット。 */
 export const definitionGraphEditorTestLabels: ComponentProps<typeof DefinitionGraphEditor>["labels"] = {
+  fieldName: "name",
+  fieldAction: "action",
+  fieldBranches: "branches (comma separated)",
+  fieldTo: "to",
+  fieldDefault: "default",
+  fieldWhenPath: "when.path",
+  fieldWhenOp: "when.op",
+  fieldWhenValue: "when.value",
   title: "Graph",
   empty: "Empty",
   addNode: "Add",

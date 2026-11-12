@@ -24,6 +24,8 @@ export type DefinitionEditorFeatureUiText = {
     labels: {
       name: string;
       yaml: string;
+      /** YAML エディタの aria-label。 */
+      yamlEditor: string;
     };
     actions: {
       saving: string;
@@ -37,6 +39,22 @@ export type DefinitionEditorFeatureUiText = {
       cancelOverwrite: string;
     };
     graph: {
+      /** ノード編集の `name` 欄のラベル。YAML のキーのまま出す。 */
+      fieldName: string;
+      /** ノード編集の `action` 欄のラベル。YAML のキーのまま出す。 */
+      fieldAction: string;
+      /** 並列分岐の `branches` 欄のラベル。YAML のキーに区切り方の説明を添える。 */
+      fieldBranches: string;
+      /** 遷移の編集の `to` 欄のラベル。 */
+      fieldTo: string;
+      /** 遷移の編集の `default` 欄のラベル。 */
+      fieldDefault: string;
+      /** 遷移の編集の `when.path` 欄のラベル。 */
+      fieldWhenPath: string;
+      /** 遷移の編集の `when.op` 欄のラベル。 */
+      fieldWhenOp: string;
+      /** 遷移の編集の `when.value` 欄のラベル。 */
+      fieldWhenValue: string;
       title: string;
       empty: string;
       addNode: string;

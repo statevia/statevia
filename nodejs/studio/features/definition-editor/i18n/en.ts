@@ -14,7 +14,7 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
     loadingMeta: "Loading definition metadata...",
     notMember: "You cannot open the editor because you are not a member of this definition's project.",
     roleDenied: "Publisher role or higher is required to create or edit a definition.",
-    permissionDenied: "Creating or editing a definition requires the definitions.write permission on one of your groups. Ask a tenant administrator.",
+    permissionDenied: "Creating or editing a definition requires the \"Write definitions\" permission on one of your groups. Ask a tenant administrator.",
     validation: {
       nameRequired: "Please enter a definition name.",
       yamlRequired: "Please enter YAML.",
@@ -26,6 +26,7 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
     labels: {
       name: "Definition name (name)",
       yaml: "YAML",
+      yamlEditor: "YAML editor",
     },
     actions: {
       saving: "Saving...",
@@ -39,16 +40,24 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       cancelOverwrite: "Cancel",
     },
     graph: {
+      fieldName: "name",
+      fieldAction: "action",
+      fieldBranches: "branches (comma separated)",
+      fieldTo: "to",
+      fieldDefault: "default",
+      fieldWhenPath: "when.path",
+      fieldWhenOp: "when.op",
+      fieldWhenValue: "when.value",
       title: "Graph editor",
       empty: "Graph cannot be shown because YAML parsing failed. Please fix YAML first.",
       addNode: "Add node",
       addNodeDialogTitle: "Add node",
-      addNodeDisabledReasonStart: "Only one start node is allowed.",
-      addNodeDisabledReasonEnd: "Only one end node is allowed.",
+      addNodeDisabledReasonStart: "Only one START node is allowed.",
+      addNodeDisabledReasonEnd: "Only one END node is allowed.",
       nodeInspectorTitle: "Node inspector",
-      edgeInspectorTitle: "Edge inspector",
+      edgeInspectorTitle: "Edit transition",
       deleteNode: "Delete node",
-      deleteEdge: "Delete edge",
+      deleteEdge: "Delete transition",
       apply: "Apply",
       closeDialog: "Close",
       rootObjectRequired: () => "YAML root must be an object.",
@@ -98,19 +107,19 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
         `Node '${nodeName}': BETWEEN requires an array of at least two values (or JSON array string) for edge.when.value.`,
       edgeDefaultMultiple: (nodeName: string) =>
         `Node '${nodeName}': only one edge can have default=true.`,
-      selfReferenceEdge: (nodeName: string) => `Node '${nodeName}': self-referencing edge is not allowed.`,
+      selfReferenceEdge: (nodeName: string) => `Node '${nodeName}': a transition to itself is not allowed.`,
       missingTargetNode: (nodeName: string, targetName: string) => `Node '${nodeName}': target '${targetName}' does not exist.`,
       forkRegionIngressFromOutside: (fromName: string, toName: string) =>
-        `Node '${fromName}': cannot enter branch '${toName}' from outside the fork region.`,
+        `Node '${fromName}': cannot enter branch '${toName}' from outside the parallel region.`,
       forkRegionEgressWithoutJoin: (fromName: string, toName: string, joinName: string) =>
         `Node '${fromName}': cannot leave to '${toName}' without join '${joinName}'.`,
       forkRegionWaitTargetOutside: (nodeName: string, toName: string) =>
-        `Node '${nodeName}': wait target '${toName}' is outside the fork region.`,
-      selfReferenceRejected: "Self-referencing edges are not allowed.",
+        `Node '${nodeName}': wait target '${toName}' is outside the parallel region.`,
+      selfReferenceRejected: "A transition to itself is not allowed.",
       whenOpPlaceholder: "Select operator",
       whenPathPlaceholder: "$.states.Fetch.output.amount",
       whenPathHint:
-        "Root is Execution Context (same as input). e.g. $.states.A.output.y / $.states['a.b'].output.z / $.vars.flag / $.sys.today",
+        "Paths start from the execution data (same as input). e.g. $.states.A.output.y / $.states['a.b'].output.z / $.vars.flag / $.sys.today",
       whenValuePlaceholder: "e.g. 100 / true / \"100\"",
       whenValueDisabledForExists: "Value is not required for EXISTS.",
       whenValueHintIn: "For IN, enter a JSON array. Example: [\"A\", \"B\"]",
@@ -123,7 +132,7 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       actionInputPlaceholder:
         'e.g. $.input.orderId / $.states.A.output.x / {"id":"$.states[\'a.b\'].output.id"}',
       actionInputHint:
-        "Root is Execution Context ($.input / $.states / $.vars / $.sys). Dotted node IDs use $.states['id'].output. Objects as JSON.",
+        "Paths start from the execution data ($.input / $.states / $.vars / $.sys). Node names with dots use $.states['id'].output. Write objects as JSON.",
       actionInputInvalidJson: "Invalid JSON.",
       actionIdCandidatesLoading: "Loading actions…",
       actionIdNoResults: "No matching actions",
@@ -144,8 +153,8 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       waitSubscribeNextLabel: "Target node name",
       waitSubscribeAdd: "Add subscribe row",
       waitSubscribeRemove: "Remove row",
-      waitSwitchToSubscribe: "Switch to Subscribe (discards events)",
-      waitSwitchToEvents: "Switch to Signal (discards subscribe)",
+      waitSwitchToSubscribe: "Switch to subscribing to a topic (discards events)",
+      waitSwitchToEvents: "Switch to resuming by execution (discards subscribe)",
       waitResolveToSubscribe: "Keep subscribe",
       waitSubscribeConflictHint:
         "Cannot edit while both events and subscribe are set. Resolve to one mode.",

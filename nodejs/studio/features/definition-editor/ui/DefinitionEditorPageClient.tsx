@@ -162,6 +162,7 @@ export function DefinitionEditorPageClient({ definitionId }: Readonly<Definition
               completionKeywords={editor.completionKeywords}
               onLintChange={editor.onYamlLintChange}
               onDiagnosticsChange={editor.onYamlDiagnosticsChange}
+              ariaLabel={uiText.definitionEditor.labels.yamlEditor}
             />
           </label>
         ) : (
