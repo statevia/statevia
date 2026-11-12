@@ -11,10 +11,14 @@ import { DEFAULT_THEME, resolveTheme } from "@/shared/lib/theme";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 import { resolveSideNavCollapsed, SIDE_NAV_COOKIE_KEY } from "@/shared/ui/navigation/sideNavState";
 
-/** Next.js のルートメタデータ（ファビコン等）。 */
+/**
+ * Next.js のルートメタデータ（ファビコン等）。
+ * タブのアイコンは紺のタイルに載せたマーク（白と黒のどちらのタブでも読める）。
+ * Apple のホーム画面用は SVG を受け付けないため、PNG のまま残す。
+ */
 export const metadata: Metadata = {
   icons: {
-    icon: "/brand/icon-mark.png",
+    icon: { url: "/brand/icon-tile.svg", type: "image/svg+xml" },
     apple: "/brand/icon-mark.png",
   },
 };

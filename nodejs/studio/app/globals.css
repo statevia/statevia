@@ -46,8 +46,20 @@
     --color-brand-cta-fg: var(--brand-cta-fg);
     --color-brand-cta-border: var(--brand-cta-border);
     --color-brand-cta-bg-hover: var(--brand-cta-bg-hover);
+    --color-brand-lead-bg: var(--brand-lead-bg);
+    --color-brand-lead-bg-hover: var(--brand-lead-bg-hover);
+    --color-brand-lead-fg: var(--brand-lead-fg);
+    --color-nav-item-active-bg: var(--nav-item-active-bg);
+    --color-nav-item-active-fg: var(--nav-item-active-fg);
     --color-editor-caret: var(--editor-caret);
     --color-editor-caret-border: var(--editor-caret-border);
+    /*
+      角丸は 3 段階に限る。control はボタン・入力欄、card はカード・ダイアログ・表の枠、
+      pill は状態バッジ・チップ。画面ごとに rounded-sm / lg / xl を混ぜないため。
+    */
+    --radius-control: 6px;
+    --radius-card: 12px;
+    --radius-pill: 999px;
 }
 
 
@@ -76,6 +88,13 @@
     --brand-cta-fg: #f8fafc;
     --brand-cta-border: #0a1a2f;
     --brand-cta-bg-hover: #132947;
+    /* 主導線（作成・保存・新規実行の開始など）。1 画面に 1 つだけ置く緑。白文字で 5.5:1 */
+    --brand-lead-bg: #047857;
+    --brand-lead-bg-hover: #065f46;
+    --brand-lead-fg: #ffffff;
+    /* サイドメニューの選択中の項目 */
+    --nav-item-active-bg: #dbeafe;
+    --nav-item-active-fg: #0f172a;
     --editor-caret: #0f172a;
     --editor-caret-border: #0f172a;
     /* Material Design 3 tone-inspired semantic tokens */
@@ -121,10 +140,21 @@ html[data-theme="dark"] {
     --brand-header-bg: #0b1220;
     --brand-header-fg: #f8fafc;
     --brand-header-fg-muted: #d1d5db;
-    --brand-cta-bg: #f8fafc1a;
-    --brand-cta-fg: #93c5fd;
-    --brand-cta-border: #60a5fa;
-    --brand-cta-bg-hover: #f8fafc2b;
+    /*
+      通常の操作（紺）は暗い背景に沈むため、青みの淡い塗りにする。
+      青い枠は緑の主導線より目立つので付けない（studio-ui-visual-refresh の案 B）。
+    */
+    --brand-cta-bg: #60a5fa2e;
+    --brand-cta-fg: #bfdbfe;
+    --brand-cta-border: transparent;
+    --brand-cta-bg-hover: #60a5fa47;
+    /* 主導線はダークでも塗りのまま。ホバーは明るくする */
+    --brand-lead-bg: #047857;
+    --brand-lead-bg-hover: #059669;
+    --brand-lead-fg: #ffffff;
+    /* 今の #2a2a2a はサイドメニューの #262626 と区別できないため、紺と同じ青みの塗りにする */
+    --nav-item-active-bg: #60a5fa2e;
+    --nav-item-active-fg: #dbeafe;
     --editor-caret: #60a5fa;
     --editor-caret-border: #60a5fa;
     /* Material Design 3 tone-inspired semantic tokens */
