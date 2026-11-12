@@ -8,7 +8,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   ...executionsUiTextJa,
   executionDashboard: {
     ...executionsUiTextJa.executionDashboard,
-    operationsPermissionDenied: "Cancel, Resume, and sending events require the executions.write permission on one of your groups. Ask a tenant administrator.",
+    operationsPermissionDenied: "Canceling, resuming, and sending events require the \"Write executions\" permission on one of your groups. Ask a tenant administrator.",
     header: {
       titleDefault: "Execution detail",
     },
@@ -24,8 +24,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     graph: {
       fullscreenEnter: "Fullscreen",
       fullscreenExit: "Exit fullscreen (Esc)",
-      definitionMissingFallback: (graphId: string) =>
-        `No registered graph definition for graph ID ${graphId}. Showing temporary edges.`,
+      definitionMissingFallback: "The definition for this execution was not found, so transitions are drawn as temporary lines.",
     },
     errors: {
       executionNotFound: "The specified execution was not found. Please check the ID.",
@@ -37,7 +36,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     },
     replayDisabledReason: "Actions are disabled while replaying.",
     operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
-      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} are grouped in the Run screen.`,
+      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} are on the Operations screen.`,
 
   },
   executionTimeline: {
@@ -84,18 +83,17 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       type: (nodeType: string) => `Type: ${nodeType}`,
       nodeName: (nodeName: string) => `Node name: ${nodeName}`,
       nodeId: (id: string) => `Node ID: ${id}`,
-      workerId: (workerId: string) => `Worker ID: ${workerId}`,
-      attempt: (attempt: number) => `Attempts: ${attempt}`,
+      attempt: (attempt: number) => `Pass: ${attempt}`,
       waitKey: (waitKey: string) => `Wait key: ${waitKey}`,
       allowedEvents: (events: string) => `Allowed events: ${events}`,
     },
     waiting: {
-      title: "Waiting",
+      title: "Wait details",
       reasonWaitByWaitKeyAndResumeWait: "Reason: waiting for a resume event on the wait key.",
       resumeEventName: (eventName: string) => `Resume event name: ${eventName}`,
       selectResumeEvent: "Event to resume with",
-      selectInternalResumeEvent: "Internal event name",
-      subscribeOnlyHint: "This resumes only this execution, using an internal event name.\nIt is not a topic / key fan-out.",
+      selectInternalResumeEvent: "Event name",
+      subscribeOnlyHint: "This resumes only this execution, using an event name.\nIt is not delivered to every execution waiting on the same topic / key.",
       subscribeResumeAction: "Resume this execution only",
     },
     cancel: {
@@ -116,14 +114,14 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       outputEmpty: "(None)",
       inputHeading: "Input",
       inputEmpty: "(None)",
-      conditionRoutingHeading: "Condition routing",
+      conditionRoutingHeading: "Condition result",
       conditionRoutingEmpty: "(None)",
     },
     visitNavigation: {
-      jumpToLatest: "Go to the latest visit",
-      stepNewer: "Go one visit newer",
-      stepOlder: "Go one visit older",
-      jumpToFirst: "Go to the first visit",
+      jumpToLatest: "Go to the latest pass",
+      stepNewer: "Go one pass newer",
+      stepOlder: "Go one pass older",
+      jumpToFirst: "Go to the first pass",
     },
 
   },
@@ -131,16 +129,16 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     ...executionsUiTextJa.graphLegend,
     heading: {
       nodeStatus: "Node status",
-      edgeType: "Edge type",
+      edgeType: "Transition type",
     },
     aria: {
       root: "Graph legend",
       nodeStatus: "Node status legend",
-      edgeType: "Edge type legend",
+      edgeType: "Transition type legend",
     },
     edgeKind: {
-      nextTraversed: "Next (executed path)",
-      nextNotTraversed: "Next (not traversed)",
+      nextTraversed: "Taken",
+      nextNotTraversed: "Not taken",
     },
 
   },
@@ -151,7 +149,6 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     compareLabel: "Compare",
     realtimeSseLabel: "Realtime updates",
     cancelRequestedLabel: "Cancel requested",
-    graphIdLine: (graphIdLabel: string, graphId: string) => `${graphIdLabel}: ${graphId}`,
     cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) =>
       `${cancelRequestedLabel}: ${cancelRequested ? "Yes" : "No"}`,
 
@@ -172,16 +169,12 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     },
     filter: {
       ...executionsUiTextJa.executionsPage.filter,
-      contextActivePrefix: "Definition filter:",
+      contextActivePrefix: "Filtered by definition:",
       clearDefinition: "Clear definition filter",
       title: "Filters",
       all: "(All)",
-      statusRunning: "Running",
-      statusCompleted: "Completed",
-      statusCancelled: "Cancelled",
-      statusFailed: "Failed",
-      definitionInputHint: "Definition display ID / UUID",
-      definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel} (display ID / UUID)`,
+      definitionInputHint: "Definition ID or UUID",
+      definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel} (ID or UUID)`,
       definitionPlaceholder: "e.g. a1B2c3D4e5",
       nameInputHint: "Execution ID (partial match) or UUID (exact match)",
       search: "Search",
@@ -189,7 +182,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       sortByLabel: "Sort by",
       sortOrderLabel: "Order",
       sortByUpdatedAt: "Updated at",
-      sortByDisplayId: "Display ID",
+      sortByDisplayId: "ID",
       sortOrderDesc: "Descending",
       sortOrderAsc: "Ascending",
       invalidName: "Execution ID allows only ASCII alphanumerics plus . - _ within 100 characters.",
@@ -202,8 +195,8 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     ingress: {
       open: "Event submission",
       title: "Event submission",
-      topicLabel: "topic",
-      keyLabel: "key",
+      topicLabel: "Topic",
+      keyLabel: "Key",
       emptyKey: "No key",
       fanOutHint: "Every execution waiting on the same topic / key may resume.\nThis is not limited to one row in the list.",
       submit: "Send",
@@ -219,7 +212,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     ...executionsUiTextJa.executionDetailPage,
     title: "Execution detail",
     missingExecutionId: "Execution ID is missing.",
-    navRun: "Run",
+    navRun: "Operations",
     navGraph: "Graph",
 
   },
@@ -228,12 +221,12 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     title: "Execution graph",
     missingExecutionId: "Execution ID is missing.",
     navDetail: "Detail",
-    navRun: "Run",
+    navRun: "Operations",
 
   },
   executionRunPage: {
     ...executionsUiTextJa.executionRunPage,
-    title: "Execution run",
+    title: "Execution operations",
     missingExecutionId: "Execution ID is missing.",
     navDetail: "Detail",
     navGraph: "Graph",
@@ -241,7 +234,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   },
   executionStatusBanner: {
     cancelRequestedNotice: (cancelLabel: string, resumeLabel: string) =>
-      `${cancelLabel} already requested, so progress actions like ${resumeLabel} are disabled.`,
+      `${cancelLabel} has been requested, so actions such as ${resumeLabel} are unavailable.`,
     terminalNotice: (executionLabel: string) => `${executionLabel} is already finished.`,
 
   },
@@ -249,11 +242,11 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     ...executionsUiTextJa.nodeList,
     title: "Node list",
     summary: (stateCount: number, visitCount: number) =>
-      stateCount === visitCount ? `${stateCount} items` : `${stateCount} states / ${visitCount} visits`,
-    visitCount: (count: number) => `${count} visits`,
-    visitLabel: (nodeName: string, attempt: number) => `${nodeName} (${attempt})`,
-    expandVisits: (nodeName: string) => `Expand visits of ${nodeName}`,
-    collapseVisits: (nodeName: string) => `Collapse visits of ${nodeName}`,
+      stateCount === visitCount ? `${stateCount} items` : `${stateCount} nodes / ${visitCount} passes`,
+    visitCount: (count: number) => `${count} passes`,
+    visitLabel: (nodeName: string, attempt: number) => `${nodeName} (pass ${attempt})`,
+    expandVisits: (nodeName: string) => `Expand passes of ${nodeName}`,
+    collapseVisits: (nodeName: string) => `Collapse passes of ${nodeName}`,
     columns: {
       status: "Status",
       type: "Type",
@@ -271,7 +264,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   nodeGraph: {
     meta: {
       type: (nodeType: string) => `Type: ${nodeType}`,
-      attempt: (attempt: number) => `Attempts: ${attempt}`,
+      attempt: (attempt: number) => `Pass: ${attempt}`,
       waitKey: (waitKey: string) => `Wait key: ${waitKey}`,
     },
     aria: {
@@ -281,14 +274,14 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   },
   nodeCommands: {
     resumeDisabledReason: {
-      runOnly: "Resume is available only on the Run screen.",
-      permissionDenied: "Resume requires the executions.write permission on one of your groups.",
-      executionNotLoaded: "Execution is not loaded.",
+      runOnly: "Resume is available only on the Operations screen.",
+      permissionDenied: "Resuming requires the \"Write executions\" permission on one of your groups.",
+      executionNotLoaded: "The execution is not loaded.",
       nodeNotSelected: "Please select a node.",
-      executionTerminal: "Execution is already finished.",
-      cancelRequested: "Cancel was requested, so progress actions like Resume are disabled.",
-      waitingOnly: "Resume is available only for WAITING nodes.",
-      noResumeEvent: "Resume is unavailable because there is no allowed event.",
+      executionTerminal: "The execution has already finished.",
+      cancelRequested: "Cancellation was requested, so actions such as resuming are unavailable.",
+      waitingOnly: "Only waiting nodes can be resumed.",
+      noResumeEvent: "Resume is unavailable because the node accepts no events.",
     },
 
   },

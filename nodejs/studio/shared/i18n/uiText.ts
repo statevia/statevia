@@ -117,14 +117,11 @@ export type UiText = DefinitionsFeatureUiText &
     definitionId: string;
     displayId: string;
     resourceId: string;
-    graphId: string;
     input: string;
     definitionEditor: string;
 
   },
   status: {
-    cancelledDisplay: string;
-    edgeTypeNext: string;
     edgeTypeResume: string;
     edgeTypeCancel: string;
 
@@ -241,17 +238,13 @@ export const uiText: UiText = {
     definitionId: "定義ID",
     displayId: "ID",
     resourceId: "UUID",
-    graphId: "グラフID",
     input: "入力データ",
     definitionEditor: "定義エディタ",
 
   },
   status: {
-    // 表示上は Cancelled に統一。内部状態値は既存仕様のまま扱う。
-    cancelledDisplay: "Cancelled",
-    edgeTypeNext: "Next",
-    edgeTypeResume: "Resume",
-    edgeTypeCancel: "Cancel",
+    edgeTypeResume: "再開",
+    edgeTypeCancel: "キャンセル",
 
   },
   pageState: {

@@ -2,6 +2,7 @@
 
 import type { ExecutionView } from "../types";
 import type { ExecutionDiffResult, NodeDiffItem } from "../lib/executionDiff";
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
@@ -91,7 +92,7 @@ export function ExecutionComparisonBar({
           {executionLeft ? (
             <div className="mt-1 rounded-lg bg-md-surface-container px-2 py-1.5 font-mono text-xs text-md-on-surface">
               {executionLeft.displayId}
-              <span className="ml-2 text-md-on-surface-variant">({executionLeft.status})</span>
+              <span className="ml-2 text-md-on-surface-variant">({toDisplayValue(executionLeft.status)})</span>
             </div>
           ) : (
             <div className="mt-1 text-xs text-md-on-surface-variant">{uiText.executionComparison.state.notLoaded}</div>
@@ -120,7 +121,7 @@ export function ExecutionComparisonBar({
           </div>
           {executionRight && (
             <div className="mt-1 text-xs text-md-on-surface-variant">
-              {executionRight.displayId} ({executionRight.status})
+              {executionRight.displayId} ({toDisplayValue(executionRight.status)})
             </div>
           )}
         </div>

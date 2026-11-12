@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.2 |
-| 更新日 | 2026-11-11 |
+| Version | 1.3 |
+| 更新日 | 2026-11-12 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -39,7 +39,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | --- | --- | --- | --- | --- |
 | Execution | 実行 | 定義の 1 つの版に従って進む状態機械のインスタンス | `/v1/executions`、`executionId`、`executions` テーブル、`Execution*` | Workflow / Run は使わない。Instance は Engine がメモリ上に持つ実行状態 `ExecutionInstance` だけに使う |
 | displayId / resourceId | ID / UUID | 定義と実行を識別する 2 つの ID。displayId は短い英数字、resourceId は UUID | `displayId`、`resourceId` | 画面で「表示ID」「リソースID」は使わない |
-| 実行ステータス | ステータス（実行中・完了・失敗・キャンセル済み） | Execution のライフサイクル。内部の投影値と HTTP の値で綴りが違う | 投影（`executions.status`）は `Running` / `Completed` / `Failed` / `Cancelled` / `Unknown`（`ExecutionProjectionStatuses`）。HTTP は `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`（`ExecutionStatusMapper`） | 投影の `Running` は HTTP では `ACTIVE`、`Cancelled` は `CANCELED`。Fact の `Cancelled` は遷移のキーで、実行ステータスではない。画面は表示だけ訳し、比較とフィルタの値は API の値のまま使う |
+| 実行ステータス | ステータス | Execution のライフサイクル。内部の投影値と HTTP の値で綴りが違う | 投影（`executions.status`）は `Running` / `Completed` / `Failed` / `Cancelled` / `Unknown`（`ExecutionProjectionStatuses`）。HTTP は `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`（`ExecutionStatusMapper`） | 投影の `Running` は HTTP では `ACTIVE`、`Cancelled` は `CANCELED`。Fact の `Cancelled` は遷移のキーで、実行ステータスではない。画面は値を訳さず、大文字にそろえて出す（`Running` → `RUNNING`）。綴りは `CANCELED` にそろえる |
 | Execution Context | 実行のデータ | 1 つの Execution の実行時データ。定義 YAML のパス式（`$.input` / `$.vars` / `$.states` など）の評価の起点になる | `WorkflowExecutionContext`（.NET の `ExecutionContext` と衝突しないための型名） | Execution そのものではない。型名の `Workflow` は旧語ではない |
 | Fact | — | 完了・失敗・キャンセル・合流など、状態で実際に起きた結果。遷移は Fact だけで確定する | `Fact.Completed` / `Failed` / `Cancelled` / `Joined`、定義 YAML の `on`、`CompiledFactTransition` | キャンセル**要求**は Fact ではない。監査イベント・待機イベントとも別（[Command・Event・Fact](#commandeventfact)） |
 | Fork / Join | 並列分岐 / 合流（Parallel / Join） | 並列分岐と合流を表す制御ノード。状態そのものではない | 定義 YAML の `fork` / `join` | — |
@@ -60,7 +60,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | Node | ノード | 実行グラフ上の 1 つの実行単位。同じ State を複数回訪れると、訪問ごとに Node ができる | `nodes[*].nodeId`、`ExecutionNode` | Step / Stage は使わない。同じ State を訪れた回数は画面で「回」「回目」（Pass）と書き、「訪問」「試行回数」は使わない |
 | nodeId | — | ランタイムが採番する実行ノードの ID（opaque） | `nodeId` | 定義上の状態名 `nodeName` とは別 |
 | nodeName | — | Node に対応する定義上の状態名（StateName と同じ値） | `nodeName` | 旧キー `stateName` は使わない |
-| nodeType | タイプ（開始・アクション・並列分岐・合流・待機・終了） | Node の種別 | `nodeType`（`Start` / `Task` / `Fork` / `Join` / `Wait` / `End`） | Node は独自の状態文字列を持たない。終わったかどうかと結果は `completedAt` と `fact` で表す。IDLE / READY などの語は実装に無い |
+| nodeType | タイプ | Node の種別 | `nodeType`（`Start` / `Task` / `Fork` / `Join` / `Wait` / `End`） | Node は独自の状態文字列を持たない。終わったかどうかと結果は `completedAt` と `fact` で表す。IDLE / READY などの語は実装に無い。画面は種別と状態の値を訳さず、大文字にそろえて出す（`Task` → `TASK`） |
 
 詳細は [specifications/execution/execution-graph.md](../specifications/execution/execution-graph.md)。
 

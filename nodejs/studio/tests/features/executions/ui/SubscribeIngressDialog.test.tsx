@@ -31,7 +31,7 @@ describe("SubscribeIngressDialog", () => {
     // Assert
     expect(submit).toHaveClass("bg-brand-cta-bg", "text-brand-cta-fg");
     expect(cancel).toHaveClass("border-md-outline-variant");
-    expect(screen.getByLabelText("topic")).toHaveClass("border-md-outline-variant", "font-mono");
+    expect(screen.getByLabelText("トピック")).toHaveClass("border-md-outline-variant", "font-mono");
     await waitFor(() => {
       expect(listEventSubscriptions).toHaveBeenCalledTimes(1);
     });
@@ -59,12 +59,12 @@ describe("SubscribeIngressDialog", () => {
     );
 
     // Act
-    fireEvent.change(screen.getByLabelText("topic"), { target: { value: "not valid" } });
+    fireEvent.change(screen.getByLabelText("トピック"), { target: { value: "not valid" } });
     fireEvent.click(screen.getByRole("button", { name: "送る" }));
 
     // Assert
     expect(
-      await screen.findByText("topic は英字で始まり、半角英数字と . _ - のみ、256 文字以内です。")
+      await screen.findByText("トピックは英字で始まり、半角英数字と . _ - のみ、256 文字以内です。")
     ).toBeInTheDocument();
     expect(publishTenantEvent).not.toHaveBeenCalled();
   });
@@ -79,8 +79,8 @@ describe("SubscribeIngressDialog", () => {
     );
 
     // Assert
-    expect(await screen.findByText("候補を読めませんでした。topic / key は手入力できます。")).toBeInTheDocument();
-    expect(screen.getByLabelText("topic")).toBeInTheDocument();
+    expect(await screen.findByText("候補を読めませんでした。トピック / キーは手入力できます。")).toBeInTheDocument();
+    expect(screen.getByLabelText("トピック")).toBeInTheDocument();
     await waitFor(() => {
       expect(listEventSubscriptions).toHaveBeenCalledTimes(1);
     });

@@ -138,11 +138,6 @@ export function ExecutionHeader({
           <div className="mt-2 grid gap-1 sm:grid-cols-2">
             <div>
               <span className="font-mono">
-                {uiText.executionHeader.graphIdLine(uiText.labels.graphId, execution.graphId)}
-              </span>
-            </div>
-            <div>
-              <span className="font-mono">
                 {uiText.executionHeader.cancelRequestedLine(
                   uiText.executionHeader.cancelRequestedLabel,
                   execution.cancelRequested

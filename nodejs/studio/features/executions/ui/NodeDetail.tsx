@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ExecutionNodeDTO, ExecutionView } from "../types";
 import { formatTracePayload } from "../lib/formatExecutionTrace";
 import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { NodeDetailStatusPanels, NodeDetailTraceSection } from "./nodeDetailSections";
@@ -246,14 +247,11 @@ export function NodeDetail({
         <div className="flex items-center justify-between">
           <div className="font-mono text-xs">{uiText.nodeDetail.meta.nodeId(node.nodeId)}</div>
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${fields.style.badgeClass}`}>
-            {node.status}
+            {toDisplayValue(node.status)}
           </span>
         </div>
         <div className="mt-2 space-y-1 text-xs text-md-on-surface">
-          {node.workerId != null && node.workerId !== "" && (
-            <div className="font-mono">{uiText.nodeDetail.meta.workerId(node.workerId)}</div>
-          )}
-          <div>{uiText.nodeDetail.meta.type(node.nodeType)}</div>
+          <div>{uiText.nodeDetail.meta.type(toDisplayValue(node.nodeType))}</div>
           {fields.nodeNameText !== "" && <div>{uiText.nodeDetail.meta.nodeName(fields.nodeNameText)}</div>}
           <div>{uiText.nodeDetail.meta.attempt(node.attempt)}</div>
           <div>{uiText.nodeDetail.meta.waitKey(node.waitKey ?? "—")}</div>

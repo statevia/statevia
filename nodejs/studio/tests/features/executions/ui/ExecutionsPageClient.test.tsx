@@ -149,9 +149,9 @@ describe("ExecutionsPageClient", () => {
     expect(screen.getByRole("listitem").querySelector("button")?.textContent).toBe("詳細");
 
     fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
-    const topic = await screen.findByLabelText("topic");
+    const topic = await screen.findByLabelText("トピック");
     fireEvent.change(topic, { target: { value: "orders.updated" } });
-    fireEvent.change(screen.getByLabelText("key"), { target: { value: "sku" } });
+    fireEvent.change(screen.getByLabelText("キー"), { target: { value: "sku" } });
     fireEvent.click(screen.getByRole("button", { name: "送る" }));
 
     await waitFor(() => {
@@ -160,8 +160,8 @@ describe("ExecutionsPageClient", () => {
     expect(vi.mocked(apiPost).mock.calls.some(([path]) => String(path).includes("resume"))).toBe(false);
 
     fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
-    fireEvent.change(await screen.findByLabelText("topic"), { target: { value: "manual.topic" } });
-    fireEvent.change(screen.getByLabelText("key"), { target: { value: "" } });
+    fireEvent.change(await screen.findByLabelText("トピック"), { target: { value: "manual.topic" } });
+    fireEvent.change(screen.getByLabelText("キー"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "送る" }));
 
     await waitFor(() => {
@@ -175,7 +175,7 @@ describe("ExecutionsPageClient", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "イベントを送信" })).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
-    fireEvent.focus(await screen.findByLabelText("topic"));
+    fireEvent.focus(await screen.findByLabelText("トピック"));
 
     const suggestion = screen.getByRole("button", { name: "orders.updated" });
     const list = suggestion.closest("ul");
@@ -184,7 +184,7 @@ describe("ExecutionsPageClient", () => {
     expect(list?.className).toContain("w-full");
 
     fireEvent.mouseDown(suggestion);
-    expect(screen.getByLabelText("topic")).toHaveValue("orders.updated");
+    expect(screen.getByLabelText("トピック")).toHaveValue("orders.updated");
   });
 
   it("一覧取得の失敗をトーストで示し、成功後はフィルタと詳細へ進める", async () => {

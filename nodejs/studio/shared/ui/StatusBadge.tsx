@@ -1,3 +1,4 @@
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 
 type StatusBadgeProps = {
@@ -11,6 +12,7 @@ type StatusBadgeProps = {
 
 /**
  * Execution / Node の状態ラベルを共通表示するバッジ。
+ * 色は API の値で決め、表示は `toDisplayValue` で大文字にそろえる（訳さない）。
  */
 export function StatusBadge({ status, className }: Readonly<StatusBadgeProps>) {
   const { badgeClass } = getStatusStyle(status);
@@ -23,6 +25,6 @@ export function StatusBadge({ status, className }: Readonly<StatusBadgeProps>) {
     .join(" ");
 
   return (
-    <span className={badgeClassName}>{status}</span>
+    <span className={badgeClassName}>{toDisplayValue(status)}</span>
   );
 }

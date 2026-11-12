@@ -5,7 +5,7 @@ import type { ExecutionsFeatureUiText } from "./types";
  */
 export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDashboard: {
-    operationsPermissionDenied: "取消・Resume・イベント送信には、所属グループに executions.write 権限が必要です。テナント管理者に依頼してください。",
+    operationsPermissionDenied: "キャンセル・再開・イベント送信には、所属グループに「実行の操作」の権限が必要です。テナント管理者に依頼してください。",
     header: {
       titleDefault: "実行の詳細",
     },
@@ -21,8 +21,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
     graph: {
       fullscreenEnter: "全画面表示",
       fullscreenExit: "全画面終了 (Esc)",
-      definitionMissingFallback: (graphId: string) =>
-        `グラフID: ${graphId} の定義が未登録のため、仮エッジ表示です。`,
+      definitionMissingFallback: "この実行の定義が見つからないため、遷移を仮の線で表示しています。",
     },
     errors: {
       executionNotFound: "指定された実行が見つかりませんでした。ID を確認してください。",
@@ -34,7 +33,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
     },
     replayDisabledReason: "リプレイ表示中は実行できません",
     operationsAggregatedInRun: (cancelLabel: string, resumeLabel: string, sendEventLabel: string) =>
-      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} は Run 画面に集約しています。`,
+      `${cancelLabel} / ${resumeLabel} / ${sendEventLabel} は操作画面にまとめています。`,
 
   },
   executionTimeline: {
@@ -78,18 +77,17 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       type: (nodeType: string) => `タイプ: ${nodeType}`,
       nodeName: (nodeName: string) => `ノード名: ${nodeName}`,
       nodeId: (id: string) => `ノードID: ${id}`,
-      workerId: (workerId: string) => `ワーカーID: ${workerId}`,
-      attempt: (attempt: number) => `試行回数: ${attempt}`,
-      waitKey: (waitKey: string) => `Wait キー: ${waitKey}`,
+      attempt: (attempt: number) => `回数: ${attempt} 回目`,
+      waitKey: (waitKey: string) => `待機キー: ${waitKey}`,
       allowedEvents: (events: string) => `受付イベント: ${events}`,
     },
     waiting: {
-      title: "待機中 (Wait)",
-      reasonWaitByWaitKeyAndResumeWait: "理由: 再開のイベントを Wait キーで待っています。",
+      title: "待機の詳細",
+      reasonWaitByWaitKeyAndResumeWait: "理由: 再開のイベントを待機キーで待っています。",
       resumeEventName: (eventName: string) => `再開イベント名: ${eventName}`,
       selectResumeEvent: "再開するイベント",
-      selectInternalResumeEvent: "内部イベント名",
-      subscribeOnlyHint: "この実行だけを、内部イベント名で再開します。\ntopic / key の集合配送ではありません。",
+      selectInternalResumeEvent: "イベント名",
+      subscribeOnlyHint: "この実行だけを、イベント名を指定して再開します。\n同じトピック / キーを待つ実行への一斉配送ではありません。",
       subscribeResumeAction: "この実行だけ再開",
     },
     cancel: {
@@ -110,30 +108,30 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       outputEmpty: "（なし）",
       inputHeading: "入力",
       inputEmpty: "（なし）",
-      conditionRoutingHeading: "条件ルーティング",
+      conditionRoutingHeading: "条件の判定結果",
       conditionRoutingEmpty: "（なし）",
     },
     visitNavigation: {
-      jumpToLatest: "最新の訪問へ",
-      stepNewer: "1つ新しい訪問へ",
-      stepOlder: "1つ古い訪問へ",
-      jumpToFirst: "1回目の訪問へ",
+      jumpToLatest: "最新の回へ",
+      stepNewer: "1 つ新しい回へ",
+      stepOlder: "1 つ古い回へ",
+      jumpToFirst: "1 回目へ",
     },
 
   },
   graphLegend: {
     heading: {
-      nodeStatus: "ノードステータス",
-      edgeType: "エッジ種別",
+      nodeStatus: "ノードのステータス",
+      edgeType: "遷移の種類",
     },
     aria: {
       root: "グラフ凡例",
-      nodeStatus: "ノードステータス凡例",
-      edgeType: "エッジ種別凡例",
+      nodeStatus: "ノードのステータスの凡例",
+      edgeType: "遷移の種類の凡例",
     },
     edgeKind: {
-      nextTraversed: "Next（実行経路）",
-      nextNotTraversed: "Next（未通過）",
+      nextTraversed: "通過した経路",
+      nextNotTraversed: "通っていない経路",
     },
 
   },
@@ -143,7 +141,6 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
     compareLabel: "比較",
     realtimeSseLabel: "リアルタイム更新",
     cancelRequestedLabel: "キャンセル要求",
-    graphIdLine: (graphIdLabel: string, graphId: string) => `${graphIdLabel}: ${graphId}`,
     cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) =>
       `${cancelRequestedLabel}: ${cancelRequested ? "あり" : "なし"}`,
 
@@ -156,16 +153,12 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       next: "次へ",
     },
     filter: {
-      contextActivePrefix: "定義文脈（フィルタ中）:",
+      contextActivePrefix: "定義で絞り込み中:",
       clearDefinition: "定義条件を外す",
       title: "フィルタ",
       all: "（すべて）",
-      statusRunning: "Running",
-      statusCompleted: "Completed",
-      statusCancelled: "Cancelled",
-      statusFailed: "Failed",
-      definitionInputHint: "定義 表示ID / UUID",
-      definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel}（定義 表示ID / UUID）`,
+      definitionInputHint: "定義の ID または UUID",
+      definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel}（ID または UUID）`,
       definitionPlaceholder: "例: a1B2c3D4e5",
       nameInputHint: "実行の ID（部分一致）または UUID（完全一致）",
       search: "検索",
@@ -173,7 +166,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       sortByLabel: "ソート項目",
       sortOrderLabel: "順序",
       sortByUpdatedAt: "更新日時",
-      sortByDisplayId: "表示ID",
+      sortByDisplayId: "ID",
       sortOrderDesc: "降順",
       sortOrderAsc: "昇順",
       invalidName: "実行の ID は半角英数字と . - _ のみ、100文字以内で入力してください。",
@@ -189,16 +182,16 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
     ingress: {
       open: "イベントを送信",
       title: "イベントを送信",
-      topicLabel: "topic",
-      keyLabel: "key",
+      topicLabel: "トピック",
+      keyLabel: "キー",
       emptyKey: "キーなし",
-      fanOutHint: "同じ topic / key を待つ実行が複数あれば、すべて再開し得ます。\nこの一覧の 1 件だけではありません。",
+      fanOutHint: "同じトピック / キーを待つ実行が複数あれば、すべて再開し得ます。\nこの一覧の 1 件だけではありません。",
       submit: "送る",
       cancel: "閉じる",
-      candidatesUnavailable: "候補を読めませんでした。topic / key は手入力できます。",
+      candidatesUnavailable: "候補を読めませんでした。トピック / キーは手入力できます。",
       accepted: "受理しました。一致する購読が 0 件でも成功です。",
-      invalidTopic: "topic は英字で始まり、半角英数字と . _ - のみ、256 文字以内です。",
-      invalidKey: "key を書くときは英字で始まり、半角英数字と . _ - のみ、256 文字以内です。",
+      invalidTopic: "トピックは英字で始まり、半角英数字と . _ - のみ、256 文字以内です。",
+      invalidKey: "キーを書くときは英字で始まり、半角英数字と . _ - のみ、256 文字以内です。",
     },
     empty: "条件に合う実行はありません。",
     error: "取得に失敗しました。時間をおいて再試行してください。",
@@ -207,7 +200,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDetailPage: {
     title: "実行詳細",
     missingExecutionId: "実行 ID が指定されていません。",
-    navRun: "実行",
+    navRun: "操作",
     navGraph: "グラフ",
 
   },
@@ -215,11 +208,11 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
     title: "実行グラフ",
     missingExecutionId: "実行 ID が指定されていません。",
     navDetail: "詳細",
-    navRun: "実行",
+    navRun: "操作",
 
   },
   executionRunPage: {
-    title: "実行",
+    title: "実行の操作",
     missingExecutionId: "実行 ID が指定されていません。",
     navDetail: "詳細",
     navGraph: "グラフ",
@@ -227,18 +220,18 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   },
   executionStatusBanner: {
     cancelRequestedNotice: (cancelLabel: string, resumeLabel: string) =>
-      `${cancelLabel}要求済みのため、${resumeLabel}など進行系操作はできません`,
-    terminalNotice: (executionLabel: string) => `${executionLabel}は終了しています`,
+      `${cancelLabel}を要求済みのため、${resumeLabel}などの操作はできません。`,
+    terminalNotice: (executionLabel: string) => `${executionLabel}は終了しています。`,
 
   },
   nodeList: {
     title: "ノード一覧",
     summary: (stateCount: number, visitCount: number) =>
-      stateCount === visitCount ? `${stateCount} 件` : `${stateCount} 状態 / ${visitCount} 訪問`,
-    visitCount: (count: number) => `${count} 訪問`,
-    visitLabel: (nodeName: string, attempt: number) => `${nodeName} (${attempt})`,
-    expandVisits: (nodeName: string) => `${nodeName} の訪問を展開`,
-    collapseVisits: (nodeName: string) => `${nodeName} の訪問を畳む`,
+      stateCount === visitCount ? `${stateCount} 件` : `${stateCount} ノード / ${visitCount} 回`,
+    visitCount: (count: number) => `${count} 回`,
+    visitLabel: (nodeName: string, attempt: number) => `${nodeName}（${attempt} 回目）`,
+    expandVisits: (nodeName: string) => `${nodeName} の各回を展開`,
+    collapseVisits: (nodeName: string) => `${nodeName} の各回を畳む`,
     columns: {
       status: "ステータス",
       type: "タイプ",
@@ -256,8 +249,8 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   nodeGraph: {
     meta: {
       type: (nodeType: string) => `タイプ: ${nodeType}`,
-      attempt: (attempt: number) => `試行回数: ${attempt}`,
-      waitKey: (waitKey: string) => `Wait キー: ${waitKey}`,
+      attempt: (attempt: number) => `回数: ${attempt} 回目`,
+      waitKey: (waitKey: string) => `待機キー: ${waitKey}`,
     },
     aria: {
       selectNode: (displayLabel: string) => `ノードを選択: ${displayLabel}`,
@@ -266,14 +259,14 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
   },
   nodeCommands: {
     resumeDisabledReason: {
-      runOnly: "Run 画面でのみ Resume できます",
-      permissionDenied: "Resume には、所属グループに executions.write 権限が必要です",
-      executionNotLoaded: "Execution が未読込です",
-      nodeNotSelected: "Node を選択してください",
-      executionTerminal: "Executionは終了しています",
-      cancelRequested: "Cancel要求済みのため、Resumeなど進行系操作はできません",
-      waitingOnly: "WAITING 状態のノードのみ Resume できます",
-      noResumeEvent: "受付可能なイベントが無いため Resume できません",
+      runOnly: "操作画面でのみ再開できます。",
+      permissionDenied: "再開には、所属グループに「実行の操作」の権限が必要です。",
+      executionNotLoaded: "実行が読み込まれていません。",
+      nodeNotSelected: "ノードを選択してください。",
+      executionTerminal: "実行は終了しています。",
+      cancelRequested: "キャンセルを要求済みのため、再開などの操作はできません。",
+      waitingOnly: "待機中のノードだけ再開できます。",
+      noResumeEvent: "受け付けるイベントが無いため、再開できません。",
     },
 
   },

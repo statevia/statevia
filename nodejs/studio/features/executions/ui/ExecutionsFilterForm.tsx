@@ -4,6 +4,17 @@ import type { FormEvent } from "react";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import type { SortOrder } from "@/features/executions/api";
 import type { ExecutionSortBy, ExecutionStatusFilter } from "../hooks/useExecutionsPage";
+import { toDisplayValue } from "@/shared/lib/displayValue";
+
+/**
+ * ステータスの絞り込みで選べる値。API に送る値なので変えず、表示だけ `toDisplayValue` で大文字にそろえる（訳さない）。
+ */
+const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, "">[] = [
+  "Running",
+  "Completed",
+  "Cancelled",
+  "Failed"
+];
 
 /** 実行一覧フィルタ欄の入力。 */
 export type ExecutionsFilterFormProps = {
@@ -91,10 +102,9 @@ export function ExecutionsFilterForm({
             onChange={(event) => onStatusChange(event.target.value)}
           >
             <option value="">{filterText.all}</option>
-            <option value="Running">{filterText.statusRunning}</option>
-            <option value="Completed">{filterText.statusCompleted}</option>
-            <option value="Cancelled">{filterText.statusCancelled}</option>
-            <option value="Failed">{filterText.statusFailed}</option>
+            {EXECUTION_STATUS_FILTER_VALUES.map((value) => (
+              <option key={value} value={value}>{toDisplayValue(value)}</option>
+            ))}
           </select>
         </label>
         <label className="block text-sm text-md-on-surface">
