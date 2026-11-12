@@ -38,15 +38,15 @@ describe("NodeListView", () => {
     );
 
     // Act
-    expect(screen.queryByText("cycle.work.a (1)")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の訪問を展開" }));
+    expect(screen.queryByText("cycle.work.a（1 回目）")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の各回を展開" }));
 
     // Assert
-    expect(screen.getByText("cycle.work.a (1)")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("cycle.work.a (1)"));
+    expect(screen.getByText("cycle.work.a（1 回目）")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("cycle.work.a（1 回目）"));
     expect(onSelectNode).toHaveBeenCalledWith("old");
-    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の訪問を畳む" }));
-    expect(screen.queryByText("cycle.work.a (1)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "cycle.work.a の各回を畳む" }));
+    expect(screen.queryByText("cycle.work.a（1 回目）")).not.toBeInTheDocument();
   });
 
   it("状態がページサイズを超えるとき次と前でページを移す", () => {

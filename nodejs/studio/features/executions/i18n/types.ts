@@ -22,7 +22,7 @@ export type ExecutionsFeatureUiText = {
     graph: {
       fullscreenEnter: string;
       fullscreenExit: string;
-      definitionMissingFallback: (graphId: string) => string;
+      definitionMissingFallback: string;
     };
     errors: {
       executionNotFound: string;
@@ -80,7 +80,6 @@ export type ExecutionsFeatureUiText = {
       type: (nodeType: string) => string;
       nodeName: (nodeName: string) => string;
       nodeId: (id: string) => string;
-      workerId: (workerId: string) => string;
       attempt: (attempt: number) => string;
       waitKey: (waitKey: string) => string;
       /** 受付イベント一覧の表示（カンマ区切り文字列）。 */
@@ -154,7 +153,6 @@ export type ExecutionsFeatureUiText = {
     compareLabel: string;
     realtimeSseLabel: string;
     cancelRequestedLabel: string;
-    graphIdLine: (graphIdLabel: string, graphId: string) => string;
     cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) => string;
 
   },
@@ -171,10 +169,6 @@ export type ExecutionsFeatureUiText = {
       clearDefinition: string;
       title: string;
       all: string;
-      statusRunning: string;
-      statusCompleted: string;
-      statusCancelled: string;
-      statusFailed: string;
       definitionInputHint: string;
       definitionLabelWithHint: (definitionLabel: string) => string;
       definitionPlaceholder: string;

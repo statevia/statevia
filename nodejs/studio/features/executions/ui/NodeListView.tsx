@@ -10,6 +10,7 @@ import {
   type NodeListGroup
 } from "../lib/nodeListGroups";
 import { formatExecutionDuration } from "@/shared/lib/dateTime";
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { ListPagination } from "@/shared/ui/ListPagination";
@@ -209,10 +210,10 @@ function NodeListDataRow({
       </td>
       <td className="py-2 pl-2 pr-2">
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${style.badgeClass}`}>
-          {node.status}
+          {toDisplayValue(node.status)}
         </span>
       </td>
-      <td className="py-2 pl-2 pr-2">{node.nodeType}</td>
+      <td className="py-2 pl-2 pr-2">{toDisplayValue(node.nodeType)}</td>
       <td className="truncate py-2 pl-2 pr-2 font-mono text-xs" title={nodeName}>
         {nodeName}
       </td>

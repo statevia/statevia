@@ -24,7 +24,7 @@ describe("ExecutionStatusBanner", () => {
 
     // Assert
     expect(
-      screen.getByText(new RegExp(`${uiText.actions.cancel}要求済みのため、${uiText.actions.resume}など進行系操作はできません`))
+      screen.getByText(new RegExp(`${uiText.actions.cancel}を要求済みのため、${uiText.actions.resume}などの操作はできません`))
     ).toBeInTheDocument();
   });
 
@@ -47,6 +47,6 @@ describe("ExecutionStatusBanner", () => {
     render(<ExecutionStatusBanner {...props} />);
 
     // Assert
-    expect(screen.getByText(new RegExp(`${uiText.actions.cancel}要求済みのため`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${uiText.actions.cancel}を要求済みのため`))).toBeInTheDocument();
   });
 });

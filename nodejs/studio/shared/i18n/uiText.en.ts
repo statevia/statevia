@@ -104,9 +104,13 @@ export const uiTextEn: UiText = {
     definitionId: "Definition ID",
     displayId: "ID",
     resourceId: "UUID",
-    graphId: "Graph ID",
     input: "Input",
     definitionEditor: "Definition Editor",
+
+  },
+  status: {
+    edgeTypeResume: "Resume",
+    edgeTypeCancel: "Cancel",
 
   },
   pageState: {

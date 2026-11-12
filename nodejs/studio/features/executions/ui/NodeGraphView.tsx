@@ -23,6 +23,7 @@ import type { GroupBounds } from "../lib/grouping";
 import type { LayoutEdgeInput, PositionedNode } from "@/shared/lib/graphLayout";
 import type { MergedGraphNode } from "../lib/mergeGraph";
 import { getNodeAppearance } from "@/shared/lib/nodeAppearance";
+import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import type { NodeStatus } from "../types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
@@ -98,11 +99,11 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
       <div className="flex items-center justify-between gap-1 text-xs">
         <span aria-hidden>{appearance.icon}</span>
         <span className="min-w-0 shrink font-semibold">{appearance.label}</span>
-        <span className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${style.badgeClass}`}>{data.status}</span>
+        <span className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${style.badgeClass}`}>{toDisplayValue(data.status)}</span>
       </div>
       <div className={`space-y-1 text-xs ${isGateway ? "mt-1" : "mt-2"}`}>
         <div className="break-all font-mono">{data.label}</div>
-        <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.type(data.nodeType)}</div>
+        <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.type(toDisplayValue(data.nodeType))}</div>
         <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.attempt(data.attempt)}</div>
         {data.waitKey && <div className="text-md-on-surface-variant">{uiText.nodeGraph.meta.waitKey(data.waitKey)}</div>}
       </div>

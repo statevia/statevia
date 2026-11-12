@@ -101,14 +101,14 @@ describe("NodeDetail", () => {
   });
 
   describe("Wait / Resume 詳細", () => {
-    it("status が WAITING のとき「待機中 (Wait)」と理由を表示する", () => {
+    it("status が WAITING のとき「待機の詳細」と理由を表示する", () => {
       const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
       render(<NodeDetail {...defaultProps} node={node} />);
       expect(screen.getByText(uiText.nodeDetail.waiting.title)).toBeInTheDocument();
       expect(screen.getByText(uiText.nodeDetail.waiting.reasonWaitByWaitKeyAndResumeWait)).toBeInTheDocument();
     });
 
-    it("status が WAITING で resumeEventName を渡すと「再開 イベント名」を表示する", () => {
+    it("status が WAITING で resumeEventName を渡すと「再開イベント名」を表示する", () => {
       const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
       render(<NodeDetail {...defaultProps} node={node} resumeEventName="DoneC" />);
       expect(screen.getByText(uiText.nodeDetail.waiting.title)).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("NodeDetail", () => {
       expect(screen.queryByText(new RegExp(`^${uiText.nodeDetail.waiting.resumeEventName("")}`))).not.toBeInTheDocument();
     });
 
-    it("status が RUNNING のとき「待機中」を表示しない", () => {
+    it("status が RUNNING のとき「待機の詳細」を表示しない", () => {
       render(<NodeDetail {...defaultProps} />);
       expect(screen.queryByText(uiText.nodeDetail.waiting.title)).not.toBeInTheDocument();
     });
