@@ -16,7 +16,7 @@ public sealed class WorkflowActionStateTests
         // Arrange
         var runner = new FakeChildWorkflowRunner
         {
-            Result = new ChildWorkflowResult("exec-1", "wf-1", "Running")
+            Result = new ChildWorkflowResult("exec-1", "wf-1", "ACTIVE")
         };
         var sut = new WorkflowActionState(BuildScopeFactory(runner));
         var input = JsonSerializer.SerializeToElement(new
@@ -32,7 +32,7 @@ public sealed class WorkflowActionStateTests
         var map = Assert.IsType<Dictionary<string, object?>>(result);
         Assert.Equal("exec-1", map["workflowId"]);
         Assert.Equal("wf-1", map["displayId"]);
-        Assert.Equal("Running", map["status"]);
+        Assert.Equal("ACTIVE", map["status"]);
         Assert.Equal("def-1", runner.LastRequest!.DefinitionId);
         Assert.NotEqual(Guid.Empty, runner.LastRequest.ParentExecutionId);
     }
@@ -84,7 +84,7 @@ public sealed class WorkflowActionStateTests
 
     private sealed class FakeChildWorkflowRunner : IChildWorkflowRunner
     {
-        public ChildWorkflowResult Result { get; init; } = new("id", "disp", "Running");
+        public ChildWorkflowResult Result { get; init; } = new("id", "disp", "ACTIVE");
         public ChildWorkflowRequest? LastRequest { get; private set; }
 
         public Task<ChildWorkflowResult> RunAsync(ChildWorkflowRequest request, CancellationToken ct)

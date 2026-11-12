@@ -3,8 +3,11 @@
  * ドメイン DTO の状態文字列と一致させる。
  */
 
-/** 実行全体の状態（Service API 準拠）。 */
-export type ExecutionStatus = "Running" | "Completed" | "Cancelled" | "Failed";
+/**
+ * 実行全体の状態（Service API の HTTP の契約の値）。
+ * 投影の値（`Running` / `Cancelled` など）は API が返さない。`UNKNOWN` は投影の値が想定外のときだけ返る。
+ */
+export type ExecutionStatus = "ACTIVE" | "COMPLETED" | "FAILED" | "CANCELED" | "UNKNOWN";
 
 /** 実行ノードの状態（Engine / Service API 準拠）。 */
 export type NodeStatus =
@@ -60,7 +63,7 @@ export type StatusStyle = {
 };
 
 const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
-  Running: {
+  ACTIVE: {
     badgeClass: "bg-md-info text-md-on-info",
     borderClass: "border-md-info",
     bgClass: softDarkContainerBackground("info"),
@@ -68,7 +71,7 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
     icon: "•",
     emphasisRank: 20,
   },
-  Completed: {
+  COMPLETED: {
     badgeClass: "bg-md-success text-md-on-success",
     borderClass: "border-md-success",
     bgClass: softDarkContainerBackground("success"),
@@ -76,21 +79,13 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
     icon: "✓",
     emphasisRank: 40,
   },
-  Failed: {
+  UNKNOWN: {
     badgeClass: "bg-md-error text-md-on-error",
     borderClass: "border-md-error",
     bgClass: softDarkContainerBackground("error"),
     textClass: "text-md-on-error-container",
     icon: "⚠",
     emphasisRank: 80,
-  },
-  Cancelled: {
-    badgeClass: "bg-md-error text-md-on-error",
-    borderClass: "border-md-error",
-    bgClass: softDarkContainerBackground("error"),
-    textClass: "text-md-on-error-container",
-    icon: "✕",
-    emphasisRank: 100,
   },
   IDLE: {
     badgeClass: "bg-md-neutral text-md-on-neutral",
@@ -151,15 +146,17 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
 };
 
 /**
- * 状態から表示スタイルを返す。
- * API が想定外の status（例: Unknown）を返しても一覧が落ちないよう、未定義時は Failed 相当に倒す。
+ * 状態から表示スタイルを返す。実行の `FAILED` / `CANCELED` はノードの同じ綴りと同じスタイルになる。
+ * API が想定外の status を返しても一覧が落ちないよう、未定義時は `FAILED` 相当に倒す。
+ * @param status 実行またはノードの状態（API の値）。
+ * @returns 表示スタイル。
  */
 export function getStatusStyle(status: string): StatusStyle {
   if (status in STATUS_STYLE) {
     return STATUS_STYLE[status as StatusLike];
   }
 
-  return STATUS_STYLE.Failed;
+  return STATUS_STYLE.FAILED;
 }
 
 /** 一覧ソート用のノード状態ウェイト。 */

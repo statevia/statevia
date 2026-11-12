@@ -889,7 +889,7 @@ public sealed class ExecutionServiceTests
         {
             DisplayId = "CACHED-DISP",
             ResourceId = defUuid, // will be overwritten by JSON if needed; kept for serialization consistency
-            Status = "Running",
+            Status = "ACTIVE",
             StartedAt = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
         var cachedJson = JsonSerializer.Serialize(cached, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
@@ -952,7 +952,7 @@ public sealed class ExecutionServiceTests
         Assert.Empty(dedupRepo.SavedRows);
         Assert.Equal("CACHED-DISP", res.DisplayId);
         Assert.Equal(cached.ResourceId, res.ResourceId);
-        Assert.Equal("Running", res.Status);
+        Assert.Equal("ACTIVE", res.Status);
 
         Assert.False(engine.StartCalled);
     }
@@ -1107,7 +1107,7 @@ public sealed class ExecutionServiceTests
         Assert.Single(dedupRepo.SavedRows);
         Assert.Equal("WF-DISP-2", res.DisplayId);
         Assert.Equal(executionId, res.ResourceId);
-        Assert.Equal("Completed", res.Status);
+        Assert.Equal("COMPLETED", res.Status);
         Assert.False(string.IsNullOrWhiteSpace(dedupService.LastRequestHash));
         Assert.Equal(dedupService.LastRequestHash, dedupRepo.SavedRows[0].RequestHash);
 
@@ -1202,7 +1202,7 @@ public sealed class ExecutionServiceTests
         Assert.Single(dedupRepo.SavedRows);
         Assert.Equal("WF-DISP-3", res.DisplayId);
         Assert.Equal(executionId, res.ResourceId);
-        Assert.Equal("Completed", res.Status);
+        Assert.Equal("COMPLETED", res.Status);
         Assert.False(string.IsNullOrWhiteSpace(dedupService.LastRequestHash));
         Assert.Equal(dedupService.LastRequestHash, dedupRepo.SavedRows[0].RequestHash);
 
@@ -1534,7 +1534,7 @@ public sealed class ExecutionServiceTests
         var view = await sut.GetExecutionViewAtSeqAsync(idOrUuid: "display-or-uuid", atSeq: 1, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Running", view.Status);
+        Assert.Equal("ACTIVE", view.Status);
         Assert.Equal(executionId.ToString("D"), view.ResourceId);
         Assert.Equal(2, view.Nodes.Count);
         Assert.Equal("Task", view.Nodes[0].NodeType);
@@ -1701,7 +1701,7 @@ public sealed class ExecutionServiceTests
         var view = await sut.GetExecutionViewAtSeqAsync(idOrUuid: "display-or-uuid", atSeq: 2, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Running", view.Status);
+        Assert.Equal("ACTIVE", view.Status);
         Assert.Equal(executionId.ToString("D"), view.ResourceId);
         Assert.Equal(2, view.Nodes.Count);
         Assert.Equal("Task", view.Nodes[0].NodeType);
@@ -1791,10 +1791,10 @@ public sealed class ExecutionServiceTests
         Assert.Equal(3, res.Events.Count); // Unknown is filtered out
 
         Assert.Equal("ExecutionStatusChanged", res.Events[0].Type);
-        Assert.Equal("Running", res.Events[0].To);
+        Assert.Equal("ACTIVE", res.Events[0].To);
 
         Assert.Equal("ExecutionStatusChanged", res.Events[1].Type);
-        Assert.Equal("Cancelled", res.Events[1].To);
+        Assert.Equal("CANCELED", res.Events[1].To);
 
         Assert.Equal("GraphUpdated", res.Events[2].Type);
         Assert.NotNull(res.Events[2].Patch);
@@ -1895,7 +1895,7 @@ public sealed class ExecutionServiceTests
         Assert.False(res.HasMore);
         Assert.Equal(2, res.Events.Count);
         Assert.Equal("ExecutionStatusChanged", res.Events[0].Type);
-        Assert.Equal("Running", res.Events[0].To);
+        Assert.Equal("ACTIVE", res.Events[0].To);
         Assert.Equal("GraphUpdated", res.Events[1].Type);
         Assert.Equal("eidCompose", res.Events[1].ExecutionId);
         Assert.Equal(1, res.Events[0].Seq);
@@ -3765,7 +3765,7 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.Equal(uuid.ToString("D"), res.DisplayId);
         Assert.Equal(uuid, res.ResourceId);
-        Assert.Equal("Running", res.Status);
+        Assert.Equal("ACTIVE", res.Status);
     }
 
     /// <summary>スナップショットがないときグラフ取得で未検出例外を投げる。</summary>
@@ -4234,7 +4234,7 @@ public sealed class ExecutionServiceTests
         Assert.Equal(2, page.Items.Count);
         Assert.Equal(w1.ExecutionId.ToString("D"), page.Items[0].DisplayId);
         Assert.Equal(w1.ExecutionId, page.Items[0].ResourceId);
-        Assert.Equal("Running", page.Items[0].Status);
+        Assert.Equal("ACTIVE", page.Items[0].Status);
         Assert.Equal(w2.ExecutionId, page.Items[1].ResourceId);
         Assert.Equal("WF-DISP-2", page.Items[1].DisplayId);
         Assert.True(page.Items[1].CancelRequested);
@@ -6558,7 +6558,7 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.False(engine.StartCalled);
         Assert.Equal(executionId, response.ResourceId);
-        Assert.Equal(ExecutionProjectionStatuses.Running, response.Status);
+        Assert.Equal(ExecutionContractStatuses.Active, response.Status);
         Assert.Single(workQueue.Items);
         Assert.Equal(ExecutionWorkItemKinds.Start, workQueue.Items[0].Kind);
         Assert.Equal(executionId, workQueue.Items[0].ExecutionId);
@@ -7325,7 +7325,7 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.False(engine.StartCalled);
         Assert.Equal(executionId, response.ResourceId);
-        Assert.Equal(ExecutionProjectionStatuses.Running, response.Status);
+        Assert.Equal(ExecutionContractStatuses.Active, response.Status);
         Assert.True(response.CancelRequested);
     }
 
@@ -7385,7 +7385,7 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.False(engine.StartCalled);
         Assert.Equal(executionId, response.ResourceId);
-        Assert.Equal(ExecutionProjectionStatuses.Running, response.Status);
+        Assert.Equal(ExecutionContractStatuses.Active, response.Status);
     }
 
     /// <summary>空グラフの queued Start は engine.Start する。</summary>

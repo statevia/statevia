@@ -44,7 +44,7 @@ test.describe("Service API + UI (real)", () => {
     await executionPage.expectHeaderVisible();
     await executionPage.executionIdInput.fill(startedExecution.displayId);
     await executionPage.loadExecution();
-    await executionPage.waitForExecutionStatus("Running");
+    await executionPage.waitForExecutionStatus("ACTIVE");
 
     await executionPage.cancelButton.click();
     // status ロールのアクセシブルネームは子テキストに依存しないことがあるため、name + フォールバックの両方に耐える。
@@ -53,7 +53,7 @@ test.describe("Service API + UI (real)", () => {
       .getByRole("status", { name: cancelAcceptedText })
       .or(page.getByRole("status").filter({ hasText: cancelAcceptedText }));
     await expect(successToast).toBeVisible({ timeout: 60_000 });
-    await executionPage.waitForExecutionStatus("Cancelled", { timeout: 30_000 });
+    await executionPage.waitForExecutionStatus("CANCELED", { timeout: 30_000 });
   });
 
   test("Cancel が 409 のときトーストに 409 が含まれる", async ({ page, request }) => {
@@ -90,7 +90,7 @@ test.describe("Service API + UI (real)", () => {
     await executionPage.expectHeaderVisible();
     await executionPage.executionIdInput.fill(startedExecution.displayId);
     await executionPage.loadExecution();
-    await executionPage.waitForExecutionStatus("Running");
+    await executionPage.waitForExecutionStatus("ACTIVE");
 
     await executionPage.cancelButton.click();
     await expect(page.getByText(/409/)).toBeVisible({ timeout: 15_000 });

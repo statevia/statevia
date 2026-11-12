@@ -131,7 +131,7 @@ public sealed class ExecutionScheduleFireScenarioTests
         var started = await context.Schedules.RunNowAsync(created.ScheduleId, "manual-key", CancellationToken.None);
 
         // Assert
-        Assert.Equal(ExecutionProjectionStatuses.Running, started.Status);
+        Assert.Equal(ExecutionContractStatuses.Active, started.Status);
         await using var verify = await context.CreateDbAsync();
         var schedule = await verify.ExecutionSchedules.IgnoreQueryFilters()
             .SingleAsync(row => row.ScheduleId == created.ScheduleId);

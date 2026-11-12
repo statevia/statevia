@@ -7,7 +7,7 @@ import type { CommandAccepted, ExecutionNodeDTO, ExecutionView } from "../types"
 import { getUiText } from "@/shared/i18n/uiTextLocale";
 import { resolveWaitResumeEvents } from "../lib/waitResumeEvents";
 
-const TERMINAL_STATUSES = new Set<string>(["Completed", "Cancelled", "Failed"]);
+const TERMINAL_STATUSES = new Set<string>(["COMPLETED", "CANCELED", "FAILED"]);
 
 function isTerminalExecution(status: ExecutionView["status"]): boolean {
   return TERMINAL_STATUSES.has(status);

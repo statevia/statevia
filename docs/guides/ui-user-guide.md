@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.15 |
+| Version | 1.16 |
 | 更新日 | 2026-11-13 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.16（2026-11-13）**: 実行の状態は API の値（`ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED`）をそのまま出す。実行一覧のステータスの絞り込みも同じ値を使う。
 
 **Version 1.15（2026-11-13）**: 実行詳細・実行の操作・実行グラフの 3 画面を、実行詳細（`/executions/{id}`）の 1 画面にまとめた。キャンセル・再開・イベント送信は、実行の操作（`executions.write`）の権限があれば実行詳細に出る。グラフは実行詳細のリスト / グラフの切替で見る。
 
@@ -165,7 +167,7 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 同じノードを何回か通ったとき、グラフ上のマスは 1 つのままです。色は待機中の回を優先します。ノード詳細には「回数: N 回目」が出ます。見出しの右にある移動で、1 つ新しい回、1 つ古い回、最新の回、1 回目へ移れます。この移動は 2 回以上通ったときだけ出ます。ノード一覧はノードごとに 1 行で、左の印を開くと `ノード名（N 回目）` の行になります。一覧の件数は「3 ノード / 5 回」のように出ます。ノードが 21 件以上のときは、見出し右のページ移動で 20 件ずつ見ます。再開はそのとき詳細に出ている回に対して行います。選択していた回が無くなったときは、同じノードが残っていれば最新の回へ移ります。
 
-状態とノードのタイプは訳さず、API の値を大文字にして出します（例: `RUNNING`、`CANCELED`、`WAITING`、`TASK`）。実行の `Cancelled` も、ノードと同じ `CANCELED` と表示します。実行一覧のステータスの絞り込みも同じ表記です。
+状態とノードのタイプは訳さず、API の値を大文字にして出します（例: 実行の `ACTIVE`・`CANCELED`、ノードの `WAITING`、タイプの `TASK`）。実行一覧のステータスの絞り込みも同じ表記です。
 
 グラフのマージ規則・ノード表現の Normative 契約は [visual 仕様](../specifications/ui/visual.md)。実行グラフ上の代表と詳細の訪問の対応は [execution-graph 仕様](../specifications/execution/execution-graph.md) を参照します。リアルタイム更新は SSE（[push-api 仕様](../specifications/ui/push-api.md)）。SSE も Principal 必須（未認証は 401）。Studio はプロキシ経由でセッション Cookie を付ける。
 

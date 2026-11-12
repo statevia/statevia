@@ -137,7 +137,7 @@ internal sealed class CapacityApi : IDisposable
             Is5xx: false);
     }
 
-    /// <summary>実行の投影 status を返す。404 は null。</summary>
+    /// <summary>実行の status（HTTP の契約の値。ACTIVE / COMPLETED など）を返す。404 は null。</summary>
     public async Task<string?> GetExecutionStatusAsync(string executionDisplayId, CancellationToken cancellationToken)
     {
         var path = $"v1/executions/{Uri.EscapeDataString(executionDisplayId)}";

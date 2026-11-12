@@ -40,10 +40,10 @@ describe("ExecutionsFilterForm", () => {
     const options = within(screen.getByLabelText("ステータス")).getAllByRole<HTMLOptionElement>("option");
     expect(options.map((option) => [option.value, option.textContent])).toEqual([
       ["", "（すべて）"],
-      ["Running", "RUNNING"],
-      ["Completed", "COMPLETED"],
-      ["Cancelled", "CANCELED"],
-      ["Failed", "FAILED"]
+      ["ACTIVE", "ACTIVE"],
+      ["COMPLETED", "COMPLETED"],
+      ["FAILED", "FAILED"],
+      ["CANCELED", "CANCELED"]
     ]);
   });
 
@@ -53,9 +53,9 @@ describe("ExecutionsFilterForm", () => {
     renderWithUiText(<ExecutionsFilterForm {...filterProps({ onStatusChange })} />);
 
     // Act
-    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "Cancelled" } });
+    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "CANCELED" } });
 
     // Assert
-    expect(onStatusChange).toHaveBeenCalledWith("Cancelled");
+    expect(onStatusChange).toHaveBeenCalledWith("CANCELED");
   });
 });

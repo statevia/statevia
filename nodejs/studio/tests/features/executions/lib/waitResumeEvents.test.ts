@@ -51,7 +51,7 @@ describe("isPublishEventAvailable", () => {
   it("WAITING が 1 件かつ許可イベントが 1 件なら true", () => {
     // Arrange
     const execution = {
-      status: "Running",
+      status: "ACTIVE",
       cancelRequested: false,
       nodes: [{ status: "WAITING", waitKey: "approve", allowedEvents: null }]
     };
@@ -63,7 +63,7 @@ describe("isPublishEventAvailable", () => {
   it("許可イベントが複数なら false", () => {
     // Arrange
     const execution = {
-      status: "Running",
+      status: "ACTIVE",
       nodes: [{ status: "WAITING", allowedEvents: ["approve", "reject"] }]
     };
 
@@ -74,7 +74,7 @@ describe("isPublishEventAvailable", () => {
   it("WAITING が複数なら false", () => {
     // Arrange
     const execution = {
-      status: "Running",
+      status: "ACTIVE",
       nodes: [
         { status: "WAITING", waitKey: "a" },
         { status: "WAITING", waitKey: "b" }
@@ -88,7 +88,7 @@ describe("isPublishEventAvailable", () => {
   it("終端実行なら false", () => {
     // Arrange
     const execution = {
-      status: "Completed",
+      status: "COMPLETED",
       nodes: [{ status: "WAITING", waitKey: "approve" }]
     };
 

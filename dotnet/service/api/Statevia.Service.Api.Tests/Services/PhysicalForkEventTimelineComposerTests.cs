@@ -70,7 +70,7 @@ public sealed class PhysicalForkEventTimelineComposerTests
         Assert.Equal(3, events.Count);
         Assert.Equal(1, events[0].Seq);
         Assert.Equal("ExecutionStatusChanged", events[0].Type);
-        Assert.Equal("Running", events[0].To);
+        Assert.Equal("ACTIVE", events[0].To);
         Assert.Equal("eidParent", events[0].ExecutionId);
 
         Assert.Equal(2, events[1].Seq);

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.19 |
-| 更新日 | 2026-11-04 |
+| Version | 1.5.20 |
+| 更新日 | 2026-11-13 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.20（2026-11-13）**: `workflow.invoke` の output の `status` は HTTP と同じ実行ステータスの契約の値（通常は `ACTIVE`）にした。これまでは投影の値（`Running`）だった。
 
 **Version 1.5.19（2026-11-04）**: `join.all` は待つ枝の先頭で、Join は各枝の最後の状態が Join に入った時点で記録される（2 ノード以上の枝でも先頭の完了だけでは成立しない）。Join の input は「枝の先頭の名前 → Join に入った状態の output」。Fork / Join の Context の契約は Hosted と Engine 単体で同じ（§1.4、[execution/fork-join.md](execution/fork-join.md)）。
 
@@ -248,7 +250,7 @@ signal は Wait を再開できなかったため退役した。
   | `definitionId` | はい | 子定義 ID（display ID または UUID）。定義名は解決しない |
   | `input` | いいえ | 子ワークフロー開始 input（JSON 互換） |
 
-- **output**: `{ workflowId, displayId, status }`（開始直後の status。通常は `Running`）
+- **output**: `{ workflowId, displayId, status }`。`status` は開始直後の実行ステータスで、HTTP と同じ契約の値（通常は `ACTIVE`。[api-http.md](api-http.md) §3.2.1）
 - **制約**:
   - 現在テナント内の定義・実行に限定
   - 子開始は HTTP `POST /v1/executions` と同じ Live Principal 経路を使わない。親実行（Action を実行中の `executions` 行。Hosted Fork 枝ならその枝）の `security_snapshot_json` を継承し、子定義の project 文脈だけ再評価する

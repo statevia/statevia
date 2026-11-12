@@ -6,8 +6,8 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 /// <remarks>
 /// <para>
 /// Engine スナップショット（<c>IsCompleted</c> / <c>IsCancelled</c> / <c>IsFailed</c>）から
-/// Application が写像する内部投影値。HTTP 契約の ACTIVE / COMPLETED 等への変換は
-/// API 層のマッパーが行う。
+/// Application が写像する内部投影値。HTTP の契約の値（<see cref="ExecutionContractStatuses"/>）への変換は
+/// <see cref="ExecutionStatusMapper"/> だけが行う。HTTP に投影の値は出さない。
 /// </para>
 /// </remarks>
 public static class ExecutionProjectionStatuses

@@ -13,9 +13,10 @@ internal static class CapacityCli
         WriteIndented = true,
     };
 
-    private const string CompletedStatus = "Completed";
-    private const string FailedStatus = "Failed";
-    private const string CancelledStatus = "Cancelled";
+    // Service API の HTTP の実行ステータス（契約の値）。投影の値（Completed など）は HTTP に出ない。
+    private const string CompletedStatus = "COMPLETED";
+    private const string FailedStatus = "FAILED";
+    private const string CancelledStatus = "CANCELED";
 
     /// <summary>引数を解釈してシナリオを実行する。</summary>
     /// <param name="args">コマンドライン。</param>

@@ -74,8 +74,8 @@ public sealed class DefinitionWorkflowScenarioTests : ScenarioTestBase
         Assert.Equal(HttpStatusCode.NoContent, cancelResponse.StatusCode);
 
         // Assert: Cancelled にポーリング
-        var finalDoc = await ScenarioHttpClient.PollExecutionStatusAsync(client, executionId, "Cancelled");
-        Assert.Equal("Cancelled", finalDoc.RootElement.GetProperty("status").GetString());
+        var finalDoc = await ScenarioHttpClient.PollExecutionStatusAsync(client, executionId, "CANCELED");
+        Assert.Equal("CANCELED", finalDoc.RootElement.GetProperty("status").GetString());
     }
 
     /// <summary>

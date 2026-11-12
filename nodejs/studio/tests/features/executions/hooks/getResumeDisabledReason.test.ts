@@ -7,7 +7,7 @@ function execution(overrides: Partial<ExecutionView> = {}): ExecutionView {
   return {
     displayId: "ex-1",
     resourceId: "r-1",
-    status: "Running",
+    status: "ACTIVE",
     startedAt: "2026-01-01T00:00:00Z",
     cancelRequested: false,
     restartLost: false,
@@ -67,7 +67,7 @@ describe("getResumeDisabledReason", () => {
 
   it("execution が終了状態 (Completed) のときメッセージを返す", () => {
     // Arrange
-    const exec = execution({ status: "Completed" });
+    const exec = execution({ status: "COMPLETED" });
     const n = node();
 
     // Act
@@ -79,7 +79,7 @@ describe("getResumeDisabledReason", () => {
 
   it("execution が終了状態 (Failed) のときメッセージを返す", () => {
     // Arrange
-    const exec = execution({ status: "Failed" });
+    const exec = execution({ status: "FAILED" });
     const n = node();
 
     // Act
@@ -115,7 +115,7 @@ describe("getResumeDisabledReason", () => {
 
   it("execution が終了状態 (Cancelled) のときメッセージを返す", () => {
     // Arrange
-    const exec = execution({ status: "Cancelled" });
+    const exec = execution({ status: "CANCELED" });
     const n = node();
 
     // Act

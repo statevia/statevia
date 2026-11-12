@@ -32,7 +32,7 @@ describe("DefinitionRunStartPage", () => {
       displayId: "ex-new",
       resourceId: "res-new",
       graphId: "g-1",
-      status: "Running",
+      status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
       restartLost: false

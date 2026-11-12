@@ -62,7 +62,7 @@ export class ExecutionPage {
 
   async waitForExecutionLoaded(options?: { timeout?: number; graphId?: string }): Promise<void> {
     const timeout = options?.timeout ?? 5000;
-    await this.waitForExecutionStatus("Running", { timeout });
+    await this.waitForExecutionStatus("ACTIVE", { timeout });
     if (options?.graphId !== undefined) {
       await this.page.getByText(options.graphId, { exact: true }).first().waitFor({ state: "visible", timeout });
     }

@@ -125,8 +125,8 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         var exec = await response.Content.ReadFromJsonAsync<JsonElement>();
         var status = exec.GetProperty("status").GetString();
         Assert.True(
-            status is "Running" or "Queued",
-            $"Expected Running or Queued, got: {status}");
+            status is "ACTIVE",
+            $"Expected ACTIVE, got: {status}");
     }
 
     /// <summary>未所属の tenant.admin は定義 GET が 404 のまま、自己昇格後は 200 になる。</summary>

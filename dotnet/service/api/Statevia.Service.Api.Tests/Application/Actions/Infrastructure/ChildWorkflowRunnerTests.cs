@@ -21,7 +21,7 @@ public sealed class ChildWorkflowRunnerTests
             {
                 DisplayId = "wf-1",
                 ResourceId = executionId,
-                Status = "Running",
+                Status = "ACTIVE",
             },
         };
         services.AddSingleton<IExecutionService>(executions);
@@ -37,7 +37,7 @@ public sealed class ChildWorkflowRunnerTests
         // Assert
         Assert.Equal(executionId.ToString("D"), result.WorkflowId);
         Assert.Equal("wf-1", result.DisplayId);
-        Assert.Equal("Running", result.Status);
+        Assert.Equal("ACTIVE", result.Status);
         Assert.Equal("POST", executions.LastRequestContext?.Method);
         Assert.Equal(parentExecutionId, executions.LastRequestContext?.ParentExecutionId);
     }
@@ -88,7 +88,7 @@ public sealed class ChildWorkflowRunnerTests
             {
                 DisplayId = "wf-json",
                 ResourceId = Guid.NewGuid(),
-                Status = "Running",
+                Status = "ACTIVE",
             }
         };
         services.AddSingleton<IExecutionService>(executions);
@@ -105,7 +105,7 @@ public sealed class ChildWorkflowRunnerTests
             CancellationToken.None);
 
         // Assert
-        Assert.Equal("Running", result.Status);
+        Assert.Equal("ACTIVE", result.Status);
     }
 
     private sealed class FakeTenantContextAccessor : ITenantContextAccessor
@@ -133,7 +133,7 @@ public sealed class ChildWorkflowRunnerTests
         {
             DisplayId = "wf",
             ResourceId = Guid.NewGuid(),
-            Status = "Running",
+            Status = "ACTIVE",
         };
 
         public CommandRequestContext? LastRequestContext { get; private set; }

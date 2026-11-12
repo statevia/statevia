@@ -41,7 +41,7 @@ function dedupeEventNames(eventNames: string[]): string[] {
 
 const SUBSCRIBE_INTERNAL_EVENT_PREFIX = "statevia.event.subscribe.";
 
-const TERMINAL_EXECUTION_STATUSES = new Set(["Completed", "Cancelled", "Failed"]);
+const TERMINAL_EXECUTION_STATUSES = new Set(["COMPLETED", "CANCELED", "FAILED"]);
 
 /**
  * Resume 候補が Subscribe の内部イベント名だけか。

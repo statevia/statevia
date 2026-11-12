@@ -4,7 +4,7 @@ export const mockExecution: ExecutionView = {
   displayId: "ex-1",
   /** buildExecutionView が graphId にコピーするため、表示検証用に resourceId = graphId と揃える */
   resourceId: "hello",
-  status: "Running",
+  status: "ACTIVE",
   startedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
   restartLost: false,

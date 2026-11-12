@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5 |
-| 更新日 | 2026-11-08 |
+| Version | 1.6 |
+| 更新日 | 2026-11-13 |
 | 関連 | [concepts/execution-model.md](../../concepts/execution-model.md), [wait-cancel.md](wait-cancel.md), [events-and-commands.md](events-and-commands.md), [../../reference/glossary.md](../../reference/glossary.md) |
 
 ---
@@ -18,6 +18,8 @@
 - **MUST**: 実行器の無い状態に遷移したら、`on.Failed` を辿らずに実行を Failed にする（下記「実行器の無い状態」）。
 
 背景は [execution-model](../../concepts/execution-model.md)、語の区別は [用語集](../../reference/glossary.md) を参照。
+
+**Version 1.6（2026-11-13）**: HTTP の実行ステータスを実装と一致させた。応答は契約の値（`ACTIVE` など）だけを返し、`status` フィルタは `UNKNOWN` を受けない。
 
 **Version 1.5（2026-11-08）**: 実装されていない状態機械の章（ノード状態 IDLE / READY など、24 種のイベント、reducer と優先順位の関数）を外し、用語とステータスを実装に合わせた。
 
@@ -113,9 +115,9 @@ Execution のライフサイクルは、内部の投影値と HTTP の値の二�
 | `Completed` | `COMPLETED` | 正常に終わった |
 | `Failed` | `FAILED` | 失敗で終わった |
 | `Cancelled` | `CANCELED` | キャンセルで終わった |
-| `Unknown` | `UNKNOWN` | スナップショットが無いなど、判定できない |
+| `Unknown` / 想定外の値 | `UNKNOWN` | スナップショットが無いなど、判定できない。HTTP の `status` フィルタでは受けない |
 
-投影値は Engine のスナップショットから写し（`ExecutionProjectionOrchestrator.MapStatus`）、HTTP の値は API 層で変換する（`ExecutionStatusMapper`）。終端（`Completed` / `Failed` / `Cancelled`）からは戻らない。キャンセルの要求を受けたかどうかは、ステータスとは別の `cancel_requested` で持つ。
+投影値は Engine のスナップショットから写し（`ExecutionProjectionOrchestrator.MapStatus`）、HTTP の値は応答を組み立てるときに `ExecutionStatusMapper`（Core.Application.Contracts）で変換する。HTTP に投影の値は出さない。一覧の `status` フィルタは契約の値を投影の値に戻して絞る（[api-http.md](../api-http.md) §3.2.1）。終端（`Completed` / `Failed` / `Cancelled`）からは戻らない。キャンセルの要求を受けたかどうかは、ステータスとは別の `cancel_requested` で持つ。
 
 失敗とキャンセルが重なったときにどちらで終わるかは、上の「失敗事実と on.Failed」の順で決まる。キャンセルの受け付けと収束は [wait-cancel.md](wait-cancel.md) を正とする。
 

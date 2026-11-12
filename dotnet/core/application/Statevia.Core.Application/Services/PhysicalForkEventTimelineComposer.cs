@@ -88,7 +88,7 @@ internal static class PhysicalForkEventTimelineComposer
                 row.Seq,
                 row.OccurredAt,
                 "ExecutionStatusChanged",
-                ExecutionProjectionStatuses.Running);
+                ExecutionContractStatuses.Active);
         }
 
         if (row.Type == TypeCancelled)
@@ -99,7 +99,7 @@ internal static class PhysicalForkEventTimelineComposer
                 row.Seq,
                 row.OccurredAt,
                 "ExecutionStatusChanged",
-                ExecutionProjectionStatuses.Cancelled);
+                ExecutionContractStatuses.Canceled);
         }
 
         if (row.Type == TypePublished)

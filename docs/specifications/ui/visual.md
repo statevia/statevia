@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.3 |
-| 更新日 | 2026-11-12 |
+| Version | 1.4 |
+| 更新日 | 2026-11-13 |
 | 関連 | [execution-graph.md](../execution/execution-graph.md), [guides/ui-user-guide.md](../../guides/ui-user-guide.md) |
 
 ---
@@ -69,7 +69,7 @@
 
 表示ラベル:
 
-- 実行とノードの状態、ノードのタイプは訳さず、API の値を大文字にして出す（`Running` → `RUNNING`、`Task` → `TASK`）。実行の `Cancelled` はノードと同じ `CANCELED` と出す。
+- 実行とノードの状態、ノードのタイプは訳さず、API の値を大文字にして出す（`Task` → `TASK`）。実行の状態は API が契約の値（`ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN`）で返すので、そのまま出す。`CANCELED` の綴りは実行とノードでそろっている。
 - 大文字にするのは表示だけで、色の判定・比較・フィルタの送信値には API の値をそのまま使う。
 
 ---

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.40 |
-| 更新日 | 2026-11-12 |
+| Version | 1.41 |
+| 更新日 | 2026-11-13 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -17,6 +17,7 @@
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{definitionId}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
 - **MUST**: 入力検証失敗は **422**、`error.code = VALIDATION_ERROR`（[data-integration.md](data-integration.md) §7）。
+- **MUST**: 実行ステータスは契約の値 `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` / `UNKNOWN` で返す。投影の値（`Running` / `Cancelled` など）は返さない。一覧の `status` フィルタは `ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED` だけを受け、それ以外は 422（§3.2.1）。
 - **MUST**: 定義名・イベント名・topic / 非空 key / resumeKey / 指定時の initialState は ASCII 識別子（先頭英字、以降英数字と `.` `_` `-`）。表示名（ユーザー / グループ / API キー / テナント）は ASCII ラベル（先頭末尾英数字。途中のみスペース可）。パスワードと実行 payload は文字種制限しない。既存の非 ASCII 識別子は GET では落ちず、次回 write で 422。
 - **SHOULD**: ミューテーションに `X-Idempotency-Key` を付与する（印字可能 ASCII。制御文字は 422）。
 - **SHOULD**: Start 時の `input` / state `output` を一覧・GET で既定返却しない（[io-log-masking.md](platform/io-log-masking.md)）。
@@ -26,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.41（2026-11-13）**: **破壊的な変更。** 実行ステータスを契約の値にそろえる。`POST /v1/executions` の 201、`GET /v1/executions` / `GET /v1/executions/{executionId}`、`/state` の `status` と、`/events` の `ExecutionStatusChanged` の `to` は、`Running` → `ACTIVE`、`Cancelled` → `CANCELED` のように契約の値になる。`GET /v1/executions?status=` は契約の値だけを受け、投影の値・`UNKNOWN`・それ以外は 422 にする（これまでは任意の文字列を受けて 0 件を返した）。移行期間は置かない。`statevia.action.builtin.workflow.invoke` の output の `status` も同じ値になる。ノードの状態、DB の `executions.status`、保存済みのデータは変えない。冪等キーで再生する応答は、保存時の本文をそのまま返す。
 
 **Version 1.40（2026-11-12）**: Studio の画面の説明を画面の語にそろえる（run-as の欄は「実行するサービスアカウント」、実行リソース許可の画面は「操作できる定義」、通知 SMTP の画面は「通知メールの設定」）。HTTP の契約は変えない。
 
@@ -363,13 +366,13 @@ Request:
 - HTTP 受理前に同じ Restore を行う。現行コンパイラで戻せない版（短名 Action、`name` 欠落など）は **422**。実行行・Start work item・`WorkflowStarted` を作らない
 - 永続化: `executions.definition_version_id` に開始版を必ず保存（Start は ReadCommitted 1 tx: `executions` + snapshot + `event_store` + dedup）
 - queued Start の再処理は、非空 graph・正当な runtime checkpoint・同一プロセスの Engine 載荷のいずれかがあれば `engine.Start` しない（Complete のみ）。空グラフかつ checkpoint なしなら Start する（[durability.md](../concepts/durability.md)）
-- Response: 201 Created（Restore できた版の enqueue。成功パスの契約は変えない）
+- Response: 201 Created（Restore できた版の enqueue。成功パスの契約は変えない）。`status` は `ACTIVE`（§3.2.1）
 
 ```json
 {
   "displayId": "string",
   "resourceId": "uuid",
-  "status": "string",
+  "status": "ACTIVE",
   "startedAt": "date-time"
 }
 ```
@@ -382,7 +385,7 @@ Request:
 
 - **`?limit=&offset=&status=&name=&definitionId=&projectId=&sortBy=&sortOrder=`**（`limit` 必須）: 200 OK、`PagedResult<ExecutionResponse>`。
   - 対象は呼び出し元が Reader 以上の Project に属する定義の実行。`projectId` を付けるとその Project だけ。未所属は 0 件。実行リソース許可の外も件数から外す
-  - `status`: `executions.status` 列と**完全一致**
+  - `status`: 実行ステータスの契約の値（`ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED`。大文字小文字を区別する）。サーバーが投影の値に戻して `executions.status` 列と完全一致で絞る。空は絞り込まない
   - `name`: `display_id` の部分一致（`Guid` 形式入力時は `execution_id` 完全一致も許容）
   - `definitionId`: Definition の displayId または UUID
   - `sortBy`: `updatedAt` / `displayId`（未指定時は `updatedAt`）
@@ -390,7 +393,22 @@ Request:
   - `limit`: 1〜500（必須）、`offset`: 0 以上（省略時 0）
   - `items` / `totalCount` / `hasMore` は、`execution_branches.execution_id` に無いルート execution のみ。ネスト Fork の中間親も子 ID として除外する。追加のクエリパラメータは無い
 - `limit` 未指定・不正: **422**
+- `status` が許可値以外（投影の値 `Running` / `Cancelled` など、`UNKNOWN`、小文字を含む）: **422**（`field=status`、`message=status must be one of ACTIVE, COMPLETED, FAILED, CANCELED`）
 - 子の displayId または UUID を指定した **GET /v1/executions/{executionId}** は、一覧に含まれなくても 200 で返す
+
+#### 3.2.1 実行ステータスの値
+
+HTTP の実行ステータスは次の契約の値だけを使う。DB の `executions.status`（投影の値）は変えず、応答を組み立てるときに変換する。ノードの状態（`ExecutionViewDto.nodes[*].status`）とは別の値の集合で、`FAILED` / `CANCELED` の綴りはそろえてある。
+
+| 契約の値 | 投影の値（`executions.status`） | 意味 | `status` フィルタ |
+| --- | --- | --- | --- |
+| `ACTIVE` | `Running` | 終端していない | 受ける |
+| `COMPLETED` | `Completed` | 正常に終わった | 受ける |
+| `FAILED` | `Failed` | 失敗で終わった | 受ける |
+| `CANCELED` | `Cancelled` | キャンセルで終わった | 受ける |
+| `UNKNOWN` | 上記以外 | 投影の値が想定外で判定できない | 受けない（投影に書かれる値ではなく、絞ると必ず 0 件のため） |
+
+使う場所: `ExecutionResponse.status`（一覧・取得・開始の 201）、`ExecutionViewDto.status`（§3.5）、タイムラインの `ExecutionStatusChanged` の `to`（§3.6。`ACTIVE` または `CANCELED`）。
 
 ### 3.3 実行取得
 
@@ -439,7 +457,8 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 - Response: 200 OK。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 - 現行実装は **スナップショット近似**であり、`atSeq` 時点の厳密な過去状態の完全再構成を保証するものではない（運用上の注意は UI 文言・将来の強化チケットに委ねる）。
 - **`ExecutionViewDto`** は UI の `ExecutionView` に近い camelCase。`displayId`, `resourceId`, `graphId`, `status`, `startedAt`, `updatedAt`, `cancelRequested`, `restartLost`, **`nodes`**。
-- **`restartLost`**: 開始済み Resume の未分類試行上限など、復旧可能な中断の観測印。このとき投影 `status` は `Failed` にしない。checkpoint は残す。
+- **`status`**: 実行ステータスの契約の値（§3.2.1）。
+- **`restartLost`**: 開始済み Resume の未分類試行上限など、復旧可能な中断の観測印。このとき `status` は `FAILED` にしない（投影も `Failed` にしない）。checkpoint は残す。
 - **`ExecutionViewDto.nodes[*]`**（`ExecutionViewNodeDto`）の主なフィールド:
   - **`nodeId`**: 実行グラフの **`nodeId`** と一致する識別子（試行単位の実行ノード。旧キー `executionNodeId` は用いない）。
   - **`nodeName`**: 定義上の状態名（**`nodeId` とは別**。旧キー `stateName` は用いない）。
@@ -457,6 +476,7 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 
 - クエリ: **`afterSeq`**（既定 0）、**`limit`**（既定 500、上限は実装に従う）。
 - Response: 200 OK、`ExecutionEventsResponseDto`（タイムライン行の列挙）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。グラフ取得と同じ判定を通る。
+- `type = ExecutionStatusChanged` の行の `to` は実行ステータスの契約の値（開始は `ACTIVE`、キャンセルは `CANCELED`。§3.2.1）。
 
 ### 3.7 SSE（グラフ変化の Push）
 
@@ -514,7 +534,7 @@ Request（JSON）:
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
 - User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。終端より先に判定する。Snapshot の許可キーでは決めない。
-- 投影 status がすでに終端（`Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
+- 実行がすでに終端（HTTP の `COMPLETED` / `FAILED` / `CANCELED`。投影の `Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
 - 非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（従来どおり）。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。
 - Response: 204 No Content。404 は実行未存在。詳細は `docs/specifications/data-integration.md` §7。

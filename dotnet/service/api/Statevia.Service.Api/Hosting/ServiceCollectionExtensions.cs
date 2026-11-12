@@ -196,7 +196,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<DisplayIdServiceImpl>();
         services.AddScoped<IDisplayIdService>(sp => sp.GetRequiredService<DisplayIdServiceImpl>());
         services.AddScoped<IDisplayIdWriteService>(sp => sp.GetRequiredService<DisplayIdServiceImpl>());
-        services.AddScoped<IExecutionReadModelService, ExecutionReadModelService>();
         services.AddStateviaInfrastructureCommon();
         services.AddSingleton<IExecutionIdGenerator>(
             sp => new DelegateExecutionIdGenerator(() => sp.GetRequiredService<IIdGenerator>().NewSequentialGuid().ToString()));

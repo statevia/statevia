@@ -3,20 +3,20 @@ import { render, screen } from "@testing-library/react";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 
 describe("StatusBadge", () => {
-  it("Execution ステータスを大文字にして表示する", () => {
+  it("Execution ステータス（契約の値）をそのまま表示する", () => {
     // Arrange
-    const props = { status: "Running" as const };
+    const props = { status: "ACTIVE" as const };
 
     // Act
     render(<StatusBadge {...props} />);
 
     // Assert
-    expect(screen.getByText("RUNNING")).toBeInTheDocument();
+    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
   });
 
   it("追加 className を結合して表示する", () => {
     // Arrange
-    const props = { status: "Completed" as const, className: "rounded-full" };
+    const props = { status: "COMPLETED" as const, className: "rounded-full" };
 
     // Act
     render(<StatusBadge {...props} />);
@@ -25,9 +25,9 @@ describe("StatusBadge", () => {
     expect(screen.getByText("COMPLETED")).toHaveClass("rounded-full");
   });
 
-  it("実行の Cancelled はノードと同じ CANCELED で表示する", () => {
+  it("実行の CANCELED はノードと同じ綴りで表示する", () => {
     // Arrange
-    const props = { status: "Cancelled" as const };
+    const props = { status: "CANCELED" as const };
 
     // Act
     render(<StatusBadge {...props} />);

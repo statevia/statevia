@@ -8,7 +8,7 @@ import { EVENT_NAME_MAX_LENGTH, EVENT_NAME_PATTERN } from "@/shared/lib/validati
 import { buildExecutionView } from "../lib/executionView";
 import type { CommandAccepted, ExecutionDTO, ExecutionGraphDTO, ExecutionView } from "../types";
 
-const TERMINAL_STATUSES = new Set<string>(["Completed", "Cancelled", "Failed"]);
+const TERMINAL_STATUSES = new Set<string>(["COMPLETED", "CANCELED", "FAILED"]);
 /** SSE 受信後に GET で Read Model を確定するまでの待ち（ms）。 */
 export const DEFAULT_STREAM_REFRESH_DEBOUNCE_MS = 500;
 /** SSE オフ時のポーリング間隔（ms）。 */
@@ -26,7 +26,7 @@ export type UseExecutionOptions = {
   onCancelSuccess?: () => void;
   /** イベントの発行に成功したときに呼ぶ。 */
   onPublishSuccess?: () => void;
-  /** false のとき EventSource を開かず、Running 中はポーリングで更新する。既定 true。 */
+  /** false のとき EventSource を開かず、ACTIVE の間はポーリングで更新する。既定 true。 */
   streamEnabled?: boolean;
   /** SSE イベント後のフル GET に使うデバウンス（ms）。既定 `DEFAULT_STREAM_REFRESH_DEBOUNCE_MS`。 */
   streamRefreshDebounceMs?: number;
