@@ -17,7 +17,7 @@ namespace Statevia.Core.Application.Contracts.Persistence;
 public static class ExecutionStatusMapper
 {
     /// <summary>フィルタで受ける契約の値と、それに対応する投影の値。</summary>
-    private static readonly IReadOnlyDictionary<string, string> ContractToProjection = new Dictionary<string, string>(StringComparer.Ordinal)
+    private static readonly Dictionary<string, string> ContractToProjection = new(StringComparer.Ordinal)
     {
         [ExecutionContractStatuses.Active] = ExecutionProjectionStatuses.Running,
         [ExecutionContractStatuses.Completed] = ExecutionProjectionStatuses.Completed,
