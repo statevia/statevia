@@ -132,6 +132,25 @@ export type UiText = DefinitionsFeatureUiText &
     error: string;
 
   },
+  /** 共通のダイアログと入力欄の文言。 */
+  dialog: {
+    /** ダイアログを閉じるボタンの aria-label。 */
+    close: string;
+    /** 削除の確認で名前の入力を求める説明。 */
+    typeNameToConfirm: (name: string) => string;
+    /** 必須の入力欄のマークの読み上げ。 */
+    required: string;
+  },
+  /** パンくずリストの文言。 */
+  breadcrumbs: {
+    /** `<nav>` の aria-label。 */
+    aria: string;
+  },
+  /** 状態バッジの文言。 */
+  statusBadge: {
+    /** 実行の状態の横に付ける待機の印（状態の値ではない）。 */
+    waiting: string;
+  },
   errorPrefixes: {
     unauthorized401: string;
     forbidden403: string;
@@ -252,6 +271,17 @@ export const uiText: UiText = {
     empty: "表示できるデータがありません。",
     error: "データの取得に失敗しました。",
 
+  },
+  dialog: {
+    close: "閉じる",
+    typeNameToConfirm: (name: string) => `確認のため、「${name}」と入力してください`,
+    required: "必須",
+  },
+  breadcrumbs: {
+    aria: "パンくずリスト",
+  },
+  statusBadge: {
+    waiting: "待機中",
   },
   errorPrefixes: {
     unauthorized401: "401 認証が必要です",

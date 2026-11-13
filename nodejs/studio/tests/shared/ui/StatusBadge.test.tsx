@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
+import { uiText } from "@/shared/i18n/uiText";
 
 describe("StatusBadge", () => {
   it("Execution ステータス（契約の値）をそのまま表示する", () => {
@@ -34,5 +35,22 @@ describe("StatusBadge", () => {
 
     // Assert
     expect(screen.getByText("CANCELED")).toBeInTheDocument();
+  });
+
+  it("waiting のときは状態を変えずに「待機中」の印を横に付ける", () => {
+    // Arrange / Act
+    render(<StatusBadge status="ACTIVE" waiting />);
+
+    // Assert
+    expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    expect(screen.getByText(uiText.statusBadge.waiting)).toBeInTheDocument();
+  });
+
+  it("waiting を付けないときは印を出さない", () => {
+    // Arrange / Act
+    render(<StatusBadge status="ACTIVE" />);
+
+    // Assert
+    expect(screen.queryByText(uiText.statusBadge.waiting)).toBeNull();
   });
 });

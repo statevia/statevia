@@ -8,9 +8,12 @@ type ToastProps = {
   onClose: () => void;
 };
 
+/** 色はトークンから取る。ダークでは `*-container` を混色で弱める（`Notice` と同じ）。 */
 const TOAST_TONE_CLASS_MAP: Record<ToastState["tone"], string> = {
-  error: "border-red-200 bg-red-50 text-red-900",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  error:
+    "border-md-error/40 bg-md-error-container text-md-on-error-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-error-container)_30%,transparent)]",
+  success:
+    "border-md-success/40 bg-md-success-container text-md-on-success-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-success-container)_30%,transparent)]",
   info: "border-md-outline bg-md-surface text-md-on-surface"
 };
 
@@ -27,7 +30,7 @@ export function Toast({ toast, onClose }: Readonly<ToastProps>) {
 
   return (
     <div
-      className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}
+      className={`rounded-card border px-4 py-3 text-sm ${toneClass}`}
     >
       <div className="flex items-start justify-between gap-4">
         <output className="flex-1" aria-live="polite" aria-atomic="true">

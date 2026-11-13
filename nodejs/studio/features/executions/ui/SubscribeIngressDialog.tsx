@@ -129,10 +129,10 @@ export function SubscribeIngressDialog({ open, onClose, onAccepted }: Readonly<S
         {dialog.fieldError && <p className="text-xs text-md-error">{dialog.fieldError}</p>}
         {dialog.formError && <p className="text-xs text-md-error">{dialog.formError}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             {dialog.text.cancel}
           </Button>
-          <Button type="submit" variant="primary" disabled={dialog.submitting}>
+          <Button type="submit" variant="standard" disabled={dialog.submitting}>
             {dialog.text.submit}
           </Button>
         </div>

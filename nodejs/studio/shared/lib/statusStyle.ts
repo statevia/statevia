@@ -46,10 +46,20 @@ function softDarkContainerBackground(semantic: DarkSoftContainerSemantic): strin
 /** ステータスバッジ用の状態型。 */
 export type StatusLike = ExecutionStatus | NodeStatus;
 
+/**
+ * 状態バッジの点の形。色だけに頼らず形でも区別する。
+ * 輪 = 進行中・未着手、四角 = 待機、丸 = 完了、ひし形 = 失敗・不明、線 = キャンセル。
+ */
+export type StatusDotShape = "ring" | "square" | "circle" | "diamond" | "line";
+
 /** ステータス表示の色・ラベル。 */
 export type StatusStyle = {
-  /** バッジの CSS クラス。 */
+  /** 塗りのバッジ（グラフ・凡例など小さい場所）の CSS クラス。 */
   badgeClass: string;
+  /** `StatusBadge` の点の形。 */
+  dotShape: StatusDotShape;
+  /** `StatusBadge` の点の色（文字色のクラス。点は currentColor で描く）。 */
+  accentClass: string;
   /** 枠線の CSS クラス。 */
   borderClass: string;
   /** 背景の CSS クラス。 */
@@ -65,6 +75,8 @@ export type StatusStyle = {
 const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   ACTIVE: {
     badgeClass: "bg-md-info text-md-on-info",
+    dotShape: "ring",
+    accentClass: "text-md-info",
     borderClass: "border-md-info",
     bgClass: softDarkContainerBackground("info"),
     textClass: "text-md-on-info-container",
@@ -73,6 +85,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   COMPLETED: {
     badgeClass: "bg-md-success text-md-on-success",
+    dotShape: "circle",
+    accentClass: "text-md-success",
     borderClass: "border-md-success",
     bgClass: softDarkContainerBackground("success"),
     textClass: "text-md-on-success-container",
@@ -81,6 +95,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   UNKNOWN: {
     badgeClass: "bg-md-error text-md-on-error",
+    dotShape: "diamond",
+    accentClass: "text-md-error",
     borderClass: "border-md-error",
     bgClass: softDarkContainerBackground("error"),
     textClass: "text-md-on-error-container",
@@ -89,6 +105,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   IDLE: {
     badgeClass: "bg-md-neutral text-md-on-neutral",
+    dotShape: "ring",
+    accentClass: "text-md-on-surface-variant",
     borderClass: "border-md-outline-variant",
     bgClass: "bg-md-neutral-container",
     textClass: "text-md-on-neutral-container",
@@ -97,6 +115,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   READY: {
     badgeClass: "bg-md-info text-md-on-info",
+    dotShape: "ring",
+    accentClass: "text-md-info",
     borderClass: "border-md-info",
     bgClass: softDarkContainerBackground("info"),
     textClass: "text-md-on-info-container",
@@ -105,6 +125,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   RUNNING: {
     badgeClass: "bg-md-neutral text-md-on-neutral",
+    dotShape: "ring",
+    accentClass: "text-md-on-surface-variant",
     borderClass: "border-md-outline-variant",
     bgClass: "bg-md-neutral-container",
     textClass: "text-md-on-neutral-container",
@@ -113,6 +135,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   WAITING: {
     badgeClass: "bg-md-warning text-md-on-warning",
+    dotShape: "square",
+    accentClass: "text-md-warning",
     borderClass: "border-md-warning",
     bgClass: softDarkContainerBackground("warning"),
     textClass: "text-md-on-warning-container",
@@ -121,6 +145,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   SUCCEEDED: {
     badgeClass: "bg-md-success text-md-on-success",
+    dotShape: "circle",
+    accentClass: "text-md-success",
     borderClass: "border-md-success",
     bgClass: softDarkContainerBackground("success"),
     textClass: "text-md-on-success-container",
@@ -129,6 +155,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   FAILED: {
     badgeClass: "bg-md-error text-md-on-error",
+    dotShape: "diamond",
+    accentClass: "text-md-error",
     borderClass: "border-md-error",
     bgClass: softDarkContainerBackground("error"),
     textClass: "text-md-on-error-container",
@@ -137,6 +165,8 @@ const STATUS_STYLE: Record<StatusLike, StatusStyle> = {
   },
   CANCELED: {
     badgeClass: "bg-md-error text-md-on-error",
+    dotShape: "line",
+    accentClass: "text-md-error",
     borderClass: "border-md-error",
     bgClass: softDarkContainerBackground("error"),
     textClass: "text-md-on-error-container",

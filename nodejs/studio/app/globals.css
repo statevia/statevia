@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 
 /*
+  `dark:` はアプリのテーマ（html の data-theme）に合わせる。
+  Tailwind の既定は OS の prefers-color-scheme なので、そのままだとテーマの切り替えと食い違う。
+*/
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
   色の正本は下の CSS 変数。ここは同じ変数を Tailwind のユーティリティへ写す。
   値の変更は変数側で行う。md 接頭辞は既定パレットを上書きしないため。
 */

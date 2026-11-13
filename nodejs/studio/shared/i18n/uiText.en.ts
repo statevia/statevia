@@ -119,6 +119,17 @@ export const uiTextEn: UiText = {
     error: "Failed to load data.",
 
   },
+  dialog: {
+    close: "Close",
+    typeNameToConfirm: (name: string) => `Type "${name}" to confirm`,
+    required: "Required",
+  },
+  breadcrumbs: {
+    aria: "Breadcrumb",
+  },
+  statusBadge: {
+    waiting: "Waiting",
+  },
   errorPrefixes: {
     unauthorized401: "401 Authentication required",
     forbidden403: "403 Insufficient permission or tenant is missing",

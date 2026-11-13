@@ -1,8 +1,15 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+"use client";
+
+import { useId, type InputHTMLAttributes, type ReactNode } from "react";
+import { FieldLabel, FieldMessage, INPUT_BASE_CLASS, INPUT_ERROR_CLASS, joinFieldClassNames } from "./FormField";
 
 type TextFieldProps = {
   /** 入力に結び付けるラベル文言。 */
   label: string;
+  /** 入力の下に出す補足の説明。 */
+  hint?: ReactNode;
+  /** エラーの文言。あれば枠を赤にし、説明の代わりに出す。 */
+  error?: ReactNode;
   /** 入力へ追加するクラス。等幅が必要なときだけ `font-mono` を渡す。 */
   className?: string;
   /** 入力の直下に置く要素。候補リストなど、このフィールドだけの補足。 */
@@ -10,30 +17,27 @@ type TextFieldProps = {
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "children">;
 
 /**
- * 追加クラスを基底クラスの後ろへ結合する。
- * @param base 入力の共通クラス。
- * @param extra 呼び出し側のクラス。無ければ基底のみ。
- * @returns 結合した class 文字列。
- */
-function joinClassNames(base: string, extra?: string): string {
-  return [base, extra].filter(Boolean).join(" ");
-}
-
-/**
  * ラベル付きの 1 行入力。
+ * `required` のときは項目名の右に「*」を付ける。説明とエラーは同じ位置に出し、`aria-describedby` で入力と結ぶ。
  * 枠と背景はセマンティックトークンに固定する。候補リストの開閉はこのコンポーネントの外で行う。
  */
-export function TextField({ label, className, children, ...inputProps }: Readonly<TextFieldProps>) {
-  const inputClassName = joinClassNames(
-    "mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm",
-    className
-  );
-
+export function TextField({ label, hint, error, className, children, required, ...inputProps }: Readonly<TextFieldProps>) {
+  const messageId = useId();
+  const hasMessage = Boolean(error ?? hint);
   return (
-    <label className="relative block text-sm text-md-on-surface">
-      <span>{label}</span>
-      <input className={inputClassName} {...inputProps} />
+    <div className="relative block">
+      <label className="block">
+        <FieldLabel label={label} required={required} />
+        <input
+          className={joinFieldClassNames(INPUT_BASE_CLASS, "h-9", error ? INPUT_ERROR_CLASS : undefined, className)}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={hasMessage ? messageId : undefined}
+          {...inputProps}
+        />
+      </label>
+      <FieldMessage id={messageId} hint={hint} error={error} />
       {children}
-    </label>
+    </div>
   );
 }

@@ -38,7 +38,10 @@ export function ExecutionsList({ items, onOpen }: Readonly<ExecutionsListProps>)
           <li key={execution.displayId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={execution.status} />
+                {/* 状態の文字の長さで右の ID の開始位置がずれないよう、状態の列幅を固定する */}
+                <span className="inline-flex w-28 shrink-0">
+                  <StatusBadge status={execution.status} />
+                </span>
                 <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
                   {execution.displayId}
                 </span>
