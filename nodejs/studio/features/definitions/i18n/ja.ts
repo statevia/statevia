@@ -18,6 +18,8 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
     },
     sortLabel: "並び順",
     sortByCreatedAt: "作成日時",
+    sortByUpdatedAt: "更新日時",
+    neverExecuted: "まだ実行していません",
     sortByName: "名前",
     sortOrderDesc: "降順",
     sortOrderAsc: "昇順",
@@ -26,6 +28,7 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
     listSummary: (totalCount: number, page: number) => `合計 ${totalCount} 件（${page} ページ目）`,
     columns: {
       name: "名前",
+      lastExecution: "最後の実行",
       createdAt: "作成日時",
       actions: "操作",
     },

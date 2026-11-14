@@ -10,6 +10,8 @@ import { matchesPattern } from "@/shared/lib/validation/primitives";
 import { DEFINITION_ID_PATTERN, SEARCH_NAME_PATTERN } from "@/shared/lib/validation/searchRules";
 import {
   buildExecutionsListPath,
+  getExecutionCounts,
+  type ExecutionCounts,
   type ExecutionsListQuery,
   type SortOrder
 } from "../api";
@@ -18,11 +20,14 @@ import type { ExecutionDTO, PagedExecutions } from "../types";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 500;
 
-/** 一覧フィルタの状態セレクト値（API の契約の値）。空文字は未指定。`UNKNOWN` は API が受けないので含めない。 */
-export type ExecutionStatusFilter = "" | "ACTIVE" | "COMPLETED" | "FAILED" | "CANCELED";
+/**
+ * 一覧の状態の絞り込み（ピルの値）。空文字は未指定。`UNKNOWN` は API が受けないので含めない。
+ * `NEEDS_ATTENTION` は状態の値ではなく要対応（待機中または `FAILED`）で、URL と API には `needsAttention=true` で渡す。
+ */
+export type ExecutionStatusFilter = "" | "NEEDS_ATTENTION" | "ACTIVE" | "COMPLETED" | "FAILED" | "CANCELED";
 
 /** 一覧のソートキー。URL の未知値は更新日時に寄せる。 */
-export type ExecutionSortBy = "updatedAt" | "displayId";
+export type ExecutionSortBy = "updatedAt" | "startedAt" | "displayId";
 
 /** 実行一覧の描画用状態。ReactNode は含まない。 */
 export type ExecutionsPageModel = {
@@ -30,6 +35,8 @@ export type ExecutionsPageModel = {
   items: ExecutionDTO[] | null;
   /** 全件数。未取得または失敗時は null。 */
   totalCount: number | null;
+  /** 状態ごと・要対応の件数（ピルに出す）。未取得または失敗時は null（件数を出さずに一覧は出す）。 */
+  counts: ExecutionCounts | null;
   /** 一覧取得中か。 */
   loading: boolean;
   /** 取得失敗・検証失敗・受理のトースト。無ければ null。 */
@@ -119,7 +126,10 @@ function readListQuery(searchParams: { get: (name: string) => string | null }): 
   const limit = Number.isFinite(limitRaw) ? Math.min(MAX_LIMIT, Math.max(1, limitRaw)) : DEFAULT_LIMIT;
   const offsetRaw = Number.parseInt(searchParams.get("offset") ?? "0", 10);
   const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0;
-  const status = toStatusFilter(searchParams.get("status")?.trim() ?? "");
+  const status =
+    searchParams.get("needsAttention") === "true"
+      ? "NEEDS_ATTENTION"
+      : toStatusFilter(searchParams.get("status")?.trim() ?? "");
   const name = searchParams.get("name")?.trim() ?? "";
   const definitionId = searchParams.get("definitionId")?.trim() ?? "";
   const sortBy = toSortBy(searchParams.get("sortBy")?.trim() ?? "");
@@ -127,7 +137,7 @@ function readListQuery(searchParams: { get: (name: string) => string | null }): 
   return {
     pagination: { limit, offset },
     sort: { sortBy, sortOrder },
-    status: status || undefined,
+    ...toStatusParams(status),
     name: name || undefined,
     definitionId: definitionId || undefined
   };
@@ -140,6 +150,7 @@ function readListQuery(searchParams: { get: (name: string) => string | null }): 
  */
 function toStatusFilter(value: string): ExecutionStatusFilter {
   switch (value) {
+    case "NEEDS_ATTENTION":
     case "ACTIVE":
     case "COMPLETED":
     case "FAILED":
@@ -151,12 +162,43 @@ function toStatusFilter(value: string): ExecutionStatusFilter {
 }
 
 /**
+ * 状態の絞り込みを一覧クエリの項目へ写す。要対応は `needsAttention`、それ以外は `status`。
+ * @param filter ピルの値。
+ * @returns 一覧クエリに混ぜる項目。
+ */
+function toStatusParams(filter: ExecutionStatusFilter): Pick<ExecutionsListQuery, "status" | "needsAttention"> {
+  switch (filter) {
+    case "":
+      return {};
+    case "NEEDS_ATTENTION":
+      return { needsAttention: true };
+    default:
+      return { status: filter };
+  }
+}
+
+/**
+ * 一覧クエリから状態の絞り込み（ピルの値）を読む。
+ * @param query 一覧クエリ。
+ * @returns ピルの値。
+ */
+function readStatusFilter(query: ExecutionsListQuery): ExecutionStatusFilter {
+  return query.needsAttention ? "NEEDS_ATTENTION" : toStatusFilter(query.status ?? "");
+}
+
+/**
  * ソートキーへ寄せる。未知値は更新日時。
  * @param value URL またはセレクトの文字列。
  * @returns 許可されたソートキー。
  */
 function toSortBy(value: string): ExecutionSortBy {
-  return value === "displayId" ? "displayId" : "updatedAt";
+  switch (value) {
+    case "displayId":
+    case "startedAt":
+      return value;
+    default:
+      return "updatedAt";
+  }
 }
 
 /**
@@ -183,6 +225,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
   const router = useRouter();
   const [items, setItems] = useState<ExecutionDTO[] | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [counts, setCounts] = useState<ExecutionCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nameDraft, setNameDraft] = useState("");
@@ -202,7 +245,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     setDefinitionDraft(listQuery.definitionId ?? "");
   }, [listQuery.name, listQuery.definitionId]);
 
-  const status = toStatusFilter(listQuery.status ?? "");
+  const status = readStatusFilter(listQuery);
   const sortBy = toSortBy(listQuery.sort.sortBy ?? "");
   const sortOrder = toSortOrder(listQuery.sort.sortOrder ?? "");
   const currentPage = useMemo(
@@ -220,6 +263,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     if (projectId === null) {
       setItems([]);
       setTotalCount(0);
+      setCounts(null);
       setToast(null);
       setLoading(false);
       return true;
@@ -227,22 +271,23 @@ export function useExecutionsPage(): ExecutionsPageModel {
     setLoading(true);
     setToast(null);
     try {
-      const path = buildExecutionsListPath({
-        pagination: listQuery.pagination,
-        sort: listQuery.sort,
-        status: listQuery.status,
-        name: listQuery.name,
+      const path = buildExecutionsListPath({ ...listQuery, projectId });
+      // 件数はピルの補助なので、失敗しても一覧は出す（件数を出さないだけ）。
+      const countsRequest = getExecutionCounts({
         definitionId: listQuery.definitionId,
-        projectId,
-      });
-      const page = await apiGet<PagedExecutions>(path);
+        name: listQuery.name,
+        projectId
+      }).catch(() => null);
+      const [page, nextCounts] = await Promise.all([apiGet<PagedExecutions>(path), countsRequest]);
       setItems(page.items);
       setTotalCount(page.totalCount);
+      setCounts(nextCounts);
       return true;
     } catch (error) {
       setToast(toToastError(error));
       setItems(null);
       setTotalCount(null);
+      setCounts(null);
       return false;
     } finally {
       setLoading(false);
@@ -278,7 +323,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
       goTo({
         pagination: { ...listQuery.pagination, offset: 0 },
         sort: listQuery.sort,
-        status: status || undefined,
+        ...toStatusParams(status),
         name: nameDraft || undefined,
         definitionId: definitionDraft || undefined
       });
@@ -291,7 +336,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
       goTo({
         pagination: { ...listQuery.pagination, offset: 0 },
         sort: listQuery.sort,
-        status: toStatusFilter(value) || undefined,
+        ...toStatusParams(toStatusFilter(value)),
         name: nameDraft || undefined,
         definitionId: definitionDraft || undefined
       });
@@ -327,7 +372,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     goTo({
       pagination: { ...listQuery.pagination, offset: 0 },
       sort: listQuery.sort,
-      status: status || undefined,
+      ...toStatusParams(status),
       name: nameDraft || undefined
     });
   }, [goTo, listQuery.pagination, listQuery.sort, nameDraft, status]);
@@ -348,7 +393,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
     goTo({
       pagination: { ...listQuery.pagination, offset: 0 },
       sort: listQuery.sort,
-      status: status || undefined,
+      ...toStatusParams(status),
       definitionId: listQuery.definitionId
     });
   }, [goTo, listQuery.definitionId, listQuery.pagination, listQuery.sort, status]);
@@ -387,6 +432,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
   return {
     items,
     totalCount,
+    counts,
     loading,
     toast,
     definitionId: listQuery.definitionId,

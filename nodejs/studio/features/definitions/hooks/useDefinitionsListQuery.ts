@@ -12,7 +12,7 @@ import {
 export const DEFINITIONS_PAGE_SIZE = 20;
 
 /** 定義一覧のソートキー。 */
-export type DefinitionsSortBy = "createdAt" | "name";
+export type DefinitionsSortBy = "createdAt" | "updatedAt" | "name";
 
 /**
  * URL searchParams から定義一覧クエリを読む。
@@ -29,7 +29,7 @@ export function readDefinitionsListQuery(searchParams: {
   const name = searchParams.get("name")?.trim() ?? "";
   const sortByRaw = searchParams.get("sortBy")?.trim() ?? "";
   const sortOrderRaw = searchParams.get("sortOrder")?.trim() ?? "";
-  const sortBy: DefinitionsSortBy = sortByRaw === "name" ? "name" : "createdAt";
+  const sortBy = toDefinitionsSortBy(sortByRaw);
   const sortOrder: SortOrder = sortOrderRaw === "asc" ? "asc" : "desc";
   const includeDeleted = searchParams.get("includeDeleted") === "true";
   return {
@@ -40,13 +40,28 @@ export function readDefinitionsListQuery(searchParams: {
   };
 }
 
+/**
+ * 並び替えの項目へ寄せる。未知値は作成日時（API の既定）。
+ * @param value URL または選択欄の文字列。
+ * @returns 許可された項目。
+ */
+function toDefinitionsSortBy(value: string | undefined): DefinitionsSortBy {
+  switch (value) {
+    case "name":
+    case "updatedAt":
+      return value;
+    default:
+      return "createdAt";
+  }
+}
+
 /** 定義一覧 URL 同期の戻り値。 */
 export type UseDefinitionsListQueryResult = {
   /** URL から読んだ一覧のクエリ。 */
   listQuery: DefinitionsListQuery;
   /** 今のページ番号（1 始まり）。 */
   currentPage: number;
-  /** 実際に使う並び替えの項目（name 以外は createdAt）。 */
+  /** 実際に使う並び替えの項目（未知値は createdAt）。 */
   effectiveSortBy: DefinitionsSortBy;
   /** 実際に使う並び順（未指定なら desc）。 */
   effectiveSortOrder: SortOrder;
@@ -67,8 +82,7 @@ export function useDefinitionsListQuery(): UseDefinitionsListQueryResult {
     () => Math.floor(listQuery.pagination.offset / listQuery.pagination.limit) + 1,
     [listQuery.pagination.limit, listQuery.pagination.offset],
   );
-  const effectiveSortBy: DefinitionsSortBy =
-    listQuery.sort.sortBy === "name" ? "name" : "createdAt";
+  const effectiveSortBy = toDefinitionsSortBy(listQuery.sort.sortBy);
   const effectiveSortOrder: SortOrder = listQuery.sort.sortOrder ?? "desc";
   const includeDeleted = listQuery.includeDeleted === true;
 

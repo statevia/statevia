@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useI18n } from "@/shared/i18n/uiTextContext";
-import type { SortOrder } from "@/features/executions/api";
+import type { ExecutionCounts, SortOrder } from "@/features/executions/api";
 import { Button } from "@/shared/ui/Button";
 import { FilterPills, type FilterPillOption } from "@/shared/ui/FilterPills";
 import { inputClassName } from "@/shared/ui/FormField";
@@ -13,7 +13,7 @@ import { toDisplayValue } from "@/shared/lib/displayValue";
 /**
  * ステータスの絞り込みで選べる値。API の契約の値をそのまま送り、そのまま出す（訳さない）。
  */
-const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, "">[] = [
+const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, "" | "NEEDS_ATTENTION">[] = [
   "ACTIVE",
   "COMPLETED",
   "FAILED",
@@ -24,6 +24,8 @@ const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, ""
 const SORT_OPTIONS: ReadonlyArray<{ sortBy: ExecutionSortBy; sortOrder: SortOrder }> = [
   { sortBy: "updatedAt", sortOrder: "desc" },
   { sortBy: "updatedAt", sortOrder: "asc" },
+  { sortBy: "startedAt", sortOrder: "desc" },
+  { sortBy: "startedAt", sortOrder: "asc" },
   { sortBy: "displayId", sortOrder: "asc" },
   { sortBy: "displayId", sortOrder: "desc" }
 ];
@@ -38,6 +40,8 @@ const DEFINITION_ERROR_ID = "executions-definition-error";
 export type ExecutionsFilterFormProps = {
   /** 状態の絞り込み。空文字はすべて。 */
   status: ExecutionStatusFilter;
+  /** ピルに出す件数。未取得なら件数を出さない。 */
+  counts?: ExecutionCounts | null;
   /** ソートキー。 */
   sortBy: ExecutionSortBy;
   /** ソート順。 */
@@ -88,6 +92,7 @@ export type ExecutionsFilterFormProps = {
  */
 export function ExecutionsFilterForm({
   status,
+  counts = null,
   sortBy,
   sortOrder,
   nameDraft,
@@ -104,9 +109,19 @@ export function ExecutionsFilterForm({
   const { uiText } = useI18n();
   const filterText = uiText.executionsPage.filter;
   const statusOptions: FilterPillOption<ExecutionStatusFilter>[] = [
-    { value: "", label: filterText.all },
-    ...EXECUTION_STATUS_FILTER_VALUES.map((value) => ({ value, label: toDisplayValue(value) }))
+    { value: "", label: filterText.all, count: counts?.total },
+    { value: "NEEDS_ATTENTION", label: filterText.needsAttention, count: counts?.needsAttention },
+    ...EXECUTION_STATUS_FILTER_VALUES.map((value) => ({
+      value,
+      label: toDisplayValue(value),
+      count: counts?.byStatus[value]
+    }))
   ];
+  const sortByLabel: Record<ExecutionSortBy, string> = {
+    updatedAt: filterText.sortByUpdatedAt,
+    startedAt: filterText.sortByStartedAt,
+    displayId: filterText.sortByDisplayId
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -163,7 +178,7 @@ export function ExecutionsFilterForm({
           >
             {SORT_OPTIONS.map((option) => (
               <option key={`${option.sortBy}:${option.sortOrder}`} value={`${option.sortBy}:${option.sortOrder}`}>
-                {`${option.sortBy === "displayId" ? filterText.sortByDisplayId : filterText.sortByUpdatedAt}（${option.sortOrder === "asc" ? filterText.sortOrderAsc : filterText.sortOrderDesc}）`}
+                {`${sortByLabel[option.sortBy]}（${option.sortOrder === "asc" ? filterText.sortOrderAsc : filterText.sortOrderDesc}）`}
               </option>
             ))}
           </select>

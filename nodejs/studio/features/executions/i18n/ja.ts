@@ -186,6 +186,8 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       definitionChip: (definitionId: string) => `定義: ${definitionId}`,
       sortByUpdatedAt: "更新日時",
       sortByDisplayId: "ID",
+      sortByStartedAt: "開始日時",
+      needsAttention: "要対応（待機中・FAILED）",
       sortOrderDesc: "降順",
       sortOrderAsc: "昇順",
       invalidName: "実行の ID は半角英数字と . - _ のみ、100文字以内で入力してください。",

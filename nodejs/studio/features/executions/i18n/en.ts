@@ -207,6 +207,8 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       definitionChip: (definitionId: string) => `Definition: ${definitionId}`,
       sortByUpdatedAt: "Updated at",
       sortByDisplayId: "ID",
+      sortByStartedAt: "Started at",
+      needsAttention: "Needs attention (waiting / FAILED)",
       sortOrderDesc: "Descending",
       sortOrderAsc: "Ascending",
       invalidName: "Execution ID allows only ASCII alphanumerics plus . - _ within 100 characters.",

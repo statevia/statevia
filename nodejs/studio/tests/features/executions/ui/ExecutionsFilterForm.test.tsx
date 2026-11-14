@@ -37,7 +37,14 @@ describe("ExecutionsFilterForm", () => {
 
     // Assert
     const pills = within(screen.getByRole("toolbar", { name: "ステータス" })).getAllByRole("button");
-    expect(pills.map((pill) => pill.textContent)).toEqual(["すべて", "ACTIVE", "COMPLETED", "FAILED", "CANCELED"]);
+    expect(pills.map((pill) => pill.textContent)).toEqual([
+      "すべて",
+      "要対応（待機中・FAILED）",
+      "ACTIVE",
+      "COMPLETED",
+      "FAILED",
+      "CANCELED"
+    ]);
     expect(screen.getByRole("button", { name: "すべて" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -53,16 +60,52 @@ describe("ExecutionsFilterForm", () => {
     expect(onStatusChange).toHaveBeenCalledWith("CANCELED");
   });
 
+  it("件数があるときは各ピルに出す", () => {
+    // Arrange
+    const counts = {
+      total: 12,
+      byStatus: { ACTIVE: 3, COMPLETED: 6, FAILED: 2, CANCELED: 1, UNKNOWN: 0 },
+      waiting: 2,
+      needsAttention: 4
+    };
+
+    // Act
+    renderWithUiText(<ExecutionsFilterForm {...filterProps({ counts })} />);
+
+    // Assert
+    const pills = within(screen.getByRole("toolbar", { name: "ステータス" })).getAllByRole("button");
+    expect(pills.map((pill) => pill.textContent)).toEqual([
+      "すべて12",
+      "要対応（待機中・FAILED）4",
+      "ACTIVE3",
+      "COMPLETED6",
+      "FAILED2",
+      "CANCELED1"
+    ]);
+  });
+
+  it("要対応のピルを押すと要対応の値で絞り込みを変える", () => {
+    // Arrange
+    const onStatusChange = vi.fn();
+    renderWithUiText(<ExecutionsFilterForm {...filterProps({ onStatusChange })} />);
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: /要対応/ }));
+
+    // Assert
+    expect(onStatusChange).toHaveBeenCalledWith("NEEDS_ATTENTION");
+  });
+
   it("並び順を選ぶと項目と順序を一度に渡す", () => {
     // Arrange
     const onSortChange = vi.fn();
     renderWithUiText(<ExecutionsFilterForm {...filterProps({ onSortChange })} />);
 
     // Act
-    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "displayId:asc" } });
+    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "startedAt:desc" } });
 
     // Assert
-    expect(onSortChange).toHaveBeenCalledWith("displayId", "asc");
+    expect(onSortChange).toHaveBeenCalledWith("startedAt", "desc");
   });
 
   it("検証エラーは入力欄の下に出す", () => {

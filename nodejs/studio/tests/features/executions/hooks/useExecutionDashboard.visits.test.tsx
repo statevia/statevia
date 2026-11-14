@@ -57,7 +57,8 @@ const executionDto = (): ExecutionDTO => ({
   status: "ACTIVE",
   startedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
-  restartLost: false
+  restartLost: false,
+  waiting: false
 });
 
 describe("useExecutionDashboard の訪問選択", () => {

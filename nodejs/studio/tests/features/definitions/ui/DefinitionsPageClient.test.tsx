@@ -259,4 +259,60 @@ describe("DefinitionsPageClient", () => {
     expect(await screen.findByText("Demo")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "復元" })).not.toBeInTheDocument();
   });
+
+  it("最後の実行は状態と待機中の印を出して実行の詳細へリンクし、無ければまだ実行していないと出す", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [
+        {
+          displayId: "def-1",
+          resourceId: "res-1",
+          name: "Waiting",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          lastExecution: {
+            displayId: "ExW1",
+            status: "ACTIVE",
+            startedAt: "2026-01-02T00:00:00Z",
+            updatedAt: "2026-01-02T00:00:00Z",
+            waiting: true
+          }
+        },
+        {
+          displayId: "def-2",
+          resourceId: "res-2",
+          name: "Fresh",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          lastExecution: null
+        }
+      ],
+      totalCount: 2
+    });
+
+    // Act
+    renderWithUiText(<DefinitionsPageClient />);
+
+    // Assert
+    const link = await screen.findByTitle("ExW1");
+    expect(link).toHaveAttribute("href", "/executions/ExW1");
+    expect(link).toHaveTextContent("ACTIVE");
+    expect(link).toHaveTextContent("待機中");
+    expect(screen.getByText("まだ実行していません")).toBeInTheDocument();
+  });
+
+  it("並び順で更新日時を選ぶと sortBy=updatedAt の 1 ページ目へ移る", async () => {
+    // Arrange
+    renderWithUiText(<DefinitionsPageClient />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+
+    // Act
+    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "updatedAt:desc" } });
+
+    // Assert
+    expect(replaceMock).toHaveBeenCalledWith(
+      expect.stringContaining("sortBy=updatedAt&sortOrder=desc"),
+      { scroll: false }
+    );
+  });
 });

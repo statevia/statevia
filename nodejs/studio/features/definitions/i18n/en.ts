@@ -14,6 +14,7 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     listSummary: (totalCount: number, page: number) => `Total ${totalCount} (page ${page})`,
     columns: {
       name: "Name",
+      lastExecution: "Last execution",
       createdAt: "Created at",
       actions: "Actions",
     },
@@ -40,6 +41,8 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     },
     sortLabel: "Sort",
     sortByCreatedAt: "Created at",
+    sortByUpdatedAt: "Updated at",
+    neverExecuted: "Not executed yet",
     sortByName: "Name",
     sortOrderDesc: "Descending",
     sortOrderAsc: "Ascending",

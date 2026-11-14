@@ -15,7 +15,8 @@ const runningExecution = {
   startedAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
-  restartLost: false
+  restartLost: false,
+  waiting: false
 };
 
 vi.mock("next/navigation", () => ({
@@ -50,6 +51,14 @@ import { buildExecutionsListPath } from "@/features/executions/api";
 import { useProject } from "@/shared/project/projectContext";
 import { testProjectId } from "@/tests/testUtils";
 
+/** `GET /executions/counts` の応答。 */
+const countsFixture = {
+  total: 12,
+  byStatus: { ACTIVE: 3, COMPLETED: 6, FAILED: 2, CANCELED: 1, UNKNOWN: 0 },
+  waiting: 2,
+  needsAttention: 4
+};
+
 describe("ExecutionsPageClient", () => {
   beforeEach(() => {
     replace.mockClear();
@@ -57,6 +66,7 @@ describe("ExecutionsPageClient", () => {
     vi.mocked(buildExecutionsListPath).mockClear();
     vi.mocked(useProject).mockReset();
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return { subscriptions: [{ topic: "orders.updated", key: "sku" }] };
       }
@@ -131,6 +141,7 @@ describe("ExecutionsPageClient", () => {
 
   it("集合配送は候補も手入力も /events に送り、行には発行ボタンが無い", async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return {
           subscriptions: [
@@ -194,6 +205,7 @@ describe("ExecutionsPageClient", () => {
     failed.unmount();
 
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return { subscriptions: [] };
       }
@@ -202,7 +214,7 @@ describe("ExecutionsPageClient", () => {
     renderWithUiText(<ExecutionsPageClient />);
     expect(await screen.findByRole("link", { name: "ex-1" })).toHaveAttribute("href", "/executions/ex-1");
 
-    fireEvent.click(screen.getByRole("button", { name: "FAILED" }));
+    fireEvent.click(screen.getByRole("button", { name: /^FAILED/ }));
     fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "displayId:asc" } });
     fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });
     fireEvent.click(screen.getAllByRole("button", { name: "次へ" })[0]);
@@ -238,5 +250,22 @@ describe("ExecutionsPageClient", () => {
       expect(apiGet).toHaveBeenCalled();
     });
     expect(screen.queryByRole("button", { name: "イベントを送信" })).not.toBeInTheDocument();
+  });
+
+  it("件数を同じ Project で取ってピルに出し、要対応のピルで needsAttention の条件へ移る", async () => {
+    // Arrange
+    renderWithUiText(<ExecutionsPageClient />);
+    const attentionPill = await screen.findByRole("button", { name: /要対応/ });
+    await waitFor(() => expect(attentionPill).toHaveTextContent("要対応（待機中・FAILED）4"));
+
+    // Act
+    fireEvent.click(attentionPill);
+
+    // Assert
+    expect(apiGet).toHaveBeenCalledWith(`/executions/counts?projectId=${testProjectId}`);
+    expect(buildExecutionsListPath).toHaveBeenLastCalledWith(
+      expect.objectContaining({ needsAttention: true, pagination: expect.objectContaining({ offset: 0 }) })
+    );
+    expect(vi.mocked(buildExecutionsListPath).mock.lastCall?.[0]).not.toHaveProperty("status");
   });
 });

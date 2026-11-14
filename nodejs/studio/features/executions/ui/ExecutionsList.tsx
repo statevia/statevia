@@ -29,9 +29,9 @@ export function ExecutionsList({ items }: Readonly<ExecutionsListProps>) {
     {
       id: "status",
       header: text.columns.status,
-      width: "7.5rem",
+      width: "11rem",
       hideLabelOnMobile: true,
-      cell: (execution) => <StatusBadge status={execution.status} />
+      cell: (execution) => <StatusBadge status={execution.status} waiting={execution.waiting} />
     },
     {
       id: "execution",

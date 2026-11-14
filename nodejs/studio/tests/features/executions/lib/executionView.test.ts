@@ -12,7 +12,8 @@ describe("buildExecutionView", () => {
       status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
-      restartLost: false
+      restartLost: false,
+      waiting: false
     };
     const conditionRouting = {
       fact: "Completed",
@@ -57,7 +58,8 @@ describe("buildExecutionView", () => {
       status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
-      restartLost: false
+      restartLost: false,
+      waiting: false
     };
     const graph: ExecutionGraphDTO = {
       nodes: [
@@ -99,7 +101,8 @@ describe("buildExecutionView", () => {
       status: "ACTIVE",
       startedAt: "2026-01-01T00:00:00Z",
       cancelRequested: false,
-      restartLost: false
+      restartLost: false,
+      waiting: false
     };
     const graph: ExecutionGraphDTO = {
       nodes: [

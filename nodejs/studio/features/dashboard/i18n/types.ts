@@ -25,6 +25,24 @@ export type DashboardFeatureUiText = {
     aria: {
       recentExecutionsList: string;
     };
+    /** 件数のタイル。 */
+    tiles: {
+      ariaLabel: string;
+      active: string;
+      waiting: string;
+      waitingNote: string;
+      failed24h: string;
+      completed24h: string;
+      /** 完了のタイルの成功率。引数は小数 1 桁までの百分率。 */
+      successRate: (percent: number) => string;
+    };
+    /** 対応が必要な実行の節。 */
+    attention: {
+      title: string;
+      description: string;
+      openAll: string;
+      empty: string;
+    };
     error: {
       fetchFailed: string;
     };

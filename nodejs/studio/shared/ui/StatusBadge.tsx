@@ -28,11 +28,11 @@ const DOT_SHAPE_CLASS: Record<StatusDotShape, string> = {
 };
 
 /**
- * 点の形で状態を区別する小さな印。
- * @param props 点の形と色のクラス。
+ * 点の形で状態を区別する小さな印。バッジの外（ダッシュボードのタイルの見出しなど）でも同じ形と色で使う。
+ * @param props 点の形と色のクラス（`getStatusStyle` の `dotShape` / `accentClass`）。
  * @returns 読み上げから外した点。
  */
-function StatusDot({ shape, accentClass }: Readonly<{ shape: StatusDotShape; accentClass: string }>) {
+export function StatusDot({ shape, accentClass }: Readonly<{ shape: StatusDotShape; accentClass: string }>) {
   return <span aria-hidden="true" className={`inline-block shrink-0 ${DOT_SHAPE_CLASS[shape]} ${accentClass}`} />;
 }
 

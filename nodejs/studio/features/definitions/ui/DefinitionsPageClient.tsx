@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DefinitionsListQuery, SortOrder } from "@/features/definitions/api";
 import { useDefinitionCatalogActions } from "@/features/definitions/hooks/useDefinitionCatalogActions";
 import { useDefinitionsList } from "@/features/definitions/hooks/useDefinitionsList";
-import { useDefinitionsListQuery } from "@/features/definitions/hooks/useDefinitionsListQuery";
+import { useDefinitionsListQuery, type DefinitionsSortBy } from "@/features/definitions/hooks/useDefinitionsListQuery";
 import { isDeletedDefinition, type DefinitionDTO } from "@/features/definitions/types";
 import { useProject } from "@/shared/project/projectContext";
 import { canPublish } from "@/shared/project/roles";
@@ -25,12 +25,15 @@ import { inputClassName } from "@/shared/ui/FormField";
 import { ListPagination } from "@/shared/ui/ListPagination";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { Toast } from "@/shared/ui/Toast";
 
 /** 並び順の選択肢。項目と順序の組を 1 つの選択欄で選ぶ。 */
-const SORT_OPTIONS: ReadonlyArray<{ sortBy: "createdAt" | "name"; sortOrder: SortOrder }> = [
+const SORT_OPTIONS: ReadonlyArray<{ sortBy: DefinitionsSortBy; sortOrder: SortOrder }> = [
   { sortBy: "createdAt", sortOrder: "desc" },
   { sortBy: "createdAt", sortOrder: "asc" },
+  { sortBy: "updatedAt", sortOrder: "desc" },
+  { sortBy: "updatedAt", sortOrder: "asc" },
   { sortBy: "name", sortOrder: "asc" },
   { sortBy: "name", sortOrder: "desc" },
 ];
@@ -101,7 +104,12 @@ function sortOptionLabel(
   option: (typeof SORT_OPTIONS)[number],
   text: ReturnType<typeof useI18n>["uiText"]["definitionsPage"],
 ): string {
-  const by = option.sortBy === "name" ? text.sortByName : text.sortByCreatedAt;
+  const sortByLabel: Record<DefinitionsSortBy, string> = {
+    createdAt: text.sortByCreatedAt,
+    updatedAt: text.sortByUpdatedAt,
+    name: text.sortByName,
+  };
+  const by = sortByLabel[option.sortBy];
   const order = option.sortOrder === "asc" ? text.sortOrderAsc : text.sortOrderDesc;
   return `${by}（${order}）`;
 }
@@ -270,6 +278,26 @@ export function DefinitionsPageClient() {
           <p className="mt-0.5 truncate font-mono text-xs text-md-on-surface-variant">{definition.displayId}</p>
         </>
       ),
+    },
+    {
+      id: "lastExecution",
+      header: text.columns.lastExecution,
+      width: "12rem",
+      cell: (definition) =>
+        definition.lastExecution ? (
+          <Link
+            href={`/executions/${encodeURIComponent(definition.lastExecution.displayId)}`}
+            className="inline-flex flex-col items-start gap-0.5 rounded-control hover:opacity-80"
+            title={definition.lastExecution.displayId}
+          >
+            <StatusBadge status={definition.lastExecution.status} waiting={definition.lastExecution.waiting} />
+            <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
+              {formatDateTimeLocalized(definition.lastExecution.startedAt, dateTimeLocale)}
+            </span>
+          </Link>
+        ) : (
+          <span className="text-sm text-md-on-surface-variant">{text.neverExecuted}</span>
+        ),
     },
     {
       id: "createdAt",

@@ -13,6 +13,8 @@ export type DashboardExecutionItem = {
   startedAt: string;
   /** 最終更新日時（ISO 8601）。無ければ null または省略。 */
   updatedAt?: string | null;
+  /** 待機中か（状態の値ではない。`ACTIVE` の横に印を出す）。 */
+  waiting: boolean;
 };
 
 /** ダッシュボード用のページング付き実行一覧。 */
@@ -21,4 +23,12 @@ export type DashboardExecutionsPage = {
   items: DashboardExecutionItem[];
   /** 絞り込み後の総件数。 */
   totalCount: number;
+};
+
+/** ダッシュボードのタイルに使う実行の件数（`GET /executions/counts` の応答のうち利用分）。 */
+export type DashboardExecutionCounts = {
+  /** 状態ごとの件数。 */
+  byStatus: Record<ExecutionStatus, number>;
+  /** 待機中の件数。 */
+  waiting: number;
 };

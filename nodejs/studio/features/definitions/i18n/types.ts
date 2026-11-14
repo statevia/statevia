@@ -19,6 +19,10 @@ export type DefinitionsFeatureUiText = {
     /** 並び順の選択欄のラベル。選択肢は項目と順序を組み合わせて作る。 */
     sortLabel: string;
     sortByCreatedAt: string;
+    /** 並び順の「更新日時」。 */
+    sortByUpdatedAt: string;
+    /** 最後の実行が無いときの文言。 */
+    neverExecuted: string;
     sortByName: string;
     sortOrderDesc: string;
     sortOrderAsc: string;
@@ -28,6 +32,7 @@ export type DefinitionsFeatureUiText = {
     /** 一覧の列の見出し。 */
     columns: {
       name: string;
+      lastExecution: string;
       createdAt: string;
       actions: string;
     };

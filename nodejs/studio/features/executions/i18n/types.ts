@@ -195,6 +195,8 @@ export type ExecutionsFeatureUiText = {
       definitionChip: (definitionId: string) => string;
       sortByUpdatedAt: string;
       sortByDisplayId: string;
+      sortByStartedAt: string;
+      needsAttention: string;
       sortOrderDesc: string;
       sortOrderAsc: string;
       invalidName: string;

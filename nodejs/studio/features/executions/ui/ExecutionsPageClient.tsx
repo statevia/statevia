@@ -72,6 +72,7 @@ function ExecutionsPageClientInner() {
 
       <ExecutionsFilterForm
         status={page.status}
+        counts={page.counts}
         sortBy={page.sortBy}
         sortOrder={page.sortOrder}
         nameDraft={page.nameDraft}

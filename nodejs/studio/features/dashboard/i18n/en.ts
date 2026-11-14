@@ -9,7 +9,7 @@ export const dashboardUiTextEn: DashboardFeatureUiText = {
   dashboard: {
     ...dashboardUiTextJa.dashboard,
     title: "Dashboard",
-    descriptionRecent: "Recent executions (up to 10).",
+    descriptionRecent: "Executions in the selected project.",
     loadingRecent: "Loading recent executions.",
     emptyStartFromDefinitionsOrExecutions: "Start from Definitions or Executions.",
     totalCount: (count: number | null) => (count == null ? "Total: --" : `Total: ${count}`),
@@ -23,6 +23,21 @@ export const dashboardUiTextEn: DashboardFeatureUiText = {
     },
     aria: {
       recentExecutionsList: "Recent executions",
+    },
+    tiles: {
+      ariaLabel: "Execution counts",
+      active: "Running",
+      waiting: "Waiting",
+      waitingNote: "Waiting for events",
+      failed24h: "Failed (24h)",
+      completed24h: "Completed (24h)",
+      successRate: (percent: number) => `Success rate ${percent}%`,
+    },
+    attention: {
+      title: "Needs attention",
+      description: "Waiting and failed executions, newest first.",
+      openAll: "View all",
+      empty: "Nothing needs attention.",
     },
     error: {
       fetchFailed: "Failed to fetch data.",
