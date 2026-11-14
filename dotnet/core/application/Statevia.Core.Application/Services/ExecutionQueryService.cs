@@ -15,6 +15,10 @@ namespace Statevia.Core.Application.Services;
 /// <param name="eventStore">event_store 読み取り。</param>
 /// <param name="executor">読み取りトランザクション実行。</param>
 /// <param name="forkChildCoordinator">Fork 合成（未登録時は生 snapshot）。</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S107:Methods should not have too many parameters",
+    Justification = "DI による明示的コンストラクタ注入。")]
 internal sealed class ExecutionQueryService(
     IDisplayIdService displayIds,
     IExecutionRepository executions,

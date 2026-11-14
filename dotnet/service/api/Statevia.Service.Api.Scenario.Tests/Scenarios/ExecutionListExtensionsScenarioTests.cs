@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Statevia.Infrastructure.Persistence;
 using Statevia.Service.Api.Scenario.Tests.Infrastructure;
 using Xunit.Abstractions;
 
