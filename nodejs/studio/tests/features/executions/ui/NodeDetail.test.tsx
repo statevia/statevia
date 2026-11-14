@@ -29,7 +29,7 @@ const defaultProps = {
   execution: baseExecution,
   node: baseNode,
   loading: false,
-  onResume: vi.fn(),
+  onSendToNode: vi.fn(),
   resumeDisabledReason: null as string | null
 };
 
@@ -194,72 +194,44 @@ describe("NodeDetail", () => {
     });
   });
 
-  describe("Resume ボタン", () => {
-    it("resumeDisabledReason が null のとき再開ボタンが有効", () => {
+  describe("このノードへ送る", () => {
+    it("待機中のノードでは「このノードへ送る」を出し、押すと onSendToNode を呼ぶ", () => {
+      // Arrange
+      const onSendToNode = vi.fn();
+      const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", allowedEvents: ["approve", "reject"] };
+      render(<NodeDetail {...defaultProps} node={node} onSendToNode={onSendToNode} />);
+
+      // Act
+      fireEvent.click(screen.getByRole("button", { name: uiText.executionDashboard.sendEvent.sendToNode }));
+
+      // Assert
+      expect(onSendToNode).toHaveBeenCalledTimes(1);
+    });
+
+    it("送れない理由があるときは理由を出し、ボタンを押せなくする", () => {
+      // Arrange
       const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
-      render(<NodeDetail {...defaultProps} node={node} />);
-      const button = screen.getByRole("button", { name: uiText.actions.resume });
-      expect(button).not.toBeDisabled();
+
+      // Act
+      render(<NodeDetail {...defaultProps} node={node} resumeDisabledReason="リプレイ表示中は実行できません" />);
+
+      // Assert
+      expect(screen.getByText("リプレイ表示中は実行できません")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: uiText.executionDashboard.sendEvent.sendToNode })).toBeDisabled();
     });
 
-    it("resumeDisabledReason があるときその理由を表示しボタンは無効", () => {
-      const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
-      render(
-        <NodeDetail
-          {...defaultProps}
-          node={node}
-          resumeDisabledReason="WAITING 状態のノードのみ Resume できます"
-        />
-      );
-      expect(screen.getByText(/WAITING 状態のノードのみ/)).toBeInTheDocument();
-      const button = screen.getByRole("button", { name: uiText.actions.resume });
-      expect(button).toBeDisabled();
-    });
+    it("待機中でないノードと、送る操作を出さない利用者には出さない", () => {
+      // Arrange
+      const waiting: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
+      const { rerender } = render(<NodeDetail {...defaultProps} />);
+      const runningHasButton = screen.queryByRole("button", { name: uiText.executionDashboard.sendEvent.sendToNode });
 
-    it("再開ボタンクリックで onResume がイベント名付きで呼ばれる", () => {
-      const onResume = vi.fn();
-      const node: ExecutionNodeDTO = { ...baseNode, status: "WAITING", waitKey: "wk-1" };
-      render(<NodeDetail {...defaultProps} node={node} onResume={onResume} />);
-      fireEvent.click(screen.getByRole("button", { name: uiText.actions.resume }));
-      expect(onResume).toHaveBeenCalledTimes(1);
-      expect(onResume).toHaveBeenCalledWith("wk-1");
-    });
+      // Act
+      rerender(<NodeDetail {...defaultProps} node={waiting} showSendAction={false} />);
 
-    it("複数 allowedEvents 時は選択イベントで onResume が呼ばれる", () => {
-      const onResume = vi.fn();
-      const node: ExecutionNodeDTO = {
-        ...baseNode,
-        status: "WAITING",
-        waitKey: null,
-        allowedEvents: ["approve", "reject"]
-      };
-      render(<NodeDetail {...defaultProps} node={node} onResume={onResume} />);
-      fireEvent.change(screen.getByLabelText(uiText.nodeDetail.waiting.selectResumeEvent), {
-        target: { value: "reject" }
-      });
-      fireEvent.click(screen.getByRole("button", { name: uiText.actions.resume }));
-      expect(onResume).toHaveBeenCalledWith("reject");
-    });
-
-    it("Subscribe の Resume は内部イベント名でこの実行だけを再開し、集合配送フォームは出さない", () => {
-      const onResume = vi.fn();
-      const node: ExecutionNodeDTO = {
-        ...baseNode,
-        status: "WAITING",
-        waitKey: null,
-        allowedEvents: ["statevia.event.subscribe.0"]
-      };
-      render(<NodeDetail {...defaultProps} node={node} onResume={onResume} />);
-
-      expect(
-        screen.getByText(
-          (_, element) =>
-            element?.tagName === "P" && element.textContent === uiText.nodeDetail.waiting.subscribeOnlyHint
-        )
-      ).toHaveClass("whitespace-pre-line");
-      expect(screen.queryByLabelText("topic")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: uiText.nodeDetail.waiting.subscribeResumeAction }));
-      expect(onResume).toHaveBeenCalledWith("statevia.event.subscribe.0");
+      // Assert
+      expect(runningHasButton).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: uiText.executionDashboard.sendEvent.sendToNode })).not.toBeInTheDocument();
     });
   });
 

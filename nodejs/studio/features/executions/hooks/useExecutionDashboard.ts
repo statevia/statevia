@@ -14,6 +14,7 @@ import {
   resolveResumeTargetNodeId,
   resolveVisitAfterRefresh
 } from "../lib/nodeVisits";
+import { canAcceptEvents, listWaitTargets, type WaitTarget } from "../lib/waitTargets";
 import type { ExecutionDTO, ExecutionGraphDTO, ExecutionView } from "../types";
 import type { GraphViewport } from "../ui/NodeGraphView";
 import type { ViewMode } from "../ui/ViewToggle";
@@ -22,7 +23,8 @@ import { useExecutionEvents } from "./useExecutionEvents";
 import { useExecutionStateAtSeq } from "./useExecutionStateAtSeq";
 import { getNodeWithFallback, useGraphData } from "./useGraphData";
 import { useGraphDefinition } from "./useGraphDefinition";
-import { getResumeDisabledReason, useNodeCommands } from "./useNodeCommands";
+import { getResumeDisabledReason } from "./useNodeCommands";
+import { useSendEvent, type SendEventTarget } from "./useSendEvent";
 
 const STREAM_PREF_STORAGE_KEY = "statevia.execution.streamEnabled";
 
@@ -35,10 +37,6 @@ export type UseExecutionDashboardOptions = {
   initialExecutionId: string;
   /** true のときマウント直後に Load を実行する。 */
   autoLoadOnMount?: boolean;
-  /** メイン見出し。未指定時は既定文言。 */
-  headerTitle?: string;
-  /** false のとき executionId を URL 固定として編集させない。 */
-  executionIdEditable?: boolean;
   /** false のとき比較モード UI を出さない。 */
   comparisonEnabled?: boolean;
 };
@@ -47,21 +45,12 @@ export type UseExecutionDashboardOptions = {
 export type ExecutionDashboardModel = {
   /** グラフを全画面にしているか。 */
   graphFullscreen: boolean;
-  /** 見出し。未指定時は既定文言。 */
-  headerTitle: string;
   /** 操作結果のトースト。無ければ null。 */
   toast: ToastState | null;
   /** トーストを閉じる。 */
   onCloseToast: () => void;
-  /** 入力中または URL の実行 ID。 */
+  /** URL の実行 ID。 */
   executionId: string;
-  /** 実行 ID を編集できるか。 */
-  executionIdEditable: boolean;
-  /**
-   * 実行 ID の入力を更新する。
-   * @param executionId 入力値。
-   */
-  onExecutionIdChange: (executionId: string) => void;
   /** 実行を読み込む。 */
   onLoadExecution: () => void;
   /** 実行のキャンセルを要求する。 */
@@ -70,11 +59,30 @@ export type ExecutionDashboardModel = {
   loading: boolean;
   /** キャンセルを受け付けるか。 */
   canCancel: boolean;
+  /** 現在の実行でイベントを待っているノード（再生中も現在の実行から作る）。 */
+  waits: WaitTarget[];
   /**
-   * イベントを送る。
-   * @param eventName イベント名。
+   * イベントを送れるか。executions.write があり、実行が終了・キャンセル要求済みでなく、再生中でないとき true。
+   * @remarks 待機が無くても true になり得る（イベント名を指定して送る届け先があるため）。「イベントを送信」の出し分けは画面側で待機の有無も見る。
    */
-  onPublishEvent: (eventName: string) => void;
+  canSendEvent: boolean;
+  /** イベント送信ダイアログの状態。閉じているときは null。 */
+  sendEventDialog: { initialNodeId: string | null } | null;
+  /**
+   * イベント送信ダイアログを開く。
+   * @param nodeId 届け先に選んでおくノード（実行ノード ID、またはグラフ上の状態名）。null なら先頭の待機。
+   */
+  onOpenSendEvent: (nodeId: string | null) => void;
+  /** イベント送信ダイアログを閉じる。 */
+  onCloseSendEvent: () => void;
+  /**
+   * イベントを送る。受理されたらダイアログを閉じ、トーストを出して実行を取得し直す。
+   * @param target 届け先とイベント名。
+   * @returns 受理されたら null。失敗したらダイアログに出すエラーの文言。
+   */
+  onSendEvent: (target: SendEventTarget) => Promise<string | null>;
+  /** イベントの送信中か。 */
+  sendingEvent: boolean;
   /** 現在の実行。未取得時は null。 */
   execution: ExecutionView | null;
   /** 一覧かグラフか。 */
@@ -166,17 +174,6 @@ export type ExecutionDashboardModel = {
   /** グラフの全画面を切り替える。 */
   onToggleGraphFullscreen: () => void;
   /**
-   * 指定ノードを Resume する。
-   * @param nodeId ノード ID。
-   * @param eventName Resume に使うイベント名。
-   */
-  onResumeNode: (nodeId: string, eventName: string) => void;
-  /**
-   * 選択中ノードを Resume する。再生中または未選択なら何もしない。
-   * @param eventName Resume に使うイベント名。
-   */
-  onResumeSelectedNode: (eventName: string) => void;
-  /**
    * ノードを Resume できない理由。できるときは null。
    * @param nodeId ノード ID。
    */
@@ -223,8 +220,6 @@ export type ExecutionDashboardModel = {
 export function useExecutionDashboard({
   initialExecutionId,
   autoLoadOnMount = false,
-  headerTitle,
-  executionIdEditable = true,
   comparisonEnabled = true
 }: UseExecutionDashboardOptions): ExecutionDashboardModel {
   const { uiText, locale } = useI18n();
@@ -232,7 +227,6 @@ export function useExecutionDashboard({
   // 取消・Resume・イベント送信は、API が executions.write を要求する。Project ロールは実行応答に無いため API に任せる。
   // 読み込み前と読み込みの失敗時は has() が false なので、操作を出さない側に倒れる。
   const commandsAllowed = permissions.has(EXECUTIONS_WRITE_PERMISSION);
-  const effectiveHeaderTitle = headerTitle ?? uiText.executionDashboard.header.titleDefault;
   const [executionId, setExecutionId] = useState(initialExecutionId);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [graphFullscreen, setGraphFullscreen] = useState(false);
@@ -272,14 +266,9 @@ export function useExecutionDashboard({
     () => ({
       onError: (err: unknown) => setToast(toToastError(err)),
       onCancelSuccess: () => setToast({ tone: "success", message: uiText.executionDashboard.toasts.cancelAccepted }),
-      onPublishSuccess: () => setToast({ tone: "success", message: uiText.executionDashboard.toasts.publishAccepted }),
       streamEnabled
     }),
-    [
-      streamEnabled,
-      uiText.executionDashboard.toasts.cancelAccepted,
-      uiText.executionDashboard.toasts.publishAccepted
-    ]
+    [streamEnabled, uiText.executionDashboard.toasts.cancelAccepted]
   );
 
   const {
@@ -289,7 +278,6 @@ export function useExecutionDashboard({
     terminal,
     loadExecution,
     cancelExecution,
-    publishEvent,
     selectedNodeId,
     setSelectedNodeId
   } = useExecution(executionId, executionHookOptions);
@@ -332,17 +320,22 @@ export function useExecutionDashboard({
   );
   const graphData = useGraphData(displayExecution, graphDefinition);
 
-  const { resumeNode, loading: nodeLoading } = useNodeCommands(execution, {
-    commandsEnabled: commandsAllowed,
-    onSuccess: () => {
-      setToast({ tone: "success", message: uiText.executionDashboard.toasts.resumeAccepted });
+  const [sendEventDialog, setSendEventDialog] = useState<{ initialNodeId: string | null } | null>(null);
+  const { send: sendEvent, sending: sendingEvent } = useSendEvent(execution?.displayId ?? null, {
+    onAccepted: (target) => {
+      setSendEventDialog(null);
+      setToast({
+        tone: "success",
+        message:
+          target.kind === "node"
+            ? uiText.executionDashboard.toasts.resumeAccepted
+            : uiText.executionDashboard.toasts.publishAccepted
+      });
       void loadExecution();
-    },
-    onError: (err) => setToast(toToastError(err))
+    }
   });
 
-  const loading =
-    executionLoading || nodeLoading || stateAtSeqLoading || graphDefinitionLoading;
+  const loading = executionLoading || stateAtSeqLoading || graphDefinitionLoading;
 
   const loadExecutionB = useCallback(async () => {
     if (!executionIdB.trim()) return;
@@ -527,58 +520,45 @@ export function useExecutionDashboard({
     void cancelExecution();
   }, [cancelExecution]);
 
-  const requestPublishEvent = useCallback(
-    (eventName: string) => {
-      void publishEvent(eventName);
-    },
-    [publishEvent]
-  );
-
   const requestLoadExecutionB = useCallback(() => {
     void loadExecutionB();
   }, [loadExecutionB]);
 
-  const requestResumeNode = useCallback(
-    (nodeId: string, eventName: string) => {
-      if (!displayExecution) return;
-      const targetId = resolveResumeTargetNodeId(
-        displayExecution.nodes,
-        nodeId,
-        selectedNode?.nodeId ?? null
-      );
-      if (!targetId) return;
-      void resumeNode(targetId, eventName);
+  const waits = useMemo(() => listWaitTargets(execution), [execution]);
+  const canSendEvent = commandsAllowed && canAcceptEvents(execution) && !isReplaying;
+
+  const openSendEvent = useCallback(
+    (nodeId: string | null) => {
+      if (!canSendEvent) return;
+      const targetId =
+        nodeId && execution
+          ? resolveResumeTargetNodeId(execution.nodes, nodeId, selectedNode?.nodeId ?? null)
+          : null;
+      setSendEventDialog({ initialNodeId: targetId });
     },
-    [displayExecution, resumeNode, selectedNode]
+    [canSendEvent, execution, selectedNode]
   );
 
-  const resumeSelectedNode = useCallback(
-    (eventName: string) => {
-      if (isReplaying || !displayExecution || !selectedNode) return;
-      const targetId = resolveResumeTargetNodeId(
-        displayExecution.nodes,
-        selectedNode.nodeId,
-        selectedNode.nodeId
-      );
-      if (!targetId) return;
-      void resumeNode(targetId, eventName);
-    },
-    [displayExecution, isReplaying, resumeNode, selectedNode]
-  );
+  const closeSendEvent = useCallback(() => {
+    setSendEventDialog(null);
+  }, []);
 
   return {
     graphFullscreen,
-    headerTitle: effectiveHeaderTitle,
     toast,
     onCloseToast: handleCloseToast,
     executionId,
-    executionIdEditable,
-    onExecutionIdChange: setExecutionId,
     onLoadExecution: requestLoadExecution,
     onCancelExecution: requestCancelExecution,
     loading,
     canCancel,
-    onPublishEvent: requestPublishEvent,
+    waits,
+    canSendEvent,
+    sendEventDialog,
+    onOpenSendEvent: openSendEvent,
+    onCloseSendEvent: closeSendEvent,
+    onSendEvent: sendEvent,
+    sendingEvent,
     execution,
     viewMode,
     onViewModeChange: setViewMode,
@@ -612,8 +592,6 @@ export function useExecutionDashboard({
     selectedNodeId,
     graphData,
     onToggleGraphFullscreen: handleToggleGraphFullscreen,
-    onResumeNode: requestResumeNode,
-    onResumeSelectedNode: resumeSelectedNode,
     getResumeDisabledReasonForNode,
     savedGraphViewport,
     onGraphViewportChange: handleGraphViewportChange,

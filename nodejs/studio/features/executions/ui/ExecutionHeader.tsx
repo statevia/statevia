@@ -1,143 +1,98 @@
 "use client";
 
+import { Send } from "lucide-react";
 import type { ExecutionView } from "../types";
-import { useUiText } from "@/shared/i18n/uiTextContext";
-import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type { ViewMode } from "./ViewToggle";
-import { ViewToggle } from "./ViewToggle";
+import { useI18n } from "@/shared/i18n/uiTextContext";
+import { getDateTimeLocale } from "@/shared/i18n/i18n";
+import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
 import { Button } from "@/shared/ui/Button";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
 
-type ExecutionHeaderProps = {
+/** 実行の詳細の見出しの props。 */
+export type ExecutionHeaderProps = {
+  /** URL の実行 ID。見出しに出す。 */
   executionId: string;
-  onExecutionIdChange: (id: string) => void;
-  onLoad: () => void;
-  onCancel: () => void;
-  loading: boolean;
-  canCancel: boolean;
+  /** 現在の実行。未取得なら null（状態のバッジと開始日時を出さない）。 */
   execution: ExecutionView | null;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  /** 比較モード（2実行差分表示） */
-  compareMode?: boolean;
-  onCompareModeChange?: (enabled: boolean) => void;
-  /** true のとき EventSource で更新。`onStreamEnabledChange` とセットで指定。 */
-  streamEnabled?: boolean;
-  onStreamEnabledChange?: (enabled: boolean) => void;
-  /** false のとき executionId の手入力を無効化し、表示のみ行う。 */
-  executionIdEditable?: boolean;
-  /** false のとき Cancel ボタンを表示しない。 */
-  showCancelAction?: boolean;
-  /** false のとき ViewToggle を表示しない。 */
-  showViewToggle?: boolean;
+  /** 待っているノードがあるか。`ACTIVE` の横に待機の印を出す（U1）。 */
+  waiting: boolean;
+  /** 実行の取得・操作の最中か。 */
+  loading: boolean;
+  /** キャンセルを受け付けるか。 */
+  canCancel: boolean;
+  /** キャンセルの操作を出すか（executions.write があるとき）。 */
+  showCancelAction: boolean;
+  /** キャンセルを要求する。 */
+  onCancel: () => void;
+  /** 比較の操作を出すか。 */
+  showCompareAction: boolean;
+  /** 比較を開いているか。 */
+  compareMode: boolean;
+  /**
+   * 比較の開閉を切り替える。
+   * @param enabled 開くとき true。
+   */
+  onCompareModeChange: (enabled: boolean) => void;
+  /** 「イベントを送信」を出すか（executions.write があり、待機があって送れる状態のとき）。 */
+  showSendEventAction: boolean;
+  /** イベント送信ダイアログを開く。 */
+  onOpenSendEvent: () => void;
 };
 
-/** 実行画面のヘッダ（ID・操作ボタン）。 */
+/**
+ * 実行の詳細の見出し（要件 5.1）。左に実行 ID・状態・開始日時、右に赤枠の「キャンセル」、枠線の「比較」、緑の「イベントを送信」を並べる。
+ * @remarks 緑（主導線）は「イベントを送信」だけにする。操作の出し分けは案内で、認可の正本は Service API。
+ */
 export function ExecutionHeader({
   executionId,
-  onExecutionIdChange,
-  onLoad,
-  onCancel,
+  execution,
+  waiting,
   loading,
   canCancel,
-  execution,
-  viewMode,
-  onViewModeChange,
-  compareMode = false,
+  showCancelAction,
+  onCancel,
+  showCompareAction,
+  compareMode,
   onCompareModeChange,
-  streamEnabled = true,
-  onStreamEnabledChange,
-  executionIdEditable = true,
-  showCancelAction = true,
-  showViewToggle = true
+  showSendEventAction,
+  onOpenSendEvent
 }: Readonly<ExecutionHeaderProps>) {
-  const uiText = useUiText();
-  const status = execution?.status;
+  const { uiText, locale } = useI18n();
+  const text = uiText.executionHeader;
+  const meta = execution
+    ? [
+        text.startedAt(formatDateTimeLocalized(execution.startedAt, getDateTimeLocale(locale))),
+        execution.cancelRequested ? text.cancelRequested : null
+      ].filter((part): part is string => part !== null)
+    : [];
 
   return (
-    <section className="rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex-1">
-          {executionIdEditable ? (
-            <>
-              <label htmlFor="execution-id-input" className="block text-xs font-semibold text-md-on-surface">
-                {uiText.executionHeader.executionIdLabel(uiText.entities.execution)}
-              </label>
-              <input
-                id="execution-id-input"
-                className="mt-1 w-full rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface outline-hidden focus:border-md-primary"
-                value={executionId}
-                onChange={(event) => onExecutionIdChange(event.target.value)}
-                placeholder={uiText.executionHeader.placeholderExecutionId}
-              />
-            </>
-          ) : (
-            <>
-              <span className="block text-xs font-semibold text-md-on-surface">
-                {uiText.executionHeader.executionIdLabel(uiText.entities.execution)}
-              </span>
-              <p className="mt-1 rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 font-mono text-sm text-md-on-surface">
-                {executionId}
-              </p>
-            </>
-          )}
+    <header className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="font-mono text-2xl font-bold break-all text-md-on-surface">{executionId}</h1>
+          {execution ? <StatusBadge status={execution.status} waiting={waiting} /> : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {executionIdEditable && (
-            <Button variant="outline" onClick={onLoad} loading={loading}>
-              {loading ? uiText.actions.loading : uiText.actions.load}
-            </Button>
-          )}
-          {showCancelAction && (
-            <Button variant="danger" onClick={onCancel} disabled={!canCancel || loading}>
-              {uiText.actions.cancel}
-            </Button>
-          )}
-          {onCompareModeChange && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-md-on-surface">
-              <input
-                type="checkbox"
-                checked={compareMode}
-                onChange={(e) => onCompareModeChange(e.target.checked)}
-                className="rounded-sm border-md-outline-variant bg-md-surface-container"
-              />
-              <span>{uiText.executionHeader.compareLabel}</span>
-            </label>
-          )}
-          {onStreamEnabledChange && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-md-on-surface">
-              <input
-                type="checkbox"
-                checked={streamEnabled}
-                onChange={(e) => onStreamEnabledChange(e.target.checked)}
-                className="rounded-sm border-md-outline-variant bg-md-surface-container"
-              />
-              <span>{uiText.executionHeader.realtimeSseLabel}</span>
-            </label>
-          )}
-          {showViewToggle && <ViewToggle value={viewMode} onChange={onViewModeChange} />}
-        </div>
+        {meta.length > 0 ? <p className="text-sm text-md-on-surface-variant">{meta.join(" ・ ")}</p> : null}
       </div>
-
-      {execution && (
-        <div className="mt-4 rounded-xl bg-md-surface-container p-3 text-xs text-md-on-surface">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">{uiText.entities.execution}</div>
-            {status && (
-              <StatusBadge status={status} className="rounded-full px-2 py-0.5 font-semibold" />
-            )}
-          </div>
-          <div className="mt-2 grid gap-1 sm:grid-cols-2">
-            <div>
-              <span className="font-mono">
-                {uiText.executionHeader.cancelRequestedLine(
-                  uiText.executionHeader.cancelRequestedLabel,
-                  execution.cancelRequested
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+        {showCancelAction && (
+          <Button variant="danger" onClick={onCancel} disabled={!canCancel || loading}>
+            {uiText.actions.cancel}
+          </Button>
+        )}
+        {showCompareAction && (
+          <Button variant="outline" aria-pressed={compareMode} onClick={() => onCompareModeChange(!compareMode)}>
+            {text.compareLabel}
+          </Button>
+        )}
+        {showSendEventAction && (
+          <Button variant="lead" onClick={onOpenSendEvent} disabled={loading}>
+            <Send aria-hidden="true" className="h-4 w-4" />
+            {uiText.executionDashboard.sendEvent.open}
+          </Button>
+        )}
+      </div>
+    </header>
   );
 }

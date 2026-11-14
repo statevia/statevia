@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { apiGet, apiPost } from "@/shared/api";
 import { startExecutionStreamLifecycle } from "./executionStreamLifecycle";
-import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
-import { EVENT_NAME_MAX_LENGTH, EVENT_NAME_PATTERN } from "@/shared/lib/validation/formRules";
 import { buildExecutionView } from "../lib/executionView";
 import type { CommandAccepted, ExecutionDTO, ExecutionGraphDTO, ExecutionView } from "../types";
 
@@ -24,8 +22,6 @@ export type UseExecutionOptions = {
   onError?: (error: unknown) => void;
   /** キャンセルに成功したときに呼ぶ。 */
   onCancelSuccess?: () => void;
-  /** イベントの発行に成功したときに呼ぶ。 */
-  onPublishSuccess?: () => void;
   /** false のとき EventSource を開かず、ACTIVE の間はポーリングで更新する。既定 true。 */
   streamEnabled?: boolean;
   /** SSE イベント後のフル GET に使うデバウンス（ms）。既定 `DEFAULT_STREAM_REFRESH_DEBOUNCE_MS`。 */
@@ -46,8 +42,6 @@ export type UseExecutionResult = {
   loadExecution: () => Promise<void>;
   /** 実行をキャンセルする。 */
   cancelExecution: () => Promise<void>;
-  /** 名前付きのイベントを発行する。 */
-  publishEvent: (eventName: string) => Promise<void>;
   /** 選択中のノード ID。無ければ null。 */
   selectedNodeId: string | null;
   /** 選択中のノード ID を設定する。 */
@@ -59,7 +53,6 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
   const {
     onError,
     onCancelSuccess,
-    onPublishSuccess,
     streamEnabled = true,
     streamRefreshDebounceMs = DEFAULT_STREAM_REFRESH_DEBOUNCE_MS
   } = options;
@@ -177,30 +170,6 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
     }
   }
 
-  async function publishEvent(eventName: string) {
-    if (!execution) return;
-    const displayId = execution.displayId;
-    const name = eventName.trim();
-    if (!name) return;
-    if (!isWithinMaxLength(name, EVENT_NAME_MAX_LENGTH) || !matchesPattern(name, EVENT_NAME_PATTERN)) return;
-    setLoading(true);
-    let posted = false;
-    try {
-      await apiPost<CommandAccepted>(`/executions/${displayId}/events`, { name });
-      posted = true;
-      await refreshExecutionSnapshot(displayId);
-      onPublishSuccess?.();
-    } catch (error) {
-      onErrorRef.current?.(error);
-      if (posted) {
-        setExecution(null);
-        setSelectedNodeId(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return {
     execution,
     loading,
@@ -208,7 +177,6 @@ export function useExecution(executionDisplayId: string, options: UseExecutionOp
     terminal,
     loadExecution,
     cancelExecution,
-    publishEvent,
     selectedNodeId,
     setSelectedNodeId
   };

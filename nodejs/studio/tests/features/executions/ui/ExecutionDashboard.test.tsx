@@ -56,11 +56,6 @@ vi.mock("@/features/executions/hooks/useGraphData", () => ({
 }));
 
 vi.mock("@/features/executions/hooks/useNodeCommands", () => ({
-  useNodeCommands: () => ({
-    resumeNode: vi.fn(),
-    cancelNode: vi.fn(),
-    publishEvent: vi.fn()
-  }),
   getResumeDisabledReason: () => null
 }));
 
@@ -105,18 +100,64 @@ describe("ExecutionDashboard", () => {
       terminal: false,
       loadExecution: vi.fn(),
       cancelExecution: vi.fn(),
-      publishEvent: vi.fn(),
       selectedNodeId: null,
       setSelectedNodeId: vi.fn()
     });
   });
 
-  it("初期 executionId でヘッダを描画する", async () => {
+  it("実行 ID を見出しにし、パンくずから実行一覧へ戻れる", () => {
+    // Arrange / Act
     renderWithUiText(<ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} />);
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/実行 ID/i)).toBeInTheDocument();
+    // Assert
+    expect(screen.getByRole("heading", { level: 1, name: "ex-1" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "実行一覧" })).toHaveAttribute("href", "/executions");
+  });
+
+  it("待機があるときだけ「イベントを送信」を出し、押すとダイアログを開く", async () => {
+    // Arrange
+    vi.mocked(useExecution).mockReturnValue({
+      execution: {
+        ...executionViewFixture(),
+        nodes: [
+          {
+            nodeId: "w-1",
+            nodeName: "approve",
+            nodeType: "Wait",
+            status: "WAITING",
+            attempt: 1,
+            workerId: null,
+            waitKey: null,
+            allowedEvents: ["approval.granted"],
+            canceledByExecution: false
+          }
+        ]
+      },
+      loading: false,
+      canCancel: true,
+      terminal: false,
+      loadExecution: vi.fn(),
+      cancelExecution: vi.fn(),
+      selectedNodeId: null,
+      setSelectedNodeId: vi.fn()
     });
+    renderWithUiText(<ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} />);
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
+
+    // Assert
+    expect(screen.getByText("approve でイベントを待っています")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "イベントを送信" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /approve に approval.granted を届ける/ })).toBeChecked();
+  });
+
+  it("待機が無ければ「イベントを送信」を出さない", () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionDashboard initialExecutionId="ex-1" autoLoadOnMount={false} />);
+
+    // Assert
+    expect(screen.queryByRole("button", { name: "イベントを送信" })).not.toBeInTheDocument();
   });
 
   it("Cancel ボタンで cancelExecution を呼ぶ", async () => {
@@ -128,7 +169,6 @@ describe("ExecutionDashboard", () => {
       terminal: false,
       loadExecution: vi.fn(),
       cancelExecution,
-      publishEvent: vi.fn(),
       selectedNodeId: null,
       setSelectedNodeId: vi.fn()
     });
@@ -170,7 +210,7 @@ describe("ExecutionDashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "グラフ" }));
     fireEvent.click(await screen.findByRole("button", { name: "全画面表示" }));
     fireEvent.keyDown(window, { key: "Escape" });
-    fireEvent.click(screen.getByRole("checkbox", { name: "比較" }));
+    fireEvent.click(screen.getByRole("button", { name: "比較" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "リアルタイム更新" }));
     fireEvent.change(screen.getByLabelText(/B$/), { target: { value: "ex-2" } });
     const loadButtons = screen.getAllByRole("button", { name: "読み込む" });

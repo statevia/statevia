@@ -10,7 +10,7 @@ import { useUiText } from "@/shared/i18n/uiTextContext";
 
 /**
  * 1 つの実行を見る唯一の画面（実行詳細）。
- * @remarks 操作（キャンセル・再開・イベント送信）は executions.write を持つ利用者にだけ出す。
+ * @remarks 見出しの操作（キャンセル・比較・イベントを送信）と待機のお知らせを持つ。キャンセルとイベント送信は executions.write を持つ利用者にだけ出す。
  * 閲覧の利用者には操作も権限が無いことの案内も出さない。出し分けは案内で、認可の正本は Service API である。
  */
 export function ExecutionDetailPage() {
@@ -37,19 +37,5 @@ export function ExecutionDetailPage() {
     );
   }
 
-  return (
-    <ExecutionDashboard
-      key={executionId}
-      initialExecutionId={executionId}
-      autoLoadOnMount
-      headerTitle={uiText.executionDetailPage.title}
-      executionIdEditable={false}
-      comparisonEnabled={false}
-      headerNav={
-        <ActionLinkGroup
-          links={[{ label: uiText.lists.executions, href: "/executions", priority: "primary" }]}
-        />
-      }
-    />
-  );
+  return <ExecutionDashboard key={executionId} initialExecutionId={executionId} autoLoadOnMount />;
 }
