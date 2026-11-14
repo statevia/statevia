@@ -121,6 +121,7 @@ describe("AdminServiceAccountsPageClient", () => {
 
     // Act
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
 
     // Assert
     expect(await screen.findByRole("heading", { name: "サービスアカウントを作成" })).toBeInTheDocument();
@@ -132,6 +133,7 @@ describe("AdminServiceAccountsPageClient", () => {
     // Arrange
     mockGets(async () => []);
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
     await screen.findByLabelText("Operators");
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: "nightly-runner" } });
 
@@ -147,6 +149,7 @@ describe("AdminServiceAccountsPageClient", () => {
     // Arrange
     mockGets(async () => []);
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
     fireEvent.click(await screen.findByLabelText("Operators"));
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: "夜間ジョブ" } });
 
@@ -158,11 +161,12 @@ describe("AdminServiceAccountsPageClient", () => {
     expect(api.apiPost).not.toHaveBeenCalled();
   });
 
-  it("名前とグループで作成すると name と groupIds だけを送り、一覧を取り直す", async () => {
+  it("名前とグループで作成すると name と groupIds だけを送り、ダイアログを閉じて一覧を取り直す", async () => {
     // Arrange
     mockGets(async () => []);
     vi.mocked(api.apiPost).mockResolvedValue({ ...serviceAccount, isActive: true, hasApiKey: false, groupIds: ["g-1"] });
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
     fireEvent.click(await screen.findByLabelText("Operators"));
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: " nightly-runner " } });
 
@@ -176,7 +180,7 @@ describe("AdminServiceAccountsPageClient", () => {
     await waitFor(() => {
       expect(listCallCount()).toBe(2);
     });
-    expect(screen.getByLabelText("名前")).toHaveValue("");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("サーバーの 422 はフォームに出し、入力を残す", async () => {
@@ -187,6 +191,7 @@ describe("AdminServiceAccountsPageClient", () => {
       error: { code: "VALIDATION_ERROR", message: "groupIds must contain at least one group." }
     });
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
     fireEvent.click(await screen.findByLabelText("Operators"));
     fireEvent.change(screen.getByLabelText("名前"), { target: { value: "nightly-runner" } });
 
@@ -210,6 +215,7 @@ describe("AdminServiceAccountsPageClient", () => {
 
     // Act
     renderWithUiText(<AdminServiceAccountsPageClient />);
+    fireEvent.click(await screen.findByRole("button", { name: "サービスアカウントを作成" }));
 
     // Assert
     expect(await screen.findByText("グループの読み込みに失敗しました。")).toBeInTheDocument();

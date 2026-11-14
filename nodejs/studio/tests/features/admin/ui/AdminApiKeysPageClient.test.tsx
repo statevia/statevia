@@ -14,7 +14,7 @@ describe("AdminApiKeysPageClient", () => {
     vi.clearAllMocks();
   });
 
-  it("一覧を読み込み発行フォームを表示する", async () => {
+  it("一覧を読み込み、見出しのボタンから発行ダイアログを開く", async () => {
     // Arrange
     vi.mocked(api.apiGet).mockImplementation(async (path: string) => {
       if (path === "/admin/api-keys") {
@@ -53,7 +53,8 @@ describe("AdminApiKeysPageClient", () => {
       expect(api.apiGet).toHaveBeenCalledWith("/admin/api-keys");
     });
     expect(await screen.findByText("CI Runner")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "API キーを発行" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "API キーを発行" }));
+    expect(screen.getByRole("dialog", { name: "API キーを発行" })).toBeInTheDocument();
     expect(screen.getByLabelText("実行の閲覧")).toBeInTheDocument();
     expect(screen.queryByText("permissions.executionsRead")).not.toBeInTheDocument();
   });
@@ -86,7 +87,7 @@ describe("AdminApiKeysPageClient", () => {
     });
 
     render(<AdminApiKeysPageClient />);
-    await screen.findByRole("heading", { name: "API キーを発行" });
+    fireEvent.click(await screen.findByRole("button", { name: "API キーを発行" }));
 
     // Act
     fireEvent.change(screen.getByLabelText("表示名"), { target: { value: "New Key" } });
@@ -103,7 +104,7 @@ describe("AdminApiKeysPageClient", () => {
     expect(await screen.findByDisplayValue("stv_plain_secret_value")).toBeInTheDocument();
   });
 
-  it("有効なキーを失効できる", async () => {
+  it("有効なキーは確認ダイアログを経てから失効する", async () => {
     // Arrange
     vi.mocked(api.apiGet).mockImplementation(async (path: string) => {
       if (path === "/admin/api-keys") {
@@ -130,8 +131,11 @@ describe("AdminApiKeysPageClient", () => {
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "失効" }));
+    const deleteCallsBeforeConfirm = vi.mocked(api.apiDelete).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "失効する" }));
 
     // Assert
+    expect(deleteCallsBeforeConfirm).toBe(0);
     await waitFor(() => {
       expect(api.apiDelete).toHaveBeenCalledWith("/admin/api-keys/key-1");
     });
@@ -171,6 +175,7 @@ describe("AdminApiKeysPageClient", () => {
     expect(await screen.findByText("CI Runner")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "失効" })).toBeNull();
 
+    fireEvent.click(screen.getByRole("button", { name: "API キーを発行" }));
     fireEvent.change(screen.getByLabelText("表示名"), { target: { value: "名前" } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "発行" }));

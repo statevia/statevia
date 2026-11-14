@@ -19,18 +19,15 @@ type FieldLabelProps = Readonly<{
 
 /**
  * 項目名と必須のマーク。マークは項目名の右に置き、項目名の下に回り込ませない。
- * マークは見た目だけにし、必須であることは入力の `required` / `aria-required` で伝える。
+ * マークは CSS の疑似要素で描き、ラベルの文字（アクセシブルな名前）には含めない。
+ * 必須であることは入力の `required` で伝え、マークの意味は `title` で補う。
  */
 export function FieldLabel({ label, required = false }: FieldLabelProps) {
   const uiText = useUiText();
+  const requiredClass = required ? " after:ml-1 after:text-md-error after:content-['*']" : "";
   return (
-    <span className="text-sm font-medium text-md-on-surface">
+    <span className={`text-sm font-medium text-md-on-surface${requiredClass}`} title={required ? uiText.dialog.required : undefined}>
       {label}
-      {required ? (
-        <span className="ml-1 text-md-error" aria-hidden="true" title={uiText.dialog.required}>
-          *
-        </span>
-      ) : null}
     </span>
   );
 }
@@ -51,7 +48,7 @@ type FieldMessageProps = Readonly<{
 export function FieldMessage({ id, hint, error }: FieldMessageProps) {
   if (error) {
     return (
-      <span id={id} className="mt-1 block text-xs text-md-error">
+      <span id={id} role="alert" className="mt-1 block text-xs text-md-error">
         {error}
       </span>
     );

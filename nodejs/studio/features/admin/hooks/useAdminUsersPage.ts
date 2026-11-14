@@ -68,11 +68,23 @@ export type AdminUsersPageModel = {
    * @param event フォームの submit。
    */
   createUser: (event: FormEvent<HTMLFormElement>) => void;
+  /** 作成ダイアログが開いているか。 */
+  createDialogOpen: boolean;
+  /** 作成ダイアログを開く。 */
+  openCreateDialog: () => void;
+  /** 作成ダイアログを閉じる（入力は残す）。 */
+  closeCreateDialog: () => void;
   /**
-   * 有効と無効を入れ替えて一覧を取り直す。
+   * 有効と無効を入れ替える。有効化はすぐ送り、無効化は確認ダイアログを出してから送る。
    * @param user 対象ユーザー。
    */
-  toggleActive: (user: AdminUserListItem) => void;
+  requestToggleActive: (user: AdminUserListItem) => void;
+  /** 無効化の確認の対象。確認を出していなければ null。 */
+  disableTarget: AdminUserListItem | null;
+  /** 無効化を確定して送る。 */
+  confirmDisable: () => void;
+  /** 無効化の確認を閉じる（何も送らない）。 */
+  cancelDisable: () => void;
   /**
    * パスワード更新ダイアログを開く。
    * @param user 対象ユーザー。
@@ -130,6 +142,8 @@ export function useAdminUsersPage(): AdminUsersPageModel {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [disableTarget, setDisableTarget] = useState<AdminUserListItem | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -188,6 +202,7 @@ export function useAdminUsersPage(): AdminUsersPageModel {
           setPassword("");
           setDisplayName("");
           setIsTenantAdmin(false);
+          setCreateDialogOpen(false);
           await loadUsers();
         } catch (error) {
           setToast(toToastError(error));
@@ -215,6 +230,36 @@ export function useAdminUsersPage(): AdminUsersPageModel {
     },
     [loadUsers]
   );
+
+  const openCreateDialog = useCallback(() => {
+    setToast(null);
+    setCreateDialogOpen(true);
+  }, []);
+
+  const closeCreateDialog = useCallback(() => {
+    setCreateDialogOpen(false);
+  }, []);
+
+  const requestToggleActive = useCallback(
+    (user: AdminUserListItem) => {
+      if (user.isActive) {
+        setDisableTarget(user);
+        return;
+      }
+      toggleActive(user);
+    },
+    [toggleActive]
+  );
+
+  const confirmDisable = useCallback(() => {
+    if (!disableTarget) return;
+    setDisableTarget(null);
+    toggleActive(disableTarget);
+  }, [disableTarget, toggleActive]);
+
+  const cancelDisable = useCallback(() => {
+    setDisableTarget(null);
+  }, []);
 
   const closePasswordDialog = useCallback(() => {
     setPasswordTarget(null);
@@ -286,7 +331,13 @@ export function useAdminUsersPage(): AdminUsersPageModel {
     setDisplayName,
     setIsTenantAdmin,
     createUser,
-    toggleActive,
+    createDialogOpen,
+    openCreateDialog,
+    closeCreateDialog,
+    requestToggleActive,
+    disableTarget,
+    confirmDisable,
+    cancelDisable,
     openPasswordDialog,
     closePasswordDialog,
     passwordTarget,

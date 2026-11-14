@@ -3,6 +3,9 @@
 import { useState } from "react";
 import type { ProjectSummary } from "@/shared/project/types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { Notice } from "@/shared/ui/Notice";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
 import { useResourceGrantsEditor, type ResourceGrantsEditorModel } from "../hooks/useResourceGrantsEditor";
@@ -36,10 +39,6 @@ type DefinitionsSectionProps = SectionProps & {
   projectCandidates: ProjectSummary[];
 };
 
-const SECONDARY_BUTTON_CLASS =
-  "rounded-lg border border-md-outline px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container disabled:opacity-60";
-const PRIMARY_BUTTON_CLASS =
-  "rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60";
 
 /**
  * 種別の上限超過と、その理由。
@@ -90,21 +89,21 @@ function ProjectsSection({ editor, projectCandidates }: Readonly<SectionProps & 
       {editor.selectedProjectIds.size === 0 ? (
         <p className="mb-2 text-sm text-md-on-surface-variant">{text.projectsEmpty}</p>
       ) : (
-        <ul className="mb-2 divide-y divide-md-outline rounded-lg border border-md-outline">
+        <ul className="mb-2 divide-y divide-md-outline overflow-hidden rounded-card border border-md-outline">
           {selectedProjects.map((project) => (
             <li key={project.projectId} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
               <span>
                 {project.displayName}{" "}
                 <span className="font-mono text-xs text-md-on-surface-variant">{project.slug}</span>
               </span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => editor.toggleProject(project.projectId)}
                 aria-label={text.removeNamed(project.displayName)}
-                className={SECONDARY_BUTTON_CLASS}
               >
                 {text.remove}
-              </button>
+              </Button>
             </li>
           ))}
           {unknownProjectIds.map((projectId) => (
@@ -112,14 +111,14 @@ function ProjectsSection({ editor, projectCandidates }: Readonly<SectionProps & 
               <span>
                 {text.unknownProject} <span className="font-mono text-xs">{projectId}</span>
               </span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => editor.toggleProject(projectId)}
                 aria-label={text.removeNamed(projectId)}
-                className={SECONDARY_BUTTON_CLASS}
               >
                 {text.remove}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -135,7 +134,7 @@ function ProjectsSection({ editor, projectCandidates }: Readonly<SectionProps & 
             id="resource-grants-project-add"
             value={projectToAdd}
             onChange={(event) => setProjectToAdd(event.target.value)}
-            className="rounded-lg border border-md-outline px-3 py-1.5 text-sm"
+            className="h-9 rounded-control border border-md-outline-variant bg-md-surface-container px-3 text-sm text-md-on-surface"
           >
             <option value="">{text.projectAddPlaceholder}</option>
             {addable.map((project) => (
@@ -144,9 +143,9 @@ function ProjectsSection({ editor, projectCandidates }: Readonly<SectionProps & 
               </option>
             ))}
           </select>
-          <button type="button" onClick={addProject} disabled={projectToAdd === ""} className={SECONDARY_BUTTON_CLASS}>
+          <Button variant="standard" size="sm" onClick={addProject} disabled={projectToAdd === ""}>
             {text.projectAddSubmit}
-          </button>
+          </Button>
         </div>
       )}
       {editor.limitErrors.projectIds === undefined ? null : (
@@ -228,7 +227,7 @@ function DefinitionsSection({ editor, definitionCandidates, projectCandidates }:
         </div>
       )}
       {outside.length === 0 ? null : (
-        <output className="mt-3 block rounded-lg border border-md-warning bg-md-warning-container p-3 text-sm text-md-on-warning-container">
+        <output className="mt-3 block rounded-card border border-md-warning/40 bg-md-warning-container p-3 text-sm text-md-on-warning-container">
           <p>{text.outsideProjectsWarning}</p>
           <ul className="mt-1 list-disc pl-5">
             {outside.map((definition) => (
@@ -257,29 +256,16 @@ function ClearConfirmDialog({ editor, fields }: Readonly<SectionProps & { fields
   };
 
   return (
-    <dialog
+    <ConfirmDialog
       open
-      aria-labelledby="resource-grants-clear-title"
-      className="mt-4 w-full max-w-none rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
-    >
-      <h2 id="resource-grants-clear-title" className="mb-2 text-lg font-medium">
-        {text.clearConfirmTitle}
-      </h2>
-      <p className="mb-4 text-sm">{text.clearConfirmBody(fields.map((field) => fieldLabels[field]))}</p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={editor.saving}
-          onClick={() => void editor.confirmClear()}
-          className={PRIMARY_BUTTON_CLASS}
-        >
-          {text.clearConfirm}
-        </button>
-        <button type="button" disabled={editor.saving} onClick={editor.cancelClear} className={SECONDARY_BUTTON_CLASS}>
-          {text.cancel}
-        </button>
-      </div>
-    </dialog>
+      title={text.clearConfirmTitle}
+      message={text.clearConfirmBody(fields.map((field) => fieldLabels[field]))}
+      confirmLabel={text.clearConfirm}
+      cancelLabel={text.cancel}
+      loading={editor.saving}
+      onConfirm={() => void editor.confirmClear()}
+      onCancel={editor.cancelClear}
+    />
   );
 }
 
@@ -315,22 +301,14 @@ export function ResourceGrantsForm({ subject }: Readonly<ResourceGrantsFormProps
   return (
     <>
       <Toast toast={editor.toast} onClose={editor.clearToast} />
-      <p className="mb-4 text-sm text-md-on-surface-variant">{text.description}</p>
+      <p className="text-sm text-md-on-surface-variant">{text.description}</p>
       <form
         noValidate
         onSubmit={(event) => void editor.submit(event)}
-        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
+        className="flex flex-col gap-2 rounded-card border border-md-outline bg-md-surface p-5"
       >
-        {editor.submitError === null ? null : (
-          <p className="mb-3 text-sm text-md-error" role="alert">
-            {editor.submitError}
-          </p>
-        )}
-        {editor.candidatesLoadFailed ? (
-          <p className="mb-3 text-sm text-md-error" role="alert">
-            {text.candidatesLoadFailed}
-          </p>
-        ) : null}
+        {editor.submitError === null ? null : <Notice tone="error" title={editor.submitError} className="mb-3" />}
+        {editor.candidatesLoadFailed ? <Notice tone="error" title={text.candidatesLoadFailed} className="mb-3" /> : null}
         {editor.projectCandidates === null ? null : (
           <ProjectsSection editor={editor} projectCandidates={editor.projectCandidates} />
         )}
@@ -341,9 +319,11 @@ export function ResourceGrantsForm({ subject }: Readonly<ResourceGrantsFormProps
             projectCandidates={editor.projectCandidates}
           />
         )}
-        <button type="submit" disabled={!editor.canSave} className={PRIMARY_BUTTON_CLASS}>
-          {editor.saving ? text.saving : text.saveSubmit}
-        </button>
+        <div className="flex justify-end">
+          <Button variant="lead" type="submit" disabled={!editor.canSave} loading={editor.saving}>
+            {editor.saving ? text.saving : text.saveSubmit}
+          </Button>
+        </div>
       </form>
       {editor.pendingClearFields === null ? null : (
         <ClearConfirmDialog editor={editor} fields={editor.pendingClearFields} />

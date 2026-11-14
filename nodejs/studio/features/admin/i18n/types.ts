@@ -35,6 +35,12 @@ export type AdminFeatureUiText = {
       cancel: string;
       /** ユーザー行から実行リソース許可へ進むリンク。 */
       resourceGrants: string;
+      /** 無効化の確認の見出し。 */
+      disableConfirmTitle: (username: string) => string;
+      /** 無効化の確認の説明。 */
+      disableConfirmMessage: string;
+      /** 無効化の確認の決定ボタン。 */
+      disableConfirmSubmit: string;
     };
     groupManagement: {
       title: string;
@@ -79,6 +85,12 @@ export type AdminFeatureUiText = {
       active: string;
       inactive: string;
       revoke: string;
+      /** 失効の確認の見出し。 */
+      revokeConfirmTitle: (name: string) => string;
+      /** 失効の確認の説明。 */
+      revokeConfirmMessage: string;
+      /** 失効の確認の決定ボタン。 */
+      revokeConfirmSubmit: string;
       revoking: string;
       prefixLabel: (prefix: string) => string;
       lastUsedLabel: (value: string) => string;
@@ -116,6 +128,12 @@ export type AdminFeatureUiText = {
       forbidden: string;
       valueConfigured: string;
       updatedAt: (value: string) => string;
+      /** 削除の確認の見出し。 */
+      deleteConfirmTitle: (name: string) => string;
+      /** 削除の確認の説明。 */
+      deleteConfirmMessage: string;
+      /** 削除の確認の決定ボタン。 */
+      deleteConfirmSubmit: string;
     };
     notificationSmtp: {
       title: string;

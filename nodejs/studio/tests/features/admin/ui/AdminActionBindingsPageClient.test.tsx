@@ -258,6 +258,7 @@ describe("AdminActionBindingsPageClient", () => {
     await screen.findByRole("heading", { name: "order-db" });
 
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
+    fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
     expect(await screen.findByRole("button", { name: "削除中…" })).toBeDisabled();
     resolveDelete();
@@ -275,6 +276,7 @@ describe("AdminActionBindingsPageClient", () => {
     await screen.findByRole("heading", { name: "order-db" });
 
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
+    fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
     expect(await screen.findByText("delete failed")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "order-db" })).toBeInTheDocument();
@@ -287,6 +289,7 @@ describe("AdminActionBindingsPageClient", () => {
     await screen.findByRole("heading", { name: "order-db" });
 
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
+    fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
     expect(await screen.findByText("Failed to delete action binding.")).toBeInTheDocument();
   });

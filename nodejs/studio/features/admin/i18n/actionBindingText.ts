@@ -41,7 +41,12 @@ const actionBindingCopy = {
   empty: { en: "No bindings yet.", ja: "バインディングはまだありません。" },
   forbidden: { en: "Tenant administrators only.", ja: "テナント管理者のみ利用できます。" },
   valueConfigured: { en: "Configured", ja: "設定済み" },
-  updatedAtPrefix: { en: "Updated: ", ja: "更新: " }
+  updatedAtPrefix: { en: "Updated: ", ja: "更新: " },
+  deleteConfirmMessage: {
+    en: "Actions that use this binding can no longer read its value. This cannot be undone.",
+    ja: "このバインディングを使うアクションは値を読めなくなります。元に戻せません。"
+  },
+  deleteConfirmSubmit: { en: "Delete", ja: "削除する" }
 } as const satisfies Record<string, LocaleCopy>;
 
 /**
@@ -72,6 +77,10 @@ export function actionBindingText(locale: "en" | "ja"): ActionBindingText {
     empty: text(actionBindingCopy.empty),
     forbidden: text(actionBindingCopy.forbidden),
     valueConfigured: text(actionBindingCopy.valueConfigured),
-    updatedAt: (value: string) => `${text(actionBindingCopy.updatedAtPrefix)}${value}`
+    updatedAt: (value: string) => `${text(actionBindingCopy.updatedAtPrefix)}${value}`,
+    deleteConfirmTitle: (name: string) =>
+      locale === "ja" ? `バインディング「${name}」を削除しますか？` : `Delete binding "${name}"?`,
+    deleteConfirmMessage: text(actionBindingCopy.deleteConfirmMessage),
+    deleteConfirmSubmit: text(actionBindingCopy.deleteConfirmSubmit)
   };
 }

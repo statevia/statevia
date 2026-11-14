@@ -67,6 +67,23 @@ export type AdminApiKeysPageModel = {
    * @param apiKey 対象キー。
    */
   revokeApiKey: (apiKey: AdminApiKeyListItem) => void;
+  /** 発行ダイアログが開いているか。 */
+  createDialogOpen: boolean;
+  /** 発行ダイアログを開く。 */
+  openCreateDialog: () => void;
+  /** 発行ダイアログを閉じる（入力は残す）。 */
+  closeCreateDialog: () => void;
+  /** 失効の確認の対象。確認を出していなければ null。 */
+  revokeTarget: AdminApiKeyListItem | null;
+  /**
+   * 失効の確認を出す。
+   * @param apiKey 対象キー。
+   */
+  requestRevoke: (apiKey: AdminApiKeyListItem) => void;
+  /** 失効を確定して送る。 */
+  confirmRevoke: () => void;
+  /** 失効の確認を閉じる（何も送らない）。 */
+  cancelRevoke: () => void;
   /** 平文キーをクリップボードへコピーする。 */
   copyPlainKey: () => void;
   /** 発行直後の平文表示を閉じる。 */
@@ -93,6 +110,8 @@ export function useAdminApiKeysPage(): AdminApiKeysPageModel {
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
   const [issuedKey, setIssuedKey] = useState<CreatedAdminApiKey | null>(null);
   const [copied, setCopied] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<AdminApiKeyListItem | null>(null);
 
   const assignablePermissions = useMemo(
     () => permissions.filter((permission) => permission.permissionKey !== "tenant.admin" && !permission.isDeprecated),
@@ -164,6 +183,7 @@ export function useAdminApiKeysPage(): AdminApiKeysPageModel {
         try {
           const created = await apiPost<CreatedAdminApiKey>("/admin/api-keys", body);
           setIssuedKey(created);
+          setCreateDialogOpen(false);
           setName("");
           setExpiresAt("");
           setSelectedScopes(new Set());
@@ -195,6 +215,29 @@ export function useAdminApiKeysPage(): AdminApiKeysPageModel {
     },
     [load]
   );
+
+  const openCreateDialog = useCallback(() => {
+    setToast(null);
+    setCreateDialogOpen(true);
+  }, []);
+
+  const closeCreateDialog = useCallback(() => {
+    setCreateDialogOpen(false);
+  }, []);
+
+  const requestRevoke = useCallback((apiKey: AdminApiKeyListItem) => {
+    setRevokeTarget(apiKey);
+  }, []);
+
+  const confirmRevoke = useCallback(() => {
+    if (!revokeTarget) return;
+    setRevokeTarget(null);
+    revokeApiKey(revokeTarget);
+  }, [revokeApiKey, revokeTarget]);
+
+  const cancelRevoke = useCallback(() => {
+    setRevokeTarget(null);
+  }, []);
 
   const copyPlainKey = useCallback(() => {
     if (!issuedKey) {
@@ -234,6 +277,13 @@ export function useAdminApiKeysPage(): AdminApiKeysPageModel {
     toggleScope,
     createApiKey,
     revokeApiKey,
+    createDialogOpen,
+    openCreateDialog,
+    closeCreateDialog,
+    revokeTarget,
+    requestRevoke,
+    confirmRevoke,
+    cancelRevoke,
     copyPlainKey,
     dismissIssuedKey
   };

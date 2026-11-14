@@ -1,6 +1,8 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/Card";
 import type { AdminUserListItem } from "../types";
 
 /**
@@ -55,9 +57,15 @@ export function AdminGroupMembersSection({
   const uiText = useUiText();
 
   return (
-    <section className="rounded-xl border border-md-outline bg-md-surface p-4">
-      <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.membersTitle}</h2>
-      <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
+    <Card
+      title={uiText.admin.groupManagement.membersTitle}
+      actions={
+        <Button variant="standard" loading={saving} onClick={onSave}>
+          {saving ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.saveMembers}
+        </Button>
+      }
+    >
+      <ul className="max-h-64 space-y-2 overflow-y-auto">
         {users.map((user) => {
           const inputId = checkboxInputId("group-member", user.userId);
           const labelText = memberCheckboxLabel(user, uiText.admin.users.inactive);
@@ -76,14 +84,6 @@ export function AdminGroupMembersSection({
           );
         })}
       </ul>
-      <button
-        type="button"
-        disabled={saving}
-        onClick={onSave}
-        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-      >
-        {saving ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.saveMembers}
-      </button>
-    </section>
+    </Card>
   );
 }

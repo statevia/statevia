@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
@@ -44,6 +45,15 @@ export function AdminGroupDetailPageClient({ groupId }: Readonly<AdminGroupDetai
     <PageShell
       title={page.group.name}
       description={uiText.admin.groupManagement.description}
+      breadcrumbs={
+        <Breadcrumbs
+          items={[
+            { label: uiText.navigation.groups.tenantAccess },
+            { label: uiText.admin.groupManagement.title, href: "/admin/groups" },
+            { label: page.group.name }
+          ]}
+        />
+      }
       secondaryActions={
         <Link href="/admin/groups" className="hover:underline">
           {uiText.admin.groupManagement.backToList}

@@ -1,7 +1,12 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button } from "@/shared/ui/Button";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
+import { TextField } from "@/shared/ui/TextField";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import type { NotificationSmtpFieldError } from "../notificationSmtp";
 import {
@@ -15,7 +20,8 @@ import {
  * @returns 表示、置換、削除。
  */
 export function AdminNotificationSmtpPageClient() {
-  const text = useUiText().admin.notificationSmtp;
+  const uiText = useUiText();
+  const text = uiText.admin.notificationSmtp;
   const page = useAdminNotificationSmtpPage();
   const fieldMessage = fieldErrorMessage(text, page.fieldError);
   const failureMessage = failureText(text, page.failure, page.errorMessage);
@@ -26,134 +32,81 @@ export function AdminNotificationSmtpPageClient() {
   };
 
   return (
-    <PageShell title={text.title} description={text.description}>
+    <PageShell
+      title={text.title}
+      description={text.description}
+      breadcrumbs={<Breadcrumbs items={[{ label: uiText.navigation.groups.tenantSettings }, { label: text.title }]} />}
+    >
       {failureMessage ? (
-        <p className="mb-4 text-sm text-red-700" role="alert">
-          {failureMessage}
-        </p>
+        <Notice
+          tone="error"
+          title={failureMessage}
+          actions={
+            page.failure === "load" ? (
+              <Button variant="outline" size="sm" onClick={() => void page.reload()}>
+                {text.retry}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : null}
-      {page.failure === "load" ? (
-        <button
-          type="button"
-          onClick={() => void page.reload()}
-          className="mb-4 rounded-lg border border-md-outline px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container"
-        >
-          {text.retry}
-        </button>
-      ) : null}
-      <form onSubmit={onSave} className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs">
-        <p className="mb-3 text-sm">{page.configured ? text.configured : text.notConfigured}</p>
-        {fieldMessage ? (
-          <p className="mb-3 text-sm text-red-700" role="alert">
-            {fieldMessage}
-          </p>
-        ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-medium" htmlFor="smtp-host">
-            {text.hostLabel}
-            <input
-              id="smtp-host"
-              value={page.host}
-              autoComplete="off"
-              onChange={(event) => page.setHost(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="smtp-port">
-            {text.portLabel}
-            <input
-              id="smtp-port"
-              value={page.port}
-              inputMode="numeric"
-              autoComplete="off"
-              onChange={(event) => page.setPort(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="smtp-user">
-            {text.userLabel}
-            <input
-              id="smtp-user"
-              value={page.user}
-              autoComplete="off"
-              onChange={(event) => page.setUser(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium" htmlFor="smtp-password">
-            {text.passwordLabel}
-            <input
-              id="smtp-password"
-              type="password"
-              value={page.password}
-              autoComplete="new-password"
-              onChange={(event) => page.setPassword(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium sm:col-span-2" htmlFor="smtp-from">
-            {text.defaultFromLabel}
-            <input
+      <form onSubmit={onSave} className="flex flex-col gap-4 rounded-card border border-md-outline bg-md-surface p-5">
+        <p className="text-sm text-md-on-surface">{page.configured ? text.configured : text.notConfigured}</p>
+        {fieldMessage ? <Notice tone="error" title={fieldMessage} /> : null}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField id="smtp-host" label={text.hostLabel} value={page.host} autoComplete="off" onChange={(event) => page.setHost(event.target.value)} />
+          <TextField
+            id="smtp-port"
+            label={text.portLabel}
+            value={page.port}
+            inputMode="numeric"
+            autoComplete="off"
+            onChange={(event) => page.setPort(event.target.value)}
+          />
+          <TextField id="smtp-user" label={text.userLabel} value={page.user} autoComplete="off" onChange={(event) => page.setUser(event.target.value)} />
+          <TextField
+            id="smtp-password"
+            label={text.passwordLabel}
+            type="password"
+            value={page.password}
+            autoComplete="new-password"
+            hint={page.passwordConfigured ? text.passwordConfigured : undefined}
+            onChange={(event) => page.setPassword(event.target.value)}
+          />
+          <div className="sm:col-span-2">
+            <TextField
               id="smtp-from"
+              label={text.defaultFromLabel}
               value={page.defaultFrom}
               autoComplete="off"
               onChange={(event) => page.setDefaultFrom(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
-          </label>
+          </div>
         </div>
-        {page.passwordConfigured ? <p className="mt-3 text-xs">{text.passwordConfigured}</p> : null}
-        <p className="mt-3 text-xs">{text.replaceHint}</p>
-        <div className="mt-4 flex gap-2">
-          <button
-            type="submit"
-            disabled={page.pending !== null || page.loading}
-            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-          >
-            {page.pending === "save" ? text.saving : text.save}
-          </button>
+        <p className="text-xs text-md-on-surface-variant">{text.replaceHint}</p>
+        <div className="flex flex-wrap justify-between gap-2">
           {page.configured ? (
-            <button
-              type="button"
-              disabled={page.pending !== null}
-              onClick={page.requestDelete}
-              className="rounded-lg border border-md-outline px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container disabled:opacity-60"
-            >
+            <Button variant="danger" disabled={page.pending !== null} loading={page.pending === "delete"} onClick={page.requestDelete}>
               {page.pending === "delete" ? text.deleting : text.delete}
-            </button>
-          ) : null}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button variant="lead" type="submit" disabled={page.pending !== null || page.loading} loading={page.pending === "save"}>
+            {page.pending === "save" ? text.saving : text.save}
+          </Button>
         </div>
       </form>
-      {page.deleteOpen ? (
-        <dialog
-          open
-          aria-labelledby="smtp-delete-title"
-          className="mt-4 w-full max-w-none rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
-        >
-          <h2 id="smtp-delete-title" className="mb-2 text-lg font-medium">
-            {text.deleteConfirmTitle}
-          </h2>
-          <p className="mb-4 text-sm">{text.deleteConfirmBody}</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page.pending !== null}
-              onClick={() => void page.confirmDelete()}
-              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-            >
-              {text.deleteConfirm}
-            </button>
-            <button
-              type="button"
-              disabled={page.pending !== null}
-              onClick={page.cancelDelete}
-              className="rounded-lg border border-md-outline px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container disabled:opacity-60"
-            >
-              {text.cancel}
-            </button>
-          </div>
-        </dialog>
-      ) : null}
+      <ConfirmDialog
+        open={page.deleteOpen}
+        title={text.deleteConfirmTitle}
+        message={text.deleteConfirmBody}
+        confirmLabel={text.deleteConfirm}
+        cancelLabel={text.cancel}
+        loading={page.pending !== null}
+        onConfirm={() => void page.confirmDelete()}
+        onCancel={page.cancelDelete}
+      />
     </PageShell>
   );
 }

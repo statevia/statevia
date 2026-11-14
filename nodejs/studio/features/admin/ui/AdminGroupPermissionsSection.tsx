@@ -1,6 +1,8 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/Card";
 import { resolvePermissionLabel } from "../permissionLabel";
 import type { PermissionDefinitionDto } from "../types";
 
@@ -46,9 +48,15 @@ export function AdminGroupPermissionsSection({
   const uiText = useUiText();
 
   return (
-    <section className="rounded-xl border border-md-outline bg-md-surface p-4">
-      <h2 className="mb-3 text-lg font-medium">{uiText.admin.groupManagement.permissionsTitle}</h2>
-      <ul className="mb-4 max-h-64 space-y-2 overflow-y-auto">
+    <Card
+      title={uiText.admin.groupManagement.permissionsTitle}
+      actions={
+        <Button variant="standard" loading={saving} onClick={onSave}>
+          {saving ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.savePermissions}
+        </Button>
+      }
+    >
+      <ul className="max-h-64 space-y-2 overflow-y-auto">
         {permissions.map((permission) => {
           const inputId = checkboxInputId("group-permission", permission.permissionKey);
           const labelText = `${resolvePermissionLabel(permission, uiText.admin.permissions.names)} (${permission.permissionKey})`;
@@ -67,14 +75,6 @@ export function AdminGroupPermissionsSection({
           );
         })}
       </ul>
-      <button
-        type="button"
-        disabled={saving}
-        onClick={onSave}
-        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-      >
-        {saving ? uiText.admin.groupManagement.saving : uiText.admin.groupManagement.savePermissions}
-      </button>
-    </section>
+    </Card>
   );
 }

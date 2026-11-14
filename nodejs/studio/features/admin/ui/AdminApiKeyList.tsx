@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
 import { resolvePermissionLabel } from "../permissionLabel";
 import type { AdminApiKeyListItem, PermissionDefinitionDto } from "../types";
 
@@ -30,7 +31,7 @@ export type AdminApiKeyListProps = {
   /** 失効中の API キー ID。無ければ null。 */
   revokingId: string | null;
   /**
-   * 有効なキーを失効する。
+   * 有効なキーの失効を求める（確認ダイアログは呼び出し側が出す）。
    * @param apiKey 対象キー。
    */
   onRevoke: (apiKey: AdminApiKeyListItem) => void;
@@ -58,14 +59,14 @@ export function AdminApiKeyList({
   );
 
   return (
-    <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
+    <ul className="divide-y divide-md-outline overflow-hidden rounded-card border border-md-outline bg-md-surface">
       {apiKeys.map((apiKey) => (
         <li
           key={apiKey.apiKeyId}
           className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
         >
           <div className="min-w-0">
-            <p className="font-medium text-md-on-surface">{apiKey.name}</p>
+            <p className="font-semibold text-md-on-surface">{apiKey.name}</p>
             <p className="text-md-on-surface-variant">
               {uiText.admin.apiKeys.prefixLabel(apiKey.keyPrefix)}
             </p>
@@ -88,14 +89,9 @@ export function AdminApiKeyList({
             </p>
           </div>
           {apiKey.isActive ? (
-            <button
-              type="button"
-              disabled={revokingId === apiKey.apiKeyId}
-              onClick={() => onRevoke(apiKey)}
-              className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container disabled:opacity-60"
-            >
+            <Button variant="danger" size="sm" loading={revokingId === apiKey.apiKeyId} onClick={() => onRevoke(apiKey)}>
               {revokingId === apiKey.apiKeyId ? uiText.admin.apiKeys.revoking : uiText.admin.apiKeys.revoke}
-            </button>
+            </Button>
           ) : null}
         </li>
       ))}

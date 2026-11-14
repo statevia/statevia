@@ -65,6 +65,8 @@ describe("AdminUsersPageClient", () => {
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");
 
+    fireEvent.click(screen.getByRole("button", { name: uiText.admin.users.createTitle }));
+
     fireEvent.change(screen.getByLabelText("ユーザー名"), {
       target: { value: "new-user" }
     });
@@ -96,6 +98,8 @@ describe("AdminUsersPageClient", () => {
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");
 
+    fireEvent.click(screen.getByRole("button", { name: uiText.admin.users.createTitle }));
+
     fireEvent.change(screen.getByLabelText("ユーザー名"), {
       target: { value: "ops" }
     });
@@ -111,11 +115,13 @@ describe("AdminUsersPageClient", () => {
     expect(apiPost).not.toHaveBeenCalled();
   });
 
-  it("有効ユーザーを無効化する", async () => {
+  it("有効ユーザーは確認ダイアログを経てから無効化する", async () => {
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");
 
     fireEvent.click(screen.getByRole("button", { name: "無効化" }));
+    expect(apiPatch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: uiText.admin.users.disableConfirmSubmit }));
 
     await waitFor(() => {
       expect(apiPatch).toHaveBeenCalledWith("/admin/users/user-1", { isActive: false });
@@ -171,6 +177,8 @@ describe("AdminUsersPageClient", () => {
     vi.mocked(apiPost).mockRejectedValue(new Error("network"));
     renderWithUiText(<AdminUsersPageClient />);
     await screen.findByText("admin");
+
+    fireEvent.click(screen.getByRole("button", { name: uiText.admin.users.createTitle }));
 
     fireEvent.change(screen.getByLabelText("ユーザー名"), { target: { value: "new-user" } });
     fireEvent.change(screen.getByLabelText("初期パスワード"), { target: { value: "password123" } });

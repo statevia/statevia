@@ -60,6 +60,7 @@ describe("AdminGroupsPageClient", () => {
     renderWithUiText(<AdminGroupsPageClient />);
     await screen.findByText("Operators");
 
+    fireEvent.click(screen.getByRole("button", { name: "グループを作成" }));
     fireEvent.change(screen.getByLabelText("グループ名"), { target: { value: "Support" } });
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
 
@@ -73,6 +74,7 @@ describe("AdminGroupsPageClient", () => {
     renderWithUiText(<AdminGroupsPageClient />);
     await screen.findByText("Operators");
 
+    fireEvent.click(screen.getByRole("button", { name: "グループを作成" }));
     fireEvent.change(screen.getByLabelText("グループ名"), { target: { value: "運用" } });
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
 

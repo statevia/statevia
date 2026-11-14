@@ -1,6 +1,9 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Dialog } from "@/shared/ui/Dialog";
+import { Notice } from "@/shared/ui/Notice";
 import type { CreatedAdminApiKey } from "../types";
 
 /** 発行直後の平文キー表示。 */
@@ -16,9 +19,10 @@ export type AdminApiKeyIssuedNoticeProps = {
 };
 
 /**
- * 発行した API キーの平文を一度だけ見せる。
+ * 発行した API キーの平文を一度だけ見せるダイアログ。平文は画面に常駐させない（要件 9.3）。
+ * 再表示できない旨の注意を添え、コピーしてから閉じられるようにする。
  * @param props 平文と、コピー・閉じるコマンド。
- * @returns 発行直後の通知。
+ * @returns 発行直後のダイアログ。
  */
 export function AdminApiKeyIssuedNotice({
   issuedKey,
@@ -27,36 +31,37 @@ export function AdminApiKeyIssuedNotice({
   onDismiss
 }: Readonly<AdminApiKeyIssuedNoticeProps>) {
   const uiText = useUiText();
+  const text = uiText.admin.apiKeys;
 
   return (
-    <section className="mb-6 rounded-xl border border-amber-500/60 bg-amber-50 p-4 text-sm text-amber-950 shadow-xs dark:bg-amber-950/30 dark:text-amber-100">
-      <h2 className="mb-2 text-lg font-medium">{uiText.admin.apiKeys.issuedTitle}</h2>
-      <p className="mb-3">{uiText.admin.apiKeys.issuedWarning}</p>
-      <label htmlFor="issued-plain-key" className="mb-1 block font-medium">
-        {uiText.admin.apiKeys.plainKeyLabel}
-      </label>
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          id="issued-plain-key"
-          readOnly
-          value={issuedKey.plainKey}
-          className="min-w-0 flex-1 rounded-lg border border-md-outline bg-white px-3 py-2 font-mono text-xs dark:bg-md-surface"
-        />
-        <button
-          type="button"
-          onClick={onCopy}
-          className="rounded-lg border border-md-outline px-3 py-2 hover:bg-md-surface-container"
-        >
-          {copied ? uiText.admin.apiKeys.copiedKey : uiText.admin.apiKeys.copyKey}
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="rounded-lg bg-emerald-700 px-3 py-2 text-white hover:bg-emerald-800"
-        >
-          {uiText.admin.apiKeys.dismissIssued}
-        </button>
+    <Dialog
+      open
+      onClose={onDismiss}
+      title={text.issuedTitle}
+      size="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onCopy}>
+            {copied ? text.copiedKey : text.copyKey}
+          </Button>
+          <Button variant="standard" onClick={onDismiss}>
+            {text.dismissIssued}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Notice tone="warning" title={text.issuedWarning} />
+        <label className="block">
+          <span className="text-sm font-medium text-md-on-surface">{text.plainKeyLabel}</span>
+          <input
+            id="issued-plain-key"
+            readOnly
+            value={issuedKey.plainKey}
+            className="mt-1.5 h-9 w-full rounded-control border border-md-outline-variant bg-md-surface-container px-3 font-mono text-xs text-md-on-surface"
+          />
+        </label>
       </div>
-    </section>
+    </Dialog>
   );
 }

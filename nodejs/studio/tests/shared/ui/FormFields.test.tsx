@@ -10,10 +10,9 @@ describe("入力欄の部品", () => {
     render(<TextField label="名前" required />);
 
     // Assert
-    const input = screen.getByRole("textbox", { name: /名前/ });
+    const input = screen.getByRole("textbox", { name: "名前" });
     expect(input).toBeRequired();
-    const labelRow = screen.getByText("名前");
-    expect(labelRow.querySelector('[aria-hidden="true"]')?.textContent).toBe("*");
+    expect(screen.getByText("名前")).toHaveClass("after:content-['*']");
   });
 
   it("説明は aria-describedby で入力と結ぶ", () => {
