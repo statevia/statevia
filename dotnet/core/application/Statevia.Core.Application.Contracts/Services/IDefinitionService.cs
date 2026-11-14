@@ -24,11 +24,11 @@ public interface IDefinitionService
     /// <returns>更新した定義を返すタスク。</returns>
     Task<DefinitionResponse> UpdateAsync(string idOrUuid, UpdateDefinitionRequest request, CancellationToken ct);
 
-    /// <summary>ページング付き一覧を返す。</summary>
+    /// <summary>ページング付き一覧を返す。各要素に最後の実行を付ける。</summary>
     /// <param name="query">ページングと絞り込みの条件。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>定義のページを返すタスク。</returns>
-    Task<PagedResult<DefinitionResponse>> ListPagedAsync(
+    Task<PagedResult<DefinitionListItemResponse>> ListPagedAsync(
         Persistence.DefinitionListPageQuery query,
         CancellationToken ct);
 

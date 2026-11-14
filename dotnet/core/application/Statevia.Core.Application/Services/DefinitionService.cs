@@ -23,6 +23,7 @@ internal sealed class DefinitionService : IDefinitionService
     private readonly IIdGenerator _idGenerator;
     private readonly ICoreTransactionExecutor _executor;
     private readonly PrincipalResourceGrantAuthorization _resourceGrants;
+    private readonly IExecutionSummaryRepository _executionSummaries;
 
     /// <summary>新しいインスタンスを初期化する。</summary>
     /// <param name="displayIds">表示用 ID の解決と採番に使うサービス。<see cref="IDisplayIdWriteService"/> も実装していること。</param>
@@ -35,6 +36,7 @@ internal sealed class DefinitionService : IDefinitionService
     /// <param name="idGenerator">ID を採番するジェネレーター。</param>
     /// <param name="executor">トランザクションの実行器。</param>
     /// <param name="resourceGrants">Principal のリソース許可を評価する認可。</param>
+    /// <param name="executionSummaries">一覧に付ける最後の実行の読み取り。</param>
     /// <exception cref="InvalidOperationException"><paramref name="displayIds"/> が <see cref="IDisplayIdWriteService"/> を実装していないとき。</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
@@ -50,7 +52,8 @@ internal sealed class DefinitionService : IDefinitionService
         IRuntimePermissionAuthorization runtimeAuth,
         IIdGenerator idGenerator,
         ICoreTransactionExecutor executor,
-        PrincipalResourceGrantAuthorization resourceGrants)
+        PrincipalResourceGrantAuthorization resourceGrants,
+        IExecutionSummaryRepository executionSummaries)
     {
         _displayIds = displayIds;
         _displayIdWrites = displayIds as IDisplayIdWriteService
@@ -64,6 +67,7 @@ internal sealed class DefinitionService : IDefinitionService
         _idGenerator = idGenerator;
         _executor = executor;
         _resourceGrants = resourceGrants;
+        _executionSummaries = executionSummaries;
     }
 
     /// <inheritdoc />
@@ -161,7 +165,8 @@ internal sealed class DefinitionService : IDefinitionService
     }
 
     /// <inheritdoc />
-    public async Task<PagedResult<DefinitionResponse>> ListPagedAsync(
+    /// <remarks>最後の実行は、定義のページを取った後に 1 回の読み取りでまとめて取る（N+1 にしない）。ページが空なら読まない。</remarks>
+    public async Task<PagedResult<DefinitionListItemResponse>> ListPagedAsync(
         DefinitionListPageQuery query,
         CancellationToken ct)
     {
@@ -177,13 +182,17 @@ internal sealed class DefinitionService : IDefinitionService
                 var (total, pairs) = await _definitions
                     .ListWithDisplayIdsPageAsync(uow, tenantId, principalId, query, innerCt)
                     .ConfigureAwait(false);
-                var items = pairs.Select(p => ToResponse(
+                var definitionIds = pairs.ConvertAll(p => p.Detail.Definition.DefinitionId);
+                var latestExecutions = await _executionSummaries
+                    .ListLatestRootByDefinitionIdsAsync(uow, tenantId, definitionIds, innerCt)
+                    .ConfigureAwait(false);
+                var items = pairs.ConvertAll(p => ToListItem(
                     p.Detail,
                     p.DisplayId,
-                    includeYaml: false,
-                    includeDeletedAt: query.IncludeDeleted)).ToList();
+                    query.IncludeDeleted,
+                    latestExecutions.GetValueOrDefault(p.Detail.Definition.DefinitionId)));
 
-                return new PagedResult<DefinitionResponse>
+                return new PagedResult<DefinitionListItemResponse>
                 {
                     Items = items,
                     TotalCount = total,
@@ -488,11 +497,11 @@ internal sealed class DefinitionService : IDefinitionService
             })
             .ToArray();
 
-    private static DefinitionResponse ToResponse(
+    private static DefinitionListItemResponse ToListItem(
         DefinitionDetail detail,
         string? displayId,
-        bool includeYaml = false,
-        bool includeDeletedAt = false) =>
+        bool includeDeletedAt,
+        LatestRootExecution? latestExecution) =>
         new()
         {
             DisplayId = displayId ?? detail.Definition.DefinitionId.ToString(),
@@ -502,7 +511,32 @@ internal sealed class DefinitionService : IDefinitionService
             LatestVersion = detail.Definition.LatestVersion,
             CreatedAt = detail.Definition.CreatedAt,
             UpdatedAt = detail.Definition.UpdatedAt,
-            Yaml = includeYaml ? detail.Version.SourceYaml : null,
-            DeletedAt = includeDeletedAt ? detail.Definition.DeletedAt : null
+            DeletedAt = includeDeletedAt ? detail.Definition.DeletedAt : null,
+            LastExecution = latestExecution is null
+                ? null
+                : new DefinitionLastExecutionResponse
+                {
+                    DisplayId = latestExecution.DisplayId ?? latestExecution.ExecutionId.ToString(),
+                    Status = ExecutionStatusMapper.ToContract(latestExecution.Status),
+                    StartedAt = latestExecution.StartedAt,
+                    UpdatedAt = latestExecution.UpdatedAt,
+                    Waiting = latestExecution.Waiting
+                }
+        };
+
+    private static DefinitionResponse ToResponse(
+        DefinitionDetail detail,
+        string? displayId,
+        bool includeYaml = false) =>
+        new()
+        {
+            DisplayId = displayId ?? detail.Definition.DefinitionId.ToString(),
+            ResourceId = detail.Definition.DefinitionId,
+            Name = detail.Definition.Name,
+            ProjectId = detail.Definition.ProjectId,
+            LatestVersion = detail.Definition.LatestVersion,
+            CreatedAt = detail.Definition.CreatedAt,
+            UpdatedAt = detail.Definition.UpdatedAt,
+            Yaml = includeYaml ? detail.Version.SourceYaml : null
         };
 }

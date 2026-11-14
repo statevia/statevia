@@ -9,14 +9,20 @@ namespace Statevia.Core.Application.Services;
 /// </remarks>
 /// <param name="displayIds">表示 ID 解決。</param>
 /// <param name="executions">executions / snapshot 永続化。</param>
+/// <param name="executionSummaries">件数と待機中の判定の読み取り。</param>
 /// <param name="authorization">横断認可（read）。</param>
 /// <param name="tenantContext">テナント文脈。</param>
 /// <param name="eventStore">event_store 読み取り。</param>
 /// <param name="executor">読み取りトランザクション実行。</param>
 /// <param name="forkChildCoordinator">Fork 合成（未登録時は生 snapshot）。</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S107:Methods should not have too many parameters",
+    Justification = "DI による明示的コンストラクタ注入。")]
 internal sealed class ExecutionQueryService(
     IDisplayIdService displayIds,
     IExecutionRepository executions,
+    IExecutionSummaryRepository executionSummaries,
     ExecutionAuthorizationGuard authorization,
     ITenantContextAccessor tenantContext,
     IEventStoreRepository eventStore,
@@ -49,7 +55,8 @@ internal sealed class ExecutionQueryService(
             StartedAt = p.Execution.StartedAt,
             UpdatedAt = p.Execution.UpdatedAt,
             CancelRequested = p.Execution.CancelRequested,
-            RestartLost = p.Execution.RestartLost
+            RestartLost = p.Execution.RestartLost,
+            Waiting = p.Waiting
         }).ToList();
 
         return new PagedResult<ExecutionResponse>
@@ -91,6 +98,7 @@ internal sealed class ExecutionQueryService(
                 var graphId = await displayIds
                     .GetDisplayIdAsync(DisplayIdResourceTypes.Definition, execution.DefinitionId.ToString("D"), innerCt)
                     .ConfigureAwait(false) ?? execution.DefinitionId.ToString("D");
+                var waiting = await executionSummaries.IsWaitingAsync(uow, execution, innerCt).ConfigureAwait(false);
 
                 return new ExecutionResponse
                 {
@@ -101,10 +109,42 @@ internal sealed class ExecutionQueryService(
                     StartedAt = execution.StartedAt,
                     UpdatedAt = execution.UpdatedAt,
                     CancelRequested = execution.CancelRequested,
-                    RestartLost = execution.RestartLost
+                    RestartLost = execution.RestartLost,
+                    Waiting = waiting
                 };
             },
             ct).ConfigureAwait(false);
+    }
+
+    /// <summary>ルートの実行の件数を、状態ごと・待機中・要対応で返す。</summary>
+    /// <param name="filter">絞り込み。</param>
+    /// <param name="ct">キャンセル。</param>
+    /// <returns>件数。<c>UNKNOWN</c> は全体から 4 つの状態の和を引いて求める。</returns>
+    public async Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct)
+    {
+        await authorization.EnsureExecutionsReadAsync(ct).ConfigureAwait(false);
+
+        var tenantId = tenantContext.GetRequiredTenantId();
+        var principalId = tenantContext.GetRequiredPrincipalId();
+        ArgumentNullException.ThrowIfNull(filter);
+
+        var counts = await executor.ExecuteReadOnlyAsync(
+            (uow, innerCt) => executionSummaries.CountAsync(uow, tenantId, principalId, filter, innerCt),
+            ct).ConfigureAwait(false);
+        return new ExecutionCountsResponse
+        {
+            Total = counts.Total,
+            ByStatus = new ExecutionStatusCountsResponse
+            {
+                Active = counts.Running,
+                Completed = counts.Completed,
+                Failed = counts.Failed,
+                Canceled = counts.Cancelled,
+                Unknown = counts.Total - counts.Running - counts.Completed - counts.Failed - counts.Cancelled
+            },
+            Waiting = counts.Waiting,
+            NeedsAttention = counts.NeedsAttention
+        };
     }
 
     /// <summary>投影済み実行グラフ JSON を返す（Fork 合成込み）。</summary>

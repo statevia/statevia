@@ -87,7 +87,8 @@ public sealed class UpdateDefinitionRequest
 }
 
 /// <summary>定義の応答 DTO。</summary>
-public sealed class DefinitionResponse
+/// <remarks>一覧の要素は <see cref="DefinitionListItemResponse"/>（最後の実行を足した形）。</remarks>
+public class DefinitionResponse
 {
     /// <summary>表示用定義 ID。</summary>
     [JsonPropertyName("displayId")]
@@ -124,4 +125,39 @@ public sealed class DefinitionResponse
     /// <summary>論理削除日時（UTC）。<c>includeDeleted=true</c> の一覧時のみ。</summary>
     [JsonPropertyName("deletedAt")]
     public DateTime? DeletedAt { get; set; }
+}
+
+/// <summary><c>GET /v1/definitions</c> の一覧の要素。<see cref="DefinitionResponse"/> に最後の実行を足す。</summary>
+/// <remarks>単体の取得（<c>GET /v1/definitions/{definitionId}</c>）は <see cref="DefinitionResponse"/> を返し、最後の実行を含めない。</remarks>
+public sealed class DefinitionListItemResponse : DefinitionResponse
+{
+    /// <summary>最後の実行。実行が無ければ <see langword="null"/>（項目は常に出す）。</summary>
+    /// <remarks>全版を通したルートの実行のうち、開始日時がいちばん新しいもの。同じ開始日時は実行 ID の大きいもの。</remarks>
+    [JsonPropertyName("lastExecution")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public DefinitionLastExecutionResponse? LastExecution { get; set; }
+}
+
+/// <summary>定義の一覧で返す最後の実行。</summary>
+public sealed class DefinitionLastExecutionResponse
+{
+    /// <summary>実行の表示 ID。</summary>
+    [JsonPropertyName("displayId")]
+    public string DisplayId { get; init; } = "";
+
+    /// <summary>実行ステータス（契約の値）。</summary>
+    [JsonPropertyName("status")]
+    public string Status { get; init; } = "";
+
+    /// <summary>開始日時（UTC）。</summary>
+    [JsonPropertyName("startedAt")]
+    public DateTime StartedAt { get; init; }
+
+    /// <summary>最終更新日時（UTC）。</summary>
+    [JsonPropertyName("updatedAt")]
+    public DateTime UpdatedAt { get; init; }
+
+    /// <summary>待機中か（<see cref="ExecutionResponse.Waiting"/> と同じ判定）。</summary>
+    [JsonPropertyName("waiting")]
+    public bool Waiting { get; init; }
 }

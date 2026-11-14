@@ -361,22 +361,31 @@ internal sealed class DefinitionRepository : IDefinitionRepository
                };
     }
 
-    private static IQueryable<DefinitionWithDisplay> ApplyDefinitionsSort(
+    /// <summary>定義の一覧の並び順を付ける。同じ値のときは最後に定義 ID で順を決め、ページをまたいで重複・欠落させない。</summary>
+    /// <remarks>許可する値の検証は API の <c>DefinitionListQuery</c> が行う。<c>sortOrder</c> の既定は降順。</remarks>
+    private static IOrderedQueryable<DefinitionWithDisplay> ApplyDefinitionsSort(
         IQueryable<DefinitionWithDisplay> query,
         string? sortBy,
         string? sortOrder)
     {
-        var normalizedSortBy = sortBy?.Trim();
-        var isAsc = !string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase);
+        var isAsc = ListSortOrders.IsAscending(sortOrder);
 
-        return normalizedSortBy switch
+        return sortBy switch
         {
-            "name" => isAsc
-                ? query.OrderBy(x => x.Definition.Name).ThenBy(x => x.Definition.CreatedAt)
-                : query.OrderByDescending(x => x.Definition.Name).ThenByDescending(x => x.Definition.CreatedAt),
-            _ => isAsc
-                ? query.OrderBy(x => x.Definition.CreatedAt)
-                : query.OrderByDescending(x => x.Definition.CreatedAt)
+            null or DefinitionListSortKeys.CreatedAt => isAsc
+                ? query.OrderBy(x => x.Definition.CreatedAt).ThenBy(x => x.Definition.DefinitionId)
+                : query.OrderByDescending(x => x.Definition.CreatedAt).ThenByDescending(x => x.Definition.DefinitionId),
+            DefinitionListSortKeys.Name => isAsc
+                ? query.OrderBy(x => x.Definition.Name)
+                    .ThenBy(x => x.Definition.CreatedAt)
+                    .ThenBy(x => x.Definition.DefinitionId)
+                : query.OrderByDescending(x => x.Definition.Name)
+                    .ThenByDescending(x => x.Definition.CreatedAt)
+                    .ThenByDescending(x => x.Definition.DefinitionId),
+            DefinitionListSortKeys.UpdatedAt => isAsc
+                ? query.OrderBy(x => x.Definition.UpdatedAt).ThenBy(x => x.Definition.DefinitionId)
+                : query.OrderByDescending(x => x.Definition.UpdatedAt).ThenByDescending(x => x.Definition.DefinitionId),
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported definition sort key.")
         };
     }
 }

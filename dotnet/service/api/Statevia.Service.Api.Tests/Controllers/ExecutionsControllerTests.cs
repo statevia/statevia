@@ -94,6 +94,18 @@ public sealed class ExecutionsControllerTests
             return ListPagedResult;
         }
 
+        public ExecutionCountFilter? LastCountFilter { get; private set; }
+
+        public ExecutionCountsResponse CountResult { get; set; } = new() { ByStatus = new ExecutionStatusCountsResponse() };
+
+        public async Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct)
+        {
+            await Task.Yield(); // async boundary for coverage
+            if (ExceptionToThrow is { } ex) throw ex;
+            LastCountFilter = filter;
+            return CountResult;
+        }
+
         public async Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct)
         {
             await Task.Yield(); // async boundary for coverage
@@ -438,6 +450,52 @@ public sealed class ExecutionsControllerTests
         // Assert
         Assert.NotNull(executions.LastListQuery);
         Assert.Null(executions.LastListQuery.StatusFilter);
+    }
+
+    /// <summary>件数は絞り込みを件数のフィルタにしてサービスへ渡し、結果をそのまま返す。</summary>
+    [Fact]
+    public async Task Counts_PassesFilterAndReturnsCounts()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var executions = new FakeExecutionService
+        {
+            CountResult = new ExecutionCountsResponse { Total = 3, Waiting = 1, NeedsAttention = 2, ByStatus = new ExecutionStatusCountsResponse { Active = 2, Failed = 1 } }
+        };
+        var stream = new ExecutionStreamService(executions, new FakeDisplayIdService { ResolveResult = null });
+        var controller = CreateController(http, executions, stream);
+        var projectId = Guid.NewGuid();
+
+        // Act
+        var result = await controller.Counts(
+            new ExecutionCountQuery { ProjectId = projectId, StartedFrom = "2026-11-14T00:00:00Z" },
+            CancellationToken.None);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Same(executions.CountResult, ok.Value);
+        Assert.Equal(projectId, executions.LastCountFilter?.ProjectId);
+        Assert.Equal(new DateTime(2026, 11, 14, 0, 0, 0, DateTimeKind.Utc), executions.LastCountFilter?.StartedFrom);
+    }
+
+    /// <summary>解決できない definitionId の件数は、サービスを呼ばずにすべて 0 を返す。</summary>
+    [Fact]
+    public async Task Counts_WhenDefinitionIdIsUnknown_ReturnsZerosWithoutCallingService()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var executions = new FakeExecutionService();
+        var stream = new ExecutionStreamService(executions, new FakeDisplayIdService { ResolveResult = null });
+        var controller = CreateController(http, executions, stream);
+
+        // Act
+        var result = await controller.Counts(new ExecutionCountQuery { DefinitionId = "missing" }, CancellationToken.None);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var counts = Assert.IsType<ExecutionCountsResponse>(ok.Value);
+        Assert.Equal(0, counts.Total);
+        Assert.Null(executions.LastCountFilter);
     }
 
     /// <summary>

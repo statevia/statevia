@@ -680,6 +680,9 @@ public sealed class ExecutionScheduleDispatchServiceTests
             CancellationToken ct) =>
             throw new NotSupportedException();
 
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             throw new NotSupportedException();
 

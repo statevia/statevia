@@ -3098,7 +3098,7 @@
         "tags": [
           "Definitions"
         ],
-        "summary": "GET /v1/definitions — ページング一覧。`limit` は必須。\r\n`?limit=&offset=&name=&projectId=&sortBy=&sortOrder=` で Statevia.Core.Application.Contracts.PagedResult`1（name は部分一致。projectId は任意）。",
+        "summary": "GET /v1/definitions — ページング一覧。`limit` は必須。\r\n`?limit=&offset=&name=&projectId=&sortBy=&sortOrder=&includeDeleted=` で Statevia.Core.Application.Contracts.PagedResult`1（name は部分一致。projectId は任意）。\r\n各要素に最後の実行（`lastExecution`。無ければ `null`）を付ける。",
         "parameters": [
           {
             "name": "limit",
@@ -3135,7 +3135,7 @@
           {
             "name": "sortBy",
             "in": "query",
-            "description": "ソート列。",
+            "description": "ソート列（`createdAt` / `name` / `updatedAt`）。",
             "schema": {
               "type": "string"
             }
@@ -3143,7 +3143,7 @@
           {
             "name": "sortOrder",
             "in": "query",
-            "description": "ソート順。",
+            "description": "ソート順（`asc` / `desc`）。",
             "schema": {
               "type": "string"
             }
@@ -3181,17 +3181,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefinitionResponsePagedResult"
+                  "$ref": "#/components/schemas/DefinitionListItemResponsePagedResult"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefinitionResponsePagedResult"
+                  "$ref": "#/components/schemas/DefinitionListItemResponsePagedResult"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefinitionResponsePagedResult"
+                  "$ref": "#/components/schemas/DefinitionListItemResponsePagedResult"
                 }
               }
             }
@@ -3977,7 +3977,7 @@
         "tags": [
           "Executions"
         ],
-        "summary": "GET /v1/executions — ページング一覧。`limit` は必須。\r\n`?limit=&offset=&status=&definitionId=&name=&sortBy=&sortOrder=` で Statevia.Core.Application.Contracts.PagedResult`1。\r\n`definitionId` は定義の display / UUID。 `name` は execution の `displayId` 部分一致、または execution の UUID 完全一致で絞り込み。\r\n応答の `items` と `totalCount` は、`execution_branches.execution_id` に無いルートのみ。",
+        "summary": "GET /v1/executions — ページング一覧。`limit` は必須。\r\n`?limit=&offset=&status=&definitionId=&name=&projectId=&waiting=&needsAttention=&startedFrom=&startedTo=&sortBy=&sortOrder=` で Statevia.Core.Application.Contracts.PagedResult`1。\r\n`definitionId` は定義の display / UUID。 `name` は execution の `displayId` 部分一致、または execution の UUID 完全一致で絞り込み。\r\n応答の `items` と `totalCount` は、`execution_branches.execution_id` に無いルートのみ。各要素は待機中かどうか（`waiting`）を持つ。",
         "parameters": [
           {
             "name": "limit",
@@ -4006,7 +4006,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "ステータスフィルタ。",
+            "description": "実行ステータスのフィルタ（契約の値。大文字小文字を区別する）。",
             "schema": {
               "type": "string"
             }
@@ -4039,7 +4039,7 @@
           {
             "name": "sortBy",
             "in": "query",
-            "description": "ソート列。",
+            "description": "ソート列（`updatedAt` / `displayId` / `startedAt`）。",
             "schema": {
               "type": "string"
             }
@@ -4047,7 +4047,39 @@
           {
             "name": "sortOrder",
             "in": "query",
-            "description": "ソート順。",
+            "description": "ソート順（`asc` / `desc`）。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "waiting",
+            "in": "query",
+            "description": "待機中だけ（`true`）か、待機中でないものだけ（`false`）。省略時は絞らない。",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "needsAttention",
+            "in": "query",
+            "description": "要対応（待機中または `FAILED`）だけ（`true`）か、それ以外だけ（`false`）。省略時は絞らない。",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "startedFrom",
+            "in": "query",
+            "description": "開始日時の下限（含む。ISO 8601、`Z` かオフセットが必須）。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startedTo",
+            "in": "query",
+            "description": "開始日時の上限（含まない。ISO 8601、`Z` かオフセットが必須）。",
             "schema": {
               "type": "string"
             }
@@ -4079,6 +4111,119 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExecutionResponsePagedResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/executions/counts": {
+      "get": {
+        "tags": [
+          "Executions"
+        ],
+        "summary": "GET /v1/executions/counts — ルートの実行の件数を、状態ごと・待機中・要対応で返す。\r\n`?definitionId=&projectId=&name=&startedFrom=&startedTo=` は一覧と同じ意味で絞る。権限は一覧と同じ `executions.read`。",
+        "description": "文字列の区間 `counts` は `{executionId}` のルートより優先される。",
+        "parameters": [
+          {
+            "name": "definitionId",
+            "in": "query",
+            "description": "定義 ID（display または UUID）。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "description": "指定時はその Project の実行だけ。未所属は 0 件。",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "表示 ID 部分一致または execution UUID 完全一致。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startedFrom",
+            "in": "query",
+            "description": "開始日時の下限（含む）。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startedTo",
+            "in": "query",
+            "description": "開始日時の上限（含まない）。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "description": "テナント ID。未指定時は \"default\"。",
+            "schema": {
+              "type": "string",
+              "default": "default"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionCountsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionCountsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionCountsResponse"
                 }
               }
             }
@@ -7189,6 +7334,105 @@
         "additionalProperties": false,
         "description": "API キー作成応答（平文はこの応答でのみ返す）。"
       },
+      "DefinitionLastExecutionResponse": {
+        "type": "object",
+        "properties": {
+          "displayId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "waiting": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DefinitionListItemResponse": {
+        "type": "object",
+        "properties": {
+          "displayId": {
+            "type": "string",
+            "nullable": true
+          },
+          "resourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "latestVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "yaml": {
+            "type": "string",
+            "nullable": true
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastExecution": {
+            "$ref": "#/components/schemas/DefinitionLastExecutionResponse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DefinitionListItemResponsePagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DefinitionListItemResponse"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "DefinitionNodesSchemaResponse": {
         "type": "object",
         "properties": {
@@ -7249,34 +7493,6 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "DefinitionResponsePagedResult": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DefinitionResponse"
-            },
-            "nullable": true
-          },
-          "totalCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "limit": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "hasMore": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -7359,6 +7575,30 @@
         "additionalProperties": false,
         "description": "現在テナントの購読候補一覧。"
       },
+      "ExecutionCountsResponse": {
+        "required": [
+          "byStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "byStatus": {
+            "$ref": "#/components/schemas/ExecutionStatusCountsResponse"
+          },
+          "waiting": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "needsAttention": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "ExecutionEventsResponseDto": {
         "type": "object",
         "properties": {
@@ -7407,6 +7647,9 @@
             "type": "boolean"
           },
           "restartLost": {
+            "type": "boolean"
+          },
+          "waiting": {
             "type": "boolean"
           }
         },
@@ -7553,6 +7796,32 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExecutionStatusCountsResponse": {
+        "type": "object",
+        "properties": {
+          "ACTIVE": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "COMPLETED": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "FAILED": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "CANCELED": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "UNKNOWN": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

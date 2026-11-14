@@ -227,7 +227,7 @@ public sealed class ForkExpansionHostHandlerTests
         public Task<ExecutionRow?> GetByExecutionIdAsync(ICoreUnitOfWork uow, Guid executionId, CancellationToken ct) =>
             Task.FromResult(parent is not null && parent.ExecutionId == executionId ? parent : null);
 
-        public Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
+        public Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> Items)> ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
             Guid principalId,
@@ -449,6 +449,9 @@ public sealed class ForkExpansionHostHandlerTests
             throw new NotImplementedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotImplementedException();
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             throw new NotImplementedException();
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) => throw new NotImplementedException();

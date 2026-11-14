@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.10 |
-| 更新日 | 2026-11-13 |
+| Version | 1.11 |
+| 更新日 | 2026-11-14 |
 | Scope | Core-Engine / Service API / UI |
 | 関連 | [concepts/durability.md](../concepts/durability.md), [api-http.md](api-http.md) |
 
@@ -21,6 +21,8 @@
 責務の背景は [Concept: 永続化](../concepts/durability.md) を参照。
 
 ---
+
+**Version 1.11（2026-11-14）**: 一覧 Query 契約に、実行の `waiting` / `needsAttention` / `startedFrom` / `startedTo` と件数の読み取り、定義の `updatedAt` の並び順と `lastExecution` を足した（[api-http.md](api-http.md) §2.2・§3.2）。
 
 **Version 1.10（2026-11-13）**: §2.1 を実際の応答（`ExecutionResponse` と `ExecutionViewDto`）に合わせた。呼び出し元の無かった Execution Read Model の形（`executionId` / `canceledAt` など）を外した。実行ステータスは HTTP の契約の値（`ACTIVE` など）で返る（[api-http.md](api-http.md) §3.2.1）。
 
@@ -176,16 +178,22 @@ UI が依存してよいレスポンス形を固定する。実行は `GET /v1/e
 - `GET /v1/definitions`
   - `limit` / `offset`（ページング）
   - `name`（部分一致）
-  - `sortBy`（`createdAt` / `name`）
-  - `sortOrder`（`asc` / `desc`）
+  - `sortBy`（`createdAt` / `name` / `updatedAt`）。許可値以外は 422
+  - `sortOrder`（`asc` / `desc`。既定 `desc`）。許可値以外は 422
+  - 各要素に `lastExecution`（最後の実行。無ければ `null`）
 - `GET /v1/executions`
   - 対象は `execution_branches.execution_id` に無いルートのみ（`items` と `totalCount`）
   - `limit` / `offset`（ページング）
-  - `status`（完全一致）
+  - `status`（契約の値。[api-http.md](api-http.md) §3.2.1）
   - `name`（`display_id` 部分一致。Guid 形式時は `execution_id` 完全一致も許容）
   - `definitionId`（displayId または UUID）
-  - `sortBy`（`updatedAt` / `displayId`）
-  - `sortOrder`（`asc` / `desc`）
+  - `waiting` / `needsAttention`（待機中・要対応。[api-http.md](api-http.md) §3.2.2）
+  - `startedFrom` / `startedTo`（開始日時の期間。ISO 8601 で `Z` かオフセットが必須）
+  - `sortBy`（`updatedAt` / `displayId` / `startedAt`）。許可値以外は 422
+  - `sortOrder`（`asc` / `desc`。既定 `desc`）。許可値以外は 422
+  - 各要素に `waiting`
+- `GET /v1/executions/counts`
+  - 状態ごと・待機中・要対応の件数。絞り込みは `definitionId` / `projectId` / `name` / `startedFrom` / `startedTo`（[api-http.md](api-http.md) §3.2.3）
 
 実装上、UI は `limit` / `offset` / `sortBy` / `sortOrder` を URL 同期し、サーバ側で全件対象ソートした結果を受け取る。
 

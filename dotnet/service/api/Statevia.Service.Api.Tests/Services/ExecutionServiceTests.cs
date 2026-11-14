@@ -480,7 +480,7 @@ public sealed class ExecutionServiceTests
 
         public List<(ExecutionRow Execution, ExecutionGraphSnapshotRow Snapshot)> Added { get; } = [];
         public List<(Guid ExecutionId, string Status, bool? CancelRequested, string GraphJson)> Updates { get; } = [];
-        public (int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items) ListWithDisplayIdsPageResult { get; set; } = (0, []);
+        public (int TotalCount, List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> Items) ListWithDisplayIdsPageResult { get; set; } = (0, []);
 
         /// <summary><see cref="IExecutionRepository.ListWithDisplayIdsPageAsync"/> の呼び出し回数。</summary>
         public int ListWithDisplayIdsPageCalls { get; private set; }
@@ -499,7 +499,7 @@ public sealed class ExecutionServiceTests
             GetByIdAsync(uow, Guid.Empty, executionId, ct);
 
         /// <inheritdoc cref="IExecutionRepository.ListWithDisplayIdsPageAsync" />
-        async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> IExecutionRepository.ListWithDisplayIdsPageAsync(
+        async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> Items)> IExecutionRepository.ListWithDisplayIdsPageAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
             Guid principalId,
@@ -4211,10 +4211,10 @@ public sealed class ExecutionServiceTests
 
         var executionRepo = new FakeExecutionRepository
         {
-            ListWithDisplayIdsPageResult = (2, new List<(ExecutionRow Execution, string? DisplayId)>
+            ListWithDisplayIdsPageResult = (2, new List<(ExecutionRow Execution, string? DisplayId, bool Waiting)>
             {
-                (w1, null),
-                (w2, "WF-DISP-2")
+                (w1, null, false),
+                (w2, "WF-DISP-2", true)
             })
         };
 
@@ -4268,7 +4268,7 @@ public sealed class ExecutionServiceTests
 
         var executionRepo = new FakeExecutionRepository
         {
-            ListWithDisplayIdsPageResult = (3, new List<(ExecutionRow Execution, string? DisplayId)> { (w1, null), (w2, null) })
+            ListWithDisplayIdsPageResult = (3, new List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> { (w1, null, false), (w2, null, false) })
         };
 
         var sut = MakeSut(
@@ -4287,7 +4287,7 @@ public sealed class ExecutionServiceTests
         Assert.True(page.HasMore);
         Assert.Equal(2, page.Items.Count);
 
-        executionRepo.ListWithDisplayIdsPageResult = (2, new List<(ExecutionRow Execution, string? DisplayId)> { (w1, null), (w2, null) });
+        executionRepo.ListWithDisplayIdsPageResult = (2, new List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> { (w1, null, false), (w2, null, false) });
 
         // Act
         var page2 = await sut.ListPagedAsync(new ExecutionListPageQuery(new PageQuery(0, 2), new SortQuery(null, null), null, null, null), CancellationToken.None);
@@ -4305,7 +4305,7 @@ public sealed class ExecutionServiceTests
         var unknownDefId = Guid.NewGuid();
         var executionRepo = new FakeExecutionRepository
         {
-            ListWithDisplayIdsPageResult = (0, new List<(ExecutionRow Execution, string? DisplayId)>())
+            ListWithDisplayIdsPageResult = (0, new List<(ExecutionRow Execution, string? DisplayId, bool Waiting)>())
         };
         var sut = MakeSut(
             dedupService: new FakeCommandDedupService(null),
@@ -5552,6 +5552,7 @@ public sealed class ExecutionServiceTests
         var query = new ExecutionQueryService(
             displayIds,
             executions,
+            new ExecutionSummaryRepository(),
             authorization,
             sqlite.TenantAccessor,
             eventStore,

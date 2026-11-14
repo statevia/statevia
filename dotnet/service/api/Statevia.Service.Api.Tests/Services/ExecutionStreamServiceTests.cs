@@ -53,6 +53,9 @@ public sealed class ExecutionStreamServiceTests
             throw new NotSupportedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             Task.FromResult(new ExecutionResponse { Status = _status });
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) => Task.CompletedTask;
@@ -139,6 +142,9 @@ public sealed class ExecutionStreamServiceTests
             throw new NotSupportedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             Task.FromResult(new ExecutionResponse { Status = "Running" });
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) => Task.CompletedTask;
@@ -201,6 +207,9 @@ public sealed class ExecutionStreamServiceTests
             throw new NotSupportedException();
 
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
             throw new NotSupportedException();
 
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
@@ -271,6 +280,9 @@ public sealed class ExecutionStreamServiceTests
             throw new NotSupportedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             Task.FromResult(new ExecutionResponse { Status = "Running" });
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) => throw new NotSupportedException();
@@ -311,6 +323,9 @@ public sealed class ExecutionStreamServiceTests
             throw new NotSupportedException();
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             Task.FromResult(new ExecutionResponse { Status = "Running" });
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) => Task.CompletedTask;
