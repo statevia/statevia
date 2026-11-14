@@ -8,6 +8,10 @@ import { USERNAME_MAX_LENGTH, USERNAME_PATTERN } from "@/shared/auth/userIdentit
 import type { ApiError } from "@/shared/api/apiError";
 import { resolveSafeInternalRedirectPath } from "@/shared/auth/safeInternalRedirect";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { FieldLabel, INPUT_BASE_CLASS } from "@/shared/ui/FormField";
+import { Notice } from "@/shared/ui/Notice";
+import { TextField } from "@/shared/ui/TextField";
 
 type LoginOk = { ok: true };
 
@@ -128,46 +132,36 @@ export function LoginPageClient() {
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="space-y-4 rounded-xl border border-md-outline bg-md-surface p-6 shadow-xs"
+        className="flex flex-col gap-4 rounded-card border border-md-outline bg-md-surface p-6"
         noValidate
       >
-        <div>
-          <label htmlFor="login-tenant-key" className="mb-1 block text-sm font-medium">
-            {uiText.auth.login.tenantKeyLabel}
-          </label>
-          <input
-            id="login-tenant-key"
-            name="tenantKey"
-            type="text"
-            autoComplete="organization"
-            required
-            value={tenantKey}
-            onChange={(e) => setTenantKey(e.target.value)}
-            className="w-full rounded-lg border border-md-outline bg-md-surface-container px-3 py-2 text-sm"
-          />
-        </div>
+        <TextField
+          id="login-tenant-key"
+          name="tenantKey"
+          type="text"
+          label={uiText.auth.login.tenantKeyLabel}
+          autoComplete="organization"
+          required
+          value={tenantKey}
+          onChange={(e) => setTenantKey(e.target.value)}
+        />
+
+        <TextField
+          id="login-username"
+          name="username"
+          type="text"
+          label={uiText.auth.login.usernameLabel}
+          autoComplete="username"
+          required
+          maxLength={USERNAME_MAX_LENGTH}
+          pattern={USERNAME_PATTERN}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
 
         <div>
-          <label htmlFor="login-username" className="mb-1 block text-sm font-medium">
-            {uiText.auth.login.usernameLabel}
-          </label>
-          <input
-            id="login-username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            required
-            maxLength={USERNAME_MAX_LENGTH}
-            pattern={USERNAME_PATTERN}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-lg border border-md-outline bg-md-surface-container px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="login-password" className="mb-1 block text-sm font-medium">
-            {uiText.auth.login.passwordLabel}
+          <label htmlFor="login-password" className="block">
+            <FieldLabel label={uiText.auth.login.passwordLabel} required />
           </label>
           <div className="relative">
             <input
@@ -178,11 +172,11 @@ export function LoginPageClient() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-md-outline bg-md-surface-container py-2 pl-3 pr-10 text-sm"
+              className={`${INPUT_BASE_CLASS} h-9 pr-10`}
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 flex items-center px-3 text-md-on-surface-variant hover:text-md-on-surface"
+              className="absolute bottom-0 right-0 flex h-9 items-center px-3 text-md-on-surface-variant hover:text-md-on-surface"
               aria-label={passwordVisible ? uiText.auth.login.hidePassword : uiText.auth.login.showPassword}
               aria-pressed={passwordVisible}
               onClick={() => setPasswordVisible((visible) => !visible)}
@@ -192,19 +186,11 @@ export function LoginPageClient() {
           </div>
         </div>
 
-        {errorMessage ? (
-          <p className="text-sm text-red-700" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
+        {errorMessage ? <Notice tone="error" title={errorMessage} /> : null}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
+        <Button variant="lead" type="submit" loading={submitting} className="w-full">
           {submitting ? uiText.auth.login.submitting : uiText.auth.login.submit}
-        </button>
+        </Button>
       </form>
     </div>
   );
