@@ -10,16 +10,23 @@ export type DashboardFeatureUiText = {
     loadingRecent: string;
     emptyStartFromDefinitionsOrExecutions: string;
     totalCount: (count: number | null) => string;
-    updatedAt: (formattedDateTime: string) => string;
+    /** 直近の実行の節の見出し。 */
+    recentTitle: string;
+    /** 実行一覧へのリンク。 */
+    openExecutions: string;
+    /** 最後に読み込んだ時刻。引数は時刻だけの書式。 */
+    lastLoadedAt: (formattedTime: string) => string;
+    /** 直近の実行の列の見出し。 */
+    columns: {
+      status: string;
+      execution: string;
+      updatedAt: string;
+    };
     aria: {
       recentExecutionsList: string;
-    };
-    actions: {
-      openDetail: string;
     };
     error: {
       fetchFailed: string;
     };
-
   };
 };

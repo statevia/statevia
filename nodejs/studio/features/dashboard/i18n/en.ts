@@ -13,16 +13,19 @@ export const dashboardUiTextEn: DashboardFeatureUiText = {
     loadingRecent: "Loading recent executions.",
     emptyStartFromDefinitionsOrExecutions: "Start from Definitions or Executions.",
     totalCount: (count: number | null) => (count == null ? "Total: --" : `Total: ${count}`),
-    updatedAt: (formattedDateTime: string) => `Updated: ${formattedDateTime}`,
+    recentTitle: "Recent executions",
+    openExecutions: "Go to executions",
+    lastLoadedAt: (formattedTime: string) => `Updated ${formattedTime}`,
+    columns: {
+      status: "Status",
+      execution: "Execution",
+      updatedAt: "Updated at",
+    },
     aria: {
       recentExecutionsList: "Recent executions",
-    },
-    actions: {
-      openDetail: "Open details",
     },
     error: {
       fetchFailed: "Failed to fetch data.",
     },
-
   },
 };

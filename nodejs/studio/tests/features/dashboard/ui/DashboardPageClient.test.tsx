@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DashboardPageClient } from "@/features/dashboard/ui/DashboardPageClient";
 import { renderWithUiText, testProjectId } from "@/tests/testUtils";
@@ -111,5 +111,35 @@ describe("DashboardPageClient", () => {
     await waitFor(() => {
       expect(apiGet).toHaveBeenLastCalledWith("/executions?limit=10&offset=0&projectId=project-b");
     });
+  });
+
+  it("直近の実行は実行 ID から詳細へリンクする", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [{ displayId: "ExA1", status: "ACTIVE", startedAt: "2026-11-14T09:00:00Z" }],
+      totalCount: 1,
+    });
+
+    // Act
+    renderWithUiText(<DashboardPageClient />);
+
+    // Assert
+    expect(await screen.findByRole("link", { name: "ExA1" })).toHaveAttribute("href", "/executions/ExA1");
+  });
+
+  it("再読み込みのボタンで直近実行を取り直す", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [{ displayId: "ExA1", status: "ACTIVE", startedAt: "2026-11-14T09:00:00Z" }],
+      totalCount: 1,
+    });
+    renderWithUiText(<DashboardPageClient />);
+    await screen.findByRole("link", { name: "ExA1" });
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+
+    // Assert
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(2));
   });
 });
