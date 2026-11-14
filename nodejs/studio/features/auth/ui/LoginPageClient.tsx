@@ -9,7 +9,7 @@ import type { ApiError } from "@/shared/api/apiError";
 import { resolveSafeInternalRedirectPath } from "@/shared/auth/safeInternalRedirect";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { Button } from "@/shared/ui/Button";
-import { FieldLabel, INPUT_BASE_CLASS } from "@/shared/ui/FormField";
+import { FieldLabel, inputClassName } from "@/shared/ui/FormField";
 import { Notice } from "@/shared/ui/Notice";
 import { TextField } from "@/shared/ui/TextField";
 
@@ -172,7 +172,7 @@ export function LoginPageClient() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${INPUT_BASE_CLASS} h-9 pr-10`}
+              className={inputClassName({ paddingX: "pl-3 pr-10", className: "h-9" })}
             />
             <button
               type="button"

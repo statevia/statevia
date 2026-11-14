@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, type ReactNode, type TextareaHTMLAttributes } from "react";
-import { FieldLabel, FieldMessage, INPUT_BASE_CLASS, INPUT_ERROR_CLASS, joinFieldClassNames } from "./FormField";
+import { FieldLabel, FieldMessage, inputClassName, joinFieldClassNames } from "./FormField";
 
 type TextAreaFieldProps = {
   /** 入力に結び付けるラベル文言。 */
@@ -25,7 +25,7 @@ export function TextAreaField({ label, hint, error, className, required, ...text
       <label className="block">
         <FieldLabel label={label} required={required} />
         <textarea
-          className={joinFieldClassNames(INPUT_BASE_CLASS, "py-2", error ? INPUT_ERROR_CLASS : undefined, className)}
+          className={inputClassName({ error: Boolean(error), className: joinFieldClassNames("py-2", className) })}
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={hasMessage ? messageId : undefined}

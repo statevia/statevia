@@ -3,12 +3,37 @@
 import type { ReactNode } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
-/** 入力欄の枠と背景の共通クラス。エラーのときは `INPUT_ERROR_CLASS` を足す。 */
+/**
+ * 入力欄の枠の形と背景の共通クラス。横の余白と枠の色は含めない。
+ * 同じ CSS プロパティのクラスを後から足しても、Tailwind は HTML の順ではなく CSS の順で勝ち負けが決まるため
+ * （例: `px-3` に `pl-9` を足しても `px-3` が勝つ）、横の余白と枠の色は `inputClassName` で 1 つだけ選ぶ。
+ */
 export const INPUT_BASE_CLASS =
-  "mt-1.5 w-full rounded-control border border-md-outline-variant bg-md-surface-container px-3 text-sm text-md-on-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-md-primary disabled:opacity-60";
+  "mt-1.5 w-full rounded-control border bg-md-surface-container text-sm text-md-on-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-md-primary disabled:opacity-60";
 
-/** エラーの入力欄に足すクラス。 */
-export const INPUT_ERROR_CLASS = "border-md-error";
+type InputClassNameOptions = Readonly<{
+  /** エラーのとき true。枠を赤にする。 */
+  error?: boolean;
+  /** 横の余白。アイコンを入力の中に置くときだけ変える（例: 左に虫眼鏡なら `pl-9 pr-3`）。省略時は `px-3`。 */
+  paddingX?: string;
+  /** 高さ・等幅などの追加クラス。横の余白と枠の色は渡さない。 */
+  className?: string;
+}>;
+
+/**
+ * 入力欄・選択欄・テキストエリアのクラスを組み立てる。
+ * 枠の色（通常・エラー）と横の余白は、衝突しないようにどちらか 1 つだけを入れる。
+ * @param options エラーか、横の余白、追加クラス。
+ * @returns class 文字列。
+ */
+export function inputClassName({ error = false, paddingX = "px-3", className }: InputClassNameOptions = {}): string {
+  return joinFieldClassNames(
+    INPUT_BASE_CLASS,
+    error ? "border-md-error" : "border-md-outline-variant",
+    paddingX,
+    className,
+  );
+}
 
 type FieldLabelProps = Readonly<{
   /** 項目名。 */

@@ -5,7 +5,7 @@ import { useI18n } from "@/shared/i18n/uiTextContext";
 import { ASCII_LABEL_DEFAULT_MAX_LENGTH } from "@/shared/lib/validation/formRules";
 import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
 import { Button } from "@/shared/ui/Button";
-import { FieldLabel, INPUT_BASE_CLASS } from "@/shared/ui/FormField";
+import { FieldLabel, inputClassName } from "@/shared/ui/FormField";
 import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
@@ -23,11 +23,11 @@ type ScheduleFormPageClientProps = {
 
 type FormText = ReturnType<typeof useI18n>["uiText"]["schedules"]["form"];
 
-/** 1 行の入力欄と選択欄の見た目。テキストエリアは高さを付けずに `INPUT_BASE_CLASS` と `py-2` を使う。 */
-const INPUT_CLASS = `${INPUT_BASE_CLASS} h-9`;
+/** 1 行の入力欄と選択欄の見た目。 */
+const INPUT_CLASS = inputClassName({ className: "h-9" });
 
 /** テキストエリアの見た目。 */
-const TEXTAREA_CLASS = `${INPUT_BASE_CLASS} py-2`;
+const TEXTAREA_CLASS = inputClassName({ className: "py-2" });
 
 /** 選べる overlap の値。 */
 const OVERLAP_POLICIES: readonly ScheduleOverlapPolicy[] = ["skip", "allow"];

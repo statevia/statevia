@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { SelectField } from "@/shared/ui/SelectField";
 import { TextAreaField } from "@/shared/ui/TextAreaField";
 import { TextField } from "@/shared/ui/TextField";
+import { inputClassName } from "@/shared/ui/FormField";
 
 describe("入力欄の部品", () => {
   it("required のとき、項目名の右に「*」を付け、入力に required を渡す", () => {
@@ -54,5 +55,25 @@ describe("入力欄の部品", () => {
 
     // Assert
     expect(screen.getByRole("textbox", { name: "説明" }).tagName).toBe("TEXTAREA");
+  });
+});
+
+describe("inputClassName", () => {
+  it("横の余白を変えると px-3 を入れず、指定した余白だけを入れる", () => {
+    // Arrange / Act
+    const classes = inputClassName({ paddingX: "pl-9 pr-3" }).split(" ");
+
+    // Assert
+    expect(classes).toContain("pl-9");
+    expect(classes).not.toContain("px-3");
+  });
+
+  it("エラーのときは通常の枠の色を入れず、赤の枠だけを入れる", () => {
+    // Arrange / Act
+    const classes = inputClassName({ error: true }).split(" ");
+
+    // Assert
+    expect(classes).toContain("border-md-error");
+    expect(classes).not.toContain("border-md-outline-variant");
   });
 });

@@ -21,7 +21,7 @@ import { Button, buttonClassName } from "@/shared/ui/Button";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { DataList, type DataListColumn } from "@/shared/ui/DataList";
 import { FilterChips, type FilterChip } from "@/shared/ui/FilterChips";
-import { INPUT_BASE_CLASS } from "@/shared/ui/FormField";
+import { inputClassName } from "@/shared/ui/FormField";
 import { ListPagination } from "@/shared/ui/ListPagination";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
@@ -336,7 +336,7 @@ export function DefinitionsPageClient() {
               />
               <input
                 type="search"
-                className={`${INPUT_BASE_CLASS} h-9 pl-9${searchError ? " border-md-error" : ""}`}
+                className={inputClassName({ error: searchError !== null, paddingX: "pl-9 pr-3", className: "h-9" })}
                 value={searchInput}
                 onChange={(event) => {
                   setSearchInput(event.target.value);
