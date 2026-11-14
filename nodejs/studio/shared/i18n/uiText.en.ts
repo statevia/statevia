@@ -127,6 +127,11 @@ export const uiTextEn: UiText = {
   breadcrumbs: {
     aria: "Breadcrumb",
   },
+  filterChips: {
+    ariaLabel: "Active filters",
+    remove: (label) => `Remove ${label}`,
+    clearAll: "Clear all",
+  },
   statusBadge: {
     waiting: "Waiting",
   },

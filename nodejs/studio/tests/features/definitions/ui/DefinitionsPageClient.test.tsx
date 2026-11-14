@@ -99,12 +99,67 @@ describe("DefinitionsPageClient", () => {
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "削除" }));
+    fireEvent.change(screen.getByLabelText("確認のため、「Demo」と入力してください"), { target: { value: "Demo" } });
     fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
     // Assert
     await waitFor(() => {
       expect(apiDelete).toHaveBeenCalledWith("/definitions/def-1");
     });
+  });
+
+  it("削除は定義名を入力するまで確定できない", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({
+      items: [
+        {
+          displayId: "def-1",
+          resourceId: "res-1",
+          name: "Demo",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z"
+        }
+      ],
+      totalCount: 1
+    });
+    renderWithUiText(<DefinitionsPageClient />);
+    await screen.findByText("Demo");
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "削除" }));
+    fireEvent.change(screen.getByLabelText("確認のため、「Demo」と入力してください"), { target: { value: "Dem" } });
+
+    // Assert
+    expect(screen.getByRole("button", { name: "削除する" })).toBeDisabled();
+    expect(apiDelete).not.toHaveBeenCalled();
+  });
+
+  it("無効な検索語は入力欄の下にエラーを出し、URL を変えない", async () => {
+    // Arrange
+    vi.mocked(apiGet).mockResolvedValue({ items: [], totalCount: 0 });
+    renderWithUiText(<DefinitionsPageClient />);
+    const searchInput = await screen.findByLabelText("名前検索（部分一致）");
+
+    // Act
+    fireEvent.change(searchInput, { target: { value: "bad word!" } });
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    // Assert
+    expect(await screen.findByRole("alert")).toHaveTextContent("検索キーワードは半角英数字");
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("名前の検索のチップを外すと name を消した URL に置換する", async () => {
+    // Arrange
+    searchParams = new URLSearchParams("limit=20&offset=0&name=order");
+    vi.mocked(apiGet).mockResolvedValue({ items: [], totalCount: 0 });
+    renderWithUiText(<DefinitionsPageClient />);
+
+    // Act
+    fireEvent.click(await screen.findByRole("button", { name: "名前: order を外す" }));
+
+    // Assert
+    expect(replaceMock).toHaveBeenCalledWith(expect.not.stringContaining("name="), { scroll: false });
   });
 
   it("削除済み行の復元確認後に apiPost restore を呼ぶ", async () => {
@@ -143,7 +198,7 @@ describe("DefinitionsPageClient", () => {
     renderWithUiText(<DefinitionsPageClient />);
 
     // Assert
-    expect(await screen.findByRole("button", { name: "新しい定義を作成" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "新しい定義を作成" })).toBeInTheDocument();
   });
 
   it("Project ロールが足りても definitions.write が無ければ新規作成ボタンを出さない", async () => {
@@ -154,7 +209,7 @@ describe("DefinitionsPageClient", () => {
     await waitFor(() => {
       expect(apiGet).toHaveBeenCalled();
     });
-    expect(screen.queryByRole("button", { name: "新しい定義を作成" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "新しい定義を作成" })).not.toBeInTheDocument();
   });
 
   it("definitions.write が無ければ active 行に削除ボタンを出さない", async () => {

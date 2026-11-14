@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { restoreDefinition, softDeleteDefinition } from "../api";
 
-/** 行単位のインライン確認対象。 */
+/** 確認ダイアログで確かめている操作。 */
 export type PendingConfirm =
   | { kind: "delete"; displayId: string }
   | { kind: "restore"; displayId: string };
@@ -38,7 +38,7 @@ export type UseDefinitionCatalogActionsResult = {
 };
 
 /**
- * 定義 catalog の論理削除・復元（インライン二段階確認付き）。
+ * 定義 catalog の論理削除・復元。確認待ち（`pendingConfirm`）を確認ダイアログで出し、確定で 2 回目を呼ぶ二段階にする。
  * @param options 再取得・トースト文言
  */
 export function useDefinitionCatalogActions(
@@ -84,7 +84,7 @@ export function useDefinitionCatalogActions(
   );
 
   /**
-   * 削除のインライン二段階確認を進める。
+   * 削除の二段階確認を進める。
    * @param displayId 対象定義の displayId
    */
   const handleDeleteClick = useCallback(
@@ -99,7 +99,7 @@ export function useDefinitionCatalogActions(
   );
 
   /**
-   * 復元のインライン二段階確認を進める。
+   * 復元の二段階確認を進める。
    * @param displayId 対象定義の displayId
    */
   const handleRestoreClick = useCallback(

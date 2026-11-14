@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { Plus, Search } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SortOrder } from "@/features/definitions/api";
+import type { DefinitionsListQuery, SortOrder } from "@/features/definitions/api";
 import { useDefinitionCatalogActions } from "@/features/definitions/hooks/useDefinitionCatalogActions";
 import { useDefinitionsList } from "@/features/definitions/hooks/useDefinitionsList";
 import { useDefinitionsListQuery } from "@/features/definitions/hooks/useDefinitionsListQuery";
-import { isDeletedDefinition } from "@/features/definitions/types";
+import { isDeletedDefinition, type DefinitionDTO } from "@/features/definitions/types";
 import { useProject } from "@/shared/project/projectContext";
 import { canPublish } from "@/shared/project/roles";
 import { DEFINITIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
@@ -15,20 +16,107 @@ import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
 import { matchesPattern } from "@/shared/lib/validation/primitives";
 import { SEARCH_NAME_PATTERN } from "@/shared/lib/validation/searchRules";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button, buttonClassName } from "@/shared/ui/Button";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { DataList, type DataListColumn } from "@/shared/ui/DataList";
+import { FilterChips, type FilterChip } from "@/shared/ui/FilterChips";
+import { INPUT_BASE_CLASS } from "@/shared/ui/FormField";
 import { ListPagination } from "@/shared/ui/ListPagination";
-import { NAVIGATION_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
 
+/** 並び順の選択肢。項目と順序の組を 1 つの選択欄で選ぶ。 */
+const SORT_OPTIONS: ReadonlyArray<{ sortBy: "createdAt" | "name"; sortOrder: SortOrder }> = [
+  { sortBy: "createdAt", sortOrder: "desc" },
+  { sortBy: "createdAt", sortOrder: "asc" },
+  { sortBy: "name", sortOrder: "asc" },
+  { sortBy: "name", sortOrder: "desc" },
+];
+
+/** 検索欄のエラーの要素 ID（`aria-describedby` 用）。 */
+const SEARCH_ERROR_ID = "definitions-search-error";
+
+type DefinitionRowActionsProps = Readonly<{
+  /** 行の定義。 */
+  definition: DefinitionDTO;
+  /** 作成・削除・復元ができるか（公開以上のロールと definitions.write）。 */
+  canManageCatalog: boolean;
+  /** 削除か復元を送っている最中か。 */
+  busy: boolean;
+  /** 削除中の定義の表示用 ID。 */
+  deletingId: string | null;
+  /** 復元中の定義の表示用 ID。 */
+  restoringId: string | null;
+  /** 削除の確認を開く。 */
+  onRequestDelete: (displayId: string) => void;
+  /** 復元の確認を開く。 */
+  onRequestRestore: (displayId: string) => void;
+}>;
+
 /**
- * Definition 一覧（検索・ページング・catalog 論理削除/復元）を表示する。
+ * 行の操作。削除済みでない定義は詳細と削除、削除済みの定義は復元を出す。
+ * @param props 行の定義と操作。
+ * @returns 操作ボタン群。
+ */
+function DefinitionRowActions({
+  definition,
+  canManageCatalog,
+  busy,
+  deletingId,
+  restoringId,
+  onRequestDelete,
+  onRequestRestore,
+}: DefinitionRowActionsProps) {
+  const actionsText = useI18n().uiText.definitionsPage.actions;
+  if (isDeletedDefinition(definition)) {
+    return canManageCatalog ? (
+      <Button variant="standard" size="sm" disabled={busy} onClick={() => onRequestRestore(definition.displayId)}>
+        {restoringId === definition.displayId ? actionsText.restoring : actionsText.restore}
+      </Button>
+    ) : null;
+  }
+  return (
+    <div className="flex flex-nowrap gap-2 whitespace-nowrap">
+      <Link href={`/definitions/${encodeURIComponent(definition.displayId)}`} className={buttonClassName("outline", "sm")}>
+        {actionsText.openDetail}
+      </Link>
+      {canManageCatalog ? (
+        <Button variant="danger" size="sm" disabled={busy} onClick={() => onRequestDelete(definition.displayId)}>
+          {deletingId === definition.displayId ? actionsText.deleting : actionsText.delete}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * 並び順の選択肢の文言。
+ * @param option 項目と順序。
+ * @param text 定義一覧の辞書。
+ * @returns 例: 「作成日時（降順）」。
+ */
+function sortOptionLabel(
+  option: (typeof SORT_OPTIONS)[number],
+  text: ReturnType<typeof useI18n>["uiText"]["definitionsPage"],
+): string {
+  const by = option.sortBy === "name" ? text.sortByName : text.sortByCreatedAt;
+  const order = option.sortOrder === "asc" ? text.sortOrderAsc : text.sortOrderDesc;
+  return `${by}（${order}）`;
+}
+
+/**
+ * Definition 一覧（検索・並び順・ページング・catalog 論理削除/復元）を表示する。
+ * 条件は URL に反映し（`useDefinitionsListQuery`）、かけている条件はチップで出す（要件 8）。
+ * 削除は定義名の入力を求める確認ダイアログ（U6）、復元は確認ダイアログを経てから送る。
  */
 export function DefinitionsPageClient() {
   const { uiText, locale } = useI18n();
-  const router = useRouter();
+  const text = uiText.definitionsPage;
   const dateTimeLocale = getDateTimeLocale(locale);
   const [searchInput, setSearchInput] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
   const {
     listQuery,
     currentPage,
@@ -67,39 +155,64 @@ export function DefinitionsPageClient() {
   } = useDefinitionCatalogActions({
     reload: loadDefinitions,
     setToast,
-    deletedMessage: uiText.definitionsPage.toasts.deleted,
-    restoredMessage: uiText.definitionsPage.toasts.restored,
+    deletedMessage: text.toasts.deleted,
+    restoredMessage: text.toasts.restored,
   });
 
   useEffect(() => {
     setSearchInput(listQuery.name ?? "");
   }, [listQuery.name]);
 
+  /**
+   * 条件を変えて 1 ページ目から読み直す。並び順を変えたときも 1 ページ目に戻す（要件 8.3）。
+   * @param next 変える条件。
+   */
+  const goToFirstPage = useCallback(
+    (next: Partial<DefinitionsListQuery>) =>
+      goTo({ ...listQuery, ...next, pagination: { ...listQuery.pagination, offset: 0 } }),
+    [goTo, listQuery],
+  );
+
   const handleSubmitSearch = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmedKeyword = searchInput.trim();
       if (!matchesPattern(trimmedKeyword, SEARCH_NAME_PATTERN)) {
-        setToast({
-          tone: "error",
-          message: uiText.definitionsPage.search.invalidName,
-        });
+        setSearchError(text.search.invalidName);
         return;
       }
-      goTo({
-        pagination: { ...listQuery.pagination, offset: 0 },
-        sort: listQuery.sort,
-        name: trimmedKeyword || undefined,
-        includeDeleted: listQuery.includeDeleted,
-      });
+      setSearchError(null);
+      goToFirstPage({ name: trimmedKeyword || undefined });
     },
-    [goTo, listQuery, searchInput, setToast, uiText.definitionsPage.search.invalidName],
+    [goToFirstPage, searchInput, text.search.invalidName],
   );
+
+  const nameChips: FilterChip[] = listQuery.name
+    ? [
+        {
+          id: "name",
+          label: text.nameChip(listQuery.name),
+          onRemove: () => {
+            setSearchInput("");
+            goToFirstPage({ name: undefined });
+          },
+        },
+      ]
+    : [];
+  const includeDeletedChips: FilterChip[] = includeDeleted
+    ? [
+        {
+          id: "includeDeleted",
+          label: text.includeDeleted.label,
+          onRemove: () => goToFirstPage({ includeDeleted: undefined }),
+        },
+      ]
+    : [];
 
   const paginationNav = (
     <ListPagination
-      ariaLabel={uiText.definitionsPage.pagination.ariaLabel}
-      currentPageLabel={uiText.definitionsPage.pagination.currentPage(currentPage)}
+      ariaLabel={text.pagination.ariaLabel}
+      currentPageLabel={text.pagination.currentPage(currentPage)}
       hasPrev={hasPrev}
       hasNext={hasNext}
       onPrev={() =>
@@ -123,259 +236,215 @@ export function DefinitionsPageClient() {
     />
   );
 
+  const busy = deletingId !== null || restoringId !== null;
+  const pendingDefinition =
+    pendingConfirm === null
+      ? undefined
+      : items?.find((definition) => definition.displayId === pendingConfirm.displayId);
+
+  const columns: DataListColumn<DefinitionDTO>[] = [
+    {
+      id: "name",
+      header: text.columns.name,
+      width: "minmax(0,1fr)",
+      hideLabelOnMobile: true,
+      cell: (definition) => (
+        <>
+          <p className="flex min-w-0 items-center gap-2 font-medium text-md-on-surface" title={definition.name}>
+            {isDeletedDefinition(definition) ? (
+              <span className="truncate">{definition.name}</span>
+            ) : (
+              <Link
+                href={`/definitions/${encodeURIComponent(definition.displayId)}`}
+                className="truncate hover:text-md-primary hover:underline"
+              >
+                {definition.name}
+              </Link>
+            )}
+            {isDeletedDefinition(definition) ? (
+              <span className="inline-flex h-5 shrink-0 items-center rounded-pill bg-md-surface-container-high px-2 text-[11px] font-semibold text-md-on-surface-variant">
+                {text.deletedBadge}
+              </span>
+            ) : null}
+          </p>
+          <p className="mt-0.5 truncate font-mono text-xs text-md-on-surface-variant">{definition.displayId}</p>
+        </>
+      ),
+    },
+    {
+      id: "createdAt",
+      header: text.columns.createdAt,
+      width: "11rem",
+      cell: (definition) => (
+        <>
+          <p className="whitespace-nowrap text-md-on-surface">
+            {formatDateTimeLocalized(definition.createdAt, dateTimeLocale)}
+          </p>
+          {isDeletedDefinition(definition) && definition.deletedAt ? (
+            <p className="mt-0.5 whitespace-nowrap text-xs text-md-on-surface-variant">
+              {text.deletedAt(formatDateTimeLocalized(definition.deletedAt, dateTimeLocale))}
+            </p>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "actions",
+      header: text.columns.actions,
+      width: "12rem",
+      align: "end",
+      hideLabelOnMobile: true,
+      cell: (definition) => (
+        <DefinitionRowActions
+          definition={definition}
+          canManageCatalog={canManageCatalog}
+          busy={busy}
+          deletingId={deletingId}
+          restoringId={restoringId}
+          onRequestDelete={(displayId) => setPendingConfirm({ kind: "delete", displayId })}
+          onRequestRestore={(displayId) => setPendingConfirm({ kind: "restore", displayId })}
+        />
+      ),
+    },
+  ];
+
   return (
-    <PageShell title={uiText.lists.definitions} description={uiText.definitionsPage.description}>
+    <PageShell
+      title={uiText.lists.definitions}
+      description={text.description}
+      breadcrumbs={
+        <Breadcrumbs items={[{ label: uiText.navigation.groups.workflow }, { label: uiText.lists.definitions }]} />
+      }
+      primaryActions={
+        canManageCatalog ? (
+          <Link href="/definitions/new" className={buttonClassName("lead")}>
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {text.actions.createNew}
+          </Link>
+        ) : null
+      }
+    >
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      <form
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-md-outline bg-md-surface p-4"
-        onSubmit={handleSubmitSearch}
-      >
-        <label className="min-w-[260px] flex-1 text-sm">
-          <span className="text-md-on-surface-variant">
-            {uiText.definitionsPage.search.label}
-          </span>
-          <input
-            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={uiText.definitionsPage.search.placeholder}
-          />
-        </label>
-        <button
-          type="submit"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-          disabled={loading}
-        >
-          {uiText.definitionsPage.search.submit}
-        </button>
-        <button
-          type="button"
-          className="rounded-sm border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
-          onClick={() => {
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start gap-3">
+          <form className="flex min-w-[260px] flex-1 items-start gap-2" onSubmit={handleSubmitSearch}>
+            <div className="relative flex-1">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-md-on-surface-variant"
+              />
+              <input
+                type="search"
+                className={`${INPUT_BASE_CLASS} h-9 pl-9${searchError ? " border-md-error" : ""}`}
+                value={searchInput}
+                onChange={(event) => {
+                  setSearchInput(event.target.value);
+                  setSearchError(null);
+                }}
+                placeholder={text.search.placeholder}
+                aria-label={text.search.label}
+                aria-invalid={searchError ? true : undefined}
+                aria-describedby={searchError ? SEARCH_ERROR_ID : undefined}
+              />
+              {searchError ? (
+                <span id={SEARCH_ERROR_ID} role="alert" className="mt-1 block text-xs text-md-error">
+                  {searchError}
+                </span>
+              ) : null}
+            </div>
+            <Button variant="standard" type="submit" className="mt-1.5" disabled={loading}>
+              {text.search.submit}
+            </Button>
+          </form>
+          <label className="mt-1.5 flex h-9 items-center gap-2 text-sm text-md-on-surface-variant">
+            {text.sortLabel}
+            <select
+              className="h-9 rounded-control border border-md-outline-variant bg-md-surface-container px-3 text-sm text-md-on-surface"
+              value={`${effectiveSortBy}:${effectiveSortOrder}`}
+              onChange={(event) => {
+                const selected = SORT_OPTIONS.find(
+                  (option) => `${option.sortBy}:${option.sortOrder}` === event.target.value,
+                );
+                if (selected) goToFirstPage({ sort: { sortBy: selected.sortBy, sortOrder: selected.sortOrder } });
+              }}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={`${option.sortBy}:${option.sortOrder}`} value={`${option.sortBy}:${option.sortOrder}`}>
+                  {sortOptionLabel(option, text)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="mt-1.5 flex h-9 items-center gap-2 text-sm text-md-on-surface">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-brand-lead-bg"
+              checked={includeDeleted}
+              onChange={(event) => goToFirstPage({ includeDeleted: event.target.checked || undefined })}
+              disabled={loading}
+            />
+            {text.includeDeleted.label}
+          </label>
+        </div>
+        <FilterChips
+          chips={[...nameChips, ...includeDeletedChips]}
+          onClearAll={() => {
             setSearchInput("");
-            goTo({
-              pagination: { ...listQuery.pagination, offset: 0 },
-              sort: listQuery.sort,
-              includeDeleted: listQuery.includeDeleted,
-            });
+            goToFirstPage({ name: undefined, includeDeleted: undefined });
           }}
-          disabled={loading && !listQuery.name}
-        >
-          {uiText.definitionsPage.search.clear}
-        </button>
-        <label className="text-sm">
-          <span className="text-md-on-surface-variant">
-            {uiText.definitionsPage.sortByLabel}
-          </span>
-          <select
-            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
-            value={effectiveSortBy}
-            onChange={(event) =>
-              goTo({
-                ...listQuery,
-                pagination: { ...listQuery.pagination, offset: 0 },
-                sort: { ...listQuery.sort, sortBy: event.target.value },
-              })
-            }
-          >
-            <option value="createdAt">{uiText.definitionsPage.sortByCreatedAt}</option>
-            <option value="name">{uiText.definitionsPage.sortByName}</option>
-          </select>
-        </label>
-        <label className="text-sm">
-          <span className="text-md-on-surface-variant">
-            {uiText.definitionsPage.sortOrderLabel}
-          </span>
-          <select
-            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
-            value={effectiveSortOrder}
-            onChange={(event) =>
-              goTo({
-                ...listQuery,
-                pagination: { ...listQuery.pagination, offset: 0 },
-                sort: { ...listQuery.sort, sortOrder: event.target.value as SortOrder },
-              })
-            }
-          >
-            <option value="desc">{uiText.definitionsPage.sortOrderDesc}</option>
-            <option value="asc">{uiText.definitionsPage.sortOrderAsc}</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm text-md-on-surface">
-          <input
-            type="checkbox"
-            checked={includeDeleted}
-            onChange={(event) =>
-              goTo({
-                ...listQuery,
-                pagination: { ...listQuery.pagination, offset: 0 },
-                includeDeleted: event.target.checked || undefined,
-              })
-            }
-            disabled={loading}
-          />
-          <span>{uiText.definitionsPage.includeDeleted.label}</span>
-        </label>
-        {canManageCatalog && (
-          <button
-            type="button"
-            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-            onClick={() => router.push("/definitions/new")}
-          >
-            {uiText.definitionsPage.actions.createNew}
-          </button>
-        )}
-      </form>
+        />
+      </div>
 
-      {loading && <PageState state="loading" message={uiText.definitionsPage.loading} />}
+      {loading && <PageState state="loading" message={text.loading} />}
 
-      {empty && <PageState state="empty" message={uiText.definitionsPage.emptyNoMatch} />}
+      {empty && <PageState state="empty" message={text.emptyNoMatch} />}
 
       {!loading && items !== null && items.length > 0 && (
-        <section aria-label={uiText.lists.definitions}>
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-md-on-surface-variant">
-              {listQuery.name ? uiText.definitionsPage.searchSummaryPrefix(listQuery.name) : ""}
-              {uiText.definitionsPage.listSummary(totalCount ?? 0, currentPage)}
-            </p>
+        <section aria-label={uiText.lists.definitions} className="flex flex-col gap-3">
+          <DataList
+            ariaLabel={uiText.lists.definitions}
+            columns={columns}
+            items={items}
+            getRowKey={(definition) => definition.displayId}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-md-on-surface-variant">{text.listSummary(totalCount ?? 0, currentPage)}</p>
             {paginationNav}
           </div>
-          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs">
-            {items.map((definition) => {
-              const deleted = isDeletedDefinition(definition);
-              const isDeletePending =
-                pendingConfirm?.kind === "delete" && pendingConfirm.displayId === definition.displayId;
-              const isRestorePending =
-                pendingConfirm?.kind === "restore" && pendingConfirm.displayId === definition.displayId;
-              const isDeleting = deletingId === definition.displayId;
-              const isRestoring = restoringId === definition.displayId;
-              return (
-                <li
-                  key={definition.displayId}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="flex flex-wrap items-center gap-2 truncate font-medium text-md-on-surface"
-                      title={definition.name}
-                    >
-                      <span className="truncate">{definition.name}</span>
-                      {deleted && (
-                        <span className="shrink-0 rounded-sm border border-md-outline-variant px-1.5 py-0.5 text-xs font-normal text-md-on-surface-variant">
-                          {uiText.definitionsPage.deletedBadge}
-                        </span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-xs text-md-on-surface-variant">
-                      {uiText.definitionsPage.displayIdAndCreatedAt(
-                        uiText.labels.displayId,
-                        definition.displayId,
-                        uiText.definitionsPage.createdAt(
-                          formatDateTimeLocalized(definition.createdAt, dateTimeLocale),
-                        ),
-                      )}
-                      {deleted && definition.deletedAt
-                        ? ` / ${uiText.definitionsPage.deletedAt(formatDateTimeLocalized(definition.deletedAt, dateTimeLocale))}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {!deleted && (
-                      <>
-                        <button
-                          type="button"
-                          className={NAVIGATION_BUTTON_CLASS}
-                          onClick={() =>
-                            router.push(`/definitions/${encodeURIComponent(definition.displayId)}`)
-                          }
-                        >
-                          {uiText.definitionsPage.actions.openDetail}
-                        </button>
-                        {canManageCatalog && (isDeletePending ? (
-                          <>
-                            <button
-                              type="button"
-                              className="rounded-sm border border-red-700 bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
-                              disabled={isDeleting}
-                              onClick={() => handleDeleteClick(definition.displayId)}
-                            >
-                              {isDeleting
-                                ? uiText.definitionsPage.actions.deleting
-                                : uiText.definitionsPage.actions.confirmDelete}
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
-                              disabled={isDeleting}
-                              onClick={() => setPendingConfirm(null)}
-                            >
-                              {uiText.definitionsPage.actions.cancelConfirm}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-60"
-                            disabled={deletingId !== null || restoringId !== null}
-                            onClick={() => handleDeleteClick(definition.displayId)}
-                          >
-                            {uiText.definitionsPage.actions.delete}
-                          </button>
-                        ))}
-                      </>
-                    )}
-                    {deleted && canManageCatalog && (
-                      <>
-                        {isRestorePending ? (
-                          <>
-                            <button
-                              type="button"
-                              className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
-                              disabled={isRestoring}
-                              onClick={() => handleRestoreClick(definition.displayId)}
-                            >
-                              {isRestoring
-                                ? uiText.definitionsPage.actions.restoring
-                                : uiText.definitionsPage.actions.confirmRestore}
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-sm text-md-on-surface"
-                              disabled={isRestoring}
-                              onClick={() => setPendingConfirm(null)}
-                            >
-                              {uiText.definitionsPage.actions.cancelConfirm}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
-                            disabled={deletingId !== null || restoringId !== null}
-                            onClick={() => handleRestoreClick(definition.displayId)}
-                          >
-                            {uiText.definitionsPage.actions.restore}
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-2 flex justify-end">{paginationNav}</div>
         </section>
       )}
 
       {!loading && items === null && !toast && (
-        <PageState
-          state="error"
-          message={uiText.definitionsPage.error}
-          onRetry={() => void loadDefinitions()}
-        />
+        <PageState state="error" message={text.error} onRetry={() => void loadDefinitions()} />
       )}
+
+      <ConfirmDialog
+        open={pendingConfirm?.kind === "delete" && pendingDefinition !== undefined}
+        title={text.deleteConfirm.title(pendingDefinition?.name ?? "")}
+        message={text.deleteConfirm.message}
+        confirmLabel={text.actions.confirmDelete}
+        cancelLabel={text.actions.cancelConfirm}
+        requireTypedName={pendingDefinition?.name}
+        loading={deletingId !== null}
+        onConfirm={() => {
+          if (pendingDefinition) handleDeleteClick(pendingDefinition.displayId);
+        }}
+        onCancel={() => setPendingConfirm(null)}
+      />
+      <ConfirmDialog
+        open={pendingConfirm?.kind === "restore" && pendingDefinition !== undefined}
+        title={text.restoreConfirm.title(pendingDefinition?.name ?? "")}
+        message={text.restoreConfirm.message}
+        confirmLabel={text.actions.confirmRestore}
+        cancelLabel={text.actions.cancelConfirm}
+        confirmVariant="standard"
+        loading={restoringId !== null}
+        onConfirm={() => {
+          if (pendingDefinition) handleRestoreClick(pendingDefinition.displayId);
+        }}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </PageShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getDefinition, startExecutionFromDefinition } from "@/features/definitions/api";
@@ -12,12 +13,16 @@ import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength } from "@/shared/lib/validation/primitives";
 import { START_INPUT_MAX_BYTES } from "@/shared/lib/validation/formRules";
 import { ActionInputCodeEditor } from "@/shared/ui/ActionInputCodeEditor";
-import { NAVIGATION_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button } from "@/shared/ui/Button";
+import { FieldLabel } from "@/shared/ui/FormField";
+import { Notice } from "@/shared/ui/Notice";
+import { PageShell } from "@/shared/ui/PageShell";
 import { Toast } from "@/shared/ui/Toast";
 
 /**
  * Definition 起点で新規実行を開始する。
- * 開始成功時は実行詳細（`/executions/[executionId]`）へ遷移する。
+ * 開始成功時は実行詳細（`/executions/[executionId]`）へ遷移する。開始のボタンは緑の主導線。定義の詳細へはパンくずで戻る。
  */
 export function DefinitionRunStartPage() {
   const uiText = useUiText();
@@ -104,76 +109,64 @@ export function DefinitionRunStartPage() {
     }
   };
 
-  return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-md-on-surface">
-          {uiText.definitionRunPage.title}
-        </h1>
-        <p className="text-sm text-md-on-surface-variant">
-          <span className="font-mono break-all">
-            {uiText.definitionRunPage.definitionIdLine(
-              uiText.labels.definitionId,
-              definitionId || uiText.definitionRunPage.unspecifiedDefinitionId,
-            )}
-          </span>
-        </p>
-      </header>
+  const encodedId = encodeURIComponent(definitionId);
 
+  return (
+    <PageShell
+      title={uiText.definitionRunPage.title}
+      description={uiText.definitionRunPage.definitionIdLine(
+        uiText.labels.definitionId,
+        definitionId || uiText.definitionRunPage.unspecifiedDefinitionId,
+      )}
+      breadcrumbs={
+        <Breadcrumbs
+          items={[
+            { label: uiText.navigation.groups.workflow },
+            { label: uiText.lists.definitions, href: "/definitions" },
+            { label: definitionId, href: `/definitions/${encodedId}` },
+            { label: uiText.definitionRunPage.title },
+          ]}
+        />
+      }
+      secondaryActions={
+        <Link href="/executions" className="hover:underline">
+          {uiText.lists.executions}
+        </Link>
+      }
+    >
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {access === "missing" && (
-        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.notMember}</p>
-      )}
-      {access === "denied" && (
-        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.roleDenied}</p>
-      )}
+      {access === "missing" && <Notice tone="info" title={uiText.definitionRunPage.notMember} />}
+      {access === "denied" && <Notice tone="info" title={uiText.definitionRunPage.roleDenied} />}
       {access === "ready" && permissionsLoaded && !canWriteExecutions && (
-        <p className="text-sm text-md-on-surface-variant">{uiText.definitionRunPage.permissionDenied}</p>
+        <Notice tone="info" title={uiText.definitionRunPage.permissionDenied} />
       )}
       {access === "ready" && canWriteExecutions && (
-      <section className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
-        <label className="block text-sm">
-          <span className="text-md-on-surface-variant">
-            {uiText.definitionRunPage.inputLabelWithHint(uiText.labels.input)}
-          </span>
-          <ActionInputCodeEditor
-            value={inputJson}
-            onChange={setInputJson}
-            placeholder={uiText.definitionRunPage.inputJsonPlaceholder}
-            syntaxHighlight="jsonOnly"
-            ariaLabel={uiText.labels.input}
-            className="min-h-28 w-full border-md-outline-variant bg-md-surface-container"
-          />
-        </label>
-        <button
-          type="button"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-50"
-          onClick={() => void handleStart()}
-          disabled={starting || !definitionId.trim()}
-        >
-          {starting
-            ? uiText.definitionRunPage.actions.starting
-            : uiText.definitionRunPage.actions.startExecution}
-        </button>
-        <p className="text-xs text-md-on-surface-variant">
-          {uiText.definitionRunPage.help.redirectAfterStart}
-        </p>
-      </section>
+        <section className="flex max-w-2xl flex-col gap-4 rounded-card border border-md-outline bg-md-surface p-5">
+          <div className="text-sm">
+            <FieldLabel label={uiText.definitionRunPage.inputLabelWithHint(uiText.labels.input)} />
+            <ActionInputCodeEditor
+              value={inputJson}
+              onChange={setInputJson}
+              placeholder={uiText.definitionRunPage.inputJsonPlaceholder}
+              syntaxHighlight="jsonOnly"
+              ariaLabel={uiText.labels.input}
+              className="mt-1.5 min-h-28 w-full rounded-control border-md-outline-variant bg-md-surface-container"
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-md-outline-variant pt-4">
+            <p className="text-xs text-md-on-surface-variant">{uiText.definitionRunPage.help.redirectAfterStart}</p>
+            <Button
+              variant="lead"
+              onClick={() => void handleStart()}
+              loading={starting}
+              disabled={!definitionId.trim()}
+            >
+              {starting ? uiText.definitionRunPage.actions.starting : uiText.definitionRunPage.actions.startExecution}
+            </Button>
+          </div>
+        </section>
       )}
-
-      <nav className="flex flex-wrap gap-3 text-sm">
-        <button
-          type="button"
-          className={NAVIGATION_BUTTON_CLASS}
-          onClick={() => router.push(`/definitions/${encodeURIComponent(definitionId)}`)}
-        >
-          {uiText.definitionRunPage.nav.backToDefinitionDetail}
-        </button>
-        <button type="button" className={NAVIGATION_BUTTON_CLASS} onClick={() => router.push("/executions")}>
-          {uiText.lists.executions}
-        </button>
-      </nav>
-    </main>
+    </PageShell>
   );
 }

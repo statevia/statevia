@@ -14,22 +14,30 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
       label: "名前検索（部分一致）",
       placeholder: "例: order",
       submit: "検索",
-      clear: "クリア",
       invalidName: "検索キーワードは半角英数字と . - _ のみ、100文字以内で入力してください。",
     },
-    sortByLabel: "ソート項目",
-    sortOrderLabel: "順序",
+    sortLabel: "並び順",
     sortByCreatedAt: "作成日時",
     sortByName: "名前",
     sortOrderDesc: "降順",
     sortOrderAsc: "昇順",
     loading: "定義一覧を読み込み中です。",
     emptyNoMatch: "該当する定義はありません。検索条件を変更するか、条件をクリアして再検索してください。",
-    searchSummaryPrefix: (keyword: string) => `検索: "${keyword}" / `,
     listSummary: (totalCount: number, page: number) => `合計 ${totalCount} 件（${page} ページ目）`,
-    createdAt: (formattedDateTime: string) => `作成: ${formattedDateTime}`,
-    displayIdAndCreatedAt: (displayIdLabel: string, displayId: string, createdAtLabel: string) =>
-      `${displayIdLabel}: ${displayId} / ${createdAtLabel}`,
+    columns: {
+      name: "名前",
+      createdAt: "作成日時",
+      actions: "操作",
+    },
+    nameChip: (keyword: string) => `名前: ${keyword}`,
+    deleteConfirm: {
+      title: (name: string) => `${name} を削除しますか？`,
+      message: "削除した定義は、「削除済みを含む」で一覧に出して復元できます。",
+    },
+    restoreConfirm: {
+      title: (name: string) => `${name} を復元しますか？`,
+      message: "復元すると、削除済みでない定義として一覧に戻ります。",
+    },
     actions: {
       openDetail: "詳細を開く",
       createNew: "新しい定義を作成",
@@ -53,8 +61,7 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
     error: "定義一覧を取得できませんでした。",
   },
   definitionDetail: {
-    title: "定義 詳細",
-    urlPrefix: "URL:",
+    title: "定義の詳細",
     errorFetchFailed: "定義を取得できませんでした。",
     notMember: "この定義のプロジェクトに所属していないため、詳細を開けません。",
     roleDenied: "ロールまたはグループ権限が足りないため、編集と実行開始はできません。",
@@ -77,11 +84,12 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
       cancelConfirm: "やめる",
       deleting: "削除中...",
     },
+    deleteConfirm: {
+      title: (name: string) => `${name} を削除しますか？`,
+      message: "削除した定義は、定義の一覧の「削除済みを含む」で出して復元できます。",
+    },
     toasts: {
       deleted: "定義を削除しました。",
-    },
-    nav: {
-      backToDefinitions: "定義一覧へ戻る",
     },
   },
   definitionRunPage: {
@@ -98,9 +106,6 @@ export const definitionsUiTextJa: DefinitionsFeatureUiText = {
       invalidInputJson: (inputLabel: string) => `${inputLabel} の JSON が不正です。`,
       inputTooLarge: "入力データは65536バイト（64KiB）以内で指定してください。",
       executionStarted: (executionDisplayId: string) => `実行を開始しました: ${executionDisplayId}`,
-    },
-    nav: {
-      backToDefinitionDetail: "定義の詳細へ戻る",
     },
     actions: {
       starting: "開始中...",

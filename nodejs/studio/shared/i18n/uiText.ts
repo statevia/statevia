@@ -146,6 +146,15 @@ export type UiText = DefinitionsFeatureUiText &
     /** `<nav>` の aria-label。 */
     aria: string;
   },
+  /** 一覧の絞り込みのチップの文言。 */
+  filterChips: {
+    /** チップのまとまりの aria-label。 */
+    ariaLabel: string;
+    /** チップの × の aria-label。引数はチップの文言。 */
+    remove: (label: string) => string;
+    /** 全部の条件を外すボタン。 */
+    clearAll: string;
+  },
   /** 状態バッジの文言。 */
   statusBadge: {
     /** 実行の状態の横に付ける待機の印（状態の値ではない）。 */
@@ -279,6 +288,11 @@ export const uiText: UiText = {
   },
   breadcrumbs: {
     aria: "パンくずリスト",
+  },
+  filterChips: {
+    ariaLabel: "かけている条件",
+    remove: (label) => `${label} を外す`,
+    clearAll: "すべて外す",
   },
   statusBadge: {
     waiting: "待機中",
