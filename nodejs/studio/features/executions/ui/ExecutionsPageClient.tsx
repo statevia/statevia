@@ -2,8 +2,10 @@
 
 import { Suspense, useState } from "react";
 import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button } from "@/shared/ui/Button";
+import { FilterChips, type FilterChip } from "@/shared/ui/FilterChips";
 import { ListPagination } from "@/shared/ui/ListPagination";
-import { OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { Toast } from "@/shared/ui/Toast";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
@@ -15,6 +17,7 @@ import { SubscribeIngressDialog } from "./SubscribeIngressDialog";
 
 /**
  * ページング・フィルタ（URL 同期）付きの実行一覧。詳細は <code>/executions/[id]</code> へ遷移する。
+ * 実行 ID と定義 ID の条件はチップで出し、1 つずつでも全部でも外せる（要件 8.4）。状態はピルで選ぶ。
  */
 function ExecutionsPageClientInner() {
   const { uiText } = useI18n();
@@ -34,18 +37,24 @@ function ExecutionsPageClientInner() {
     onNext: page.goToNextPage
   };
 
+  const filterText = uiText.executionsPage.filter;
+  const nameChips: FilterChip[] = page.name
+    ? [{ id: "name", label: filterText.nameChip(page.name), onRemove: page.clearName }]
+    : [];
+  const definitionChips: FilterChip[] = page.definitionId
+    ? [{ id: "definitionId", label: filterText.definitionChip(page.definitionId), onRemove: page.clearDefinitionContext }]
+    : [];
+
   return (
     <PageShell
       title={uiText.lists.executions}
+      description={uiText.executionsPage.description}
+      breadcrumbs={<Breadcrumbs items={[{ label: uiText.navigation.groups.workflow }, { label: uiText.lists.executions }]} />}
       primaryActions={
         canSendEvents && (
-          <button
-            type="button"
-            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-            onClick={() => setIngressOpen(true)}
-          >
+          <Button variant="standard" onClick={() => setIngressOpen(true)}>
             {uiText.executionsPage.ingress.open}
-          </button>
+          </Button>
         )
       }
     >
@@ -61,36 +70,22 @@ function ExecutionsPageClientInner() {
         }}
       />
 
-      {page.definitionId && (
-        <output className="block rounded-sm border border-md-primary bg-md-primary-container px-3 py-2 text-sm text-md-on-primary-container" aria-live="polite">
-          <span className="text-md-on-primary-container">{uiText.executionsPage.filter.contextActivePrefix} </span>
-          <span className="font-mono break-all">{page.definitionId}</span>
-          <button
-            type="button"
-            className={`ml-2 ${OPERATION_TEXT_BUTTON_CLASS}`}
-            onClick={page.clearDefinitionContext}
-          >
-            {uiText.executionsPage.filter.clearDefinition}
-          </button>
-        </output>
-      )}
-
       <ExecutionsFilterForm
         status={page.status}
         sortBy={page.sortBy}
         sortOrder={page.sortOrder}
         nameDraft={page.nameDraft}
         definitionDraft={page.definitionDraft}
+        nameError={page.nameError}
+        definitionError={page.definitionError}
         loading={page.loading}
-        limit={page.limit}
         onSubmit={page.submitFilters}
         onStatusChange={page.changeStatus}
         onNameDraftChange={page.setNameDraft}
         onDefinitionDraftChange={page.setDefinitionDraft}
-        onSortByChange={page.changeSortBy}
-        onSortOrderChange={page.changeSortOrder}
-        onClear={page.clearFilters}
+        onSortChange={page.changeSort}
       />
+      <FilterChips chips={[...nameChips, ...definitionChips]} onClearAll={page.clearFilters} />
 
       <Toast toast={page.toast} onClose={page.dismissToast} />
 
@@ -99,15 +94,12 @@ function ExecutionsPageClientInner() {
       )}
 
       {!page.loading && page.items !== null && page.items.length > 0 && (
-        <section aria-label={uiText.lists.executions}>
-          <div className="mb-2 flex items-center justify-between gap-3">
+        <section aria-label={uiText.lists.executions} className="flex flex-col gap-3">
+          <ExecutionsList items={page.items} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-md-on-surface-variant">
               {uiText.executionsPage.listSummary(page.totalCount ?? 0, page.currentPage)}
             </p>
-            <ListPagination {...paginationProps} />
-          </div>
-          <ExecutionsList items={page.items} onOpen={page.openExecution} />
-          <div className="mt-2 flex justify-end">
             <ListPagination {...paginationProps} />
           </div>
         </section>

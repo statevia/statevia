@@ -161,33 +161,36 @@ export type ExecutionsFeatureUiText = {
       prev: string;
       next: string;
     };
+    /** 一覧の見出しの下の説明。 */
+    description: string;
     filter: {
-      contextActivePrefix: string;
-      clearDefinition: string;
-      title: string;
       all: string;
       definitionInputHint: string;
       definitionLabelWithHint: (definitionLabel: string) => string;
       definitionPlaceholder: string;
       nameInputHint: string;
       search: string;
-      clear: string;
-      sortByLabel: string;
-      sortOrderLabel: string;
+      /** 並び順の選択欄のラベル。選択肢は項目と順序を組み合わせて作る。 */
+      sortLabel: string;
+      /** 実行 ID の検索語のチップ。 */
+      nameChip: (keyword: string) => string;
+      /** 定義 ID のチップ。 */
+      definitionChip: (definitionId: string) => string;
       sortByUpdatedAt: string;
       sortByDisplayId: string;
       sortOrderDesc: string;
       sortOrderAsc: string;
       invalidName: string;
       invalidDefinitionId: string;
-      /** 1 ページの表示件数の説明。 */
-      pageInfo: (limit: number) => string;
     };
     loading: string;
     listSummary: (totalCount: number, page: number) => string;
-    updatedAt: (formattedDateTime: string) => string;
-    actions: {
-      openDetail: string;
+    /** 一覧の列の見出し。 */
+    columns: {
+      status: string;
+      execution: string;
+      startedAt: string;
+      updatedAt: string;
     };
     ingress: {
       open: string;

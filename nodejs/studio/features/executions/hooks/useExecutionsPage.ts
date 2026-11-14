@@ -34,8 +34,14 @@ export type ExecutionsPageModel = {
   loading: boolean;
   /** 取得失敗・検証失敗・受理のトースト。無ければ null。 */
   toast: ToastState | null;
-  /** URL 上の定義 ID。コンテキスト表示に使う。無ければ undefined。 */
+  /** URL 上の定義 ID。条件のチップに使う。無ければ undefined。 */
   definitionId: string | undefined;
+  /** URL 上の実行 ID の検索語。条件のチップに使う。無ければ undefined。 */
+  name: string | undefined;
+  /** 実行 ID の検索語の検証エラー。入力欄の下に出す。無ければ null。 */
+  nameError: string | null;
+  /** 定義 ID の検証エラー。入力欄の下に出す。無ければ null。 */
+  definitionError: string | null;
   /** 状態フィルタ。空文字はすべて。 */
   status: ExecutionStatusFilter;
   /** ソートキー。 */
@@ -77,19 +83,17 @@ export type ExecutionsPageModel = {
    */
   changeStatus: (value: string) => void;
   /**
-   * ソートキーを変えて先頭ページへ移す。名前と定義 ID は URL の値を使う。
-   * @param value セレクトの値。
+   * 並びの項目と順序を一度に変えて先頭ページへ移す（1 つの選択欄で選ぶため）。
+   * @param sortBy 並びの項目。
+   * @param sortOrder 並びの順序。
    */
-  changeSortBy: (value: string) => void;
-  /**
-   * ソート順を変えて先頭ページへ移す。名前と定義 ID は URL の値を使う。
-   * @param value セレクトの値。
-   */
-  changeSortOrder: (value: string) => void;
+  changeSort: (sortBy: ExecutionSortBy, sortOrder: SortOrder) => void;
   /** フィルタを消して先頭ページへ移す。 */
   clearFilters: () => void;
-  /** 定義 ID のコンテキストだけ外す。名前は入力中の値を残す。 */
+  /** 定義 ID の条件だけ外す。名前は入力中の値を残す。 */
   clearDefinitionContext: () => void;
+  /** 実行 ID の検索語の条件だけ外す。 */
+  clearName: () => void;
   /** 前のページへ移す。 */
   goToPreviousPage: () => void;
   /** 次のページへ移す。 */
@@ -103,11 +107,6 @@ export type ExecutionsPageModel = {
   notifyIngressAccepted: () => void;
   /** トーストを閉じる。 */
   dismissToast: () => void;
-  /**
-   * 実行詳細へ遷移する。
-   * @param displayId 実行の displayId。
-   */
-  openExecution: (displayId: string) => void;
 };
 
 /**
@@ -188,6 +187,8 @@ export function useExecutionsPage(): ExecutionsPageModel {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [definitionDraft, setDefinitionDraft] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [definitionError, setDefinitionError] = useState<string | null>(null);
 
   // 参照が毎レンダー変わっても、クエリ文字列が同じなら一覧を再取得しない。
   const searchParamsKey = searchParams.toString();
@@ -262,18 +263,16 @@ export function useExecutionsPage(): ExecutionsPageModel {
   const submitFilters = useCallback(
     (event: FormEvent) => {
       event.preventDefault();
-      if (!matchesPattern(nameDraft.trim(), SEARCH_NAME_PATTERN)) {
-        setToast({
-          tone: "error",
-          message: uiText.executionsPage.filter.invalidName
-        });
-        return;
-      }
-      if (!matchesPattern(definitionDraft.trim(), DEFINITION_ID_PATTERN)) {
-        setToast({
-          tone: "error",
-          message: uiText.executionsPage.filter.invalidDefinitionId
-        });
+      // 無効な値は入力欄の下にエラーを出し、URL を変えない（要件 8.5）。
+      const nextNameError = matchesPattern(nameDraft.trim(), SEARCH_NAME_PATTERN)
+        ? null
+        : uiText.executionsPage.filter.invalidName;
+      const nextDefinitionError = matchesPattern(definitionDraft.trim(), DEFINITION_ID_PATTERN)
+        ? null
+        : uiText.executionsPage.filter.invalidDefinitionId;
+      setNameError(nextNameError);
+      setDefinitionError(nextDefinitionError);
+      if (nextNameError !== null || nextDefinitionError !== null) {
         return;
       }
       goTo({
@@ -300,23 +299,12 @@ export function useExecutionsPage(): ExecutionsPageModel {
     [definitionDraft, goTo, listQuery.pagination, listQuery.sort, nameDraft]
   );
 
-  const changeSortBy = useCallback(
-    (value: string) => {
+  const changeSort = useCallback(
+    (nextSortBy: ExecutionSortBy, nextSortOrder: SortOrder) => {
       goTo({
         ...listQuery,
         pagination: { ...listQuery.pagination, offset: 0 },
-        sort: { ...listQuery.sort, sortBy: toSortBy(value) }
-      });
-    },
-    [goTo, listQuery]
-  );
-
-  const changeSortOrder = useCallback(
-    (value: string) => {
-      goTo({
-        ...listQuery,
-        pagination: { ...listQuery.pagination, offset: 0 },
-        sort: { ...listQuery.sort, sortOrder: toSortOrder(value) }
+        sort: { sortBy: nextSortBy, sortOrder: nextSortOrder }
       });
     },
     [goTo, listQuery]
@@ -325,6 +313,8 @@ export function useExecutionsPage(): ExecutionsPageModel {
   const clearFilters = useCallback(() => {
     setNameDraft("");
     setDefinitionDraft("");
+    setNameError(null);
+    setDefinitionError(null);
     goTo({
       pagination: { ...listQuery.pagination, offset: 0 },
       sort: listQuery.sort
@@ -333,6 +323,7 @@ export function useExecutionsPage(): ExecutionsPageModel {
 
   const clearDefinitionContext = useCallback(() => {
     setDefinitionDraft("");
+    setDefinitionError(null);
     goTo({
       pagination: { ...listQuery.pagination, offset: 0 },
       sort: listQuery.sort,
@@ -340,6 +331,27 @@ export function useExecutionsPage(): ExecutionsPageModel {
       name: nameDraft || undefined
     });
   }, [goTo, listQuery.pagination, listQuery.sort, nameDraft, status]);
+
+  const changeNameDraft = useCallback((value: string) => {
+    setNameDraft(value);
+    setNameError(null);
+  }, []);
+
+  const changeDefinitionDraft = useCallback((value: string) => {
+    setDefinitionDraft(value);
+    setDefinitionError(null);
+  }, []);
+
+  const clearName = useCallback(() => {
+    setNameDraft("");
+    setNameError(null);
+    goTo({
+      pagination: { ...listQuery.pagination, offset: 0 },
+      sort: listQuery.sort,
+      status: status || undefined,
+      definitionId: listQuery.definitionId
+    });
+  }, [goTo, listQuery.definitionId, listQuery.pagination, listQuery.sort, status]);
 
   const goToPreviousPage = useCallback(() => {
     goTo({
@@ -372,19 +384,15 @@ export function useExecutionsPage(): ExecutionsPageModel {
     setToast(null);
   }, []);
 
-  const openExecution = useCallback(
-    (displayId: string) => {
-      router.push(`/executions/${encodeURIComponent(displayId)}`);
-    },
-    [router]
-  );
-
   return {
     items,
     totalCount,
     loading,
     toast,
     definitionId: listQuery.definitionId,
+    name: listQuery.name,
+    nameError,
+    definitionError,
     status,
     sortBy,
     sortOrder,
@@ -395,19 +403,18 @@ export function useExecutionsPage(): ExecutionsPageModel {
     currentPage,
     hasPrev,
     hasNext,
-    setNameDraft,
-    setDefinitionDraft,
+    setNameDraft: changeNameDraft,
+    setDefinitionDraft: changeDefinitionDraft,
     submitFilters,
     changeStatus,
-    changeSortBy,
-    changeSortOrder,
+    changeSort,
     clearFilters,
     clearDefinitionContext,
+    clearName,
     goToPreviousPage,
     goToNextPage,
     reload,
     notifyIngressAccepted,
-    dismissToast,
-    openExecution
+    dismissToast
   };
 }

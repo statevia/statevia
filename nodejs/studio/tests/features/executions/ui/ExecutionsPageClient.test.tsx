@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { ExecutionsPageClient } from "@/features/executions/ui/ExecutionsPageClient";
 import { renderWithUiText } from "@/tests/testUtils";
 
@@ -142,11 +142,11 @@ describe("ExecutionsPageClient", () => {
       return { items: [runningExecution], totalCount: 1 };
     });
     renderWithUiText(<ExecutionsPageClient />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "詳細" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("link", { name: "ex-1" })).toBeInTheDocument());
 
     const ingressButton = screen.getByRole("button", { name: "イベントを送信" });
     expect(screen.getByRole("banner")).toContainElement(ingressButton);
-    expect(screen.getByRole("listitem").querySelector("button")?.textContent).toBe("詳細");
+    expect(within(screen.getByRole("list", { name: "実行一覧" })).queryByRole("button")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
     const topic = await screen.findByLabelText("トピック");
@@ -200,20 +200,33 @@ describe("ExecutionsPageClient", () => {
       return { items: [runningExecution], totalCount: 40 };
     });
     renderWithUiText(<ExecutionsPageClient />);
-    expect(await screen.findByRole("button", { name: "詳細" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "ex-1" })).toHaveAttribute("href", "/executions/ex-1");
 
-    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "FAILED" } });
-    fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "displayId" } });
-    fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "asc" } });
+    fireEvent.click(screen.getByRole("button", { name: "FAILED" }));
+    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "displayId:asc" } });
     fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });
     fireEvent.click(screen.getAllByRole("button", { name: "次へ" })[0]);
-    fireEvent.click(screen.getByRole("button", { name: "クリア" }));
     fireEvent.change(screen.getByLabelText("実行の ID（部分一致）または UUID（完全一致）"), { target: { value: "名前" } });
+    replace.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(await screen.findByText(/実行の ID は半角英数字/)).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "詳細" }));
-    expect(push).toHaveBeenCalledWith("/executions/ex-1");
+  it("定義 ID のチップを外すと definitionId を消した URL に置換する", async () => {
+    // Arrange
+    searchParams.set("definitionId", "def-1");
+    renderWithUiText(<ExecutionsPageClient />);
+    const chipRemove = await screen.findByRole("button", { name: "定義: def-1 を外す" });
+    vi.mocked(buildExecutionsListPath).mockClear();
+
+    // Act
+    fireEvent.click(chipRemove);
+    searchParams.delete("definitionId");
+
+    // Assert
+    expect(buildExecutionsListPath).toHaveBeenCalledWith(expect.not.objectContaining({ definitionId: "def-1" }));
+    expect(replace).toHaveBeenCalled();
   });
 
   it("executions.write が無ければイベント送信ボタンを出さない", async () => {

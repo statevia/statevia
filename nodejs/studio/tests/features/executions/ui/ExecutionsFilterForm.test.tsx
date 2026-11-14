@@ -15,21 +15,20 @@ function filterProps(overrides: Partial<ExecutionsFilterFormProps> = {}): Execut
     sortOrder: "desc",
     nameDraft: "",
     definitionDraft: "",
+    nameError: null,
+    definitionError: null,
     loading: false,
-    limit: 20,
     onSubmit: vi.fn(),
     onStatusChange: vi.fn(),
     onNameDraftChange: vi.fn(),
     onDefinitionDraftChange: vi.fn(),
-    onSortByChange: vi.fn(),
-    onSortOrderChange: vi.fn(),
-    onClear: vi.fn(),
+    onSortChange: vi.fn(),
     ...overrides
   };
 }
 
 describe("ExecutionsFilterForm", () => {
-  it("ステータスの選択肢は、値を API の値のままにし、表示だけ大文字にそろえる", () => {
+  it("ステータスのピルは、値を API の値のままにし、表示だけ大文字にそろえる", () => {
     // Arrange
     const props = filterProps();
 
@@ -37,25 +36,41 @@ describe("ExecutionsFilterForm", () => {
     renderWithUiText(<ExecutionsFilterForm {...props} />);
 
     // Assert
-    const options = within(screen.getByLabelText("ステータス")).getAllByRole<HTMLOptionElement>("option");
-    expect(options.map((option) => [option.value, option.textContent])).toEqual([
-      ["", "（すべて）"],
-      ["ACTIVE", "ACTIVE"],
-      ["COMPLETED", "COMPLETED"],
-      ["FAILED", "FAILED"],
-      ["CANCELED", "CANCELED"]
-    ]);
+    const pills = within(screen.getByRole("toolbar", { name: "ステータス" })).getAllByRole("button");
+    expect(pills.map((pill) => pill.textContent)).toEqual(["すべて", "ACTIVE", "COMPLETED", "FAILED", "CANCELED"]);
+    expect(screen.getByRole("button", { name: "すべて" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("選択肢を選ぶと API の値で絞り込みを変える", () => {
+  it("ピルを押すと API の値で絞り込みを変える", () => {
     // Arrange
     const onStatusChange = vi.fn();
     renderWithUiText(<ExecutionsFilterForm {...filterProps({ onStatusChange })} />);
 
     // Act
-    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "CANCELED" } });
+    fireEvent.click(screen.getByRole("button", { name: "CANCELED" }));
 
     // Assert
     expect(onStatusChange).toHaveBeenCalledWith("CANCELED");
+  });
+
+  it("並び順を選ぶと項目と順序を一度に渡す", () => {
+    // Arrange
+    const onSortChange = vi.fn();
+    renderWithUiText(<ExecutionsFilterForm {...filterProps({ onSortChange })} />);
+
+    // Act
+    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "displayId:asc" } });
+
+    // Assert
+    expect(onSortChange).toHaveBeenCalledWith("displayId", "asc");
+  });
+
+  it("検証エラーは入力欄の下に出す", () => {
+    // Arrange / Act
+    renderWithUiText(<ExecutionsFilterForm {...filterProps({ nameError: "実行の ID が不正です" })} />);
+
+    // Assert
+    expect(screen.getByRole("alert")).toHaveTextContent("実行の ID が不正です");
+    expect(screen.getByLabelText("実行の ID（部分一致）または UUID（完全一致）")).toHaveAttribute("aria-invalid", "true");
   });
 });

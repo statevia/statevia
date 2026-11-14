@@ -1,8 +1,12 @@
 "use client";
 
+import { Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import type { SortOrder } from "@/features/executions/api";
+import { Button } from "@/shared/ui/Button";
+import { FilterPills, type FilterPillOption } from "@/shared/ui/FilterPills";
+import { inputClassName } from "@/shared/ui/FormField";
 import type { ExecutionSortBy, ExecutionStatusFilter } from "../hooks/useExecutionsPage";
 import { toDisplayValue } from "@/shared/lib/displayValue";
 
@@ -16,9 +20,23 @@ const EXECUTION_STATUS_FILTER_VALUES: readonly Exclude<ExecutionStatusFilter, ""
   "CANCELED"
 ];
 
+/** 並び順の選択肢。項目と順序の組を 1 つの選択欄で選ぶ。 */
+const SORT_OPTIONS: ReadonlyArray<{ sortBy: ExecutionSortBy; sortOrder: SortOrder }> = [
+  { sortBy: "updatedAt", sortOrder: "desc" },
+  { sortBy: "updatedAt", sortOrder: "asc" },
+  { sortBy: "displayId", sortOrder: "asc" },
+  { sortBy: "displayId", sortOrder: "desc" }
+];
+
+/** 実行 ID の検索欄のエラーの要素 ID。 */
+const NAME_ERROR_ID = "executions-name-error";
+
+/** 定義 ID の欄のエラーの要素 ID。 */
+const DEFINITION_ERROR_ID = "executions-definition-error";
+
 /** 実行一覧フィルタ欄の入力。 */
 export type ExecutionsFilterFormProps = {
-  /** 状態セレクトの値。空文字はすべて。 */
+  /** 状態の絞り込み。空文字はすべて。 */
   status: ExecutionStatusFilter;
   /** ソートキー。 */
   sortBy: ExecutionSortBy;
@@ -28,18 +46,20 @@ export type ExecutionsFilterFormProps = {
   nameDraft: string;
   /** 定義 ID の入力中の値。 */
   definitionDraft: string;
+  /** 実行 ID の検索語の検証エラー。無ければ null。 */
+  nameError: string | null;
+  /** 定義 ID の検証エラー。無ければ null。 */
+  definitionError: string | null;
   /** 検索ボタンを無効にするか。一覧取得中。 */
   loading: boolean;
-  /** 1 ページの件数。 */
-  limit: number;
   /**
    * フォーム送信。
    * @param event フォームの submit。
    */
   onSubmit: (event: FormEvent) => void;
   /**
-   * 状態セレクトの変更。
-   * @param value セレクトの値。
+   * 状態の絞り込みの変更。
+   * @param value 状態の値。空文字はすべて。
    */
   onStatusChange: (value: string) => void;
   /**
@@ -53,21 +73,16 @@ export type ExecutionsFilterFormProps = {
    */
   onDefinitionDraftChange: (value: string) => void;
   /**
-   * ソートキーの変更。
-   * @param value セレクトの値。
+   * 並び順の変更。
+   * @param sortBy 並びの項目。
+   * @param sortOrder 並びの順序。
    */
-  onSortByChange: (value: string) => void;
-  /**
-   * ソート順の変更。
-   * @param value セレクトの値。
-   */
-  onSortOrderChange: (value: string) => void;
-  /** フィルタを消す。 */
-  onClear: () => void;
+  onSortChange: (sortBy: ExecutionSortBy, sortOrder: SortOrder) => void;
 };
 
 /**
- * 実行一覧のフィルタ欄。検証と URL 更新は呼び出し側のコマンドに渡す。
+ * 実行一覧のフィルタ欄（モック 07）。状態はピルで選んですぐ反映し、実行 ID と定義 ID は検索ボタンで反映する。
+ * 無効な値は各入力欄の下にエラーを出す（要件 8.5）。検証と URL 更新は呼び出し側のコマンドに渡す。
  * @param props 入力値とコマンド。
  * @returns フィルタフォーム。
  */
@@ -77,98 +92,83 @@ export function ExecutionsFilterForm({
   sortOrder,
   nameDraft,
   definitionDraft,
+  nameError,
+  definitionError,
   loading,
-  limit,
   onSubmit,
   onStatusChange,
   onNameDraftChange,
   onDefinitionDraftChange,
-  onSortByChange,
-  onSortOrderChange,
-  onClear
+  onSortChange
 }: Readonly<ExecutionsFilterFormProps>) {
   const { uiText } = useI18n();
   const filterText = uiText.executionsPage.filter;
+  const statusOptions: FilterPillOption<ExecutionStatusFilter>[] = [
+    { value: "", label: filterText.all },
+    ...EXECUTION_STATUS_FILTER_VALUES.map((value) => ({ value, label: toDisplayValue(value) }))
+  ];
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-md-outline bg-md-surface p-4 shadow-xs">
-      <h2 className="text-sm font-medium text-md-on-surface">{filterText.title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm text-md-on-surface">
-          <span className="text-md-on-surface-variant">{uiText.labels.status}</span>
+    <div className="flex flex-col gap-3">
+      <FilterPills ariaLabel={uiText.labels.status} options={statusOptions} value={status} onChange={onStatusChange} />
+      <form onSubmit={onSubmit} className="flex flex-wrap items-start gap-3">
+        <div className="relative min-w-[240px] flex-1">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-md-on-surface-variant" />
+          <input
+            type="search"
+            className={inputClassName({ error: nameError !== null, paddingX: "pl-9 pr-3", className: "h-9 font-mono" })}
+            value={nameDraft}
+            onChange={(event) => onNameDraftChange(event.target.value)}
+            aria-label={filterText.nameInputHint}
+            placeholder={filterText.nameInputHint}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? NAME_ERROR_ID : undefined}
+            autoComplete="off"
+          />
+          {nameError ? (
+            <span id={NAME_ERROR_ID} role="alert" className="mt-1 block text-xs text-md-error">
+              {nameError}
+            </span>
+          ) : null}
+        </div>
+        <div className="w-full sm:w-56">
+          <input
+            className={inputClassName({ error: definitionError !== null, className: "h-9 font-mono" })}
+            value={definitionDraft}
+            onChange={(event) => onDefinitionDraftChange(event.target.value)}
+            aria-label={filterText.definitionLabelWithHint(uiText.labels.definitionId)}
+            placeholder={filterText.definitionInputHint}
+            aria-invalid={definitionError ? true : undefined}
+            aria-describedby={definitionError ? DEFINITION_ERROR_ID : undefined}
+            autoComplete="off"
+          />
+          {definitionError ? (
+            <span id={DEFINITION_ERROR_ID} role="alert" className="mt-1 block text-xs text-md-error">
+              {definitionError}
+            </span>
+          ) : null}
+        </div>
+        <Button variant="standard" type="submit" className="mt-1.5" disabled={loading}>
+          {filterText.search}
+        </Button>
+        <label className="mt-1.5 flex h-9 items-center gap-2 text-sm text-md-on-surface-variant">
+          {filterText.sortLabel}
           <select
-            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-sm text-md-on-surface"
-            value={status}
-            onChange={(event) => onStatusChange(event.target.value)}
+            className="h-9 rounded-control border border-md-outline-variant bg-md-surface-container px-3 text-sm text-md-on-surface"
+            value={`${sortBy}:${sortOrder}`}
+            onChange={(event) => {
+              const selected = SORT_OPTIONS.find((option) => `${option.sortBy}:${option.sortOrder}` === event.target.value);
+              if (selected) onSortChange(selected.sortBy, selected.sortOrder);
+            }}
           >
-            <option value="">{filterText.all}</option>
-            {EXECUTION_STATUS_FILTER_VALUES.map((value) => (
-              <option key={value} value={value}>{toDisplayValue(value)}</option>
+            {SORT_OPTIONS.map((option) => (
+              <option key={`${option.sortBy}:${option.sortOrder}`} value={`${option.sortBy}:${option.sortOrder}`}>
+                {`${option.sortBy === "displayId" ? filterText.sortByDisplayId : filterText.sortByUpdatedAt}（${option.sortOrder === "asc" ? filterText.sortOrderAsc : filterText.sortOrderDesc}）`}
+              </option>
             ))}
           </select>
         </label>
-        <label className="block text-sm text-md-on-surface">
-          <span className="text-md-on-surface-variant">{filterText.definitionLabelWithHint(uiText.labels.definitionId)}</span>
-          <input
-            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
-            value={definitionDraft}
-            onChange={(event) => onDefinitionDraftChange(event.target.value)}
-            placeholder={filterText.definitionPlaceholder}
-            autoComplete="off"
-          />
-        </label>
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-[260px] flex-1 text-sm text-md-on-surface">
-          <span className="text-md-on-surface-variant">{filterText.nameInputHint}</span>
-          <input
-            className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1.5 font-mono text-sm text-md-on-surface"
-            value={nameDraft}
-            onChange={(event) => onNameDraftChange(event.target.value)}
-            autoComplete="off"
-          />
-        </label>
-        <button
-          type="submit"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-          disabled={loading}
-        >
-          {filterText.search}
-        </button>
-        <label className="text-sm text-md-on-surface">
-          <span className="text-md-on-surface-variant">{filterText.sortByLabel}</span>
-          <select
-            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
-            value={sortBy}
-            onChange={(event) => onSortByChange(event.target.value)}
-          >
-            <option value="updatedAt">{filterText.sortByUpdatedAt}</option>
-            <option value="displayId">{filterText.sortByDisplayId}</option>
-          </select>
-        </label>
-        <label className="text-sm text-md-on-surface">
-          <span className="text-md-on-surface-variant">{filterText.sortOrderLabel}</span>
-          <select
-            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-2 text-sm text-md-on-surface"
-            value={sortOrder}
-            onChange={(event) => onSortOrderChange(event.target.value)}
-          >
-            <option value="desc">{filterText.sortOrderDesc}</option>
-            <option value="asc">{filterText.sortOrderAsc}</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className="rounded-sm border border-md-outline-variant bg-md-surface-container px-4 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high"
-          onClick={onClear}
-          disabled={loading && !status && !nameDraft && !definitionDraft}
-        >
-          {filterText.clear}
-        </button>
-      </div>
-      <p className="text-xs text-md-on-surface-variant">
-        {filterText.pageInfo(limit)}
-      </p>
-    </form>
+      </form>
+    </div>
   );
 }
