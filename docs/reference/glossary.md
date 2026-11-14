@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.4 |
-| 更新日 | 2026-11-13 |
+| Version | 1.5 |
+| 更新日 | 2026-11-14 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -46,6 +46,9 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | 物理子 Execution | — | Hosted Runtime が Fork の分岐ごとに作る子の Execution。親子の関係は `execution_branches` が正本 | `execution_branches`、`ForkChildExecutionCoordinator` | `workflow.invoke` で起動する子ワークフローとは別（[2 種類の子 Execution](#2-種類の子-execution)） |
 | Wait | 待機、待機キー | 外部イベントや再開を待つ、永続化される待機 | `EventWait`、`waitKey`、`execution_waits` テーブル | — |
 | 待機イベント | イベント、イベント名 | Wait を再開させる外部からの入力。配送すると監査イベント `EventPublished` が残る | `POST /v1/executions/{id}/events`、`POST /v1/events`、`POST /v1/executions/{id}/nodes/{nodeId}/resume`、`ExecutionWaitEventService` | Fact ではない（再開後に状態が出す結果が Fact）。監査イベントの記録そのものとも別 |
+| 待機中（の実行） | 待機中 | 自身または子孫の物理子 Execution が、人や外部の入力を待つ Wait（`EventWait` / `CallbackWait`）を 1 つ以上持つ、`ACTIVE` のルートの Execution。実行ステータスの値ではない | `GET /v1/executions` のクエリと応答の `waiting`、`ExecutionWaitingQueries` | 実行ステータスに `WAITING` は無い。画面は `ACTIVE` のバッジに「待機中」の印を足す。期限で自動に再開する `DelayWait` だけの実行は待機中にしない |
+| 要対応（の実行） | 要対応 | 待機中の Execution と、`FAILED` の Execution を合わせたもの。`FAILED` は期間で区切らない | `GET /v1/executions` のクエリ `needsAttention`、`GET /v1/executions/counts` の `needsAttention` | 「アラート」「インシデント」は使わない |
+| 最後の実行 | 最後の実行 | 定義のルートの Execution のうち、全版を通して開始日時がいちばん新しいもの | `GET /v1/definitions` の各要素の `lastExecution` | 版ごとの最後ではない。物理子 Execution は選ばない |
 | Cancel | キャンセル | 協調的なキャンセル。要求は Command として受け付け、遷移は状態がキャンセルを処理した Fact まで保留される | `POST /v1/executions/{id}/cancel` | Abort / Kill は使わない（強制終了はしない）。画面で「取消」「中止」は使わない。確認ダイアログを閉じる操作は「やめる」と書き、キャンセルと呼ばない |
 | Resume | 再開 | 待機中の Execution を再開すること | `ExecutionWaitEventService` | — |
 | Schedule | 定期実行 | 決まった時刻に Execution を開始する設定。発火時の Start は run-as の ServiceAccount が呼び出し元になる | `/v1/schedules`、`ExecutionSchedule*` | Job は使わない。画面では run-as を「実行するサービスアカウント」、発火を「実行の開始時」、`overlapPolicy` を「同時実行」と書く。`JobKey` はシステムが作る定期実行（滞留した実行のレポートなど）を見分けるキー |

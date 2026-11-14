@@ -29,6 +29,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IDefinitionRepository, DefinitionRepository>();
         services.AddScoped<IExecutionRepository, ExecutionRepository>();
+        services.AddScoped<IExecutionSummaryRepository, ExecutionSummaryRepository>();
         services.AddScoped<IExecutionCursorRepository, ExecutionCursorRepository>();
         services.AddScoped<IExecutionWaitRepository, ExecutionWaitRepository>();
         services.AddScoped<IExecutionBranchRepository, ExecutionBranchRepository>();

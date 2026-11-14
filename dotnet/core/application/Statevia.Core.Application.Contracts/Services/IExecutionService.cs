@@ -62,6 +62,14 @@ public interface IExecutionService
         ExecutionListPageQuery query,
         CancellationToken ct);
 
+    /// <summary>ルートの実行の件数を、状態ごと・待機中・要対応で返す。範囲は一覧と同じ。</summary>
+    /// <param name="filter">絞り込み（状態・待機・要対応では絞らない）。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>件数を返すタスク。</returns>
+    Task<ExecutionCountsResponse> CountAsync(
+        ExecutionCountFilter filter,
+        CancellationToken ct);
+
     /// <summary>単一取得（一覧 <see cref="ExecutionResponse"/> と同一形。UI の ExecutionDTO 向け）。</summary>
     /// <param name="idOrUuid">表示用 ID または UUID の文字列。</param>
     /// <param name="ct">キャンセル トークン。</param>

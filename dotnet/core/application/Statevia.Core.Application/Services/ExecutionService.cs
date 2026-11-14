@@ -54,6 +54,12 @@ internal sealed class ExecutionService(
         queryService.ListPagedAsync(query, ct);
 
     /// <inheritdoc />
+    public Task<ExecutionCountsResponse> CountAsync(
+        ExecutionCountFilter filter,
+        CancellationToken ct) =>
+        queryService.CountAsync(filter, ct);
+
+    /// <inheritdoc />
     public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
         queryService.GetExecutionResponseAsync(idOrUuid, ct);
 

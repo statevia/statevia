@@ -101,6 +101,62 @@ public class ExecutionResponse
     /// <summary>再起動喪失フラグ。</summary>
     [JsonPropertyName("restartLost")]
     public bool RestartLost { get; set; }
+
+    /// <summary>待機中か。実行ステータスの値ではない。</summary>
+    /// <remarks>
+    /// 自身または子孫の物理子 Execution が、人や外部の入力を待つ Wait（<c>EventWait</c> / <c>CallbackWait</c>）を持つ <c>ACTIVE</c> の実行で <see langword="true"/>。
+    /// 期限で自動に再開する <c>DelayWait</c> は数えない。投影（<c>execution_waits</c>）から読むため、グラフより遅れることがある。開始の 201 では常に <see langword="false"/>。
+    /// </remarks>
+    [JsonPropertyName("waiting")]
+    public bool Waiting { get; set; }
+}
+
+/// <summary><c>GET /v1/executions/counts</c> の応答。ルートの実行だけを数える。</summary>
+/// <remarks>
+/// 範囲は実行の一覧と同じ。待機中は <see cref="ExecutionResponse.Waiting"/> と同じ判定、要対応は待機中または <c>FAILED</c>（期間で区切らない）。
+/// 一覧とは別の呼び出しのため、間に書き込みがあれば一覧の件数と一致しないことがある。
+/// </remarks>
+public sealed class ExecutionCountsResponse
+{
+    /// <summary>全体の件数。</summary>
+    [JsonPropertyName("total")]
+    public int Total { get; init; }
+
+    /// <summary>実行ステータス（契約の値）ごとの件数。</summary>
+    [JsonPropertyName("byStatus")]
+    public required ExecutionStatusCountsResponse ByStatus { get; init; }
+
+    /// <summary>待機中の件数。</summary>
+    [JsonPropertyName("waiting")]
+    public int Waiting { get; init; }
+
+    /// <summary>要対応（待機中または <c>FAILED</c>）の件数。</summary>
+    [JsonPropertyName("needsAttention")]
+    public int NeedsAttention { get; init; }
+}
+
+/// <summary>実行ステータス（契約の値）ごとの件数。5 つの和は <see cref="ExecutionCountsResponse.Total"/> と等しい。</summary>
+public sealed class ExecutionStatusCountsResponse
+{
+    /// <summary><c>ACTIVE</c> の件数。</summary>
+    [JsonPropertyName("ACTIVE")]
+    public int Active { get; init; }
+
+    /// <summary><c>COMPLETED</c> の件数。</summary>
+    [JsonPropertyName("COMPLETED")]
+    public int Completed { get; init; }
+
+    /// <summary><c>FAILED</c> の件数。</summary>
+    [JsonPropertyName("FAILED")]
+    public int Failed { get; init; }
+
+    /// <summary><c>CANCELED</c> の件数。</summary>
+    [JsonPropertyName("CANCELED")]
+    public int Canceled { get; init; }
+
+    /// <summary><c>UNKNOWN</c>（投影の値が想定外）の件数。</summary>
+    [JsonPropertyName("UNKNOWN")]
+    public int Unknown { get; init; }
 }
 
 /// <summary>UI <c>ExecutionView</c> に近い形（camelCase JSON）。GET …/state 等で返す。</summary>

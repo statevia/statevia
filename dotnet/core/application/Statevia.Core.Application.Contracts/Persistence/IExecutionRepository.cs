@@ -24,8 +24,9 @@ public interface IExecutionRepository
     /// <param name="principalId">Principal ID。</param>
     /// <param name="query">ページングと絞り込みの条件。</param>
     /// <param name="ct">キャンセル トークン。</param>
-    /// <returns>絞り込み後の総件数と、ページ内の Execution と表示用 ID。</returns>
-    Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
+    /// <returns>絞り込み後の総件数と、ページ内の Execution と表示用 ID と待機中かどうか。</returns>
+    /// <remarks>待機中は、自身または子孫の物理子 Execution が <c>EventWait</c> / <c>CallbackWait</c> を持つ <c>Running</c> の実行。</remarks>
+    Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
         Guid principalId,

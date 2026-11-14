@@ -17,7 +17,7 @@ namespace Statevia.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -507,7 +507,9 @@ namespace Statevia.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DefinitionVersionId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("DefinitionId", "StartedAt");
+
+                    b.HasIndex("TenantId", "StartedAt");
 
                     b.ToTable("executions", (string)null);
                 });
@@ -610,7 +612,7 @@ namespace Statevia.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_schedules_job_key", "job_key IS NULL OR job_key = 'stuck-execution-report'");
 
-                            t.HasCheckConstraint("ck_schedules_job_shape", "(job_key IS NULL AND definition_id IS NOT NULL AND run_as_principal_id IS NOT NULL)\r\nOR (job_key IS NOT NULL AND definition_id IS NULL AND run_as_principal_id IS NULL AND input_json IS NULL)");
+                            t.HasCheckConstraint("ck_schedules_job_shape", "(job_key IS NULL AND definition_id IS NOT NULL AND run_as_principal_id IS NOT NULL)\nOR (job_key IS NOT NULL AND definition_id IS NULL AND run_as_principal_id IS NULL AND input_json IS NULL)");
                         });
                 });
 

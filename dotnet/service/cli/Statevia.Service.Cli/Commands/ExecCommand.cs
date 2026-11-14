@@ -68,7 +68,7 @@ public static class ExecCommand
         var statusOption = new Option<string?>("--status", "Filter by execution status");
         var nameOption = new Option<string?>("--name", "Filter by execution display id");
         var definitionIdOption = new Option<string?>("--definition-id", "Filter by definition id");
-        var sortByOption = new Option<string?>("--sort-by", "Sort field (updatedAt or displayId)");
+        var sortByOption = new Option<string?>("--sort-by", "Sort field (updatedAt, displayId, or startedAt)");
         var sortOrderOption = new Option<string?>("--sort-order", "Sort order (asc or desc)");
         var list = new Command("list", "List executions (GET /v1/executions)")
         {

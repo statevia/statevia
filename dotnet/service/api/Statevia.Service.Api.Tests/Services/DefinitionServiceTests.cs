@@ -38,7 +38,8 @@ public sealed class DefinitionServiceTests
                 new EmptyPrincipalResourceGrantStore(),
                 overrides?.TenantAccessor ?? new FixedTenantContextAccessor(
                     TestTenantIds.DefaultContext with { PrincipalId = TestPrincipalId }),
-                new MissingPrincipalDataAccess()));
+                new MissingPrincipalDataAccess()),
+            new ExecutionSummaryRepository());
     }
 
     /// <summary>定義サービスのテストで差し替える認可。</summary>
@@ -407,6 +408,56 @@ public sealed class DefinitionServiceTests
         Assert.Equal(def1.ToString(), page.Items[0].DisplayId);
         Assert.Equal(projectId, page.Items[0].ProjectId);
         Assert.Equal("DISP-B", page.Items[1].DisplayId);
+    }
+
+    /// <summary>一覧の各要素に最後の実行（契約の状態）を付け、実行の無い定義は null にする。</summary>
+    [Fact]
+    public async Task ListPagedAsync_AttachesLastExecution_AndNullWhenNoExecution()
+    {
+        // Arrange
+        using var inDb = new InMemoryTestDatabase();
+        var projectId = await SeedDefaultTenantAndProjectAsync(inDb.Options);
+        var definitionsRepo = TestRepositoryFactory.CreateDefinitionRepository();
+        var withExecution = Guid.NewGuid();
+        var withoutExecution = Guid.NewGuid();
+        var startedAt = new DateTime(2026, 11, 13, 9, 0, 0, DateTimeKind.Utc);
+        var executionId = Guid.NewGuid();
+
+        await using (var ctx = new CoreDbContext(inDb.Options))
+        {
+            var (_, version) = DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.DefaultTenantId, withExecution, "with", projectId);
+            DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.DefaultTenantId, withoutExecution, "without", projectId);
+            ctx.Executions.Add(new ExecutionRow
+            {
+                ExecutionId = executionId,
+                TenantId = TestTenantIds.DefaultTenantId,
+                DefinitionId = withExecution,
+                DefinitionVersionId = version.DefinitionVersionId,
+                Status = ExecutionProjectionStatuses.Failed,
+                StartedAt = startedAt,
+                UpdatedAt = startedAt.AddMinutes(1),
+                CancelRequested = false,
+                RestartLost = false
+            });
+            ctx.DisplayIds.Add(new DisplayIdRow { Kind = "execution", DisplayId = "exe-last", ResourceId = executionId, CreatedAt = startedAt });
+            await ctx.SaveChangesAsync();
+        }
+
+        var sut = CreateDefinitionService(inDb, new StubDisplayIdService(), new StubCompiler(compiledJson: "{}"), definitionsRepo, new FixedIdGenerator(Guid.NewGuid()));
+
+        // Act
+        var page = await sut.ListPagedAsync(
+            new DefinitionListPageQuery(Page: new PageQuery(0, 10), Sort: new SortQuery(null, null), NameContains: null),
+            CancellationToken.None);
+
+        // Assert
+        var with = Assert.Single(page.Items, item => item.ResourceId == withExecution);
+        Assert.NotNull(with.LastExecution);
+        Assert.Equal("exe-last", with.LastExecution.DisplayId);
+        Assert.Equal("FAILED", with.LastExecution.Status);
+        Assert.Equal(startedAt, with.LastExecution.StartedAt);
+        Assert.False(with.LastExecution.Waiting);
+        Assert.Null(Assert.Single(page.Items, item => item.ResourceId == withoutExecution).LastExecution);
     }
 
     /// <summary>

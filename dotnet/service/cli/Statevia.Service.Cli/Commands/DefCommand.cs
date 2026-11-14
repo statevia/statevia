@@ -124,7 +124,7 @@ public static class DefCommand
         var limitOption = CliRuntimeCommandSupport.CreateLimitOption();
         var offsetOption = CliRuntimeCommandSupport.CreateOffsetOption();
         var nameOption = new Option<string?>("--name", "Filter by definition name");
-        var sortByOption = new Option<string?>("--sort-by", "Sort field (createdAt or name)");
+        var sortByOption = new Option<string?>("--sort-by", "Sort field (createdAt, name, or updatedAt)");
         var sortOrderOption = new Option<string?>("--sort-order", "Sort order (asc or desc)");
         var includeDeletedOption = new Option<bool>("--include-deleted", "Include logically deleted definitions");
         var list = new Command("list", "List definitions (GET /v1/definitions)")

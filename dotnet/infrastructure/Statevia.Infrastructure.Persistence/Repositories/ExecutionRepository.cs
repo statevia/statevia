@@ -5,12 +5,6 @@ namespace Statevia.Infrastructure.Persistence.Repositories;
 /// <summary><see cref="IExecutionRepository"/> の EF Core 実装。<c>executions</c> と <c>execution_graph_snapshots</c> を読み書きする。</summary>
 internal sealed class ExecutionRepository : IExecutionRepository
 {
-    private sealed class ExecutionWithDisplay
-    {
-        public required ExecutionRow Execution { get; init; }
-        public string? DisplayId { get; init; }
-    }
-
     /// <inheritdoc />
     public Task<ExecutionRow?> GetByIdAsync(ICoreUnitOfWork uow, Guid tenantId, Guid executionId, CancellationToken ct) =>
         uow.GetDb().Executions.AsNoTracking()
@@ -24,13 +18,17 @@ internal sealed class ExecutionRepository : IExecutionRepository
     /// <summary>
     /// テナント内 execution をページングする。件数と items は <c>execution_branches.execution_id</c> に無いルートのみ。
     /// </summary>
+    /// <remarks>
+    /// 範囲と絞り込みは <see cref="ExecutionListScope"/>、待機の判定は <see cref="ExecutionWaitingQueries"/> を通る。
+    /// <c>Waiting</c> / <c>NeedsAttention</c> は他の条件と AND で効く。各要素の待機中かどうかもあわせて返す。
+    /// </remarks>
     /// <param name="uow">読み取り単位。</param>
     /// <param name="tenantId">対象テナント。</param>
     /// <param name="principalId">呼び出し元 Principal。</param>
     /// <param name="query">フィルタ、ソート、ページ。</param>
     /// <param name="ct">キャンセル。</param>
-    /// <returns>ルートだけの件数と、そのページの execution と displayId。</returns>
-    public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId)> Items)> ListWithDisplayIdsPageAsync(
+    /// <returns>ルートだけの件数と、そのページの execution と displayId と待機中かどうか。</returns>
+    public async Task<(int TotalCount, List<(ExecutionRow Execution, string? DisplayId, bool Waiting)> Items)> ListWithDisplayIdsPageAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
         Guid principalId,
@@ -38,60 +36,47 @@ internal sealed class ExecutionRepository : IExecutionRepository
         CancellationToken ct)
     {
         var db = uow.GetDb();
-        var joinQuery = QueryExecutionsWithDisplayIds(db, tenantId, principalId);
-        var grantScope = await ResourceGrantListScope.LoadAsync(db, principalId, ct).ConfigureAwait(false);
-        if (grantScope.ProjectIds is { } grantedProjectIds)
+        var scoped = await ExecutionListScope.BuildAsync(
+            db,
+            tenantId,
+            principalId,
+            new ExecutionScopeFilter(
+                query.StatusFilter,
+                query.DefinitionIdFilter,
+                query.NameContains,
+                query.ProjectId,
+                query.StartedFrom,
+                query.StartedTo),
+            ct).ConfigureAwait(false);
+        var waitingIds = await ExecutionWaitingQueries.LoadWaitingExecutionIdsAsync(db, tenantId, ct).ConfigureAwait(false);
+        const string running = ExecutionProjectionStatuses.Running;
+        const string failed = ExecutionProjectionStatuses.Failed;
+
+        if (query.Waiting is bool waiting)
         {
-            var grantedDefinitionIds = db.Definitions.AsNoTracking()
-                .Where(definition => grantedProjectIds.Contains(definition.ProjectId))
-                .Select(definition => definition.DefinitionId);
-            joinQuery = joinQuery.Where(x => grantedDefinitionIds.Contains(x.Execution.DefinitionId));
+            scoped = scoped.Where(x =>
+                (x.Execution.Status == running && waitingIds.Contains(x.Execution.ExecutionId)) == waiting);
         }
 
-        if (grantScope.DefinitionIds is { } grantedDefinitionIdList)
-            joinQuery = joinQuery.Where(x => grantedDefinitionIdList.Contains(x.Execution.DefinitionId));
-
-        if (!string.IsNullOrWhiteSpace(query.StatusFilter))
-            joinQuery = joinQuery.Where(x => x.Execution.Status == query.StatusFilter);
-
-        if (query.DefinitionIdFilter is not null)
-            joinQuery = joinQuery.Where(x => x.Execution.DefinitionId == query.DefinitionIdFilter.Value);
-
-        if (query.ProjectId is Guid projectId)
+        if (query.NeedsAttention is bool needsAttention)
         {
-            var projectDefinitionIds = db.Definitions.AsNoTracking()
-                .Where(definition => definition.ProjectId == projectId)
-                .Select(definition => definition.DefinitionId);
-            joinQuery = joinQuery.Where(x => projectDefinitionIds.Contains(x.Execution.DefinitionId));
+            scoped = scoped.Where(x =>
+                ((x.Execution.Status == running && waitingIds.Contains(x.Execution.ExecutionId))
+                    || x.Execution.Status == failed) == needsAttention);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.NameContains))
-        {
-            var needle = query.NameContains.Trim();
-            if (Guid.TryParse(needle, out var executionGuid))
-            {
-                joinQuery = joinQuery.Where(
-                    x => (x.DisplayId != null && x.DisplayId.Contains(needle)) || x.Execution.ExecutionId == executionGuid);
-            }
-            else
-            {
-                joinQuery = joinQuery.Where(x => x.DisplayId != null && x.DisplayId.Contains(needle));
-            }
-        }
-
-        joinQuery = joinQuery.Where(
-            x => !db.ExecutionBranches.Any(branch => branch.ExecutionId == x.Execution.ExecutionId));
-
-        var sortedQuery = ApplyExecutionsSort(joinQuery, query.Sort.SortBy, query.Sort.SortOrder);
-
-        var total = await joinQuery.CountAsync(ct).ConfigureAwait(false);
-        var page = await sortedQuery
+        var total = await scoped.CountAsync(ct).ConfigureAwait(false);
+        var page = await ApplyExecutionsSort(scoped, query.Sort.SortBy, query.Sort.SortOrder)
             .Skip(query.Page.Offset)
             .Take(query.Page.Limit)
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        List<(ExecutionRow Execution, string? DisplayId)> list = page.ConvertAll(x => (Execution: x.Execution, DisplayId: x.DisplayId));
+        var waitingSet = waitingIds.ToHashSet();
+        var list = page.ConvertAll(x => (
+            Execution: x.Execution,
+            DisplayId: x.DisplayId,
+            Waiting: x.Execution.Status == running && waitingSet.Contains(x.Execution.ExecutionId)));
         return (total, list);
     }
 
@@ -207,41 +192,35 @@ internal sealed class ExecutionRepository : IExecutionRepository
         row.UpdatedAt = DateTime.UtcNow;
     }
 
-    private static IQueryable<ExecutionWithDisplay> QueryExecutionsWithDisplayIds(
-        CoreDbContext db,
-        Guid tenantId,
-        Guid principalId)
-    {
-        var accessibleProjectIds = ProjectAccessQueries.AccessibleProjectIds(db, principalId, ProjectAccessRole.Reader);
-        var accessibleDefinitionIds = db.Definitions.AsNoTracking()
-            .Where(definition => accessibleProjectIds.Contains(definition.ProjectId))
-            .Select(definition => definition.DefinitionId);
-        var displayIdsForExecution = db.DisplayIds.Where(x => x.Kind == "execution");
-        return from w in db.Executions.AsNoTracking()
-                   .Where(x => x.TenantId == tenantId && accessibleDefinitionIds.Contains(x.DefinitionId))
-               join d in displayIdsForExecution on w.ExecutionId equals d.ResourceId into dGroup
-               from d in dGroup.DefaultIfEmpty()
-               select new ExecutionWithDisplay { Execution = w, DisplayId = d != null ? d.DisplayId : null };
-    }
-
-    private static IQueryable<ExecutionWithDisplay> ApplyExecutionsSort(
+    /// <summary>実行の一覧の並び順を付ける。同じ値のときは最後に実行 ID で順を決め、ページをまたいで重複・欠落させない。</summary>
+    /// <remarks>許可する値の検証は API の <c>ExecutionListQuery</c> が行う。ここに届く値は <c>null</c> か許可する値だけ。</remarks>
+    private static IOrderedQueryable<ExecutionWithDisplay> ApplyExecutionsSort(
         IQueryable<ExecutionWithDisplay> query,
         string? sortBy,
         string? sortOrder)
     {
-        var normalizedSortBy = sortBy?.Trim();
-        var isAsc = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
+        var isAsc = ListSortOrders.IsAscending(sortOrder);
 
-        return normalizedSortBy switch
+        return sortBy switch
         {
-            "displayId" => isAsc
-                ? query.OrderBy(x => x.DisplayId).ThenBy(x => x.Execution.StartedAt)
-                : query.OrderByDescending(x => x.DisplayId).ThenByDescending(x => x.Execution.StartedAt),
-            _ => isAsc
+            null or ExecutionListSortKeys.UpdatedAt => isAsc
                 ? query.OrderBy(x => x.Execution.UpdatedAt)
                     .ThenBy(x => x.Execution.StartedAt)
+                    .ThenBy(x => x.Execution.ExecutionId)
                 : query.OrderByDescending(x => x.Execution.UpdatedAt)
                     .ThenByDescending(x => x.Execution.StartedAt)
+                    .ThenByDescending(x => x.Execution.ExecutionId),
+            ExecutionListSortKeys.DisplayId => isAsc
+                ? query.OrderBy(x => x.DisplayId)
+                    .ThenBy(x => x.Execution.StartedAt)
+                    .ThenBy(x => x.Execution.ExecutionId)
+                : query.OrderByDescending(x => x.DisplayId)
+                    .ThenByDescending(x => x.Execution.StartedAt)
+                    .ThenByDescending(x => x.Execution.ExecutionId),
+            ExecutionListSortKeys.StartedAt => isAsc
+                ? query.OrderBy(x => x.Execution.StartedAt).ThenBy(x => x.Execution.ExecutionId)
+                : query.OrderByDescending(x => x.Execution.StartedAt).ThenByDescending(x => x.Execution.ExecutionId),
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "Unsupported execution sort key.")
         };
     }
 }

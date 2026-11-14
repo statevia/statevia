@@ -75,13 +75,14 @@ public class DefinitionsController : ControllerBase
 
     /// <summary>
     /// GET /v1/definitions — ページング一覧。<c>limit</c> は必須。
-    /// <c>?limit=&amp;offset=&amp;name=&amp;projectId=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>（name は部分一致。projectId は任意）。
+    /// <c>?limit=&amp;offset=&amp;name=&amp;projectId=&amp;sortBy=&amp;sortOrder=&amp;includeDeleted=</c> で <see cref="PagedResult{T}"/>（name は部分一致。projectId は任意）。
+    /// 各要素に最後の実行（<c>lastExecution</c>。無ければ <c>null</c>）を付ける。
     /// </summary>
     /// <param name="query">ページングと絞り込みの条件。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>200 と定義のページ。</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<DefinitionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedResult<DefinitionListItemResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
         [FromQuery] DefinitionListQuery query,
         CancellationToken ct = default)
@@ -91,7 +92,7 @@ public class DefinitionsController : ControllerBase
         var offset = query.Offset ?? 0;
         var pageQuery = new DefinitionListPageQuery(
             Page: new PageQuery(offset, query.Limit!.Value),
-            Sort: new SortQuery(query.SortBy, query.SortOrder),
+            Sort: new SortQuery(ListQueryValidation.Normalize(query.SortBy), ListQueryValidation.Normalize(query.SortOrder)),
             NameContains: query.Name,
             IncludeDeleted: query.IncludeDeleted ?? false,
             ProjectId: query.ProjectId);

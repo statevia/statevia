@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.41 |
-| 更新日 | 2026-11-13 |
+| Version | 1.42 |
+| 更新日 | 2026-11-14 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.42（2026-11-14）**: **破壊的な変更を含む。** 一覧 API を広げる。`GET /v1/executions` に `waiting` / `needsAttention`（待機中・要対応の絞り込み）と `startedFrom` / `startedTo`（開始日時の期間）、`sortBy=startedAt` を足し、各要素と単体 GET に `waiting` を足す。件数の読み取り `GET /v1/executions/counts` を足す。`GET /v1/definitions` の各要素に `lastExecution`（最後の実行）を足し、`sortBy=updatedAt` を足す。破壊的な変更は 2 つ: (1) 実行・定義の一覧で許可していない `sortBy` / `sortOrder`（大文字小文字を区別する）を 422 にする（これまでは黙って既定の順で返した）、(2) `GET /v1/definitions` の `sortOrder` を省略したときの順を、契約どおり `desc` にする（これまでの実装は `asc`）。移行期間は置かない。`executions` に `(tenant_id, started_at)` と `(definition_id, started_at)` の索引を足す。
 
 **Version 1.41（2026-11-13）**: **破壊的な変更。** 実行ステータスを契約の値にそろえる。`POST /v1/executions` の 201、`GET /v1/executions` / `GET /v1/executions/{executionId}`、`/state` の `status` と、`/events` の `ExecutionStatusChanged` の `to` は、`Running` → `ACTIVE`、`Cancelled` → `CANCELED` のように契約の値になる。`GET /v1/executions?status=` は契約の値だけを受け、投影の値・`UNKNOWN`・それ以外は 422 にする（これまでは任意の文字列を受けて 0 件を返した）。移行期間は置かない。`statevia.action.builtin.workflow.invoke` の output の `status` も同じ値になる。ノードの状態、DB の `executions.status`、保存済みのデータは変えない。冪等キーで再生する応答は、保存時の本文をそのまま返す。
 
@@ -172,6 +174,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 | GET      | /v1/graphs/{graphId}      | Graph Definition（nodes/edges） |
 | POST     | /v1/executions             | 実行開始                      |
 | GET      | /v1/executions             | 実行一覧                      |
+| GET      | /v1/executions/counts      | 実行の件数（状態ごと・待機中・要対応） |
 | GET      | /v1/executions/{executionId}        | 実行取得                      |
 | GET      | /v1/executions/{executionId}/graph  | 実行グラフ（JSON）取得        |
 | GET      | /v1/executions/{executionId}/waits  | 未完了 Wait の再開キー一覧    |
@@ -253,11 +256,17 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 - **`?limit=&offset=&name=&projectId=&sortBy=&sortOrder=&includeDeleted=`**（`limit` 必須）: 200 OK、`PagedResult<DefinitionResponse>`（`items`, `totalCount`, `offset`, `limit`, `hasMore`）。
   - 対象は呼び出し元が Reader 以上の Project。`projectId` を付けるとその Project だけ。未所属は 0 件。実行リソース許可の外も件数から外す
   - `name`: 名前の部分一致
-  - `sortBy`: `createdAt` / `name`（未指定時は `createdAt`）
+  - `sortBy`: `createdAt` / `name` / `updatedAt`（未指定時は `createdAt`）。同じ値のときは定義 ID で順を決める
   - `sortOrder`: `asc` / `desc`（未指定時は `desc`）
+  - `sortBy` / `sortOrder` は大文字小文字を区別する。空と空白だけは未指定と同じ
   - `limit`: 1〜500（必須）、`offset`: 0 以上（省略時 0）
   - `includeDeleted`: `true` のとき削除行を含む。各 item に **`deletedAt`**（UTC）のみ追加返却（通常 GET では出さない）
+- 各 item は **`lastExecution`**（最後の実行）を常に持つ。実行が無ければ `null`。単体 GET（§2.3）には出さない
+  - 最後の実行は、その定義のルートの実行（物理子 Execution を除く）のうち、全版を通して `startedAt` がいちばん新しいもの。同じ日時は実行 ID の大きいもの
+  - 項目は `displayId`、`status`（§3.2.1 の契約の値）、`startedAt`、`updatedAt`、`waiting`（§3.2 と同じ判定）
+  - 定義の件数によらず、ページの定義をまとめて 1 回で読む（N+1 にしない）
 - `limit` 未指定・不正: **422**
+- `sortBy` / `sortOrder` が許可値以外: **422**（`field=sortBy` / `sortOrder`、`message` に許可値）
 
 **移行:** 一覧取得は `?limit=N&offset=M` を必須とする。全件が必要な場合は `limit=500` と `hasMore` を用いてページを繰り返す。
 
@@ -383,17 +392,26 @@ Request:
 
 **GET /v1/executions**
 
-- **`?limit=&offset=&status=&name=&definitionId=&projectId=&sortBy=&sortOrder=`**（`limit` 必須）: 200 OK、`PagedResult<ExecutionResponse>`。
+- **`?limit=&offset=&status=&name=&definitionId=&projectId=&waiting=&needsAttention=&startedFrom=&startedTo=&sortBy=&sortOrder=`**（`limit` 必須）: 200 OK、`PagedResult<ExecutionResponse>`。
   - 対象は呼び出し元が Reader 以上の Project に属する定義の実行。`projectId` を付けるとその Project だけ。未所属は 0 件。実行リソース許可の外も件数から外す
   - `status`: 実行ステータスの契約の値（`ACTIVE` / `COMPLETED` / `FAILED` / `CANCELED`。大文字小文字を区別する）。サーバーが投影の値に戻して `executions.status` 列と完全一致で絞る。空は絞り込まない
   - `name`: `display_id` の部分一致（`Guid` 形式入力時は `execution_id` 完全一致も許容）
   - `definitionId`: Definition の displayId または UUID
-  - `sortBy`: `updatedAt` / `displayId`（未指定時は `updatedAt`）
+  - `waiting`: `true` は待機中の実行だけ、`false` は待機中でない実行だけ。省略は絞り込まない（§3.2.2）
+  - `needsAttention`: `true` は要対応（待機中または `FAILED`）の実行だけ、`false` はそれ以外だけ。`FAILED` は期間で区切らない
+  - `startedFrom` / `startedTo`: 開始日時の期間。`startedFrom` を含み、`startedTo` を含まない。ISO 8601 で `Z` かオフセット（`+09:00` など）が必須。どちらか一方だけでもよい
+  - 条件はすべて AND で効く（`status=COMPLETED&waiting=true` は 0 件）
+  - `sortBy`: `updatedAt` / `displayId` / `startedAt`（未指定時は `updatedAt`）。同じ値のときは最後に実行 ID で順を決める
   - `sortOrder`: `asc` / `desc`（未指定時は `desc`）
+  - `sortBy` / `sortOrder` は大文字小文字を区別する。空と空白だけは未指定と同じ
   - `limit`: 1〜500（必須）、`offset`: 0 以上（省略時 0）
-  - `items` / `totalCount` / `hasMore` は、`execution_branches.execution_id` に無いルート execution のみ。ネスト Fork の中間親も子 ID として除外する。追加のクエリパラメータは無い
+  - `items` / `totalCount` / `hasMore` は、`execution_branches.execution_id` に無いルート execution のみ。ネスト Fork の中間親も子 ID として除外する
+- 各 item は **`waiting`**（真偽値。§3.2.2）を持つ
 - `limit` 未指定・不正: **422**
 - `status` が許可値以外（投影の値 `Running` / `Cancelled` など、`UNKNOWN`、小文字を含む）: **422**（`field=status`、`message=status must be one of ACTIVE, COMPLETED, FAILED, CANCELED`）
+- `waiting` / `needsAttention` が `true` / `false` 以外: **422**（`field` は項目名）
+- `startedFrom` / `startedTo` の形式が不正（タイムゾーンが無い、日時でない）: **422**。`startedFrom` が `startedTo` 以上: **422**（`field=startedFrom`）
+- `sortBy` / `sortOrder` が許可値以外: **422**（`field=sortBy` / `sortOrder`、`message` に許可値）
 - 子の displayId または UUID を指定した **GET /v1/executions/{executionId}** は、一覧に含まれなくても 200 で返す
 
 #### 3.2.1 実行ステータスの値
@@ -410,11 +428,44 @@ HTTP の実行ステータスは次の契約の値だけを使う。DB の `exec
 
 使う場所: `ExecutionResponse.status`（一覧・取得・開始の 201）、`ExecutionViewDto.status`（§3.5）、タイムラインの `ExecutionStatusChanged` の `to`（§3.6。`ACTIVE` または `CANCELED`）。
 
+#### 3.2.2 待機中と要対応
+
+待機中と要対応は実行ステータスの値ではない。ステータスは §3.2.1 の値のまま増やさない。
+
+- **待機中**（`waiting = true`）: 実行ステータスが `ACTIVE` で、自身または子孫の物理子 Execution（`execution_branches` でたどる）が、人や外部の入力を待つ Wait（`EventWait` / `CallbackWait`）を `execution_waits` に 1 つ以上持つ。期限で自動に再開する `DelayWait` だけの実行は待機中にしない
+- **要対応**: 待機中、または `FAILED`。`FAILED` は期間で区切らない。期間は `startedFrom` / `startedTo` で指定する
+- `waiting` は投影（`execution_waits`）から読む。Worker の投影が遅れる間は、グラフ（§3.4）や Wait 一覧（§3.4.1。グラフのスナップショットが正本）より遅れて変わることがある
+- `POST /v1/executions` の 201 の `waiting` は常に `false`（開始直後は投影が無い）
+
+#### 3.2.3 実行の件数
+
+**GET /v1/executions/counts**
+
+- **`?definitionId=&projectId=&name=&startedFrom=&startedTo=`**: 200 OK、`ExecutionCountsResponse`。権限は一覧と同じ `executions.read`
+  - 範囲は一覧と同じ（Reader 以上の Project、実行リソース許可、ルートの実行だけ）。各クエリの意味も一覧と同じ
+  - `status` / `waiting` / `needsAttention` は受けない（それらごとに数えて返すため）
+- 応答の形:
+
+```json
+{
+  "total": 128,
+  "byStatus": { "ACTIVE": 5, "COMPLETED": 118, "FAILED": 5, "CANCELED": 0, "UNKNOWN": 0 },
+  "waiting": 2,
+  "needsAttention": 7
+}
+```
+
+- `byStatus` の 5 つの和は `total` と等しい。`waiting` / `needsAttention` は §3.2.2 の判定
+- 1 回の集計で数える。一覧とは別の呼び出しのため、間に書き込みがあれば一覧の `totalCount` と一致しないことがある
+- 期間は開始日時で区切る。たとえば `startedFrom` を 24 時間前にした `byStatus.FAILED` は「直近 24 時間に始まって失敗した実行」で、それより前に始まって最近失敗した実行は入らない
+- 解決できない `definitionId` はすべて 0 を返す
+- `startedFrom` / `startedTo` の形式が不正、または `startedFrom` が `startedTo` 以上: **422**
+
 ### 3.3 実行取得
 
 **GET /v1/executions/{executionId}**
 
-- Response: 200 OK、**一覧と同一形の `ExecutionResponse`**（UI の ExecutionDTO と整合）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
+- Response: 200 OK、**一覧と同一形の `ExecutionResponse`**（UI の ExecutionDTO と整合。`waiting` を含む）。404 は未存在または Project 未所属。実行リソース許可の外は **403**（`RESOURCE_GRANT_DENIED`）。
 
 ### 3.4 実行グラフ取得
 

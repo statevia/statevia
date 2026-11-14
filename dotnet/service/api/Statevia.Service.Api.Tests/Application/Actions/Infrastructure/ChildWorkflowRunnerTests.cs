@@ -151,6 +151,9 @@ public sealed class ChildWorkflowRunnerTests
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotImplementedException();
 
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             throw new NotImplementedException();
 
