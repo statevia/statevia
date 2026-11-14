@@ -41,7 +41,7 @@ function ScheduleRowActions({ schedule, page }: Readonly<ScheduleRowProps>) {
   const disabled = page.busyScheduleId !== null;
 
   return (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="flex flex-nowrap justify-end gap-2 whitespace-nowrap">
       <Link href={`/schedules/${encodeURIComponent(schedule.scheduleId)}`} className={buttonClassName("outline", "sm")}>
         {text.edit}
       </Link>
@@ -96,10 +96,10 @@ function ScheduleRow({ schedule, page }: Readonly<ScheduleRowProps>) {
           </p>
         </td>
         <td className={BODY_CELL_CLASS}>
-          <p className="font-mono text-md-on-surface">{schedule.cronExpression}</p>
+          <p className="whitespace-nowrap font-mono text-md-on-surface">{schedule.cronExpression}</p>
           <p className="mt-0.5 text-xs text-md-on-surface-variant">{schedule.timeZone}</p>
         </td>
-        <td className={`${BODY_CELL_CLASS} text-xs text-md-on-surface-variant`}>{text.overlap[schedule.overlapPolicy]}</td>
+        <td className={`${BODY_CELL_CLASS} max-w-48 text-xs text-md-on-surface-variant`}>{text.overlap[schedule.overlapPolicy]}</td>
         <td className={BODY_CELL_CLASS}>
           <EnabledPill enabled={schedule.enabled} />
         </td>
