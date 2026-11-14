@@ -48,6 +48,7 @@
     --color-brand-header-bg: var(--brand-header-bg);
     --color-brand-header-fg: var(--brand-header-fg);
     --color-brand-header-fg-muted: var(--brand-header-fg-muted);
+    --color-brand-header-accent: var(--brand-header-accent);
     --color-brand-cta-bg: var(--brand-cta-bg);
     --color-brand-cta-fg: var(--brand-cta-fg);
     --color-brand-cta-border: var(--brand-cta-border);
@@ -90,6 +91,8 @@
     --brand-header-bg: #0a1a2f;
     --brand-header-fg: #f8fafc;
     --brand-header-fg-muted: #c6d3e6;
+    /* ワードマークの via の緑（ヘッダーは紺なので明るい緑） */
+    --brand-header-accent: #34d399;
     --brand-cta-bg: #0a1a2f;
     --brand-cta-fg: #f8fafc;
     --brand-cta-border: #0a1a2f;
@@ -146,6 +149,7 @@ html[data-theme="dark"] {
     --brand-header-bg: #0b1220;
     --brand-header-fg: #f8fafc;
     --brand-header-fg-muted: #d1d5db;
+    --brand-header-accent: #34d399;
     /*
       通常の操作（紺）は暗い背景に沈むため、青みの淡い塗りにする。
       青い枠は緑の主導線より目立つので付けない（studio-ui-visual-refresh の案 B）。

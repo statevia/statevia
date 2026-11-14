@@ -51,7 +51,7 @@ export function AppHeader({ theme, locale, showNavigation, isNavigationOpen = fa
             <BrandMark size={32} className="h-8 w-8 shrink-0" />
             <span className="hidden text-[1.75rem] font-semibold leading-none tracking-wide sm:inline">
               <span>state</span>
-              <span className="text-emerald-400">via</span>
+              <span className="text-brand-header-accent">via</span>
             </span>
           </Link>
         </div>

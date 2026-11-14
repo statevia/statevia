@@ -60,6 +60,20 @@ const testOnlyAliasPatterns = [{
     message: "@/tests/* と @/app/* はテスト専用のエイリアスです。アプリのコードでは使わないでください（route から feature を参照する）。",
 }];
 
+/**
+ * Tailwind の既定パレットの色クラス（`bg-emerald-700` / `text-red-700` など）。
+ * 色は app/globals.css のトークン（`bg-md-*` / `bg-brand-*`）から取り、ライトとダークの両方で読めるようにする
+ * （studio-ui-visual-refresh の要件 2.4）。文字列リテラルとテンプレートの両方を見る。
+ */
+const paletteColorClassPattern = String.raw `\b(bg|text|border|ring|divide|outline|from|to|via|fill|stroke)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b`;
+const paletteColorMessage = "Tailwind の既定パレットの色を直書きしないでください。app/globals.css のトークン（bg-md-* / text-md-* / bg-brand-*）か shared/ui の部品を使います。";
+
+/**
+ * パレット色の直書きをまだ置き換えていない feature。置き換えの PR（studio-ui-visual-refresh のタスク 5）で 1 つずつ外す。
+ * ここに無い feature と shared には直書きを許さない。
+ */
+const paletteColorPendingFeatures = ["admin", "auth", "definition-editor", "definitions", "executions", "projects", "schedules"];
+
 /** feature の名前（features/ 直下のディレクトリ）。feature を足すと、境界のルールも自動で足される。 */
 const featureNames = fs.readdirSync(path.join(tsconfigRootDir, "features"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -244,6 +258,17 @@ export default defineConfig({
     files: ["app/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}", "middleware.ts"],
     rules: {
         "no-restricted-imports": ["error", { patterns: testOnlyAliasPatterns }],
+    },
+}, {
+    // app/**/*.tsx の no-restricted-syntax（i18n）を上書きしないよう、app は含めない（app は route の薄い殻で色を持たない）。
+    files: ["features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}"],
+    ignores: paletteColorPendingFeatures.map((featureName) => `features/${featureName}/**`),
+    rules: {
+        "no-restricted-syntax": [
+            "error",
+            { selector: `Literal[value=/${paletteColorClassPattern}/]`, message: paletteColorMessage },
+            { selector: `TemplateElement[value.raw=/${paletteColorClassPattern}/]`, message: paletteColorMessage },
+        ],
     },
 },
 ...featureNames.flatMap((featureName) => [{
