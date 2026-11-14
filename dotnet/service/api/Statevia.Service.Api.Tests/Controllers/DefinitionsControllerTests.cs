@@ -13,7 +13,7 @@ public sealed class DefinitionsControllerTests
 
         public DefinitionResponse CreateResult { get; set; } = new DefinitionResponse();
         public ValidateDefinitionResponse ValidateResult { get; set; } = new() { Valid = true, Name = "n" };
-        public PagedResult<DefinitionResponse> ListPagedResult { get; set; } = new() { Items = [], TotalCount = 0, Offset = 0, Limit = 0, HasMore = false };
+        public PagedResult<DefinitionListItemResponse> ListPagedResult { get; set; } = new() { Items = [], TotalCount = 0, Offset = 0, Limit = 0, HasMore = false };
         public DefinitionListPageQuery? LastListQuery { get; private set; }
         public DefinitionResponse GetResult { get; set; } = new DefinitionResponse();
         public DefinitionResponse UpdateResult { get; set; } = new DefinitionResponse();
@@ -33,7 +33,7 @@ public sealed class DefinitionsControllerTests
             return ValidateResult;
         }
 
-        public async Task<PagedResult<DefinitionResponse>> ListPagedAsync(DefinitionListPageQuery query, CancellationToken ct)
+        public async Task<PagedResult<DefinitionListItemResponse>> ListPagedAsync(DefinitionListPageQuery query, CancellationToken ct)
         {
             await Task.Yield();
             if (ExceptionToThrow is { } ex) throw ex;
@@ -163,9 +163,9 @@ public sealed class DefinitionsControllerTests
         // Act
         var fake = new FakeDefinitionService
         {
-            ListPagedResult = new PagedResult<DefinitionResponse>
+            ListPagedResult = new PagedResult<DefinitionListItemResponse>
             {
-                Items = [new DefinitionResponse { DisplayId = "D1", ResourceId = Guid.NewGuid(), Name = "a", CreatedAt = DateTime.UtcNow }],
+                Items = [new DefinitionListItemResponse { DisplayId = "D1", ResourceId = Guid.NewGuid(), Name = "a", CreatedAt = DateTime.UtcNow }],
                 TotalCount = 1,
                 Offset = 0,
                 Limit = 1,
@@ -181,7 +181,7 @@ public sealed class DefinitionsControllerTests
         // Assert
         var res = await controller.List(new DefinitionListQuery { Limit = 1, Offset = 0 }, ct: CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(res);
-        var paged = Assert.IsType<PagedResult<DefinitionResponse>>(ok.Value);
+        var paged = Assert.IsType<PagedResult<DefinitionListItemResponse>>(ok.Value);
         Assert.Single(paged.Items);
     }
 
@@ -198,9 +198,9 @@ public sealed class DefinitionsControllerTests
         // Act
         var fake = new FakeDefinitionService
         {
-            ListPagedResult = new PagedResult<DefinitionResponse>
+            ListPagedResult = new PagedResult<DefinitionListItemResponse>
             {
-                Items = [new DefinitionResponse { DisplayId = "D1", ResourceId = Guid.NewGuid(), Name = "a", CreatedAt = DateTime.UtcNow }],
+                Items = [new DefinitionListItemResponse { DisplayId = "D1", ResourceId = Guid.NewGuid(), Name = "a", CreatedAt = DateTime.UtcNow }],
                 TotalCount = 1,
                 Offset = 0,
                 Limit = 1,
@@ -216,7 +216,7 @@ public sealed class DefinitionsControllerTests
         // Assert
         var res = await controller.List(new DefinitionListQuery { Limit = 1, Offset = 0 }, ct: CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(res);
-        var paged = Assert.IsType<PagedResult<DefinitionResponse>>(ok.Value);
+        var paged = Assert.IsType<PagedResult<DefinitionListItemResponse>>(ok.Value);
         Assert.False(paged.HasMore);
     }
 

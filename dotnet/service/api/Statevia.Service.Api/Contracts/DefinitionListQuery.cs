@@ -6,7 +6,11 @@ namespace Statevia.Service.Api.Contracts;
 /// <summary>
 /// GET /v1/definitions のクエリパラメータ（ページング・フィルタ・ソート）。
 /// </summary>
-public sealed class DefinitionListQuery
+/// <remarks>
+/// <c>sortBy</c> は <c>createdAt</c>（既定）/ <c>name</c> / <c>updatedAt</c>、<c>sortOrder</c> は <c>asc</c> / <c>desc</c>（既定）だけを受け、
+/// それ以外は 422 にする（大文字小文字を区別する）。空と空白だけは省略と同じ。
+/// </remarks>
+public sealed class DefinitionListQuery : IValidatableObject
 {
     /// <summary>ページサイズ（必須。1〜500）。</summary>
     [FromQuery(Name = "limit")]
@@ -23,11 +27,11 @@ public sealed class DefinitionListQuery
     [FromQuery(Name = "name")]
     public string? Name { get; init; }
 
-    /// <summary>ソート列。</summary>
+    /// <summary>ソート列（<c>createdAt</c> / <c>name</c> / <c>updatedAt</c>）。</summary>
     [FromQuery(Name = "sortBy")]
     public string? SortBy { get; init; }
 
-    /// <summary>ソート順。</summary>
+    /// <summary>ソート順（<c>asc</c> / <c>desc</c>）。</summary>
     [FromQuery(Name = "sortOrder")]
     public string? SortOrder { get; init; }
 
@@ -38,4 +42,8 @@ public sealed class DefinitionListQuery
     /// <summary>所属 Project で絞る。省略時は所属の和。</summary>
     [FromQuery(Name = "projectId")]
     public Guid? ProjectId { get; init; }
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        ListQueryValidation.ValidateSort(SortBy, DefinitionListSortKeys.All, SortOrder, nameof(SortBy), nameof(SortOrder));
 }

@@ -64,9 +64,9 @@ public class ExecutionsController : ControllerBase
 
     /// <summary>
     /// GET /v1/executions — ページング一覧。<c>limit</c> は必須。
-    /// <c>?limit=&amp;offset=&amp;status=&amp;definitionId=&amp;name=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>。
+    /// <c>?limit=&amp;offset=&amp;status=&amp;definitionId=&amp;name=&amp;projectId=&amp;waiting=&amp;needsAttention=&amp;startedFrom=&amp;startedTo=&amp;sortBy=&amp;sortOrder=</c> で <see cref="PagedResult{T}"/>。
     /// <c>definitionId</c> は定義の display / UUID。 <c>name</c> は execution の <c>displayId</c> 部分一致、または execution の UUID 完全一致で絞り込み。
-    /// 応答の <c>items</c> と <c>totalCount</c> は、<c>execution_branches.execution_id</c> に無いルートのみ。
+    /// 応答の <c>items</c> と <c>totalCount</c> は、<c>execution_branches.execution_id</c> に無いルートのみ。各要素は待機中かどうか（<c>waiting</c>）を持つ。
     /// </summary>
     /// <param name="query">ページングと絞り込みの条件。</param>
     /// <param name="ct">キャンセル トークン。</param>
@@ -90,16 +90,37 @@ public class ExecutionsController : ControllerBase
                 return Ok(new PagedResult<ExecutionResponse> { Items = [], TotalCount = 0, Offset = offset, Limit = query.Limit!.Value, HasMore = false });
         }
 
-        var pageQuery = new ExecutionListPageQuery(
-            Page: new PageQuery(offset, query.Limit!.Value),
-            Sort: new SortQuery(query.SortBy, query.SortOrder),
-            StatusFilter: query.ResolveProjectionStatusFilter(),
-            DefinitionIdFilter: definitionIdFilter,
-            NameContains: string.IsNullOrWhiteSpace(query.Name) ? null : query.Name.Trim(),
-            ProjectId: query.ProjectId is Guid projectId && projectId != Guid.Empty ? projectId : null);
-
-        var paged = await _executions.ListPagedAsync(pageQuery, ct).ConfigureAwait(false);
+        var paged = await _executions.ListPagedAsync(query.ToPageQuery(definitionIdFilter), ct).ConfigureAwait(false);
         return Ok(paged);
+    }
+
+    /// <summary>
+    /// GET /v1/executions/counts — ルートの実行の件数を、状態ごと・待機中・要対応で返す。
+    /// <c>?definitionId=&amp;projectId=&amp;name=&amp;startedFrom=&amp;startedTo=</c> は一覧と同じ意味で絞る。権限は一覧と同じ <c>executions.read</c>。
+    /// </summary>
+    /// <remarks>文字列の区間 <c>counts</c> は <c>{executionId}</c> のルートより優先される。</remarks>
+    /// <param name="query">絞り込みの条件。</param>
+    /// <param name="ct">キャンセル トークン。</param>
+    /// <returns>200 と件数。</returns>
+    [HttpGet("counts")]
+    [ProducesResponseType(typeof(ExecutionCountsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ExecutionCountsResponse>> Counts(
+        [FromQuery] ExecutionCountQuery query,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        Guid? definitionIdFilter = null;
+        if (!string.IsNullOrWhiteSpace(query.DefinitionId))
+        {
+            definitionIdFilter = await _displayIds.ResolveAsync(
+                DisplayIdResourceTypes.Definition, query.DefinitionId, ct).ConfigureAwait(false);
+            if (definitionIdFilter is null)
+                return Ok(EmptyCounts());
+        }
+
+        var counts = await _executions.CountAsync(query.ToFilter(definitionIdFilter), ct).ConfigureAwait(false);
+        return Ok(counts);
     }
 
     /// <summary>GET /v1/executions/{executionId} — 一覧と同一の <see cref="ExecutionResponse"/>（UI ExecutionDTO 向け）。X-Tenant-Id でスコープ。</summary>
@@ -281,4 +302,7 @@ public class ExecutionsController : ControllerBase
             ct).ConfigureAwait(false);
         return NoContent();
     }
+
+    private static ExecutionCountsResponse EmptyCounts() =>
+        new() { ByStatus = new ExecutionStatusCountsResponse() };
 }

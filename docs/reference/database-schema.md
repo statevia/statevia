@@ -1,7 +1,9 @@
 # スキーマ定義
 
-Version: 1.26
+Version: 1.27
 Project: 実行型ステートマシン
+
+**Version 1.27（2026-11-14）**: `executions` に `(tenant_id, started_at)` と `(definition_id, started_at)` の索引を足した（マイグレーション `AddExecutionStartedAtIndexes`）。FK 用の `IX_executions_tenant_id` は `(tenant_id, started_at)` に置き換わる。
 
 **Version 1.26（2026-11-10）**: `permission_definitions.permission_key` の例を、実装の形式（`executions.read`）に直した。
 
@@ -244,6 +246,13 @@ project の **認可 truth**。付与先は同一テナントの Principal。行
 | cancel_requested | boolean | NOT NULL | キャンセル要求有無 |
 | restart_lost | boolean | NOT NULL | 再起動で失効したか（U8） |
 | security_snapshot_json | text | NULL | Start 時点の `ExecutionSecuritySnapshot` JSON（E4 · 認可用 BLOB。新規 Start は NOT NULL）。検索・集計は別投影テーブル想定（`jsonb` 非採用） |
+
+索引:
+
+| 索引 | 列 | 用途 |
+| --- | --- | --- |
+| `IX_executions_tenant_id_started_at` | `(tenant_id, started_at)` | 実行の一覧の `sortBy=startedAt` と開始日時の期間の絞り込み（`GET /v1/executions`、`GET /v1/executions/counts`） |
+| `IX_executions_definition_id_started_at` | `(definition_id, started_at)` | 定義の一覧の最後の実行の選択（`GET /v1/definitions` の `lastExecution`） |
 
 ### 2.8 event_store（イベントソース）
 

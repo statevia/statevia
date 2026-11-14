@@ -350,6 +350,12 @@ internal class CoreDbContext : DbContext, ICoreDatabase
             e.Property(x => x.CancelRequested).HasColumnName(Columns.CancelRequested);
             e.Property(x => x.RestartLost).HasColumnName(Columns.RestartLost);
             e.Property(x => x.SecuritySnapshotJson).HasColumnName(Columns.SecuritySnapshotJson);
+
+            // 実行の一覧の sortBy=startedAt と開始日時の期間の絞り込み（テナント内）に使う。
+            e.HasIndex(x => new { x.TenantId, x.StartedAt });
+
+            // 定義の一覧で、定義ごとの最後の実行（開始日時が最大のルートの実行）を選ぶときに使う。
+            e.HasIndex(x => new { x.DefinitionId, x.StartedAt });
         });
 
         // event_store: カラムはスネークケース

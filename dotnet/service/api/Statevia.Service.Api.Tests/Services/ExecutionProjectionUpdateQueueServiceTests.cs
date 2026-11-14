@@ -148,6 +148,9 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
 
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
+            throw new NotSupportedException();
+
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
             throw new NotSupportedException();
         public Task EnsureExecutionExistsAsync(Guid executionId, CancellationToken ct) =>
@@ -217,6 +220,9 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
             throw new NotSupportedException();
 
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
             throw new NotSupportedException();
 
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>
@@ -293,6 +299,9 @@ public sealed class ExecutionProjectionUpdateQueueServiceTests
             throw new NotSupportedException();
 
         public Task<PagedResult<ExecutionResponse>> ListPagedAsync(ExecutionListPageQuery query, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<ExecutionCountsResponse> CountAsync(ExecutionCountFilter filter, CancellationToken ct) =>
             throw new NotSupportedException();
 
         public Task<ExecutionResponse> GetExecutionResponseAsync(string idOrUuid, CancellationToken ct) =>

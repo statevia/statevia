@@ -229,7 +229,7 @@ public sealed class DefinitionRepositoryTests
     }
 
     /// <summary>
-    /// 名称部分一致で絞り込みつつページ取得する。
+    /// 名称部分一致で絞り込みつつページ取得する。並び順を省略すると作成日時の新しい順（契約の既定 desc）になる。
     /// </summary>
     [Fact]
     public async Task ListWithDisplayIdsPageAsync_FiltersByNameContains_AndPaginates()
@@ -272,7 +272,49 @@ public sealed class DefinitionRepositoryTests
         // Assert
         Assert.Equal(2, total);
         Assert.Single(items);
-        Assert.Equal(defId1, items[0].Detail.Definition.DefinitionId);
+        Assert.Equal(defId3, items[0].Detail.Definition.DefinitionId);
+    }
+
+    /// <summary>updatedAt の降順に並べる。</summary>
+    [Fact]
+    public async Task ListWithDisplayIdsPageAsync_WhenSortedByUpdatedAtDesc_ReturnsNewestUpdatedFirst()
+    {
+        // Arrange
+        using var db = new SqliteTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = TestRepositoryFactory.CreateDefinitionRepository();
+        var olderUpdated = Guid.NewGuid();
+        var newerUpdated = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        Guid principalId;
+        await using (var ctx = db.Factory.CreateDbContext())
+        {
+            ProjectTestData.AddDefaultProject(ctx, OwnerTenantId, OwnerTenantKey, projectId);
+            principalId = ProjectTestData.AddMemberPrincipal(ctx, OwnerTenantId, projectId);
+            var (newerCreated, _) = DefinitionTestData.AddDefinitionWithVersion(
+                ctx, OwnerTenantId, olderUpdated, "a", projectId, createdAt: new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc));
+            var (olderCreated, _) = DefinitionTestData.AddDefinitionWithVersion(
+                ctx, OwnerTenantId, newerUpdated, "b", projectId, createdAt: new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            newerCreated.UpdatedAt = new DateTime(2020, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+            olderCreated.UpdatedAt = new DateTime(2020, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+            await ctx.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var (_, items) = await repo.ListWithDisplayIdsPageAsync(
+            uow,
+            OwnerTenantId,
+            principalId,
+            new DefinitionListPageQuery(
+                Page: new PageQuery(0, 10),
+                Sort: new SortQuery(DefinitionListSortKeys.UpdatedAt, ListSortOrders.Desc),
+                NameContains: null),
+            default);
+
+        // Assert
+        Assert.Equal([newerUpdated, olderUpdated], items.Select(item => item.Detail.Definition.DefinitionId));
     }
 
     /// <summary>projectId 指定は所属 Project の中だけを返す。未所属 Project は空。</summary>

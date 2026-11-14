@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.13 |
-| 更新日 | 2026-10-31 |
+| Version | 1.14 |
+| 更新日 | 2026-11-14 |
 | 関連 | [../../dotnet/service/cli/Statevia.Service.Cli/](../../dotnet/service/cli/Statevia.Service.Cli/) |
 
 ---
@@ -107,7 +107,7 @@ statevia def restore <id>
 
 `create` の `--project-id` は必須で、定義を置く Project の UUID を渡します。呼び出し元が Publisher 以上で所属している Project でなければなりません。省略すると API を呼ばずに失敗します。Project の UUID は `GET /v1/projects`（所属 Project の一覧）の `projectId` で確かめます。`publish` は所属 Project を変えないので `--project-id` を取りません。
 
-`list` の任意フィルタ: `--name` / `--sort-by` / `--sort-order` / `--include-deleted`。`create` / `publish` / `delete` / `restore` には任意 `--idempotency-key`（未指定時は自動生成しない）。`validate` には付けない。成功時は API JSON を stdout へ（204 は空）。graph / SSE は対象外です。パスの `id` は 1 セグメントだけを許し、`/` や `..` は拒否します。
+`list` の任意フィルタ: `--name` / `--sort-by`（`createdAt` / `name` / `updatedAt`）/ `--sort-order`（`asc` / `desc`）/ `--include-deleted`。許可値以外は API が 422 を返します。`create` / `publish` / `delete` / `restore` には任意 `--idempotency-key`（未指定時は自動生成しない）。`validate` には付けない。成功時は API JSON を stdout へ（204 は空）。graph / SSE は対象外です。パスの `id` は 1 セグメントだけを許し、`/` や `..` は拒否します。
 
 ## `exec`（実行）
 
@@ -129,7 +129,7 @@ statevia exec resume <id> --node <nodeId> --event <resumeKey>
 | `cancel <id>` | `POST /v1/executions/{id}/cancel` |
 | `resume <id> --node --event` | `POST /v1/executions/{id}/nodes/{nodeId}/resume`（body `resumeKey`） |
 
-`list` の任意フィルタ: `--status` / `--name` / `--definition-id` / `--sort-by` / `--sort-order`。Wait 再開の正本は `resume` のみです（`POST .../events` は呼びません）。再開キーは `exec waits` で取ります。`--wait` や graph / events / SSE は対象外です。パスに載せる `id` と `--node` は 1 セグメントだけを許し、`/` や `..` は拒否します。
+`list` の任意フィルタ: `--status` / `--name` / `--definition-id` / `--sort-by`（`updatedAt` / `displayId` / `startedAt`）/ `--sort-order`（`asc` / `desc`）。許可値以外は API が 422 を返します。Wait 再開の正本は `resume` のみです（`POST .../events` は呼びません）。再開キーは `exec waits` で取ります。`--wait` や graph / events / SSE は対象外です。パスに載せる `id` と `--node` は 1 セグメントだけを許し、`/` や `..` は拒否します。
 
 認証が無いときは非ゼロで `statevia auth login` を案内します。
 
