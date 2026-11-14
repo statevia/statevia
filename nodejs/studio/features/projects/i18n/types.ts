@@ -35,6 +35,12 @@ export type ProjectsFeatureUiText = {
       empty: string;
       granted: string;
       revoked: string;
+      /** メンバーから外す確認の見出し。引数は表示ラベル。 */
+      revokeConfirmTitle: (label: string) => string;
+      /** メンバーから外す確認の本文。 */
+      revokeConfirmMessage: string;
+      /** 確認ダイアログの確定ボタン。 */
+      revokeConfirmSubmit: string;
     };
     admin: {
       title: string;

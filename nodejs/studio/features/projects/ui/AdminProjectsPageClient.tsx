@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 import { PROJECTS_CREATE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
+import { buttonClassName } from "@/shared/ui/Button";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { EmptyState } from "@/shared/ui/EmptyState";
+import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
+import { SelectField } from "@/shared/ui/SelectField";
 import { Toast } from "@/shared/ui/Toast";
 import { listAdminProjects } from "../api";
 import type { ProjectSummary } from "@/shared/project/types";
@@ -49,12 +54,10 @@ export function AdminProjectsPageClient() {
     <PageShell
       title={text.title}
       description={text.description}
+      breadcrumbs={<Breadcrumbs items={[{ label: uiText.navigation.groups.tenantSettings }, { label: text.title }]} />}
       primaryActions={
         permissions.has(PROJECTS_CREATE_PERMISSION) && (
-          <Link
-            href="/projects/new"
-            className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover"
-          >
+          <Link href="/projects/new" className={buttonClassName("lead")}>
             {text.create}
           </Link>
         )
@@ -64,25 +67,18 @@ export function AdminProjectsPageClient() {
       <p className="text-sm text-md-on-surface-variant">{text.definitionClosed}</p>
       {projects === null && <p className="text-sm text-md-on-surface-variant">{uiText.actions.loading}</p>}
       {projects !== null && projects.length === 0 && !forbidden && (
-        <p className="text-sm text-md-on-surface-variant">{text.empty}</p>
+        <EmptyState title={text.empty} />
       )}
-      {forbidden && projects?.length === 0 && (
-        <p className="text-sm text-md-on-surface-variant">{text.forbidden}</p>
-      )}
+      {forbidden && projects?.length === 0 && <Notice tone="error" title={text.forbidden} />}
       {projects !== null && projects.length > 0 && selectedId && (
         <>
-          <label className="block text-sm">
-            <span className="text-md-on-surface-variant">{text.select}</span>
-            <select
-              className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
-              value={selectedId}
-              onChange={(event) => setSelectedId(event.target.value)}
-            >
+          <div className="max-w-sm">
+            <SelectField label={text.select} value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
               {projects.map((project) => (
                 <option key={project.projectId} value={project.projectId}>{project.displayName}</option>
               ))}
-            </select>
-          </label>
+            </SelectField>
+          </div>
           <ProjectMembersPanel projectId={selectedId} />
         </>
       )}

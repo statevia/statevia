@@ -72,7 +72,7 @@ const paletteColorMessage = "Tailwind の既定パレットの色を直書きし
  * パレット色の直書きをまだ置き換えていない feature。置き換えの PR（studio-ui-visual-refresh のタスク 5）で 1 つずつ外す。
  * ここに無い feature と shared には直書きを許さない。
  */
-const paletteColorPendingFeatures = ["auth", "definition-editor", "definitions", "executions", "projects"];
+const paletteColorPendingFeatures = ["auth", "definition-editor", "definitions", "executions"];
 
 /** feature の名前（features/ 直下のディレクトリ）。feature を足すと、境界のルールも自動で足される。 */
 const featureNames = fs.readdirSync(path.join(tsconfigRootDir, "features"), { withFileTypes: true })

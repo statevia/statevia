@@ -39,6 +39,9 @@ export const projectsUiTextJa: ProjectsFeatureUiText = {
       empty: "メンバーはいません。",
       granted: "メンバーを更新しました。",
       revoked: "メンバーから外しました。",
+      revokeConfirmTitle: (label) => `${label} をメンバーから外しますか？`,
+      revokeConfirmMessage: "外すと、このプロジェクトでのロールが無くなります。もう一度追加すれば戻せます。",
+      revokeConfirmSubmit: "外す",
     },
     admin: {
       title: "テナントのプロジェクト",

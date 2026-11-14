@@ -194,6 +194,7 @@ describe("ProjectMembersPanel", () => {
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "メンバーから外す" }));
+    fireEvent.click(screen.getByRole("button", { name: "外す" }));
 
     // Assert
     expect(await screen.findByText("メンバーから外しました。")).toBeInTheDocument();
@@ -209,10 +210,25 @@ describe("ProjectMembersPanel", () => {
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "メンバーから外す" }));
+    fireEvent.click(screen.getByRole("button", { name: "外す" }));
 
     // Assert
     expect(await screen.findByText(unknownErrorMessage)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "メンバーから外す" })).toBeEnabled();
+  });
+
+  it("メンバーから外すのを確認でやめると送らない", async () => {
+    // Arrange
+    renderWithUiText(<ProjectMembersPanel projectId={projectId} />);
+    await screen.findByText("alice（ユーザー）");
+
+    // Act
+    fireEvent.click(screen.getByRole("button", { name: "メンバーから外す" }));
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+
+    // Assert
+    expect(removeProjectMember).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "外す" })).not.toBeInTheDocument();
   });
 
   it("トーストを閉じると消える", async () => {
