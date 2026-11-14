@@ -8,6 +8,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   ...executionsUiTextJa,
   executionDashboard: {
     ...executionsUiTextJa.executionDashboard,
+    viewModeLabel: "Node view",
     header: {
       titleDefault: "Execution detail",
     },

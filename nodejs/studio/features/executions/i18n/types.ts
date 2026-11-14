@@ -5,6 +5,8 @@
 export type ExecutionsFeatureUiText = {
   /** 実行ダッシュボードの文言。 */
   executionDashboard: {
+    /** 一覧とグラフを切り替えるセグメントの aria-label。 */
+    viewModeLabel: string;
     header: {
       titleDefault: string;
     };

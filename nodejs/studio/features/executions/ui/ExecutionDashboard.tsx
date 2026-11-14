@@ -21,6 +21,8 @@ import { NodeDetail } from "./NodeDetail";
 import { NodeGraphView } from "./NodeGraphView";
 import { NodeListView } from "./NodeListView";
 import { ReplayBanner } from "./ReplayBanner";
+import { Button } from "@/shared/ui/Button";
+import { Notice } from "@/shared/ui/Notice";
 
 /** 実行ダッシュボードの props。 */
 export type ExecutionDashboardProps = UseExecutionDashboardOptions & {
@@ -173,9 +175,8 @@ function ExecutionDashboardView({
                     autoComplete="off"
                   />
                 </label>
-                <button
-                  type="button"
-                  className="rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-50"
+                <Button
+                  variant="standard"
                   disabled={loading || !trimmedEventName || !execution || terminal || !!eventNameValidationMessage}
                   onClick={() => {
                     onPublishEvent(trimmedEventName);
@@ -183,10 +184,10 @@ function ExecutionDashboardView({
                   }}
                 >
                   {uiText.actions.sendEvent}
-                </button>
+                </Button>
               </div>
               {eventNameValidationMessage && (
-                <p className="mt-2 text-xs text-rose-600">{eventNameValidationMessage}</p>
+                <p className="mt-2 text-xs text-md-error">{eventNameValidationMessage}</p>
               )}
             </section>
           )}
@@ -244,20 +245,14 @@ function ExecutionDashboardView({
               ) : (
                 <div className={graphContainerClassName}>
                   <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-xs font-semibold text-md-on-surface hover:bg-md-surface-container-high"
-                      onClick={onToggleGraphFullscreen}
-                    >
+                    <Button variant="outline" size="sm" onClick={onToggleGraphFullscreen}>
                       {graphFullscreen
                         ? uiText.executionDashboard.graph.fullscreenExit
                         : uiText.executionDashboard.graph.fullscreenEnter}
-                    </button>
+                    </Button>
                   </div>
                   {graphData && !graphData.definitionBased && !graphFullscreen && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                      {uiText.executionDashboard.graph.definitionMissingFallback}
-                    </div>
+                    <Notice tone="warning" title={uiText.executionDashboard.graph.definitionMissingFallback} />
                   )}
                   {graphData && (
                     <NodeGraphView

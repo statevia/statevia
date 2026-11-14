@@ -1,24 +1,25 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Notice } from "@/shared/ui/Notice";
 
 type ReplayBannerProps = {
   onBackToCurrent: () => void;
 };
 
-/** リプレイ中であることを示すバナー。 */
+/** リプレイ中であることを示すお知らせ。今の状態へ戻る操作を右に置く。 */
 export function ReplayBanner({ onBackToCurrent }: Readonly<ReplayBannerProps>) {
   const uiText = useUiText();
   return (
-    <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 flex items-center justify-between gap-2 flex-wrap">
-      <span>{uiText.executionTimeline.replayingPastStateMessage}</span>
-      <button
-        type="button"
-        onClick={onBackToCurrent}
-        className="shrink-0 rounded-lg border border-md-info bg-md-info-container px-2 py-1 font-medium text-md-on-info-container hover:opacity-90"
-      >
-        {uiText.executionTimeline.backToCurrent}
-      </button>
-    </div>
+    <Notice
+      tone="info"
+      title={uiText.executionTimeline.replayingPastStateMessage}
+      actions={
+        <Button variant="outline" size="sm" onClick={onBackToCurrent}>
+          {uiText.executionTimeline.backToCurrent}
+        </Button>
+      }
+    />
   );
 }

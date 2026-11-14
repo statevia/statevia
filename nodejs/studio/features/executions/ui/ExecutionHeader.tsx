@@ -5,6 +5,7 @@ import { useUiText } from "@/shared/i18n/uiTextContext";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type { ViewMode } from "./ViewToggle";
 import { ViewToggle } from "./ViewToggle";
+import { Button } from "@/shared/ui/Button";
 
 type ExecutionHeaderProps = {
   executionId: string;
@@ -82,24 +83,14 @@ export function ExecutionHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {executionIdEditable && (
-            <button
-              type="button"
-              className="rounded-xl border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-50"
-              onClick={onLoad}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={onLoad} loading={loading}>
               {loading ? uiText.actions.loading : uiText.actions.load}
-            </button>
+            </Button>
           )}
           {showCancelAction && (
-            <button
-              type="button"
-              className="rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-              onClick={onCancel}
-              disabled={!canCancel || loading}
-            >
+            <Button variant="danger" onClick={onCancel} disabled={!canCancel || loading}>
               {uiText.actions.cancel}
-            </button>
+            </Button>
           )}
           {onCompareModeChange && (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-md-on-surface">

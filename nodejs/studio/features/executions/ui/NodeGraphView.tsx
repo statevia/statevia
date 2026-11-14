@@ -30,6 +30,7 @@ import { useUiText } from "@/shared/i18n/uiTextContext";
 import { GraphLegend } from "./GraphLegend";
 import { GraphNodeShell } from "@/shared/ui/GraphNodeShell";
 import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { Button } from "@/shared/ui/Button";
 
 /** NodeDiffHighlight の型定義。 */
 export type NodeDiffHighlight = Record<string, { isFailureOrCancel: boolean }>;
@@ -92,8 +93,8 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   if (data.diffHighlight != null) {
     diffRing =
       data.diffHighlight.isFailureOrCancel === true
-        ? "ring-2 ring-red-500 ring-offset-1"
-        : "ring-2 ring-amber-400 ring-offset-1";
+        ? "ring-2 ring-md-error ring-offset-1"
+        : "ring-2 ring-md-warning ring-offset-1";
   }
 
   const nodeMainSection = (
@@ -197,9 +198,10 @@ function WaitingResumeControls({
           ))}
         </select>
       )}
-      <button
-        type="button"
-        className="nodrag w-full cursor-pointer rounded-lg bg-amber-500 px-2 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
+        variant="standard"
+        size="sm"
+        className="nodrag w-full"
         onClick={(event) => {
           event.stopPropagation();
           data.onResume(data.nodeId, effectiveEvent);
@@ -207,7 +209,7 @@ function WaitingResumeControls({
         disabled={disabled}
       >
         {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
-      </button>
+      </Button>
       {data.resumeDisabledReason && (
         <p className="mt-1 text-[10px] text-md-on-surface-variant">{data.resumeDisabledReason}</p>
       )}

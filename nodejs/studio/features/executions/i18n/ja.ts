@@ -5,6 +5,7 @@ import type { ExecutionsFeatureUiText } from "./types";
  */
 export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDashboard: {
+    viewModeLabel: "ノードの表示",
     header: {
       titleDefault: "実行の詳細",
     },

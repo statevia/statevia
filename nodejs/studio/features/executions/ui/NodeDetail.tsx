@@ -8,6 +8,7 @@ import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { NodeDetailStatusPanels, NodeDetailTraceSection } from "./nodeDetailSections";
+import { Button } from "@/shared/ui/Button";
 
 type NodeDetailProps = {
   execution: ExecutionView | null;
@@ -140,14 +141,14 @@ function NodeDetailResumeActions({
           </select>
         </label>
       )}
-      <button
-        type="button"
-        className="w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
+        variant="standard"
+        className="w-full"
         disabled={!canResume || loading || effectiveResumeEvent.length === 0}
         onClick={() => onResume(effectiveResumeEvent)}
       >
         {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
-      </button>
+      </Button>
       {resumeDisabledReason && (
         <p className="text-xs text-md-on-surface-variant">{resumeDisabledReason}</p>
       )}

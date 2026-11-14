@@ -6,6 +6,7 @@ import { useDelayedVisibility } from "@/shared/lib/useDelayedVisibility";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import type { ExecutionEventWithSeq } from "../types";
 import { useI18n } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
 
 function eventLabel(event: ExecutionEventWithSeq): string {
   switch (event.type) {
@@ -86,13 +87,9 @@ export function ExecutionTimeline({
           </h2>
         </button>
         {isReplaying && (
-          <button
-            type="button"
-            onClick={onBackToCurrent}
-            className="shrink-0 rounded-lg border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs font-medium text-md-on-surface hover:bg-md-surface-container-high"
-          >
+          <Button variant="outline" size="sm" className="shrink-0" onClick={onBackToCurrent}>
             {uiText.executionTimeline.backToCurrent}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -103,7 +100,7 @@ export function ExecutionTimeline({
         className="mt-2"
       >
       {error ? (
-        <p className="mt-2 text-xs text-red-600" role="alert">
+        <p className="mt-2 text-xs text-md-error" role="alert">
           {toErrorMessage(error, uiText.executionTimeline.errorUnknown)}
         </p>
       ) : null}
@@ -148,14 +145,9 @@ export function ExecutionTimeline({
           </ul>
           {hasMore && onLoadMore && (
             <div className="mt-2">
-              <button
-                type="button"
-                onClick={onLoadMore}
-                disabled={loadingMore}
-                className="w-full rounded-lg border border-md-outline-variant bg-md-surface-container px-2 py-1.5 text-xs text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-50"
-              >
+              <Button variant="outline" size="sm" className="w-full" onClick={onLoadMore} loading={loadingMore}>
                 {loadingMore ? uiText.actions.loading : uiText.executionTimeline.loadMore}
-              </button>
+              </Button>
             </div>
           )}
         </>

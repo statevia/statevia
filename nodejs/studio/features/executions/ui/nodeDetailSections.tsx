@@ -115,9 +115,9 @@ export function NodeDetailStatusPanels({
   return (
     <>
       {isWaiting && (
-        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50/80 p-2">
-          <div className="font-medium text-amber-900">{uiText.nodeDetail.waiting.title}</div>
-          <div className="mt-1 text-amber-800">
+        <div className="mt-2 rounded-lg border p-2 border-md-warning/40 bg-md-warning-container text-md-on-warning-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-warning-container)_30%,transparent)]">
+          <div className="font-medium">{uiText.nodeDetail.waiting.title}</div>
+          <div className="mt-1">
             <div>{uiText.nodeDetail.waiting.reasonWaitByWaitKeyAndResumeWait}</div>
             {resumeEventName != null && resumeEventName !== "" && (
               <div className="mt-0.5 font-medium">{uiText.nodeDetail.waiting.resumeEventName(resumeEventName)}</div>
@@ -126,24 +126,24 @@ export function NodeDetailStatusPanels({
         </div>
       )}
       {isCanceled && (
-        <div className="mt-2 rounded-lg border border-red-200 bg-red-50/80 p-2">
-          <div className="font-medium text-red-900">{uiText.nodeDetail.cancel.detailTitle(uiText.actions.cancel)}</div>
-          <div className="mt-1 space-y-0.5 text-red-800">
+        <div className="mt-2 rounded-lg border p-2 border-md-error/40 bg-md-error-container text-md-on-error-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-error-container)_30%,transparent)]">
+          <div className="font-medium">{uiText.nodeDetail.cancel.detailTitle(uiText.actions.cancel)}</div>
+          <div className="mt-1 space-y-0.5">
             {node.cancelReason != null && node.cancelReason !== "" && <div>{uiText.nodeDetail.cancel.reason(node.cancelReason)}</div>}
             {node.canceledByExecution && (
-              <div className="rounded-sm bg-red-100 px-2 py-1">{uiText.nodeDetail.cancel.convergedByExecutionCancel}</div>
+              <div className="rounded-sm bg-md-surface/60 px-2 py-1">{uiText.nodeDetail.cancel.convergedByExecutionCancel}</div>
             )}
           </div>
         </div>
       )}
       {isFailed && (
-        <div className="mt-2 rounded-lg border border-red-300 bg-red-50 p-2">
-          <div className="font-medium text-red-900">{uiText.nodeDetail.failure.title}</div>
-          <div className="mt-1 text-red-800">
+        <div className="mt-2 rounded-lg border p-2 border-md-error/40 bg-md-error-container text-md-on-error-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-error-container)_30%,transparent)]">
+          <div className="font-medium">{uiText.nodeDetail.failure.title}</div>
+          <div className="mt-1">
             {node.error?.message != null && node.error.message !== "" ? (
               <div className="wrap-break-word">{node.error.message}</div>
             ) : (
-              <div className="text-red-600">{uiText.nodeDetail.failure.noMessage}</div>
+              <div className="opacity-80">{uiText.nodeDetail.failure.noMessage}</div>
             )}
           </div>
         </div>
