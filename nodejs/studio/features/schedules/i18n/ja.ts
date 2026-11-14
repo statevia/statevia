@@ -40,12 +40,14 @@ export const schedulesUiTextJa: SchedulesFeatureUiText = {
       cancel: "やめる",
       runConfirmNote: "1 回だけ実行を開始します。次の実行の予定は進みません。前の実行が残っていても開始します。",
       runStarted: (displayId) => `実行 ${displayId} を開始しました。`,
-      deleted: (name) => `${name} を削除しました。`
+      deleted: (name) => `${name} を削除しました。`,
+      deleteConfirmTitle: (name) => `${name} を削除しますか？`,
+      deleteConfirmMessage: "削除した定期実行は元に戻せません。",
+      runConfirmTitle: (name) => `${name} を今すぐ実行しますか？`
     },
     form: {
       createTitle: "定期実行を作成",
       editTitle: "定期実行を編集",
-      backToList: "定期実行の一覧へ戻る",
       notFound: "この定期実行は見つかりません。削除されたか、所属していないプロジェクトの定義のものです。",
       forbidden: "この定期実行の定義は、あなたの操作できる定義に入っていません。",
       loadFailed: "定期実行の読み込みに失敗しました。",

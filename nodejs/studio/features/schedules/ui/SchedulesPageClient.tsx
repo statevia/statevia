@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useI18n } from "@/shared/i18n/uiTextContext";
+import { buttonClassName } from "@/shared/ui/Button";
+import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
@@ -23,10 +25,7 @@ export function SchedulesPageClient() {
       title={text.title}
       description={text.description}
       primaryActions={
-        <Link
-          href="/schedules/new"
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
-        >
+        <Link href="/schedules/new" className={buttonClassName("lead")}>
           {text.create}
         </Link>
       }
@@ -37,17 +36,20 @@ export function SchedulesPageClient() {
         <PageState state="error" message={text.loadFailed} retryLabel={text.retry} onRetry={() => void page.reload()} />
       ) : null}
       {!page.loading && schedules !== null && schedules.length === 0 ? (
-        <div className="space-y-2">
-          <PageState state="empty" message={text.empty} />
-          <Link href="/admin/projects" className="text-sm underline">
-            {text.joinProjectLink}
-          </Link>
-        </div>
+        <PageState
+          state="empty"
+          message={text.empty}
+          emptyAction={
+            <Link href="/admin/projects" className={buttonClassName("outline")}>
+              {text.joinProjectLink}
+            </Link>
+          }
+        />
       ) : null}
       {!page.loading && schedules !== null && schedules.length > 0 ? (
         <>
           {page.definitionNames === null ? (
-            <p className="text-sm text-md-on-surface-variant">{text.definitionNamesUnavailable}</p>
+            <Notice tone="warning" title={text.definitionNamesUnavailable} />
           ) : null}
           <ScheduleList schedules={schedules} page={page} />
         </>

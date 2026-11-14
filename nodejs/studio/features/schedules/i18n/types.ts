@@ -47,11 +47,16 @@ export type SchedulesFeatureUiText = {
       /** 手動実行の成功。実行詳細へのリンク文言。 */
       runStarted: (displayId: string) => string;
       deleted: (name: string) => string;
+      /** 削除の確認ダイアログの見出し。 */
+      deleteConfirmTitle: (name: string) => string;
+      /** 削除の確認ダイアログの本文。 */
+      deleteConfirmMessage: string;
+      /** 手動実行の確認ダイアログの見出し。本文は `runConfirmNote`。 */
+      runConfirmTitle: (name: string) => string;
     };
     form: {
       createTitle: string;
       editTitle: string;
-      backToList: string;
       notFound: string;
       /** 単票 GET の 403（呼び出し元の実行リソース許可の外）。 */
       forbidden: string;
