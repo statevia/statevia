@@ -5,7 +5,6 @@ import type { DefinitionEditorFeatureUiText } from "./types";
  */
 export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
   definitionEditor: {
-    backToDetail: "定義の詳細へ戻る",
     descriptionCreating: "新しい定義を作成します。",
     descriptionEditingTarget: (definitionId: string) => `編集対象: ${definitionId}`,
     loadingMeta: "定義メタ情報を読み込み中...",
@@ -35,6 +34,10 @@ export const definitionEditorUiTextJa: DefinitionEditorFeatureUiText = {
       downloadYaml: "ダウンロード",
       confirmOverwrite: "上書きする",
       cancelOverwrite: "やめる",
+      overwriteConfirmTitle: "編集中の内容を上書きしますか？",
+      overwriteConfirmMessage: "保存していない変更は、読み込んだ YAML で置き換わります。定義名は変わりません。",
+      editorModeLabel: "編集の表示",
+      unsavedChanges: "保存していない変更があります",
     },
     graph: {
       fieldName: "name",

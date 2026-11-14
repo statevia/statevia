@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DefinitionGraphWaitSubscribeEntry } from "../lib/types";
+import { Button } from "@/shared/ui/Button";
 
 /** Wait `subscribe` 行編集 UI 向けの i18n 文言。 */
 export type WaitSubscribeEditorLabels = {
@@ -113,14 +114,14 @@ export function WaitSubscribeEditor({
           }}
         />
       ))}
-      <button
-        type="button"
-        className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
+      <Button
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={addRow}
       >
         {labels.waitSubscribeAdd}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -205,14 +206,14 @@ function WaitSubscribeRowEditor({
           }}
         />
       </label>
-      <button
-        type="button"
-        className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
+      <Button
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={onRemove}
       >
         {labels.waitSubscribeRemove}
-      </button>
+      </Button>
     </div>
   );
 }

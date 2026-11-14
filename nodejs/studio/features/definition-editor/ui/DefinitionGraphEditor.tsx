@@ -52,6 +52,7 @@ import type {
   ActionSchemaDetailResponse,
   ActionSchemaIndexItem
 } from "../actionSchema/types";
+import { Button } from "@/shared/ui/Button";
 
 function formatActionInputForEditor(input: DefinitionGraphNode["input"]): string {
   if (input === undefined) {
@@ -359,13 +360,14 @@ export function DefinitionGraphEditor({
       <section className={panelClassName}>
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold text-md-on-surface">{labels.title}</h3>
-        <button
-          type="button"
-          className="ml-auto rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1 text-xs"
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
           onClick={canvas.toggleFullscreen}
         >
           {canvas.isFullscreen ? labels.fullscreenExit : labels.fullscreenEnter}
-        </button>
+        </Button>
       </div>
 
       <div className={gridClassName}>
@@ -397,16 +399,16 @@ export function DefinitionGraphEditor({
             <p className="text-sm font-medium">{labels.addNodeDialogTitle}</p>
             <div className="grid grid-cols-2 gap-2">
               {canvas.availableNodeTypes.map((entry) => (
-                <button
+                <Button
                   key={entry.type}
-                  type="button"
+                  variant="outline"
+                  size="sm"
                   disabled={entry.disabled}
-                  className="rounded-sm border border-md-outline px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => canvas.addNode(entry.type)}
                   title={entry.reason}
                 >
                   {toDisplayValue(entry.type)}
-                </button>
+                </Button>
               ))}
             </div>
             {canvas.availableNodeTypes.some((entry) => entry.disabled && entry.reason) && (
@@ -433,9 +435,9 @@ export function DefinitionGraphEditor({
         </div>
       </div>
 
-      {canvas.graphMessage && <p className="text-xs text-rose-600">{canvas.graphMessage}</p>}
+      {canvas.graphMessage && <p className="text-xs text-md-error">{canvas.graphMessage}</p>}
       {validationMessages.length > 0 && (
-        <ul className="list-disc space-y-1 pl-5 text-xs text-rose-600">
+        <ul className="list-disc space-y-1 pl-5 text-xs text-md-error">
           {validationMessages.slice(0, 6).map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -656,38 +658,38 @@ function GraphNodeInspector({
         </label>
       )}
       {node.type === "wait" && waitEditMode === "legacy" && (
-        <button
-          type="button"
-          className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             onDocumentChange(convertLegacyWaitToEvents(document, node.name));
           }}
         >
           {labels.waitConvertToEvents}
-        </button>
+        </Button>
       )}
       {node.type === "wait" && waitEditMode === "conflict" && (
         <div className="space-y-2">
-          <p className="text-xs text-rose-700">
+          <p className="text-xs text-md-error">
             {node.subscribe !== undefined && node.events !== undefined
               ? labels.waitSubscribeConflictHint
               : labels.waitEventsConflictHint}
           </p>
           {node.events !== undefined && (
-            <button
-              type="button"
-              className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 onDocumentChange(setWaitEvents(document, node.name, node.events ?? {}));
               }}
             >
               {labels.waitConvertToEvents}
-            </button>
+            </Button>
           )}
           {node.subscribe !== undefined && (
-            <button
-              type="button"
-              className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 onDocumentChange(
                   setWaitSubscribe(
@@ -701,7 +703,7 @@ function GraphNodeInspector({
               }}
             >
               {labels.waitResolveToSubscribe}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -720,15 +722,15 @@ function GraphNodeInspector({
               onDocumentChange(setWaitEvents(document, node.name, events));
             }}
           />
-          <button
-            type="button"
-            className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "subscribe"));
             }}
           >
             {labels.waitSwitchToSubscribe}
-          </button>
+          </Button>
         </div>
       )}
       {node.type === "wait" && waitEditMode === "subscribe" && (
@@ -747,15 +749,15 @@ function GraphNodeInspector({
               onDocumentChange(setWaitSubscribe(document, node.name, entries));
             }}
           />
-          <button
-            type="button"
-            className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               onDocumentChange(switchWaitMode(document, node.name, "events"));
             }}
           >
             {labels.waitSwitchToEvents}
-          </button>
+          </Button>
         </div>
       )}
       {node.type === "action" && (
@@ -830,7 +832,7 @@ function GraphNodeInspector({
               </span>
             </>
           )}
-          {actionInputError ? <p className="text-[10px] text-rose-600">{actionInputError}</p> : null}
+          {actionInputError ? <p className="text-[10px] text-md-error">{actionInputError}</p> : null}
         </div>
       )}
       {node.type === "fork" && (
@@ -850,9 +852,9 @@ function GraphNodeInspector({
         </label>
       )}
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="rounded-sm border border-rose-400 px-2 py-1 text-xs text-rose-700"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => {
             onDocumentChange({
               ...document,
@@ -862,7 +864,7 @@ function GraphNodeInspector({
           }}
         >
           {labels.deleteNode}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -1229,16 +1231,16 @@ function GraphEdgeInspector({
         </div>
       )}
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="rounded-sm border border-rose-400 px-2 py-1 text-xs text-rose-700"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => {
             onDocumentChange(removeSelectedEdge(document, sourceNode, selection));
             onClearSelection();
           }}
         >
           {labels.deleteEdge}
-        </button>
+        </Button>
       </div>
     </section>
   );
