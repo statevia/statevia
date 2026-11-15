@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import { EXECUTIONS_WRITE_PERMISSION, usePermissions } from "@/shared/auth/permissionsContext";
 import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
 import { Button } from "@/shared/ui/Button";
@@ -9,7 +9,7 @@ import { ListPagination } from "@/shared/ui/ListPagination";
 import { Toast } from "@/shared/ui/Toast";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
-import { useI18n, useUiText } from "@/shared/i18n/uiTextContext";
+import { useI18n } from "@/shared/i18n/uiTextContext";
 import { useExecutionsPage } from "../hooks/useExecutionsPage";
 import { ExecutionsFilterForm } from "./ExecutionsFilterForm";
 import { ExecutionsList } from "./ExecutionsList";
@@ -18,8 +18,10 @@ import { SubscribeIngressDialog } from "./SubscribeIngressDialog";
 /**
  * ページング・フィルタ（URL 同期）付きの実行一覧。詳細は <code>/executions/[id]</code> へ遷移する。
  * 実行 ID と定義 ID の条件はチップで出し、1 つずつでも全部でも外せる（要件 8.4）。状態はピルで選ぶ。
+ * @remarks `useSearchParams` を使うが `Suspense` で包まない。ルートの layout が `cookies()` を読むので全 route が動的に描画され、
+ * 包まなくても静的な事前描画で止まらない。包むと、URL に検索パラメータがあるとき、流し込んだ中身（`<div hidden id="S:0">`）が差し替わらずに DOM に残っていた。
  */
-function ExecutionsPageClientInner() {
+export function ExecutionsPageClient() {
   const { uiText } = useI18n();
   const page = useExecutionsPage();
   const [ingressOpen, setIngressOpen] = useState(false);
@@ -118,23 +120,5 @@ function ExecutionsPageClientInner() {
         />
       )}
     </PageShell>
-  );
-}
-
-/**
- * ページング付き実行一覧（検索パラメータ用に `useSearchParams` 利用箇所を `Suspense` で包む）。
- */
-export function ExecutionsPageClient() {
-  const uiText = useUiText();
-  return (
-    <Suspense
-      fallback={
-        <div className="p-6 text-sm text-md-on-surface-variant" aria-live="polite">
-          {uiText.actions.loading}
-        </div>
-      }
-    >
-      <ExecutionsPageClientInner />
-    </Suspense>
   );
 }

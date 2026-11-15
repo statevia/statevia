@@ -21,7 +21,7 @@ type ConfirmDialogProps = Readonly<{
   confirmVariant?: Extract<ButtonVariant, "dangerSolid" | "lead" | "standard">;
   /**
    * 指定すると、この文字列を入力するまで決定できない。
-   * 影響の大きい削除（定義・プロジェクト・グループ）だけに使う（studio-ui-visual-refresh の U6）。
+   * 取り消しにくさが大きい削除だけに使う（studio-ui-visual-refresh の U6）。今使っているのは定義の削除だけ。
    */
   requireTypedName?: string;
   /** 送信中か。true のあいだは閉じられず、決定のボタンがスピナーになる。 */
