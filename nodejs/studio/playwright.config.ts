@@ -7,6 +7,14 @@ const coreApiInternalForWebServer =
   (coreApiE2E && coreApiInternalBase ? coreApiInternalBase : process.env.SERVICE_API_INTERNAL_BASE) ??
   "http://localhost:8080";
 
+/**
+ * E2E 用に起動する Next のポート。
+ * 既定の 3200 は、ローカルの Docker Compose が使うポート（Studio 3000・Grafana 3001・Loki 3100）と重ならない値として選んだ。
+ * 3000 のままだと `reuseExistingServer` が Compose の Studio（イメージのビルド時点のコード）を再利用し、作業中のコードを試さない。
+ */
+const e2ePort = Number(process.env.E2E_PORT ?? "3200");
+const baseURL = `http://localhost:${e2ePort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -15,20 +23,22 @@ export default defineConfig({
   workers: process.env.CI ? 1 : process.env.SERVICE_API_E2E_URL ? 2 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
+    locale: "ja-JP",
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
+    command: `npx next dev --port ${e2ePort}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
     env: {
       ...process.env,
       SERVICE_API_INTERNAL_BASE: coreApiInternalForWebServer.replace(/\/$/, ""),
-      // 実 API E2E は request 側で X-Tenant-Id: default を付ける。ブラウザはヘッダ無しのことが多いのでプロキシが既定テナントを転送する。
-      ...(coreApiE2E ? { SERVICE_API_TENANT_ID: process.env.SERVICE_API_TENANT_ID ?? "default" } : {}),
+      // モック E2E はログインしない。開発時の認証バイパス（middleware と /api/auth/session）で画面へ入る。
+      // 値は Service API へ届いても通らないダミー。実 API E2E はログインの Cookie が優先されるので影響しない。
+      SERVICE_API_AUTH_TOKEN: process.env.SERVICE_API_AUTH_TOKEN ?? "e2e-dev-auth-bypass",
     },
   },
 });

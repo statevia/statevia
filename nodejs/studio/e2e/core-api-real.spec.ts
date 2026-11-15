@@ -1,152 +1,109 @@
+import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { e2eWaitWorkflowYaml } from "./fixtures/e2eWaitWorkflowYaml";
+import {
+  createDefinition,
+  loginServiceApi,
+  serviceApiBase,
+  serviceApiE2EEnabled,
+  serviceApiE2ESkipReason,
+  startExecutionFromYaml,
+  uniqueDefinitionName,
+  waitForExecutionStatus,
+  type ServiceApiSession
+} from "./fixtures/serviceApi";
 
 /**
  * Service API を直接叩くオプション E2E。
- * 実行例:
- *   SERVICE_API_E2E_URL=http://localhost:8080 npx playwright test e2e/core-api-real.spec.ts
+ * 前提と実行例は `e2e/README.md`（SERVICE_API_E2E_URL とログインの資格情報が要る）。
  */
-const apiBase = process.env.SERVICE_API_E2E_URL?.replace(/\/$/, "") ?? "";
-
-const tenantHeaders = { "X-Tenant-Id": "default", "Content-Type": "application/json" };
-
-async function waitForExecutionStatus(
-  request: import("@playwright/test").APIRequestContext,
-  displayId: string,
-  status: string,
-  timeoutMs: number
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const res = await request.get(`${apiBase}/v1/executions/${encodeURIComponent(displayId)}`, {
-      headers: { "X-Tenant-Id": "default" }
-    });
-    if (res.ok()) {
-      const j = (await res.json()) as { status?: string };
-      if (j.status === status) {
-        return;
-      }
-    }
-    await new Promise((r) => setTimeout(r, 200));
-  }
-  throw new Error(`timeout waiting for execution status ${status}`);
-}
-
 test.describe("Service API (direct)", () => {
   test.describe.configure({ mode: "serial" });
-  // Reason: SERVICE_API_E2E_URL 未設定時は実体 Service API が無いため、環境ゲートでスイートをスキップする。
-  test.skip(!apiBase, "SERVICE_API_E2E_URL が未設定のためスキップ（例: http://localhost:8080）");
+  // Reason: 実体の Service API とログインの資格情報が無いときは、環境ゲートでスイートをスキップする。
+  test.skip(!serviceApiE2EEnabled, serviceApiE2ESkipReason);
+
+  let session: ServiceApiSession;
+
+  test.beforeAll(async ({ request }) => {
+    session = await loginServiceApi(request);
+  });
 
   test("GET /v1/health は ok を返す", async ({ request }) => {
-    const res = await request.get(`${apiBase}/v1/health`);
+    // Act
+    const res = await request.get(`${serviceApiBase}/v1/health`);
+
+    // Assert
     expect(res.ok()).toBeTruthy();
     const json = (await res.json()) as { status?: string };
     expect(json.status).toBe("ok");
   });
 
-  test("GET /v1/executions?limit=1 は 200（テナント default）", async ({ request }) => {
-    const res = await request.get(`${apiBase}/v1/executions?limit=1&offset=0`, {
-      headers: { "X-Tenant-Id": "default" }
-    });
+  test("GET /v1/executions?limit=1 はログイン済みなら 200", async ({ request }) => {
+    // Act
+    const res = await request.get(`${serviceApiBase}/v1/executions?limit=1&offset=0`, { headers: session.headers });
+
+    // Assert
     expect(res.status()).toBe(200);
   });
 
-  test("実行開始 → Cancel → Cancelled", async ({ request }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const defName = `e2e-wait-${suffix}`;
-    const yaml = e2eWaitWorkflowYaml(defName);
+  test("実行開始 → キャンセル → CANCELED", async ({ request }) => {
+    // Arrange
+    const name = uniqueDefinitionName("e2e_wait");
+    const executionId = await startExecutionFromYaml(request, session, name, e2eWaitWorkflowYaml(name));
 
-    const createDef = await request.post(`${apiBase}/v1/definitions`, {
-      headers: tenantHeaders,
-      data: { name: defName, yaml }
-    });
-    expect(createDef.status(), await createDef.text()).toBe(201);
-    const defJson = (await createDef.json()) as { displayId: string };
-
-    const start = await request.post(`${apiBase}/v1/executions`, {
-      headers: tenantHeaders,
-      data: { definitionId: defJson.displayId, input: {} }
-    });
-    expect(start.status(), await start.text()).toBe(201);
-    const execution = (await start.json()) as { displayId: string; status: string };
-    expect(execution.status).toBe("ACTIVE");
-
-    const cancel = await request.post(`${apiBase}/v1/executions/${encodeURIComponent(execution.displayId)}/cancel`, {
-      headers: tenantHeaders,
+    // Act
+    const cancel = await request.post(`${serviceApiBase}/v1/executions/${encodeURIComponent(executionId)}/cancel`, {
+      headers: { ...session.headers, "X-Idempotency-Key": randomUUID() },
       data: { reason: "e2e" }
     });
-    expect(cancel.status()).toBe(204);
 
-    await waitForExecutionStatus(request, execution.displayId, "CANCELED", 15_000);
+    // Assert
+    expect(cancel.ok(), await cancel.text()).toBeTruthy();
+    await waitForExecutionStatus(request, session, executionId, "CANCELED", 15_000);
   });
 
-  test("同一 X-Idempotency-Key + 同一ボディの再送は同一実行を返す", async ({ request }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const defName = `e2e-idem-${suffix}`;
-    const yaml = e2eWaitWorkflowYaml(defName);
+  test("同じ X-Idempotency-Key と同じ本文の再送は同じ実行を返す", async ({ request }) => {
+    // Arrange
+    const name = uniqueDefinitionName("e2e_idem");
+    const definitionId = await createDefinition(request, session, name, e2eWaitWorkflowYaml(name));
+    const headers = { ...session.headers, "X-Idempotency-Key": `idem-${randomUUID()}` };
+    const body = { definitionId, input: { k: 1 } };
 
-    const createDef = await request.post(`${apiBase}/v1/definitions`, {
-      headers: tenantHeaders,
-      data: { name: defName, yaml }
-    });
-    expect(createDef.ok()).toBeTruthy();
-    const defJson = (await createDef.json()) as { displayId: string };
+    // Act
+    const start1 = await request.post(`${serviceApiBase}/v1/executions`, { headers, data: body });
+    const start2 = await request.post(`${serviceApiBase}/v1/executions`, { headers, data: body });
 
-    const idemKey = `idem-${suffix}`;
-    const body = { definitionId: defJson.displayId, input: { k: 1 } };
-
-    const start1 = await request.post(`${apiBase}/v1/executions`, {
-      headers: { ...tenantHeaders, "X-Idempotency-Key": idemKey },
-      data: body
-    });
+    // Assert
     expect(start1.status(), await start1.text()).toBe(201);
-    const execution1 = (await start1.json()) as { displayId: string; resourceId: string };
-
-    const start2 = await request.post(`${apiBase}/v1/executions`, {
-      headers: { ...tenantHeaders, "X-Idempotency-Key": idemKey },
-      data: body
-    });
     expect(start2.status(), await start2.text()).toBe(201);
+    const execution1 = (await start1.json()) as { displayId: string; resourceId: string };
     const execution2 = (await start2.json()) as { displayId: string; resourceId: string };
-
     expect(execution2.displayId).toBe(execution1.displayId);
     expect(execution2.resourceId).toBe(execution1.resourceId);
   });
 
-  test("同一 X-Idempotency-Key でボディが異なると 409", async ({ request }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const defNameA = `e2e-idem-a-${suffix}`;
-    const defNameB = `e2e-idem-b-${suffix}`;
-    const yamlA = e2eWaitWorkflowYaml(defNameA);
-    const yamlB = e2eWaitWorkflowYaml(defNameB);
-
-    const createA = await request.post(`${apiBase}/v1/definitions`, {
-      headers: tenantHeaders,
-      data: { name: defNameA, yaml: yamlA }
+  test("同じ X-Idempotency-Key で本文が違うと 409", async ({ request }) => {
+    // Arrange
+    const nameA = uniqueDefinitionName("e2e_idem_a");
+    const nameB = uniqueDefinitionName("e2e_idem_b");
+    const definitionA = await createDefinition(request, session, nameA, e2eWaitWorkflowYaml(nameA));
+    const definitionB = await createDefinition(request, session, nameB, e2eWaitWorkflowYaml(nameB));
+    const headers = { ...session.headers, "X-Idempotency-Key": `idem-conflict-${randomUUID()}` };
+    const start1 = await request.post(`${serviceApiBase}/v1/executions`, {
+      headers,
+      data: { definitionId: definitionA, input: {} }
     });
-    const createB = await request.post(`${apiBase}/v1/definitions`, {
-      headers: tenantHeaders,
-      data: { name: defNameB, yaml: yamlB }
-    });
-    expect(createA.ok()).toBeTruthy();
-    expect(createB.ok()).toBeTruthy();
-    const defA = (await createA.json()) as { displayId: string };
-    const defB = (await createB.json()) as { displayId: string };
+    expect(start1.status(), await start1.text()).toBe(201);
 
-    const idemKey = `idem-conflict-${suffix}`;
-
-    const start1 = await request.post(`${apiBase}/v1/executions`, {
-      headers: { ...tenantHeaders, "X-Idempotency-Key": idemKey },
-      data: { definitionId: defA.displayId, input: {} }
+    // Act
+    const start2 = await request.post(`${serviceApiBase}/v1/executions`, {
+      headers,
+      data: { definitionId: definitionB, input: {} }
     });
-    expect(start1.status()).toBe(201);
 
-    const start2 = await request.post(`${apiBase}/v1/executions`, {
-      headers: { ...tenantHeaders, "X-Idempotency-Key": idemKey },
-      data: { definitionId: defB.displayId, input: {} }
-    });
+    // Assert
     expect(start2.status()).toBe(409);
-    const err = (await start2.json()) as { error?: { code?: string } };
-    expect(err.error?.code).toBe("IDEMPOTENCY_KEY_CONFLICT");
+    const error = (await start2.json()) as { error?: { code?: string } };
+    expect(error.error?.code).toBe("IDEMPOTENCY_KEY_CONFLICT");
   });
 });

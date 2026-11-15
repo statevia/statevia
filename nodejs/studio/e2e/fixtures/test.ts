@@ -1,13 +1,14 @@
 import { test as base } from "@playwright/test";
-import { ExecutionPage } from "../pages/ExecutionPage";
+import { ExecutionDetailPage } from "../pages/ExecutionDetailPage";
 
 type E2EFixtures = {
-  executionPage: ExecutionPage;
+  /** 実行詳細の Page Object。 */
+  executionDetailPage: ExecutionDetailPage;
 };
 
 export const test = base.extend<E2EFixtures>({
-  executionPage: async ({ page }, use) => {
-    await use(new ExecutionPage(page));
+  executionDetailPage: async ({ page }, use) => {
+    await use(new ExecutionDetailPage(page));
   },
 });
 
