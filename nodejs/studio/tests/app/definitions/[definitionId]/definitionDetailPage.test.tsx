@@ -30,7 +30,7 @@ describe("DefinitionDetailPage", () => {
     renderWithUiText(page);
 
     await waitFor(() => {
-      expect(screen.getByText("Demo")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Demo" })).toBeInTheDocument();
     });
   });
 });

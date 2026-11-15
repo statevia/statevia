@@ -39,6 +39,9 @@ export const projectsUiTextEn: ProjectsFeatureUiText = {
       empty: "No members.",
       granted: "Member updated.",
       revoked: "Member removed.",
+      revokeConfirmTitle: (label) => `Remove ${label} from the members?`,
+      revokeConfirmMessage: "Their role in this project is removed. You can add them again later.",
+      revokeConfirmSubmit: "Remove",
     },
     admin: {
       title: "Tenant projects",

@@ -2,6 +2,9 @@
 
 import type { FormEvent } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Dialog } from "@/shared/ui/Dialog";
+import { TextField } from "@/shared/ui/TextField";
 import { resolvePermissionLabel } from "../permissionLabel";
 import type { PermissionDefinitionDto } from "../types";
 
@@ -15,8 +18,15 @@ function checkboxInputId(prefix: string, key: string): string {
   return `${prefix}-${key.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
-/** API キー発行フォームの入力。 */
+/** 発行フォームの `<form>` の id。ダイアログ下部の送信ボタンから `form` 属性で結ぶ。 */
+const CREATE_FORM_ID = "admin-api-key-create-form";
+
+/** API キー発行ダイアログの入力。 */
 export type AdminApiKeyCreateFormProps = {
+  /** ダイアログが開いているか。 */
+  open: boolean;
+  /** ダイアログを閉じる。 */
+  onClose: () => void;
   /** 表示名。 */
   name: string;
   /** 有効期限の datetime-local 値。 */
@@ -50,11 +60,14 @@ export type AdminApiKeyCreateFormProps = {
 };
 
 /**
- * API キーの発行フォーム。検証と API は呼び出し側に渡す。
- * @param props 入力値とコマンド。
- * @returns 発行フォーム。
+ * API キーの発行ダイアログ。一覧の見出しの「API キーを発行」から開く（studio-ui-visual-refresh の U5）。
+ * 検証と API は呼び出し側に渡す。権限を 1 つも選んでいないと発行できない。
+ * @param props 開閉・入力値・コマンド。
+ * @returns 発行ダイアログ。
  */
 export function AdminApiKeyCreateForm({
+  open,
+  onClose,
   name,
   expiresAt,
   selectedScopes,
@@ -66,66 +79,52 @@ export function AdminApiKeyCreateForm({
   onSubmit
 }: Readonly<AdminApiKeyCreateFormProps>) {
   const uiText = useUiText();
+  const text = uiText.admin.apiKeys;
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={text.createTitle}
+      size="lg"
+      dismissible={!submitting}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {uiText.actions.cancel}
+          </Button>
+          <Button variant="lead" type="submit" form={CREATE_FORM_ID} loading={submitting} disabled={selectedScopes.size === 0}>
+            {submitting ? text.creating : text.createSubmit}
+          </Button>
+        </>
+      }
     >
-      <h2 className="mb-3 text-lg font-medium">{uiText.admin.apiKeys.createTitle}</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="admin-api-key-name" className="mb-1 block text-sm font-medium">
-            {uiText.admin.apiKeys.nameLabel}
-          </label>
-          <input
-            id="admin-api-key-name"
-            type="text"
-            required
-            value={name}
-            onChange={(event) => onNameChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="admin-api-key-expires" className="mb-1 block text-sm font-medium">
-            {uiText.admin.apiKeys.expiresAtLabel}
-          </label>
-          <input
-            id="admin-api-key-expires"
-            type="datetime-local"
-            value={expiresAt}
-            onChange={(event) => onExpiresAtChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-          <p className="mt-1 text-xs text-md-on-surface-variant">
-            {uiText.admin.apiKeys.expiresAtHint}
-          </p>
-        </div>
-      </div>
-      <fieldset className="mt-4">
-        <legend className="mb-2 text-sm font-medium">{uiText.admin.apiKeys.scopesTitle}</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {assignablePermissions.map((permission) => (
-            <label key={permission.permissionKey} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                id={checkboxInputId("api-key-scope", permission.permissionKey)}
-                checked={selectedScopes.has(permission.permissionKey)}
-                onChange={() => onToggleScope(permission.permissionKey)}
-              />
-              {resolvePermissionLabel(permission, uiText.admin.permissions.names)}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <button
-        type="submit"
-        disabled={submitting || selectedScopes.size === 0}
-        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-      >
-        {submitting ? uiText.admin.apiKeys.creating : uiText.admin.apiKeys.createSubmit}
-      </button>
-    </form>
+      <form id={CREATE_FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
+        <TextField label={text.nameLabel} type="text" required value={name} onChange={(event) => onNameChange(event.target.value)} />
+        <TextField
+          label={text.expiresAtLabel}
+          type="datetime-local"
+          hint={text.expiresAtHint}
+          value={expiresAt}
+          onChange={(event) => onExpiresAtChange(event.target.value)}
+        />
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium after:ml-1 after:text-md-error after:content-['*']">{text.scopesTitle}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {assignablePermissions.map((permission) => (
+              <label key={permission.permissionKey} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id={checkboxInputId("api-key-scope", permission.permissionKey)}
+                  checked={selectedScopes.has(permission.permissionKey)}
+                  onChange={() => onToggleScope(permission.permissionKey)}
+                />
+                {resolvePermissionLabel(permission, uiText.admin.permissions.names)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      </form>
+    </Dialog>
   );
 }

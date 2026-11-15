@@ -178,7 +178,7 @@ function InputFieldTreeNode({
           onChange(setNestedInputValue(normalizedValue, node.logicalPath, nextFieldValue));
         }
       })}
-      {error ? <p className="mt-0.5 text-[10px] text-rose-600">{error}</p> : null}
+      {error ? <p className="mt-0.5 text-[10px] text-md-error">{error}</p> : null}
     </label>
   );
 }

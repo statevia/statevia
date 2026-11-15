@@ -23,6 +23,10 @@ export type AdminGroupDetailModel = {
   selectedUserIds: ReadonlySet<string>;
   /** 選択中の権限キー。 */
   selectedPermissionKeys: ReadonlySet<string>;
+  /** 保存済みのメンバー（保存前の差分の基準）。 */
+  savedUserIds: ReadonlySet<string>;
+  /** 保存済みの権限（保存前の差分の基準）。 */
+  savedPermissionKeys: ReadonlySet<string>;
   /** 詳細の取得中か。 */
   loading: boolean;
   /** メンバー保存中か。 */
@@ -43,10 +47,20 @@ export type AdminGroupDetailModel = {
    * @param permissionKey 権限キー。
    */
   togglePermission: (permissionKey: string) => void;
-  /** 選択中のメンバーを保存する。 */
-  saveMembers: () => void;
-  /** 選択中の権限を保存する。 */
-  savePermissions: () => void;
+  /** メンバーの選択を保存済みの状態へ戻す。 */
+  resetMembers: () => void;
+  /** 権限の選択を保存済みの状態へ戻す。 */
+  resetPermissions: () => void;
+  /**
+   * 選択中のメンバーを保存する。
+   * @returns 保存できたら true。失敗したら false（トーストを残す）。
+   */
+  saveMembers: () => Promise<boolean>;
+  /**
+   * 選択中の権限を保存する。
+   * @returns 保存できたら true。失敗したら false（トーストを残す）。
+   */
+  savePermissions: () => Promise<boolean>;
 };
 
 /**
@@ -67,6 +81,9 @@ export function useAdminGroupDetail({ groupId }: UseAdminGroupDetailOptions): Ad
   const [savingMembers, setSavingMembers] = useState(false);
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  const savedUserIds = useMemo(() => new Set(group?.memberUserIds ?? []), [group]);
+  const savedPermissionKeys = useMemo(() => new Set(group?.permissionKeys ?? []), [group]);
 
   const assignablePermissions = useMemo(
     () => permissions.filter((permission) => permission.permissionKey !== "tenant.admin" && !permission.isDeprecated),
@@ -127,40 +144,48 @@ export function useAdminGroupDetail({ groupId }: UseAdminGroupDetailOptions): Ad
     });
   }, []);
 
-  const saveMembers = useCallback(() => {
-    void (async () => {
-      setSavingMembers(true);
-      setToast(null);
-      try {
-        const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/members`, {
-          userIds: [...selectedUserIds]
-        });
-        setGroup(updated);
-        setSelectedUserIds(new Set(updated.memberUserIds));
-      } catch (error) {
-        setToast(toToastError(error));
-      } finally {
-        setSavingMembers(false);
-      }
-    })();
+  const resetMembers = useCallback(() => {
+    setSelectedUserIds(new Set(group?.memberUserIds ?? []));
+  }, [group]);
+
+  const resetPermissions = useCallback(() => {
+    setSelectedPermissionKeys(new Set(group?.permissionKeys ?? []));
+  }, [group]);
+
+  const saveMembers = useCallback(async (): Promise<boolean> => {
+    setSavingMembers(true);
+    setToast(null);
+    try {
+      const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/members`, {
+        userIds: [...selectedUserIds]
+      });
+      setGroup(updated);
+      setSelectedUserIds(new Set(updated.memberUserIds));
+      return true;
+    } catch (error) {
+      setToast(toToastError(error));
+      return false;
+    } finally {
+      setSavingMembers(false);
+    }
   }, [groupId, selectedUserIds]);
 
-  const savePermissions = useCallback(() => {
-    void (async () => {
-      setSavingPermissions(true);
-      setToast(null);
-      try {
-        const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/permissions`, {
-          permissionKeys: [...selectedPermissionKeys]
-        });
-        setGroup(updated);
-        setSelectedPermissionKeys(new Set(updated.permissionKeys));
-      } catch (error) {
-        setToast(toToastError(error));
-      } finally {
-        setSavingPermissions(false);
-      }
-    })();
+  const savePermissions = useCallback(async (): Promise<boolean> => {
+    setSavingPermissions(true);
+    setToast(null);
+    try {
+      const updated = await apiPut<AdminGroupDetail>(`/admin/groups/${groupId}/permissions`, {
+        permissionKeys: [...selectedPermissionKeys]
+      });
+      setGroup(updated);
+      setSelectedPermissionKeys(new Set(updated.permissionKeys));
+      return true;
+    } catch (error) {
+      setToast(toToastError(error));
+      return false;
+    } finally {
+      setSavingPermissions(false);
+    }
   }, [groupId, selectedPermissionKeys]);
 
   return {
@@ -169,6 +194,8 @@ export function useAdminGroupDetail({ groupId }: UseAdminGroupDetailOptions): Ad
     assignablePermissions,
     selectedUserIds,
     selectedPermissionKeys,
+    savedUserIds,
+    savedPermissionKeys,
     loading,
     savingMembers,
     savingPermissions,
@@ -176,6 +203,8 @@ export function useAdminGroupDetail({ groupId }: UseAdminGroupDetailOptions): Ad
     dismissToast,
     toggleUser,
     togglePermission,
+    resetMembers,
+    resetPermissions,
     saveMembers,
     savePermissions
   };

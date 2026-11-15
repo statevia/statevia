@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { ExecutionsPageClient } from "@/features/executions/ui/ExecutionsPageClient";
 import { renderWithUiText } from "@/tests/testUtils";
 
@@ -15,7 +15,8 @@ const runningExecution = {
   startedAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
-  restartLost: false
+  restartLost: false,
+  waiting: false
 };
 
 vi.mock("next/navigation", () => ({
@@ -50,6 +51,14 @@ import { buildExecutionsListPath } from "@/features/executions/api";
 import { useProject } from "@/shared/project/projectContext";
 import { testProjectId } from "@/tests/testUtils";
 
+/** `GET /executions/counts` の応答。 */
+const countsFixture = {
+  total: 12,
+  byStatus: { ACTIVE: 3, COMPLETED: 6, FAILED: 2, CANCELED: 1, UNKNOWN: 0 },
+  waiting: 2,
+  needsAttention: 4
+};
+
 describe("ExecutionsPageClient", () => {
   beforeEach(() => {
     replace.mockClear();
@@ -57,6 +66,7 @@ describe("ExecutionsPageClient", () => {
     vi.mocked(buildExecutionsListPath).mockClear();
     vi.mocked(useProject).mockReset();
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return { subscriptions: [{ topic: "orders.updated", key: "sku" }] };
       }
@@ -131,6 +141,7 @@ describe("ExecutionsPageClient", () => {
 
   it("集合配送は候補も手入力も /events に送り、行には発行ボタンが無い", async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return {
           subscriptions: [
@@ -142,11 +153,11 @@ describe("ExecutionsPageClient", () => {
       return { items: [runningExecution], totalCount: 1 };
     });
     renderWithUiText(<ExecutionsPageClient />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "詳細" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("link", { name: "ex-1" })).toBeInTheDocument());
 
     const ingressButton = screen.getByRole("button", { name: "イベントを送信" });
     expect(screen.getByRole("banner")).toContainElement(ingressButton);
-    expect(screen.getByRole("listitem").querySelector("button")?.textContent).toBe("詳細");
+    expect(within(screen.getByRole("list", { name: "実行一覧" })).queryByRole("button")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "イベントを送信" }));
     const topic = await screen.findByLabelText("トピック");
@@ -194,26 +205,40 @@ describe("ExecutionsPageClient", () => {
     failed.unmount();
 
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path.startsWith("/executions/counts")) return countsFixture;
       if (path.startsWith("/event-subscriptions")) {
         return { subscriptions: [] };
       }
       return { items: [runningExecution], totalCount: 40 };
     });
     renderWithUiText(<ExecutionsPageClient />);
-    expect(await screen.findByRole("button", { name: "詳細" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "ex-1" })).toHaveAttribute("href", "/executions/ex-1");
 
-    fireEvent.change(screen.getByLabelText("ステータス"), { target: { value: "FAILED" } });
-    fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "displayId" } });
-    fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "asc" } });
+    fireEvent.click(screen.getByRole("button", { name: /^FAILED/ }));
+    fireEvent.change(screen.getByLabelText("並び順"), { target: { value: "displayId:asc" } });
     fireEvent.change(screen.getByLabelText(/定義ID/), { target: { value: "def-1" } });
     fireEvent.click(screen.getAllByRole("button", { name: "次へ" })[0]);
-    fireEvent.click(screen.getByRole("button", { name: "クリア" }));
     fireEvent.change(screen.getByLabelText("実行の ID（部分一致）または UUID（完全一致）"), { target: { value: "名前" } });
+    replace.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
     expect(await screen.findByText(/実行の ID は半角英数字/)).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "詳細" }));
-    expect(push).toHaveBeenCalledWith("/executions/ex-1");
+  it("定義 ID のチップを外すと definitionId を消した URL に置換する", async () => {
+    // Arrange
+    searchParams.set("definitionId", "def-1");
+    renderWithUiText(<ExecutionsPageClient />);
+    const chipRemove = await screen.findByRole("button", { name: "定義: def-1 を外す" });
+    vi.mocked(buildExecutionsListPath).mockClear();
+
+    // Act
+    fireEvent.click(chipRemove);
+    searchParams.delete("definitionId");
+
+    // Assert
+    expect(buildExecutionsListPath).toHaveBeenCalledWith(expect.not.objectContaining({ definitionId: "def-1" }));
+    expect(replace).toHaveBeenCalled();
   });
 
   it("executions.write が無ければイベント送信ボタンを出さない", async () => {
@@ -225,5 +250,22 @@ describe("ExecutionsPageClient", () => {
       expect(apiGet).toHaveBeenCalled();
     });
     expect(screen.queryByRole("button", { name: "イベントを送信" })).not.toBeInTheDocument();
+  });
+
+  it("件数を同じ Project で取ってピルに出し、要対応のピルで needsAttention の条件へ移る", async () => {
+    // Arrange
+    renderWithUiText(<ExecutionsPageClient />);
+    const attentionPill = await screen.findByRole("button", { name: /要対応/ });
+    await waitFor(() => expect(attentionPill).toHaveTextContent("要対応（待機中・FAILED）4"));
+
+    // Act
+    fireEvent.click(attentionPill);
+
+    // Assert
+    expect(apiGet).toHaveBeenCalledWith(`/executions/counts?projectId=${testProjectId}`);
+    expect(buildExecutionsListPath).toHaveBeenLastCalledWith(
+      expect.objectContaining({ needsAttention: true, pagination: expect.objectContaining({ offset: 0 }) })
+    );
+    expect(vi.mocked(buildExecutionsListPath).mock.lastCall?.[0]).not.toHaveProperty("status");
   });
 });

@@ -27,7 +27,7 @@ const positionedNode = (overrides: Partial<PositionedNode<MergedGraphNode>> = {}
 describe("NodeGraphView", () => {
   it("ノードを描画しクリックで選択できる", async () => {
     const onSelectNode = vi.fn();
-    const onResumeNode = vi.fn();
+    const onSendToNode = vi.fn();
 
     renderWithUiText(
       <NodeGraphView
@@ -36,9 +36,9 @@ describe("NodeGraphView", () => {
         groups={[]}
         selectedNodeId={null}
         onSelectNode={onSelectNode}
-        onResumeNode={onResumeNode}
+        onSendToNode={onSendToNode}
         getResumeDisabledReason={() => null}
-        showResumeAction
+        showSendAction
         heightClassName="h-[320px]"
       />
     );
@@ -51,7 +51,7 @@ describe("NodeGraphView", () => {
     expect(onSelectNode).toHaveBeenCalledWith("n-1");
   });
 
-  it("WAITING の説明は改行し、ノード高さはレイアウト枠で固定しない", async () => {
+  it("待機中のノードは「このノードへ送る」を出し、ノード高さはレイアウト枠で固定しない", async () => {
     // Arrange
     const waiting = positionedNode({
       nodeType: "Wait",
@@ -70,18 +70,15 @@ describe("NodeGraphView", () => {
         groups={[]}
         selectedNodeId={null}
         onSelectNode={vi.fn()}
-        onResumeNode={vi.fn()}
+        onSendToNode={vi.fn()}
         getResumeDisabledReason={() => null}
-        showResumeAction
+        showSendAction
         heightClassName="h-[320px]"
       />
     );
 
     // Assert
-    const hint = await screen.findByText(
-      (_, element) => element?.tagName === "P" && element.textContent === uiText.nodeDetail.waiting.subscribeOnlyHint
-    );
-    expect(hint).toHaveClass("whitespace-pre-line");
+    const hint = await screen.findByText(uiText.executionDashboard.sendEvent.sendToNode);
     const flowNode = hint.closest(".react-flow__node");
     expect(flowNode).toBeInstanceOf(HTMLElement);
     if (!(flowNode instanceof HTMLElement)) return;
@@ -108,9 +105,9 @@ describe("NodeGraphView", () => {
         groups={[]}
         selectedNodeId={null}
         onSelectNode={vi.fn()}
-        onResumeNode={vi.fn()}
+        onSendToNode={vi.fn()}
         getResumeDisabledReason={() => null}
-        showResumeAction
+        showSendAction
         heightClassName="h-[320px]"
       />
     );
@@ -125,7 +122,7 @@ describe("NodeGraphView", () => {
     expect(flowNode.style.height).not.toBe("150px");
   });
 
-  it("showResumeAction が false なら待機中のノードに再開の操作と理由を出さない", async () => {
+  it("showSendAction が false なら待機中のノードに送る操作と理由を出さない", async () => {
     // Arrange
     const waiting = positionedNode({
       nodeType: "Wait",
@@ -142,16 +139,43 @@ describe("NodeGraphView", () => {
         groups={[]}
         selectedNodeId={null}
         onSelectNode={vi.fn()}
-        onResumeNode={vi.fn()}
+        onSendToNode={vi.fn()}
         getResumeDisabledReason={() => "理由"}
-        showResumeAction={false}
+        showSendAction={false}
         heightClassName="h-[320px]"
       />
     );
 
     // Assert
     expect(await screen.findByText("Wait 1")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: uiText.actions.resume })).not.toBeInTheDocument();
+    expect(screen.queryByText(uiText.executionDashboard.sendEvent.sendToNode)).not.toBeInTheDocument();
     expect(screen.queryByText("理由")).not.toBeInTheDocument();
+  });
+
+  it("「このノードへ送る」を押すと実行ノード ID を渡し、ノードの選択はしない", async () => {
+    // Arrange
+    const onSendToNode = vi.fn();
+    const onSelectNode = vi.fn();
+    const waiting = positionedNode({ nodeType: "Wait", status: "WAITING", label: "Wait 1", allowedEvents: ["approved"] });
+    renderWithUiText(
+      <NodeGraphView
+        nodes={[waiting]}
+        edges={[]}
+        groups={[]}
+        selectedNodeId={null}
+        onSelectNode={onSelectNode}
+        onSendToNode={onSendToNode}
+        getResumeDisabledReason={() => null}
+        showSendAction
+        heightClassName="h-[320px]"
+      />
+    );
+
+    // Act
+    fireEvent.click(await screen.findByText(uiText.executionDashboard.sendEvent.sendToNode));
+
+    // Assert
+    expect(onSendToNode).toHaveBeenCalledWith(waiting.nodeId);
+    expect(onSelectNode).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,11 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button, buttonClassName } from "@/shared/ui/Button";
+import { Dialog } from "@/shared/ui/Dialog";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
@@ -10,13 +14,19 @@ import type { AdminGroupListItem } from "../types";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { isWithinMaxLength, matchesPattern } from "@/shared/lib/validation/primitives";
 import { ASCII_LABEL_DEFAULT_MAX_LENGTH, ASCII_LABEL_PATTERN } from "@/shared/lib/validation/formRules";
-import { useAdminGroupsUiText } from "@/shared/i18n/uiTextContext";
+import { TextField } from "@/shared/ui/TextField";
+import { useAdminGroupsUiText, useUiText } from "@/shared/i18n/uiTextContext";
+
+/** 作成フォームの `<form>` の id。ダイアログ下部の送信ボタンから `form` 属性で結ぶ。 */
+const CREATE_FORM_ID = "admin-group-create-form";
 
 /**
- * グループ一覧・作成。
+ * グループ一覧・作成。作成は見出しの緑のボタンからダイアログで行う（studio-ui-visual-refresh の U5）。
  */
 export function AdminGroupsPageClient() {
   const pageUi = useAdminGroupsUiText();
+  const uiText = useUiText();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [groupList, setGroupList] = useState<AdminGroupListItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -57,6 +67,7 @@ export function AdminGroupsPageClient() {
     try {
       await apiPost("/admin/groups", { name: trimmedName });
       setName("");
+      setCreateDialogOpen(false);
       await loadGroups();
     } catch (error) {
       setToast(toToastError(error));
@@ -70,17 +81,17 @@ export function AdminGroupsPageClient() {
     if (groupList === null) return <PageState state="error" />;
     if (groupList.length === 0) return <PageState state="empty" />;
     return (
-      <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
+      <ul className="divide-y divide-md-outline overflow-hidden rounded-card border border-md-outline bg-md-surface">
         {groupList.map((item) => (
           <li
             key={item.groupId}
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
           >
             <div>
-              <p className="font-medium text-md-on-surface">
+              <p className="font-semibold text-md-on-surface">
                 {item.name}
                 {item.isSystem ? (
-                  <span className="ml-2 rounded-sm bg-md-surface-container-high px-2 py-0.5 text-xs">
+                  <span className="ml-2 inline-flex h-5 items-center rounded-pill bg-md-surface-container-high px-2 text-[11px] font-semibold text-md-on-surface-variant">
                     {pageUi.systemBadge}
                   </span>
                 ) : null}
@@ -91,7 +102,7 @@ export function AdminGroupsPageClient() {
             </div>
             <Link
               href={`/admin/groups/${item.groupId}`}
-              className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
+              className={buttonClassName("outline", "sm")}
             >
               {pageUi.openDetail}
             </Link>
@@ -102,37 +113,52 @@ export function AdminGroupsPageClient() {
   }
 
   return (
-    <PageShell title={pageUi.title} description={pageUi.description}>
-      <form
-        onSubmit={(event) => {
-          void handleCreate(event);
-        }}
-        className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
-      >
-        <h2 className="mb-3 text-lg font-medium">{pageUi.createTitle}</h2>
-        <label htmlFor="admin-group-name" className="mb-1 block text-sm font-medium">
-          {pageUi.nameLabel}
-        </label>
-        <input
-          id="admin-group-name"
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-md-outline px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+    <PageShell
+      title={pageUi.title}
+      description={pageUi.description}
+      breadcrumbs={<Breadcrumbs items={[{ label: uiText.navigation.groups.tenantAccess }, { label: pageUi.title }]} />}
+      primaryActions={
+        <Button
+          variant="lead"
+          onClick={() => {
+            setToast(null);
+            setCreateDialogOpen(true);
+          }}
         >
-          {submitting ? pageUi.creating : pageUi.createSubmit}
-        </button>
-      </form>
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          {pageUi.createTitle}
+        </Button>
+      }
+    >
+      {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
 
       {renderListBody()}
 
-      {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        title={pageUi.createTitle}
+        dismissible={!submitting}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={submitting}>
+              {uiText.actions.cancel}
+            </Button>
+            <Button variant="lead" type="submit" form={CREATE_FORM_ID} loading={submitting}>
+              {submitting ? pageUi.creating : pageUi.createSubmit}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id={CREATE_FORM_ID}
+          onSubmit={(event) => {
+            void handleCreate(event);
+          }}
+        >
+          <TextField label={pageUi.nameLabel} type="text" required value={name} onChange={(e) => setName(e.target.value)} />
+        </form>
+      </Dialog>
     </PageShell>
   );
 }

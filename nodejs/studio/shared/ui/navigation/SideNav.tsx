@@ -195,7 +195,7 @@ type SideNavLinkProps = Readonly<{
 function SideNavLink({ item, label, isActive, isRail, onNavigate }: SideNavLinkProps) {
   const Icon = item.icon;
   const stateClassName = isActive
-    ? "bg-md-secondary-container font-semibold text-md-on-surface"
+    ? "bg-nav-item-active-bg font-semibold text-nav-item-active-fg"
     : "text-md-on-surface-variant hover:bg-md-surface-container hover:text-md-on-surface";
   return (
     <Link

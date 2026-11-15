@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
+import { buttonClassName } from "@/shared/ui/Button";
 import type { AdminServiceAccount } from "../types";
 
 /** ServiceAccount 一覧の行。 */
@@ -24,14 +25,14 @@ export function AdminServiceAccountList({ serviceAccounts }: Readonly<AdminServi
   const dateTimeLocale = getDateTimeLocale(locale);
 
   return (
-    <ul className="divide-y divide-md-outline rounded-xl border border-md-outline bg-md-surface">
+    <ul className="divide-y divide-md-outline overflow-hidden rounded-card border border-md-outline bg-md-surface">
       {serviceAccounts.map((serviceAccount) => (
         <li
           key={serviceAccount.serviceAccountId}
           className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
         >
           <div className="min-w-0">
-            <p className="font-medium text-md-on-surface">{serviceAccount.name}</p>
+            <p className="font-semibold text-md-on-surface">{serviceAccount.name}</p>
             <p className="text-xs text-md-on-surface-variant">
               {serviceAccount.isActive ? text.active : text.inactive}
               {` · ${serviceAccount.hasApiKey ? text.hasApiKey : text.noApiKey}`}
@@ -43,7 +44,7 @@ export function AdminServiceAccountList({ serviceAccounts }: Readonly<AdminServi
           </div>
           <Link
             href={`/admin/service-accounts/${encodeURIComponent(serviceAccount.serviceAccountId)}`}
-            className="rounded-lg border border-md-outline px-3 py-1.5 hover:bg-md-surface-container"
+            className={buttonClassName("outline", "sm")}
           >
             {text.openDetail}
           </Link>

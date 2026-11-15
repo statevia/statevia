@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { ExecutionNodeDTO, ExecutionView } from "../types";
 import { formatTracePayload } from "../lib/formatExecutionTrace";
-import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { resolveWaitResumeEvents } from "../lib/waitResumeEvents";
 import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { NodeDetailStatusPanels, NodeDetailTraceSection } from "./nodeDetailSections";
+import { Button } from "@/shared/ui/Button";
 
 type NodeDetailProps = {
   execution: ExecutionView | null;
   node: ExecutionNodeDTO | null;
   loading: boolean;
-  /** 選択したイベント名で Resume する。 */
-  onResume: (eventName: string) => void;
+  /** このノードを届け先に選んだ状態でイベント送信ダイアログを開く。 */
+  onSendToNode: () => void;
+  /** このノードへ送れない理由。送れるときは null。 */
   resumeDisabledReason: string | null;
   /** WAITING ノードの Resume に必要なイベント名（グラフ定義の Resume エッジから取得） */
   resumeEventName?: string | null;
-  /** false のとき Resume ボタンを表示しない。 */
-  showResumeAction?: boolean;
+  /** false のとき「このノードへ送る」を表示しない（executions.write が無いとき）。 */
+  showSendAction?: boolean;
   className?: string;
   /**
    * 同一状態の訪問移動。未指定または visible が false のときは出さない。
@@ -42,7 +43,6 @@ type NodeDetailProps = {
 /** ノード詳細パネル用の派生表示値。 */
 type NodeDetailDerivedFields = {
   style: ReturnType<typeof getStatusStyle>;
-  canResume: boolean;
   isWaiting: boolean;
   isCanceled: boolean;
   isFailed: boolean;
@@ -52,7 +52,6 @@ type NodeDetailDerivedFields = {
   conditionRoutingText: string;
   showTracePanel: boolean;
   allowedEventsLabel: string;
-  effectiveResumeEvent: string;
 };
 
 /**
@@ -60,14 +59,10 @@ type NodeDetailDerivedFields = {
  */
 function deriveNodeDetailFields(
   node: ExecutionNodeDTO,
-  resumeDisabledReason: string | null,
-  resumeEvents: string[],
-  selectedResumeEvent: string
+  resumeEvents: string[]
 ): NodeDetailDerivedFields {
-  const selected = selectedResumeEvent.trim();
   return {
     style: getStatusStyle(node.status),
-    canResume: !resumeDisabledReason,
     isWaiting: node.status === "WAITING",
     isCanceled: node.status === "CANCELED",
     isFailed: node.status === "FAILED",
@@ -84,73 +79,28 @@ function deriveNodeDetailFields(
       ("input" in node && node.input !== undefined) ||
       ("output" in node && node.output !== undefined) ||
       ("conditionRouting" in node && node.conditionRouting !== undefined),
-    allowedEventsLabel: resumeEvents.length > 0 ? resumeEvents.join(", ") : "—",
-    effectiveResumeEvent: selected.length > 0 ? selected : (resumeEvents[0] ?? "")
+    allowedEventsLabel: resumeEvents.length > 0 ? resumeEvents.join(", ") : "—"
   };
 }
 
-type NodeDetailResumeActionsProps = {
-  isWaiting: boolean;
-  resumeEvents: string[];
-  effectiveResumeEvent: string;
-  canResume: boolean;
+type NodeDetailSendActionProps = {
   loading: boolean;
   resumeDisabledReason: string | null;
-  onSelectedResumeEventChange: (eventName: string) => void;
-  onResume: (eventName: string) => void;
+  onSendToNode: () => void;
 };
 
 /**
- * WAITING ノード向けのイベント選択と Resume 操作 UI。
+ * 待機中のノードの「このノードへ送る」（要件 5.5）。届け先とイベントはイベント送信ダイアログで選ぶ。
  */
-function NodeDetailResumeActions({
-  isWaiting,
-  resumeEvents,
-  effectiveResumeEvent,
-  canResume,
-  loading,
-  resumeDisabledReason,
-  onSelectedResumeEventChange,
-  onResume
-}: Readonly<NodeDetailResumeActionsProps>) {
+function NodeDetailSendAction({ loading, resumeDisabledReason, onSendToNode }: Readonly<NodeDetailSendActionProps>) {
   const uiText = useUiText();
-  const subscribeResume = isSubscribeInternalResume(resumeEvents);
-  const selectLabel = subscribeResume
-    ? uiText.nodeDetail.waiting.selectInternalResumeEvent
-    : uiText.nodeDetail.waiting.selectResumeEvent;
   return (
-    <div className="mt-3 space-y-2">
-      {isWaiting && subscribeResume && (
-        <p className="whitespace-pre-line text-xs text-md-on-surface-variant">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
-      )}
-      {isWaiting && resumeEvents.length > 1 && (
-        <label className="block space-y-1 text-xs text-md-on-surface">
-          <span>{selectLabel}</span>
-          <select
-            className="w-full rounded-xl border border-md-outline bg-md-surface px-3 py-2 text-sm"
-            value={effectiveResumeEvent}
-            disabled={!canResume || loading}
-            onChange={(event) => onSelectedResumeEventChange(event.target.value)}
-          >
-            {resumeEvents.map((eventName) => (
-              <option key={eventName} value={eventName}>
-                {eventName}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <button
-        type="button"
-        className="w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={!canResume || loading || effectiveResumeEvent.length === 0}
-        onClick={() => onResume(effectiveResumeEvent)}
-      >
-        {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
-      </button>
-      {resumeDisabledReason && (
-        <p className="text-xs text-md-on-surface-variant">{resumeDisabledReason}</p>
-      )}
+    <div className="mt-3 space-y-2 border-t border-md-outline pt-3">
+      <p className="text-xs text-md-on-surface-variant">{uiText.executionDashboard.sendEvent.nodeOptionHint(null)}</p>
+      <Button variant="standard" disabled={!!resumeDisabledReason || loading} onClick={onSendToNode}>
+        {uiText.executionDashboard.sendEvent.sendToNode}
+      </Button>
+      {resumeDisabledReason && <p className="text-xs text-md-on-surface-variant">{resumeDisabledReason}</p>}
     </div>
   );
 }
@@ -160,10 +110,10 @@ export function NodeDetail({
   execution,
   node,
   loading,
-  onResume,
+  onSendToNode,
   resumeDisabledReason,
   resumeEventName,
-  showResumeAction = true,
+  showSendAction = true,
   className,
   nodeVisitNavigation
 }: Readonly<NodeDetailProps>) {
@@ -171,13 +121,6 @@ export function NodeDetail({
   const baseClassName = "rounded-2xl border border-md-outline bg-md-surface p-4 shadow-xs";
   const asideClassName = className ? `${baseClassName} ${className}` : baseClassName;
   const resumeEvents = node ? resolveWaitResumeEvents(node) : [];
-  const [selectedResumeEvent, setSelectedResumeEvent] = useState(resumeEvents[0] ?? "");
-  const resumeEventsKey = resumeEvents.join("\0");
-
-  useEffect(() => {
-    const nextEvents = resumeEventsKey.length > 0 ? resumeEventsKey.split("\0") : [];
-    setSelectedResumeEvent(nextEvents[0] ?? "");
-  }, [node?.nodeId, resumeEventsKey]);
 
   if (!execution) {
     return (
@@ -195,7 +138,7 @@ export function NodeDetail({
     );
   }
 
-  const fields = deriveNodeDetailFields(node, resumeDisabledReason, resumeEvents, selectedResumeEvent);
+  const fields = deriveNodeDetailFields(node, resumeEvents);
 
   return (
     <aside className={asideClassName}>
@@ -275,17 +218,8 @@ export function NodeDetail({
           />
         </div>
       </div>
-      {showResumeAction && (
-        <NodeDetailResumeActions
-          isWaiting={fields.isWaiting}
-          resumeEvents={resumeEvents}
-          effectiveResumeEvent={fields.effectiveResumeEvent}
-          canResume={fields.canResume}
-          loading={loading}
-          resumeDisabledReason={resumeDisabledReason}
-          onSelectedResumeEventChange={setSelectedResumeEvent}
-          onResume={onResume}
-        />
+      {showSendAction && fields.isWaiting && (
+        <NodeDetailSendAction loading={loading} resumeDisabledReason={resumeDisabledReason} onSendToNode={onSendToNode} />
       )}
     </aside>
   );

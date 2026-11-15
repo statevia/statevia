@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { DataList, type DataListColumn } from "@/shared/ui/DataList";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import { NAVIGATION_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
@@ -11,50 +12,84 @@ import type { ExecutionDTO } from "../types";
 export type ExecutionsListProps = {
   /** 現在ページの実行。 */
   items: readonly ExecutionDTO[];
-  /**
-   * 詳細を開く。
-   * @param displayId 実行の displayId。
-   */
-  onOpen: (displayId: string) => void;
 };
 
 /**
- * 実行一覧の行。ページングと空・失敗の出し分けは呼び出し側に残す。
- * @param props 行と詳細を開くコマンド。
- * @returns 実行のリスト。
+ * 実行一覧の列（状態・実行 ID・開始・更新）。
+ * @param text 実行一覧の辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @returns 列の定義。
  */
-export function ExecutionsList({ items, onOpen }: Readonly<ExecutionsListProps>) {
+function buildExecutionColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["executionsPage"],
+  dateTimeLocale: string
+): DataListColumn<ExecutionDTO>[] {
+  return [
+    {
+      id: "status",
+      header: text.columns.status,
+      width: "11rem",
+      hideLabelOnMobile: true,
+      cell: (execution) => <StatusBadge status={execution.status} waiting={execution.waiting} />
+    },
+    {
+      id: "execution",
+      header: text.columns.execution,
+      width: "minmax(0,1fr)",
+      hideLabelOnMobile: true,
+      cell: (execution) => (
+        <Link
+          href={`/executions/${encodeURIComponent(execution.displayId)}`}
+          className="block truncate font-mono text-md-primary hover:underline"
+          title={execution.displayId}
+        >
+          {execution.displayId}
+        </Link>
+      )
+    },
+    {
+      id: "startedAt",
+      header: text.columns.startedAt,
+      width: "10rem",
+      cell: (execution) => (
+        <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
+          {formatDateTimeLocalized(execution.startedAt, dateTimeLocale)}
+        </span>
+      )
+    },
+    {
+      id: "updatedAt",
+      header: text.columns.updatedAt,
+      width: "10rem",
+      align: "end",
+      cell: (execution) => (
+        <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
+          {formatDateTimeLocalized(execution.updatedAt ?? execution.startedAt, dateTimeLocale)}
+        </span>
+      )
+    }
+  ];
+}
+
+/**
+ * 実行一覧の行（共通の `DataList`。デスクトップは表、スマートフォンはカード）。ページングと空・失敗の出し分けは呼び出し側に残す。
+ * 実行 ID が詳細へのリンクを兼ねる。状態の列は幅を固定し、右の ID の開始位置を揃える。
+ * @param props 行。
+ * @returns 実行の一覧。
+ */
+export function ExecutionsList({ items }: Readonly<ExecutionsListProps>) {
   const { uiText, locale } = useI18n();
+  const text = uiText.executionsPage;
   const dateTimeLocale = getDateTimeLocale(locale);
 
+  const columns = buildExecutionColumns(text, dateTimeLocale);
+
   return (
-    <ul
-      className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs"
-      aria-label={uiText.lists.executions}
-    >
-      {items.map((execution) => {
-        const updated = execution.updatedAt ?? execution.startedAt;
-        return (
-          <li key={execution.displayId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={execution.status} />
-                <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
-                  {execution.displayId}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-md-on-surface-variant">{uiText.executionsPage.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
-            </div>
-            <button
-              type="button"
-              className={`shrink-0 ${NAVIGATION_BUTTON_CLASS}`}
-              onClick={() => onOpen(execution.displayId)}
-            >
-              {uiText.executionsPage.actions.openDetail}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <DataList
+      ariaLabel={uiText.lists.executions}
+      columns={columns}
+      items={items}
+      getRowKey={(execution) => execution.displayId}
+    />
   );
 }

@@ -8,6 +8,7 @@ export const mockExecution: ExecutionView = {
   startedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
   restartLost: false,
+  waiting: false,
   graphId: "hello",
   nodes: [
     { nodeId: "start", nodeType: "Start", status: "SUCCEEDED", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false },

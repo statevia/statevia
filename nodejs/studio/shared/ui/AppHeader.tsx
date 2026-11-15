@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import type { RefObject } from "react";
 import type { Locale } from "@/shared/i18n/i18n";
 import type { Theme } from "@/shared/lib/theme";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { BrandMark } from "./BrandMark";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
@@ -47,18 +47,11 @@ export function AppHeader({ theme, locale, showNavigation, isNavigationOpen = fa
               <Menu aria-hidden="true" className="h-6 w-6" />
             </button>
           ) : null}
-          <Link href={brandHref} className="inline-flex items-center gap-2">
-            <Image
-              src="/brand/icon-mark.png"
-              alt="statevia"
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded-md border border-white/20 object-cover"
-              priority
-            />
+          <Link href={brandHref} aria-label="statevia" className="inline-flex items-center gap-2">
+            <BrandMark size={32} className="h-8 w-8 shrink-0" />
             <span className="hidden text-[1.75rem] font-semibold leading-none tracking-wide sm:inline">
               <span>state</span>
-              <span className="text-emerald-400">via</span>
+              <span className="text-brand-header-accent">via</span>
             </span>
           </Link>
         </div>

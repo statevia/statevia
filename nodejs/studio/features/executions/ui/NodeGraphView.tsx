@@ -29,7 +29,7 @@ import type { NodeStatus } from "../types";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { GraphLegend } from "./GraphLegend";
 import { GraphNodeShell } from "@/shared/ui/GraphNodeShell";
-import { isSubscribeInternalResume, resolveWaitResumeEvents } from "../lib/waitResumeEvents";
+import { Button } from "@/shared/ui/Button";
 
 /** NodeDiffHighlight の型定義。 */
 export type NodeDiffHighlight = Record<string, { isFailureOrCancel: boolean }>;
@@ -49,11 +49,12 @@ type ExecutionNodeData = {
   allowedEvents?: string[] | null;
   selected: boolean;
   onSelect: (name: string) => void;
-  /** Resume API 呼び出し（nodeId + イベント名）。 */
-  onResume: (nodeId: string, eventName: string) => void;
+  /** このノードを届け先に選んだ状態でイベント送信ダイアログを開く（引数は実行ノード ID）。 */
+  onSendToNode: (nodeId: string) => void;
+  /** このノードへ送れない理由。送れるときは null。 */
   resumeDisabledReason: string | null;
-  /** 待機中のノードに再開の操作を出すか。executions.write を持たない利用者には出さない。 */
-  showResumeAction: boolean;
+  /** 待機中のノードに「このノードへ送る」を出すか。executions.write を持たない利用者には出さない。 */
+  showSendAction: boolean;
   /** 比較モード時の差分ハイライト（該当時のみ ring 表示） */
   diffHighlight?: { isFailureOrCancel: boolean } | null;
 };
@@ -92,8 +93,8 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   if (data.diffHighlight != null) {
     diffRing =
       data.diffHighlight.isFailureOrCancel === true
-        ? "ring-2 ring-red-500 ring-offset-1"
-        : "ring-2 ring-amber-400 ring-offset-1";
+        ? "ring-2 ring-md-error ring-offset-1"
+        : "ring-2 ring-md-warning ring-offset-1";
   }
 
   const nodeMainSection = (
@@ -113,8 +114,8 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   );
 
   const waitingResumeSection =
-    data.status === "WAITING" && data.showResumeAction ? (
-      <WaitingResumeControls data={data} isGateway={isGateway} />
+    data.status === "WAITING" && data.showSendAction ? (
+      <WaitingSendControl data={data} isGateway={isGateway} />
     ) : null;
 
   // Wait はレイアウト高さとカードの高さがずれる。枠に h-full で合わせると、待機中はカード途中から、完了後はカード下端から離れた位置から出辺が出る。
@@ -158,56 +159,28 @@ function ExecutionNodeComponent({ data }: NodeProps<ExecutionNodeData>) {
   );
 }
 
-function WaitingResumeControls({
+/**
+ * 待機中のノードの「このノードへ送る」。届け先とイベントはイベント送信ダイアログで選ぶ。
+ */
+function WaitingSendControl({
   data,
   isGateway
 }: Readonly<{ data: ExecutionNodeData; isGateway: boolean }>) {
   const uiText = useUiText();
-  const resumeEvents = resolveWaitResumeEvents(data);
-  const subscribeResume = isSubscribeInternalResume(resumeEvents);
-  const resumeEventsKey = resumeEvents.join("\0");
-  const [selectedEvent, setSelectedEvent] = useState(resumeEvents[0] ?? "");
-  const effectiveEvent =
-    selectedEvent.trim().length > 0 ? selectedEvent.trim() : (resumeEvents[0] ?? "");
-  const disabled = !!data.resumeDisabledReason || effectiveEvent.length === 0;
-
-  useEffect(() => {
-    const nextEvents = resumeEventsKey.length > 0 ? resumeEventsKey.split("\0") : [];
-    setSelectedEvent(nextEvents[0] ?? "");
-  }, [data.nodeId, resumeEventsKey]);
-
   return (
     <div className={`shrink-0 ${isGateway ? "mt-2" : "mt-3"} space-y-1`}>
-      {subscribeResume && (
-        <p className="whitespace-pre-line text-[10px] text-md-on-surface-variant">{uiText.nodeDetail.waiting.subscribeOnlyHint}</p>
-      )}
-      {resumeEvents.length > 1 && (
-        <select
-          className="nodrag w-full rounded-lg border border-md-outline-variant bg-md-surface px-1.5 py-1 text-[10px]"
-          value={effectiveEvent}
-          disabled={disabled}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => setSelectedEvent(event.target.value)}
-          aria-label={subscribeResume ? uiText.nodeDetail.waiting.selectInternalResumeEvent : uiText.nodeDetail.waiting.selectResumeEvent}
-        >
-          {resumeEvents.map((eventName) => (
-            <option key={eventName} value={eventName}>
-              {eventName}
-            </option>
-          ))}
-        </select>
-      )}
-      <button
-        type="button"
-        className="nodrag w-full cursor-pointer rounded-lg bg-amber-500 px-2 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
+        variant="standard"
+        size="sm"
+        className="nodrag w-full"
         onClick={(event) => {
           event.stopPropagation();
-          data.onResume(data.nodeId, effectiveEvent);
+          data.onSendToNode(data.nodeId);
         }}
-        disabled={disabled}
+        disabled={!!data.resumeDisabledReason}
       >
-        {subscribeResume ? uiText.nodeDetail.waiting.subscribeResumeAction : uiText.actions.resume}
-      </button>
+        {uiText.executionDashboard.sendEvent.sendToNode}
+      </Button>
       {data.resumeDisabledReason && (
         <p className="mt-1 text-[10px] text-md-on-surface-variant">{data.resumeDisabledReason}</p>
       )}
@@ -260,10 +233,14 @@ type NodeGraphViewProps = {
   /** 選択中訪問の状態名。キャンバスは 1 ノードのまま、この名前で選択表示する。 */
   selectedNodeName?: string | null;
   onSelectNode: (nodeId: string | null) => void;
-  onResumeNode: (nodeId: string, eventName: string) => void;
+  /**
+   * 待機中のノードの「このノードへ送る」を押したとき。
+   * @param nodeId 実行ノード ID。
+   */
+  onSendToNode: (nodeId: string) => void;
   getResumeDisabledReason: (nodeId: string) => string | null;
-  /** 待機中のノードに再開の操作を出すか。executions.write を持たない利用者には false を渡す。 */
-  showResumeAction: boolean;
+  /** 待機中のノードに「このノードへ送る」を出すか。executions.write を持たない利用者には false を渡す。 */
+  showSendAction: boolean;
   heightClassName?: string;
   /** 復元する viewport（指定時は fitView を行わずこの位置・ズームで表示） */
   defaultViewport?: GraphViewport;
@@ -281,9 +258,9 @@ export function NodeGraphView({
   selectedNodeId,
   selectedNodeName = null,
   onSelectNode,
-  onResumeNode,
+  onSendToNode,
   getResumeDisabledReason,
-  showResumeAction,
+  showSendAction,
   heightClassName,
   defaultViewport,
   onViewportChange,
@@ -324,9 +301,9 @@ export function NodeGraphView({
           allowedEvents: node.allowedEvents ?? null,
           selected: false,
           onSelect: (id: string) => onSelectNode(id),
-          onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
+          onSendToNode: (id: string) => onSendToNode(id),
           resumeDisabledReason: getResumeDisabledReason(node.name),
-          showResumeAction,
+          showSendAction,
           diffHighlight: nodeDiffHighlight?.[node.nodeId] ?? null
         },
         style: sizedToContent ? { width: node.w } : { width: node.w, height: node.h }
@@ -334,7 +311,7 @@ export function NodeGraphView({
     });
 
     return [...groupNodes, ...executionNodes];
-  }, [groups, nodes, onResumeNode, onSelectNode, getResumeDisabledReason, showResumeAction, nodeDiffHighlight]);
+  }, [groups, nodes, onSendToNode, onSelectNode, getResumeDisabledReason, showSendAction, nodeDiffHighlight]);
 
   const [rfNodes, setRfNodes] = useState<Array<Node<ExecutionNodeData | GroupNodeData>>>([]);
 
@@ -363,14 +340,14 @@ export function NodeGraphView({
             selectedNodeName
           ),
           resumeDisabledReason: getResumeDisabledReason(d.name),
-          showResumeAction,
+          showSendAction,
           onSelect: (id: string) => onSelectNode(id),
-          onResume: (id: string, eventName: string) => onResumeNode(id, eventName),
+          onSendToNode: (id: string) => onSendToNode(id),
           diffHighlight: nodeDiffHighlight?.[d.nodeId] ?? null
         }
       };
     });
-  }, [syncedNodes, selectedNodeId, selectedNodeName, onSelectNode, onResumeNode, getResumeDisabledReason, showResumeAction, nodeDiffHighlight]);
+  }, [syncedNodes, selectedNodeId, selectedNodeName, onSelectNode, onSendToNode, getResumeDisabledReason, showSendAction, nodeDiffHighlight]);
 
   const graphEdges = useMemo(() => buildGraphEdges(edges), [edges]);
 

@@ -5,13 +5,38 @@
 export type ExecutionsFeatureUiText = {
   /** 実行ダッシュボードの文言。 */
   executionDashboard: {
-    header: {
-      titleDefault: string;
-    };
-    actions: {
-      sectionTitle: string;
+    /** 一覧とグラフを切り替えるセグメントの aria-label。 */
+    viewModeLabel: string;
+    /** イベント送信ダイアログ（届け先を選んで待機中の実行へイベントを届ける）。 */
+    sendEvent: {
+      open: string;
+      title: string;
+      descriptionNone: (executionId: string) => string;
+      descriptionSingle: (executionId: string, nodeName: string) => string;
+      descriptionMulti: (executionId: string, count: number) => string;
+      targetLabel: string;
+      nodeOptionLabel: (nodeName: string, eventName: string | null) => string;
+      nodeOptionHint: (waitingSince: string | null) => string;
+      nodeEventSelectLabel: (nodeName: string) => string;
+      executionOptionLabel: string;
+      executionOptionHint: string;
       eventNameLabel: string;
       eventNamePlaceholder: string;
+      previewNode: (nodeName: string, remainingNodeNames: readonly string[]) => string;
+      previewExecution: string;
+      submit: string;
+      cancel: string;
+      sendToNode: string;
+      sendThisEvent: string;
+    };
+    /** 見出しの下の待機のお知らせ。 */
+    waitNotice: {
+      singleTitle: (nodeName: string) => string;
+      singleBody: (eventNames: string) => string;
+      multiTitle: (count: number) => string;
+      multiBody: string;
+      waitingSince: (time: string) => string;
+      listLabel: string;
     };
     validation: {
       eventNameTooLong: string;
@@ -86,14 +111,8 @@ export type ExecutionsFeatureUiText = {
       title: string;
       reasonWaitByWaitKeyAndResumeWait: string;
       resumeEventName: (eventName: string) => string;
-      /** 複数イベント時の選択ラベル。 */
-      selectResumeEvent: string;
-      /** Subscribe の内部イベント名を選ぶラベル。 */
-      selectInternalResumeEvent: string;
       /** この実行だけの副操作であることの説明。 */
       subscribeOnlyHint: string;
-      /** Subscribe Resume のボタン。 */
-      subscribeResumeAction: string;
     };
     cancel: {
       detailTitle: (cancelLabel: string) => string;
@@ -145,12 +164,10 @@ export type ExecutionsFeatureUiText = {
   },
   /** 実行のヘッダーの文言。 */
   executionHeader: {
-    placeholderExecutionId: string;
-    executionIdLabel: (executionLabel: string) => string;
+    startedAt: (time: string) => string;
+    cancelRequested: string;
     compareLabel: string;
     realtimeSseLabel: string;
-    cancelRequestedLabel: string;
-    cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) => string;
 
   },
   /** 実行一覧画面の文言。 */
@@ -161,33 +178,38 @@ export type ExecutionsFeatureUiText = {
       prev: string;
       next: string;
     };
+    /** 一覧の見出しの下の説明。 */
+    description: string;
     filter: {
-      contextActivePrefix: string;
-      clearDefinition: string;
-      title: string;
       all: string;
       definitionInputHint: string;
       definitionLabelWithHint: (definitionLabel: string) => string;
       definitionPlaceholder: string;
       nameInputHint: string;
       search: string;
-      clear: string;
-      sortByLabel: string;
-      sortOrderLabel: string;
+      /** 並び順の選択欄のラベル。選択肢は項目と順序を組み合わせて作る。 */
+      sortLabel: string;
+      /** 実行 ID の検索語のチップ。 */
+      nameChip: (keyword: string) => string;
+      /** 定義 ID のチップ。 */
+      definitionChip: (definitionId: string) => string;
       sortByUpdatedAt: string;
       sortByDisplayId: string;
+      sortByStartedAt: string;
+      needsAttention: string;
       sortOrderDesc: string;
       sortOrderAsc: string;
       invalidName: string;
       invalidDefinitionId: string;
-      /** 1 ページの表示件数の説明。 */
-      pageInfo: (limit: number) => string;
     };
     loading: string;
     listSummary: (totalCount: number, page: number) => string;
-    updatedAt: (formattedDateTime: string) => string;
-    actions: {
-      openDetail: string;
+    /** 一覧の列の見出し。 */
+    columns: {
+      status: string;
+      execution: string;
+      startedAt: string;
+      updatedAt: string;
     };
     ingress: {
       open: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { NAVIGATION_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
+import { buttonClassName } from "@/shared/ui/Button";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 
 type ActionLinkPriority = "primary" | "secondary";
@@ -12,7 +12,7 @@ export type ActionLinkItem = {
   label: string;
   /** 遷移先のパス。 */
   href: string;
-  /** 見た目の強さ。`primary` は主操作の CTA、`secondary` はナビゲーションボタン。省略すると `secondary`。 */
+  /** 見た目の強さ。`primary` は紺のボタン、`secondary` は枠線のボタン。主導線の緑にはしない（戻り・関連の導線のため）。省略すると `secondary`。 */
   priority?: ActionLinkPriority;
 };
 
@@ -22,9 +22,8 @@ type ActionLinkGroupProps = {
 };
 
 const ACTION_LINK_CLASS_MAP: Record<ActionLinkPriority, string> = {
-  primary:
-    "rounded-md border-2 border-brand-cta-border bg-brand-cta-bg px-3 py-1.5 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover",
-  secondary: NAVIGATION_BUTTON_CLASS
+  primary: buttonClassName("standard"),
+  secondary: buttonClassName("outline")
 };
 
 function getLinkClass(priority: ActionLinkPriority): string {

@@ -57,7 +57,8 @@ const executionDto = (): ExecutionDTO => ({
   status: "ACTIVE",
   startedAt: "2026-01-01T00:00:00Z",
   cancelRequested: false,
-  restartLost: false
+  restartLost: false,
+  waiting: false
 });
 
 describe("useExecutionDashboard の訪問選択", () => {
@@ -164,29 +165,44 @@ describe("useExecutionDashboard の訪問選択", () => {
     expect(result.current.selectedNodeId).toBeNull();
   });
 
-  it("Resume は選択中の訪問を送り、残っていない ID は送らない", async () => {
+  it("このノードへ送るは選択中の訪問を届け先にし、残っていない ID は届け先にしない", async () => {
     // Arrange
     const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
-    act(() => {
-      result.current.onResumeNode("latest", "Again");
-      result.current.onResumeSelectedNode("Again");
-    });
     await loadUntilLatest(result);
 
     // Act
     act(() => {
-      result.current.onResumeNode("missing", "Again");
-      result.current.onResumeSelectedNode("Again");
+      result.current.onOpenSendEvent("latest");
+    });
+    const opened = result.current.sendEventDialog;
+    act(() => {
+      result.current.onOpenSendEvent("missing");
     });
 
     // Assert
-    await waitFor(() => {
-      expect(vi.mocked(api.apiPost)).toHaveBeenCalledWith(
-        "/executions/ex-1/nodes/latest/resume",
-        { resumeKey: "Again" }
-      );
+    expect(opened).toEqual({ initialNodeId: "latest" });
+    expect(result.current.sendEventDialog).toEqual({ initialNodeId: null });
+  });
+
+  it("ノードへ送ると resume を呼び、受理されたらダイアログを閉じる", async () => {
+    // Arrange
+    const { result } = renderHook(() => useExecutionDashboard({ initialExecutionId: "ex-1" }), { wrapper: withExecutionsWrite });
+    await loadUntilLatest(result);
+    act(() => {
+      result.current.onOpenSendEvent("latest");
     });
-    expect(vi.mocked(api.apiPost).mock.calls.some((call) => String(call[0]).includes("missing"))).toBe(false);
+
+    // Act
+    let error: string | null = "not-called";
+    await act(async () => {
+      error = await result.current.onSendEvent({ kind: "node", nodeId: "latest", eventName: "Again" });
+    });
+
+    // Assert
+    expect(error).toBeNull();
+    expect(vi.mocked(api.apiPost)).toHaveBeenCalledWith("/executions/ex-1/nodes/latest/resume", { resumeKey: "Again" });
+    expect(result.current.sendEventDialog).toBeNull();
+    expect(result.current.toast).toEqual({ tone: "success", message: "再開を受け付けました。" });
   });
 
   it("消えた訪問は同じ状態の最新へ移す", async () => {

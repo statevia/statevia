@@ -5,7 +5,6 @@
 export type DefinitionEditorFeatureUiText = {
   /** 定義エディタ画面の文言。 */
   definitionEditor: {
-    backToDetail: string;
     descriptionCreating: string;
     descriptionEditingTarget: (definitionId: string) => string;
     loadingMeta: string;
@@ -37,6 +36,14 @@ export type DefinitionEditorFeatureUiText = {
       downloadYaml: string;
       confirmOverwrite: string;
       cancelOverwrite: string;
+      /** YAML の読み込みで未保存の変更を上書きする確認の見出し。 */
+      overwriteConfirmTitle: string;
+      /** 同じ確認の本文。 */
+      overwriteConfirmMessage: string;
+      /** YAML とグラフを切り替えるセグメントの aria-label。 */
+      editorModeLabel: string;
+      /** 画面下の操作バーに出す、保存していない変更があることの表示。 */
+      unsavedChanges: string;
     };
     graph: {
       /** ノード編集の `name` 欄のラベル。YAML のキーのまま出す。 */

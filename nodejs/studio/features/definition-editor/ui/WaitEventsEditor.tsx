@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/shared/ui/Button";
 
 /** Wait `events` 行編集 UI 向けの i18n 文言。 */
 export type WaitEventsEditorLabels = {
@@ -113,14 +114,14 @@ export function WaitEventsEditor({
           }}
         />
       ))}
-      <button
-        type="button"
-        className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
+      <Button
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={addRow}
       >
         {labels.waitEventsAdd}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -188,14 +189,14 @@ function WaitEventRowEditor({
           }}
         />
       </label>
-      <button
-        type="button"
-        className="rounded-sm border border-md-outline-variant px-2 py-1 text-xs disabled:opacity-50"
+      <Button
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={onRemove}
       >
         {labels.waitEventsRemove}
-      </button>
+      </Button>
     </div>
   );
 }

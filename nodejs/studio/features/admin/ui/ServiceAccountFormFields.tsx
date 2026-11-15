@@ -1,6 +1,7 @@
 "use client";
 
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { TextField } from "@/shared/ui/TextField";
 import { ASCII_LABEL_DEFAULT_MAX_LENGTH } from "@/shared/lib/validation/formRules";
 import type { ServiceAccountFieldErrorKind } from "../serviceAccounts";
 import type { AdminGroupListItem } from "../types";
@@ -62,34 +63,19 @@ function nameErrorMessage(
  */
 export function ServiceAccountNameField({ id, value, onChange, error }: Readonly<ServiceAccountNameFieldProps>) {
   const text = useUiText().admin.serviceAccounts;
-  const hintId = `${id}-hint`;
-  const errorId = `${id}-error`;
 
   return (
-    <div className="mb-4">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
-        {text.nameLabel}
-      </label>
-      <input
-        id={id}
-        type="text"
-        autoComplete="off"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error !== undefined}
-        aria-describedby={error === undefined ? hintId : errorId}
-        className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-      />
-      {error === undefined ? (
-        <p id={hintId} className="mt-1 text-xs text-md-on-surface-variant">
-          {text.nameHint}
-        </p>
-      ) : (
-        <p id={errorId} className="mt-1 text-xs text-md-error">
-          {nameErrorMessage(error, text)}
-        </p>
-      )}
-    </div>
+    <TextField
+      id={id}
+      label={text.nameLabel}
+      type="text"
+      required
+      autoComplete="off"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      hint={text.nameHint}
+      error={error === undefined ? undefined : nameErrorMessage(error, text)}
+    />
   );
 }
 
@@ -122,7 +108,7 @@ export function ServiceAccountGroupsField({
   }
   return (
     <fieldset aria-describedby={error === undefined ? undefined : errorId}>
-      <legend className="mb-2 text-sm font-medium">{text.groupsLabel}</legend>
+      <legend className="mb-2 text-sm font-medium after:ml-1 after:text-md-error after:content-['*']">{text.groupsLabel}</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {groups.map((group) => (
           <label key={group.groupId} className="flex items-center gap-2 text-sm">

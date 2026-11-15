@@ -1,9 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useI18n } from "@/shared/i18n/uiTextContext";
 import { ASCII_LABEL_DEFAULT_MAX_LENGTH } from "@/shared/lib/validation/formRules";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button } from "@/shared/ui/Button";
+import { FieldLabel, inputClassName } from "@/shared/ui/FormField";
+import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
@@ -20,8 +23,11 @@ type ScheduleFormPageClientProps = {
 
 type FormText = ReturnType<typeof useI18n>["uiText"]["schedules"]["form"];
 
-/** 入力欄の見た目。 */
-const INPUT_CLASS = "w-full rounded-lg border border-md-outline bg-md-surface px-3 py-2 text-sm";
+/** 1 行の入力欄と選択欄の見た目。 */
+const INPUT_CLASS = inputClassName({ className: "h-9" });
+
+/** テキストエリアの見た目。 */
+const TEXTAREA_CLASS = inputClassName({ className: "py-2" });
 
 /** 選べる overlap の値。 */
 const OVERLAP_POLICIES: readonly ScheduleOverlapPolicy[] = ["skip", "allow"];
@@ -101,6 +107,8 @@ type FieldProps = {
   label: string;
   /** 補足。 */
   hint?: string;
+  /** 必須か。項目名の右に「*」を付ける（検証は `validateSchedule*` が行う）。 */
+  required?: boolean;
   /** 欄。項目エラーと API の失敗の置き場所に使う。 */
   field: ScheduleField;
   /** フォームの状態。 */
@@ -114,20 +122,20 @@ type FieldProps = {
  * @param props 欄の情報と入力要素。
  * @returns 1 欄。
  */
-function Field({ id, label, hint, field, form, children }: Readonly<FieldProps>) {
+function Field({ id, label, hint, required, field, form, children }: Readonly<FieldProps>) {
   const text = useI18n().uiText.schedules.form;
   const kind = form.fieldErrors[field];
   const failure = form.submitFailure;
 
   return (
-    <div className="mb-4">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
-        {label}
+    <div>
+      <label htmlFor={id} className="block">
+        <FieldLabel label={label} required={required} />
       </label>
       {children}
       {hint ? <p className="mt-1 text-xs text-md-on-surface-variant">{hint}</p> : null}
       {kind === undefined ? null : (
-        <p className="mt-1 text-sm text-md-error" role="alert">
+        <p className="mt-1 text-xs text-md-error" role="alert">
           {fieldErrorMessage(field, kind, text)}
         </p>
       )}
@@ -171,7 +179,7 @@ function DefinitionSelect({ form }: Readonly<ScheduleFormProps>) {
         ))}
       </select>
       {form.definitionOptions === null ? (
-        <p className="mt-1 text-sm text-md-error">{text.definitionsLoadFailed}</p>
+        <p className="mt-1 text-xs text-md-error">{text.definitionsLoadFailed}</p>
       ) : null}
       {form.definitionOptions?.hasMore ? (
         <p className="mt-1 text-xs text-md-on-surface-variant">
@@ -210,7 +218,7 @@ function RunAsSelect({ form }: Readonly<ScheduleFormProps>) {
           </option>
         ))}
       </select>
-      {form.runAsCandidates === null ? <p className="mt-1 text-sm text-md-error">{text.runAsLoadFailed}</p> : null}
+      {form.runAsCandidates === null ? <p className="mt-1 text-xs text-md-error">{text.runAsLoadFailed}</p> : null}
       {form.runAsCandidates?.length === 0 ? (
         <p className="mt-1 text-xs text-md-on-surface-variant">{text.runAsEmpty}</p>
       ) : null}
@@ -233,17 +241,13 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
     <form
       noValidate
       onSubmit={(event) => void form.submit(event)}
-      className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
+      className="flex flex-col gap-4 rounded-card border border-md-outline bg-md-surface p-5"
     >
       {failure !== null && failurePlacement(failure) === "top" ? (
-        <div className="mb-3">
-          <ScheduleWriteErrorMessage failure={failure.failure} fallbackMessage={failure.fallbackMessage} />
-        </div>
+        <ScheduleWriteErrorMessage failure={failure.failure} fallbackMessage={failure.fallbackMessage} />
       ) : null}
-      {form.unchanged ? (
-        <output className="mb-3 block text-sm text-md-on-surface-variant">{text.unchanged}</output>
-      ) : null}
-      <Field id="schedule-name" label={text.nameLabel} hint={text.nameHint} field="name" form={form}>
+      {form.unchanged ? <Notice tone="info" title={text.unchanged} /> : null}
+      <Field required id="schedule-name" label={text.nameLabel} hint={text.nameHint} field="name" form={form}>
         <input
           id="schedule-name"
           className={INPUT_CLASS}
@@ -251,7 +255,7 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
           onChange={(event) => form.setValue("name", event.target.value)}
         />
       </Field>
-      <Field id="schedule-definition" label={text.definitionLabel} field="definitionId" form={form}>
+      <Field required id="schedule-definition" label={text.definitionLabel} field="definitionId" form={form}>
         <DefinitionSelect form={form} />
       </Field>
       <Field
@@ -269,7 +273,7 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
           onChange={(event) => form.setValue("definitionVersion", event.target.value)}
         />
       </Field>
-      <Field id="schedule-cron" label={text.cronLabel} hint={text.cronHint} field="cronExpression" form={form}>
+      <Field required id="schedule-cron" label={text.cronLabel} hint={text.cronHint} field="cronExpression" form={form}>
         <input
           id="schedule-cron"
           className={`${INPUT_CLASS} font-mono`}
@@ -277,7 +281,7 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
           onChange={(event) => form.setValue("cronExpression", event.target.value)}
         />
       </Field>
-      <Field id="schedule-time-zone" label={text.timeZoneLabel} hint={text.timeZoneHint} field="timeZone" form={form}>
+      <Field required id="schedule-time-zone" label={text.timeZoneLabel} hint={text.timeZoneHint} field="timeZone" form={form}>
         <input
           id="schedule-time-zone"
           className={INPUT_CLASS}
@@ -302,7 +306,7 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
           ))}
         </select>
       </Field>
-      <Field id="schedule-run-as" label={text.runAsLabel} field="runAsPrincipalId" form={form}>
+      <Field required id="schedule-run-as" label={text.runAsLabel} field="runAsPrincipalId" form={form}>
         <RunAsSelect form={form} />
       </Field>
       <Field
@@ -315,28 +319,27 @@ function ScheduleForm({ form }: Readonly<ScheduleFormProps>) {
         <textarea
           id="schedule-input"
           rows={6}
-          className={`${INPUT_CLASS} font-mono`}
+          className={`${TEXTAREA_CLASS} font-mono`}
           value={form.values.inputText}
           onChange={(event) => form.setValue("inputText", event.target.value)}
         />
       </Field>
-      <div className="mb-4">
-        <label className="flex items-center gap-2 text-sm font-medium">
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-md-on-surface">
           <input
             type="checkbox"
+            className="h-4 w-4 accent-brand-lead-bg"
             checked={form.values.enabled}
             onChange={(event) => form.setValue("enabled", event.target.checked)}
           />
           {text.enabledLabel}
         </label>
       </div>
-      <button
-        type="submit"
-        disabled={form.saving}
-        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-      >
-        {submitLabel(form, text)}
-      </button>
+      <div className="flex justify-end border-t border-md-outline-variant pt-4">
+        <Button variant="lead" type="submit" loading={form.saving}>
+          {submitLabel(form, text)}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -363,40 +366,37 @@ export function ScheduleFormPageClient({ scheduleId }: Readonly<ScheduleFormPage
   const text = useI18n().uiText.schedules.form;
   const form = useScheduleForm(scheduleId);
   const title = form.isEdit ? text.editTitle : text.createTitle;
-  const backLink = (
-    <Link href="/schedules" className="hover:underline">
-      {text.backToList}
-    </Link>
-  );
+  const listText = useI18n().uiText.schedules;
+  const breadcrumbs = <Breadcrumbs items={[{ label: listText.title, href: "/schedules" }, { label: title }]} />;
 
   switch (form.loadState) {
     case "loading":
       return (
-        <PageShell title={title} secondaryActions={backLink}>
+        <PageShell title={title} breadcrumbs={breadcrumbs}>
           <PageState state="loading" />
         </PageShell>
       );
     case "notFound":
       return (
-        <PageShell title={title} secondaryActions={backLink}>
+        <PageShell title={title} breadcrumbs={breadcrumbs}>
           <PageState state="empty" message={text.notFound} />
         </PageShell>
       );
     case "forbidden":
       return (
-        <PageShell title={title} secondaryActions={backLink}>
+        <PageShell title={title} breadcrumbs={breadcrumbs}>
           <PageState state="empty" message={text.forbidden} />
         </PageShell>
       );
     case "error":
       return (
-        <PageShell title={title} secondaryActions={backLink}>
+        <PageShell title={title} breadcrumbs={breadcrumbs}>
           <PageState state="error" message={text.loadFailed} onRetry={() => void form.reload()} />
         </PageShell>
       );
     case "ready":
       return (
-        <PageShell title={title} secondaryActions={backLink}>
+        <PageShell title={title} breadcrumbs={breadcrumbs}>
           <Toast toast={form.toast} onClose={form.clearToast} />
           <ScheduleForm form={form} />
         </PageShell>

@@ -82,7 +82,7 @@ export function useDefinitionDetail(
   }, [load]);
 
   /**
-   * 論理削除のインライン二段階確認を進める。
+   * 論理削除の二段階確認を進める。1 回目で確認ダイアログを開き、確定で削除する。
    * UI 側は戻り Promise を `.catch` で扱う（エラー表示は本関数内で完結）。
    */
   const handleDeleteClick = useCallback(async () => {

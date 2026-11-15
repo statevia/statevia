@@ -5,6 +5,7 @@ import type { ExecutionDiffResult, NodeDiffItem } from "../lib/executionDiff";
 import { toDisplayValue } from "@/shared/lib/displayValue";
 import { getStatusStyle } from "@/shared/lib/statusStyle";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
 
 type ExecutionComparisonBarProps = {
   executionLeft: ExecutionView | null;
@@ -41,7 +42,7 @@ function DiffRow({
       <span
         className={
           item.isFailureOrCancel
-            ? "font-semibold text-red-700"
+            ? "font-semibold text-md-error"
             : "font-medium text-md-on-surface"
         }
       >
@@ -110,14 +111,9 @@ export function ExecutionComparisonBar({
               onChange={(e) => onExecutionIdRightChange(e.target.value)}
               placeholder={uiText.executionComparison.executionIdPlaceholder}
             />
-            <button
-              type="button"
-              className="rounded-lg border border-md-outline-variant bg-md-surface-container px-3 py-1.5 text-xs font-medium text-md-on-surface hover:bg-md-surface-container-high disabled:opacity-50"
-              onClick={onLoadRight}
-              disabled={loadingRight}
-            >
+            <Button variant="outline" size="sm" onClick={onLoadRight} loading={loadingRight}>
               {loadingRight ? uiText.actions.loading : uiText.actions.load}
-            </button>
+            </Button>
           </div>
           {executionRight && (
             <div className="mt-1 text-xs text-md-on-surface-variant">
@@ -131,7 +127,7 @@ export function ExecutionComparisonBar({
             <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-md-outline bg-(--md-sys-color-surface-container)/60">
               {failureOrCancelDiffs.length > 0 && (
                 <div className="border-b border-md-outline px-2 py-1.5">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-md-error">
                     {uiText.executionComparison.summary.failedOrCancelled}
                   </div>
                   {failureOrCancelDiffs.map((item) => (

@@ -41,7 +41,6 @@ function dedupeEventNames(eventNames: string[]): string[] {
 
 const SUBSCRIBE_INTERNAL_EVENT_PREFIX = "statevia.event.subscribe.";
 
-const TERMINAL_EXECUTION_STATUSES = new Set(["COMPLETED", "CANCELED", "FAILED"]);
 
 /**
  * Resume 候補が Subscribe の内部イベント名だけか。
@@ -53,33 +52,4 @@ export function isSubscribeInternalResume(eventNames: readonly string[]): boolea
     eventNames.length > 0 &&
     eventNames.every((eventName) => eventName.startsWith(SUBSCRIBE_INTERNAL_EVENT_PREFIX))
   );
-}
-
-/**
- * 上部「イベント送信」（PublishEvent シム）が使えるか。
- * Engine と同様に「WAITING の Wait がちょうど 1 件かつ許可イベントが 1 件」のときだけ true。
- *
- * @param execution 実行ビュー。未読込・終端・Cancel 要求済みなら false。
- * @returns PublishEvent UI を出してよいとき true。
- */
-export function isPublishEventAvailable(execution: {
-  status: string;
-  cancelRequested?: boolean;
-  nodes: ReadonlyArray<{
-    status: string;
-    allowedEvents?: readonly string[] | null;
-    waitKey?: string | null;
-  }>;
-} | null): boolean {
-  if (!execution) return false;
-  if (execution.cancelRequested) return false;
-  if (TERMINAL_EXECUTION_STATUSES.has(execution.status)) return false;
-
-  const waitingNodes = execution.nodes.filter((node) => node.status === "WAITING");
-  if (waitingNodes.length !== 1) return false;
-
-  const [soleWaitingNode] = waitingNodes;
-  if (!soleWaitingNode) return false;
-
-  return resolveWaitResumeEvents(soleWaitingNode).length === 1;
 }

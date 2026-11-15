@@ -4,10 +4,6 @@ import { AppHeader } from "@/shared/ui/AppHeader";
 import { uiText } from "@/shared/i18n/uiText";
 import { UiTextProvider } from "@/shared/i18n/uiTextContext";
 
-vi.mock("next/image", () => ({
-  default: ({ alt }: { alt: string }) => <img alt={alt} />
-}));
-
 vi.mock("@/shared/ui/ThemeToggle", () => ({
   ThemeToggle: () => <span data-testid="theme-toggle">theme</span>
 }));
@@ -57,6 +53,17 @@ describe("AppHeader", () => {
     expect(screen.queryByTestId("user-menu")).toBeNull();
     expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
     expect(document.querySelector('header a[href="/login"]')).not.toBeNull();
+  });
+
+  it("ブランドのリンクに枠なしのマークを出し、狭い幅でも名前を読み上げられる", () => {
+    // Arrange & Act
+    renderHeader(true);
+
+    // Assert
+    const brandLink = screen.getByRole("link", { name: "statevia" });
+    expect(brandLink).toHaveAttribute("href", "/dashboard");
+    expect(brandLink.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(brandLink.querySelector("img")).toBeNull();
   });
 
   it("メニューボタン押下で親へ通知する", () => {

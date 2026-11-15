@@ -21,6 +21,11 @@ export type ExecutionDTO = {
   cancelRequested: boolean;
   /** 再起動で失われたか。 */
   restartLost: boolean;
+  /**
+   * 待機中か（`ACTIVE` で、人や外部の入力を待つ Wait を自身か子の実行が持つ）。状態の値ではない（U1）。
+   * @remarks 投影から読むため、グラフより遅れて変わることがある。
+   */
+  waiting: boolean;
 };
 
 /**

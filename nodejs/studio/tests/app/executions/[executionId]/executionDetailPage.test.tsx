@@ -36,7 +36,6 @@ vi.mock("@/features/executions/hooks/useGraphData", () => ({
 }));
 
 vi.mock("@/features/executions/hooks/useNodeCommands", () => ({
-  useNodeCommands: () => ({ resumeNode: vi.fn(), cancelNode: vi.fn(), publishEvent: vi.fn() }),
   getResumeDisabledReason: () => null
 }));
 
@@ -58,6 +57,7 @@ describe("ExecutionDetailPage", () => {
         startedAt: "2026-01-01T00:00:00Z",
         cancelRequested: false,
         restartLost: false,
+        waiting: false,
         nodes: []
       },
       loading: false,
@@ -65,7 +65,6 @@ describe("ExecutionDetailPage", () => {
       terminal: false,
       loadExecution: vi.fn(),
       cancelExecution: vi.fn(),
-      publishEvent: vi.fn(),
       selectedNodeId: null,
       setSelectedNodeId: vi.fn()
     });
@@ -77,31 +76,16 @@ describe("ExecutionDetailPage", () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText("ex-1")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 1, name: "ex-1" })).toBeInTheDocument();
     });
   });
 
-  it("見出しは日本語の画面で「実行詳細」である", () => {
+  it("見出しは実行 ID で、パンくずから実行一覧へ戻れる", () => {
     // Arrange / Act
     renderWithUiText(<ExecutionDetailPage />);
 
     // Assert
-    expect(screen.getByRole("heading", { level: 1, name: "実行詳細" })).toBeInTheDocument();
-  });
-
-  it("見出しは英語の画面で「Execution detail」である", () => {
-    // Arrange / Act
-    renderWithUiText(<ExecutionDetailPage />, { locale: "en" });
-
-    // Assert
-    expect(screen.getByRole("heading", { level: 1, name: "Execution detail" })).toBeInTheDocument();
-  });
-
-  it("詳細と操作を行き来するナビを出さない", () => {
-    // Arrange / Act
-    renderWithUiText(<ExecutionDetailPage />);
-
-    // Assert
+    expect(screen.getByRole("heading", { level: 1, name: "ex-1" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "操作" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "実行一覧" })).toHaveAttribute("href", "/executions");
   });
@@ -120,10 +104,10 @@ describe("ExecutionDetailPage", () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText("ex-1")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 1, name: "ex-1" })).toBeInTheDocument();
     });
     expect(screen.queryByRole("button", { name: "キャンセル" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "イベント送信" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "イベントを送信" })).not.toBeInTheDocument();
     expect(screen.queryByText(/権限が必要です/)).not.toBeInTheDocument();
   });
 });

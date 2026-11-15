@@ -11,9 +11,22 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     description: "Search and paginate definitions, then open the detail page.",
     loading: "Loading definitions.",
     emptyNoMatch: "No definitions matched. Change the query or clear filters.",
-    searchSummaryPrefix: (keyword: string) => `Search: "${keyword}" / `,
     listSummary: (totalCount: number, page: number) => `Total ${totalCount} (page ${page})`,
-    createdAt: (formattedDateTime: string) => `Created: ${formattedDateTime}`,
+    columns: {
+      name: "Name",
+      lastExecution: "Last execution",
+      createdAt: "Created at",
+      actions: "Actions",
+    },
+    nameChip: (keyword: string) => `Name: ${keyword}`,
+    deleteConfirm: {
+      title: (name: string) => `Delete ${name}?`,
+      message: "You can restore a deleted definition by turning on Include deleted.",
+    },
+    restoreConfirm: {
+      title: (name: string) => `Restore ${name}?`,
+      message: "The definition returns to the list as not deleted.",
+    },
     error: "Failed to load definitions.",
     pagination: {
       ...definitionsUiTextJa.definitionsPage.pagination,
@@ -24,12 +37,12 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
       label: "Name search (partial match)",
       placeholder: "e.g. order",
       submit: "Search",
-      clear: "Clear",
       invalidName: "Search keyword allows only ASCII alphanumerics plus . - _ within 100 characters.",
     },
-    sortByLabel: "Sort by",
-    sortOrderLabel: "Order",
+    sortLabel: "Sort",
     sortByCreatedAt: "Created at",
+    sortByUpdatedAt: "Updated at",
+    neverExecuted: "Not executed yet",
     sortByName: "Name",
     sortOrderDesc: "Descending",
     sortOrderAsc: "Ascending",
@@ -57,7 +70,6 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
   definitionDetail: {
     ...definitionsUiTextJa.definitionDetail,
     title: "Definition detail",
-    urlPrefix: "URL:",
     errorFetchFailed: "Failed to fetch definition.",
     notMember: "You cannot open this definition because you are not a member of its project.",
     roleDenied: "Your role or group permissions do not allow editing the definition or starting an execution.",
@@ -80,11 +92,12 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
       cancelConfirm: "Cancel",
       deleting: "Deleting...",
     },
+    deleteConfirm: {
+      title: (name: string) => `Delete ${name}?`,
+      message: "You can restore a deleted definition from the definitions list by turning on Include deleted.",
+    },
     toasts: {
       deleted: "Definition deleted.",
-    },
-    nav: {
-      backToDefinitions: "Back to definitions",
     },
   },
   definitionRunPage: {
@@ -96,9 +109,6 @@ export const definitionsUiTextEn: DefinitionsFeatureUiText = {
     permissionDenied: "Starting an execution requires the executions.write permission on one of your groups. Ask a tenant administrator.",
     inputLabelWithHint: (inputLabel: string) => `${inputLabel} (optional, JSON)`,
     inputJsonPlaceholder: 'Example: {"orderId":"123"}',
-    nav: {
-      backToDefinitionDetail: "Back to definition detail",
-    },
     actions: {
       starting: "Starting...",
       startExecution: "Start execution",

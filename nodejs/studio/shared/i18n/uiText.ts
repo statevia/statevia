@@ -132,6 +132,49 @@ export type UiText = DefinitionsFeatureUiText &
     error: string;
 
   },
+  /** 共通のダイアログと入力欄の文言。 */
+  dialog: {
+    /** ダイアログを閉じるボタンの aria-label。 */
+    close: string;
+    /** 削除の確認で名前の入力を求める説明。 */
+    typeNameToConfirm: (name: string) => string;
+    /** 必須の入力欄のマークの読み上げ。 */
+    required: string;
+  },
+  /** パンくずリストの文言。 */
+  breadcrumbs: {
+    /** `<nav>` の aria-label。 */
+    aria: string;
+  },
+  /** 一覧の絞り込みのチップの文言。 */
+  /** 検索できる選択の部品（`SearchableCheckList`）。 */
+  searchableCheckList: {
+    /** 検索欄の aria-label。引数は一覧の名前。 */
+    searchLabel: (listLabel: string) => string;
+    /** 検索欄のプレースホルダ。 */
+    searchPlaceholder: string;
+    /** 選択の件数。 */
+    selectedCount: (selected: number, total: number) => string;
+    /** 検索に当てはまる項目が無いとき。 */
+    noMatch: string;
+    /** 保存済みに無く、今は選んでいる行の印。 */
+    added: string;
+    /** 保存済みにあって、今は外した行の印。 */
+    removed: string;
+  },
+  filterChips: {
+    /** チップのまとまりの aria-label。 */
+    ariaLabel: string;
+    /** チップの × の aria-label。引数はチップの文言。 */
+    remove: (label: string) => string;
+    /** 全部の条件を外すボタン。 */
+    clearAll: string;
+  },
+  /** 状態バッジの文言。 */
+  statusBadge: {
+    /** 実行の状態の横に付ける待機の印（状態の値ではない）。 */
+    waiting: string;
+  },
   errorPrefixes: {
     unauthorized401: string;
     forbidden403: string;
@@ -252,6 +295,30 @@ export const uiText: UiText = {
     empty: "表示できるデータがありません。",
     error: "データの取得に失敗しました。",
 
+  },
+  dialog: {
+    close: "閉じる",
+    typeNameToConfirm: (name: string) => `確認のため、「${name}」と入力してください`,
+    required: "必須",
+  },
+  breadcrumbs: {
+    aria: "パンくずリスト",
+  },
+  searchableCheckList: {
+    searchLabel: (listLabel) => `${listLabel}を検索`,
+    searchPlaceholder: "名前で絞り込む",
+    selectedCount: (selected, total) => `${total} 件中 ${selected} 件を選択`,
+    noMatch: "当てはまる項目はありません。",
+    added: "追加",
+    removed: "解除",
+  },
+  filterChips: {
+    ariaLabel: "かけている条件",
+    remove: (label) => `${label} を外す`,
+    clearAll: "すべて外す",
+  },
+  statusBadge: {
+    waiting: "待機中",
   },
   errorPrefixes: {
     unauthorized401: "401 認証が必要です",

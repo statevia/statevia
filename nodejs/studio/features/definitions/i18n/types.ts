@@ -14,21 +14,40 @@ export type DefinitionsFeatureUiText = {
       label: string;
       placeholder: string;
       submit: string;
-      clear: string;
       invalidName: string;
     };
-    sortByLabel: string;
-    sortOrderLabel: string;
+    /** 並び順の選択欄のラベル。選択肢は項目と順序を組み合わせて作る。 */
+    sortLabel: string;
     sortByCreatedAt: string;
+    /** 並び順の「更新日時」。 */
+    sortByUpdatedAt: string;
+    /** 最後の実行が無いときの文言。 */
+    neverExecuted: string;
     sortByName: string;
     sortOrderDesc: string;
     sortOrderAsc: string;
     loading: string;
     emptyNoMatch: string;
-    searchSummaryPrefix: (keyword: string) => string;
     listSummary: (totalCount: number, page: number) => string;
-    createdAt: (formattedDateTime: string) => string;
-    displayIdAndCreatedAt: (displayIdLabel: string, displayId: string, createdAtLabel: string) => string;
+    /** 一覧の列の見出し。 */
+    columns: {
+      name: string;
+      lastExecution: string;
+      createdAt: string;
+      actions: string;
+    };
+    /** 名前の検索のチップ。 */
+    nameChip: (keyword: string) => string;
+    /** 削除の確認ダイアログ。名前の入力を求める（U6）。 */
+    deleteConfirm: {
+      title: (name: string) => string;
+      message: string;
+    };
+    /** 復元の確認ダイアログ。 */
+    restoreConfirm: {
+      title: (name: string) => string;
+      message: string;
+    };
     actions: {
       openDetail: string;
       createNew: string;
@@ -54,7 +73,6 @@ export type DefinitionsFeatureUiText = {
   /** 定義の詳細画面の文言。 */
   definitionDetail: {
     title: string;
-    urlPrefix: string;
     errorFetchFailed: string;
     notMember: string;
     roleDenied: string;
@@ -77,11 +95,13 @@ export type DefinitionsFeatureUiText = {
       cancelConfirm: string;
       deleting: string;
     };
+    /** 削除の確認ダイアログ。名前の入力を求める（U6）。 */
+    deleteConfirm: {
+      title: (name: string) => string;
+      message: string;
+    };
     toasts: {
       deleted: string;
-    };
-    nav: {
-      backToDefinitions: string;
     };
   };
   /** 定義から実行を開始する画面の文言。 */
@@ -100,9 +120,6 @@ export type DefinitionsFeatureUiText = {
       invalidInputJson: (inputLabel: string) => string;
       inputTooLarge: string;
       executionStarted: (executionDisplayId: string) => string;
-    };
-    nav: {
-      backToDefinitionDetail: string;
     };
     actions: {
       starting: string;

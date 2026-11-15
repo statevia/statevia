@@ -15,7 +15,18 @@ vi.mock("@/shared/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/api")>();
   return {
     ...actual,
-    apiGet: vi.fn(() => Promise.resolve({ items: [], totalCount: 0 }))
+    apiGet: vi.fn((path: string) =>
+      Promise.resolve(
+        path.startsWith("/executions/counts")
+          ? {
+              total: 0,
+              byStatus: { ACTIVE: 0, COMPLETED: 0, FAILED: 0, CANCELED: 0, UNKNOWN: 0 },
+              waiting: 0,
+              needsAttention: 0
+            }
+          : { items: [], totalCount: 0 }
+      )
+    )
   };
 });
 

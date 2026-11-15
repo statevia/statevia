@@ -1,7 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useDelayedVisibility } from "@/shared/lib/useDelayedVisibility";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "./Button";
+import { EmptyState } from "./EmptyState";
+import { Notice } from "./Notice";
+import { TableSkeleton } from "./TableSkeleton";
 
 type PageStateKind = "loading" | "empty" | "error";
 
@@ -16,68 +21,62 @@ type PageStateProps = {
   retryLabel?: string;
   /** loading 表示を出すまでの遅延（ミリ秒）。0 で即時。 */
   loadingDelayMs?: number;
+  /** empty のときに添える次の操作（作成・条件のクリアなど）。 */
+  emptyAction?: ReactNode;
 };
-
-const STATE_STYLE_MAP: Record<PageStateKind, string> = {
-  loading: "border-blue-200 bg-blue-50 text-blue-900",
-  error: "border-red-200 bg-red-50 text-red-900",
-  empty: "border-md-outline bg-md-surface text-md-on-surface"
-};
-
-function getStateStyle(state: PageStateKind): string {
-  return STATE_STYLE_MAP[state];
-}
 
 /**
- * Loading / Empty / Error の共通表示ブロック。
+ * Loading / Empty / Error の共通表示ブロック。色はトークンから取り、ダークでも明るい枠のままにしない。
+ * - loading: 遅延のあと、表の骨組みと「読み込み中」を出す
+ * - empty: 次の操作を 1 つ添えた空の表示
+ * - error: エラーのお知らせと再試行
  */
 export function PageState({
   state,
   message,
   onRetry,
   retryLabel,
-  loadingDelayMs
+  loadingDelayMs,
+  emptyAction
 }: Readonly<PageStateProps>) {
   const uiText = useUiText();
   const showLoading = useDelayedVisibility(state === "loading", loadingDelayMs);
 
-  if (state === "loading" && !showLoading) {
-    return null;
+  if (state === "loading") {
+    if (!showLoading) return null;
+    return (
+      <output className="flex flex-col gap-2" aria-live="polite" aria-busy="true">
+        <div className="flex flex-wrap items-baseline gap-2 text-sm text-md-on-surface-variant">
+          <span className="font-medium">{uiText.pageState.loading}</span>
+          {message ? <p>{message}</p> : null}
+        </div>
+        <TableSkeleton rows={3} />
+      </output>
+    );
   }
-  const stateTitleMap: Record<PageStateKind, string> = {
-    loading: uiText.pageState.loading,
-    error: uiText.pageState.error,
-    empty: uiText.pageState.empty
-  };
-  const effectiveRetryLabel = retryLabel ?? uiText.actions.retry;
-  const showRetryButton = state === "error" && typeof onRetry === "function";
-  const content = (
-    <>
-      <p className="font-medium">{stateTitleMap[state]}</p>
-      {message ? <p className="mt-1">{message}</p> : null}
-      {showRetryButton ? (
-        <button
-          type="button"
-          className="mt-3 rounded-md border border-current/30 bg-md-surface-container px-3 py-1.5 text-sm font-medium hover:bg-md-surface-container-high"
-          onClick={onRetry}
-        >
-          {effectiveRetryLabel}
-        </button>
-      ) : null}
-    </>
-  );
 
   if (state === "error") {
+    const showRetryButton = typeof onRetry === "function";
     return (
-      <section className={`rounded-2xl border px-4 py-3 text-sm ${getStateStyle(state)}`} role="alert" aria-live="assertive">
-        {content}
-      </section>
+      <Notice
+        tone="error"
+        title={uiText.pageState.error}
+        actions={
+          showRetryButton ? (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {retryLabel ?? uiText.actions.retry}
+            </Button>
+          ) : undefined
+        }
+      >
+        {message ? <p>{message}</p> : null}
+      </Notice>
     );
   }
 
   return (
-    <output className={`block rounded-2xl border px-4 py-3 text-sm ${getStateStyle(state)}`} aria-live="polite">
-      {content}
+    <output className="block" aria-live="polite">
+      <EmptyState title={uiText.pageState.empty} description={message} action={emptyAction} />
     </output>
   );
 }

@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.13 |
-| 更新日 | 2026-11-01 |
+| Version | 0.14 |
+| 更新日 | 2026-11-15 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.14（2026-11-15）**: 全画面を `shared/ui` の部品で組む形にした（§8）。ボタンの色の役割（緑は主導線で 1 画面 1 つ、紺、枠線、赤枠）、部品の一覧、既定パレットの色の直書きを ESLint で禁止したこと、実行詳細のイベント送信の部品の分担、グループのメンバーと権限の検索できる選択と保存前の差分の確認を書いた。0.10 の「部品を使うのは集合配送ダイアログだけ」は廃止した。
 
 **Version 0.13（2026-11-01）**: Project の文脈・ロール判定・所属一覧を `shared/project/` へ、`isApiNotFound` を `shared/api/` へ移した。feature 間の依存は公開面（`features/<name>/index.ts`）だけにし、他 feature の内部への import と、`@/app/*`・`@/tests/*` をアプリのコードで使うことを ESLint で禁止した。
 
@@ -53,7 +55,7 @@ nodejs/studio/
 │  └─ projects/              # api, hooks, ui, types, i18n（Project 管理画面とメンバー）
 ├─ shared/
 │  ├─ api/                   # transport + 共通 query 型
-│  ├─ ui/                    # PageShell, Toast, AppHeader, GraphNodeShell, Button, TextField 等
+│  ├─ ui/                    # 画面の部品（§8）、AppShell・AppHeader・navigation/SideNav
 │  ├─ i18n/                  # Context・locale・横断辞書 + feature 切片の合成
 │  ├─ auth/                  # session / jwt ヘルパ
 │  ├─ project/               # 選択中 Project の文脈（ProjectProvider / useProject）、ロール判定、所属一覧
@@ -187,24 +189,83 @@ flowchart LR
 - C# Clean Architecture フォルダ名のそのまま移植
 - React Query 等の新規状態管理ライブラリ導入
 
-## 8. 色トークンと操作部品
+## 8. 色トークンと部品
 
-色の正本は `app/globals.css` の CSS 変数である。Tailwind のユーティリティへは、同じファイルの `@theme` が写す。
+### 8.1 色トークン
 
-| 変数の接頭辞 | ユーティリティの例 |
-| --- | --- |
-| `--md-sys-color-*` | `text-md-on-surface`、`bg-md-surface`、`border-md-outline` |
-| `--brand-*` | `bg-brand-cta-bg`、`text-brand-cta-fg`、`border-brand-cta-border` |
-| `--editor-*` | `text-editor-caret` |
+色の正本は `app/globals.css` の CSS 変数である。Tailwind のユーティリティへは、同じファイルの `@theme` が写す。ライトとダークの値はどちらも `globals.css` に置き、`dark:` はアプリのテーマ（`@custom-variant dark`）に従う。
+
+| 変数の接頭辞 | 用途 | ユーティリティの例 |
+| --- | --- | --- |
+| `--md-sys-color-*` | 面・文字・枠・状態の色 | `text-md-on-surface`、`bg-md-surface`、`border-md-outline`、`text-md-error` |
+| `--brand-lead-*` | 主導線（緑）のボタン | `bg-brand-lead-bg`、`text-brand-lead-fg` |
+| `--brand-cta-*` | 通常の操作（紺）のボタン。ダークは青を敷いた淡い塗り | `bg-brand-cta-bg`、`text-brand-cta-fg` |
+| `--nav-item-active-*` | サイドメニューの選択中の項目 | `bg-nav-item-active-bg` |
+| `--radius-*` | 角丸（`control` 6px・`card` 12px・`pill`） | `rounded-control`、`rounded-card`、`rounded-pill` |
+| `--editor-*` | コードエディタ | `text-editor-caret` |
 
 `md` 接頭辞は、Tailwind 既定の `neutral` パレットを置き換えないためである。新規の色指定で `text-[var(--md-sys-color-on-surface)]` は使わない。
 
-横断の操作部品は `shared/ui/Button`（`primary` / `secondary`）と `shared/ui/TextField` である。クラス列が一致するのは集合配送ダイアログだけなので、他画面のボタンと 1 行入力はトークンクラスの直書きである。hover、余白、ラベル色が部品と違う箇所は部品へ寄せない。
+`features/**` と `shared/**` では、Tailwind の既定パレットの色（`bg-gray-100`・`text-red-600`・`border-amber-200` など）を書かない。`eslint.config.js` の `no-restricted-syntax`（`paletteColorClassPattern`）が文字列とテンプレートの両方を error にする。除外の一覧は持たない。`app/**` は route の薄い殻で色を持たないので対象外である。
 
-次はトークンへ替えず、直書きのまま残す。
+### 8.2 ボタンの色の役割
 
-- 不透明度付きの class（グラフノードの帯、凡例、比較バー、ノード詳細、フォーク領域）
-- `GraphNodeShell` の `--md-sys-color-secondary`（`globals.css` に変数が無い）
-- `PageState` の loading / error と `Toast` の error / success（パレット色）
-- 状態バッジのダーク背景（`color-mix`）
-- グラフのエッジとコードエディタの caret / プレースホルダ（style。class ではない）
+`shared/ui/Button` の `variant` は役割で選ぶ。`next/link` をボタンの見た目にするときは `buttonClassName(variant, size)` を使う。
+
+| variant | 色 | 使う場面 |
+| --- | --- | --- |
+| `lead` | 緑 | 主導線。1 画面に 1 つまで。ページの見出しの右か、フォームの下の操作バーに置く |
+| `standard` | 紺 | 主導線以外の操作（イベントを送信・このノードへ送る・検索など） |
+| `outline` | 枠線 | 補助（キャンセル・読み込み・全画面・行の中の操作） |
+| `danger` | 赤枠 | 削除・実行のキャンセル・失効など取り消しにくい操作の入口 |
+| `dangerSolid` | 赤の塗り | 確認ダイアログの確定だけ |
+| `ghost` | 塗り無し | 文字だけの軽い操作 |
+
+`size` は `md`（既定）、`sm`（一覧の行の中だけ）、`icon`（アイコンだけ。`aria-label` 必須）。
+
+ダイアログは画面とは別の層なので、ダイアログの確定に `lead` を使ってよい（画面の見出しの `lead` と数えない）。
+
+### 8.3 部品の一覧
+
+| 部品 | 用途 |
+| --- | --- |
+| `PageShell` | パンくず → 見出し（と右の操作）→ 本文 → 下部の操作バー、の骨格 |
+| `Breadcrumbs` | 深い階層の画面で上へ戻る導線 |
+| `Card` | 見出し・説明・右上の操作・本文の枠 |
+| `Notice` | 情報・成功・注意・エラーのお知らせ（エラーは `role="alert"`） |
+| `PageState` / `EmptyState` / `TableSkeleton` | 読み込み中・失敗・空の表示 |
+| `Toast` | 操作の結果の一時的な通知 |
+| `Dialog` | ポップアップダイアログ（暗幕・Esc・フォーカスの閉じ込め） |
+| `ConfirmDialog` | 確認。取り消しにくさが大きい削除は `requireTypedName` で名前の入力を求める（今は定義の削除だけ） |
+| `TextField` / `SelectField` / `TextAreaField` | ラベル・説明・エラー付きの入力。ラベルの無い入力（検索欄など）は `inputClassName` |
+| `FormField`（`FieldLabel` / `FieldMessage` / `inputClassName`） | 入力の共通部分。`inputClassName` は横の余白と枠の色を 1 つずつ選ぶ（Tailwind は同じ性質のクラスを CSS の順で決めるため、`px-3` と `pl-9` を重ねない） |
+| `DataList` | 一覧。デスクトップは表、狭い幅はカード。列幅は `width` で揃える |
+| `FilterPills` | 一覧の単一選択の絞り込み（件数付き） |
+| `FilterChips` | かけている条件のチップ。1 つずつ外す・すべて外す |
+| `SegmentedControl` | 表示の切り替え（一覧 / グラフなど） |
+| `SearchableCheckList` | 検索で絞り込める複数選択。保存済みと違う行に「追加」「解除」の印を出す（グループのメンバーと権限）。保存前の差分は `shared/lib/selectionDiff` で求め、確認ダイアログに並べる |
+| `ListPagination` | ページ移動 |
+| `StatusBadge` / `StatusDot` | 状態の表示。待機中のときは `ACTIVE` の横に「待機中」の印を足す（状態の値は増やさない） |
+| `BrandMark` | ロゴのマーク |
+
+行そのものを押す操作（タイムラインの行・ノードの選択・比較の差分の行など）は `Button` の形に合わないので、生の `<button>` のまま色だけトークンにする。
+
+次はトークンの色を `style` か不透明度付きのクラスで書いたまま残す。
+
+- グラフノードの帯、凡例、フォーク領域などの不透明度付きのクラス
+- グラフのエッジとコードエディタの caret / プレースホルダ（`style`。クラスではない）
+
+### 8.4 実行詳細のイベント送信
+
+実行詳細（`features/executions`）では、待機中の実行へイベントを届ける操作を次のように分ける。HTTP は `POST /v1/executions/{id}/nodes/{nodeId}/resume` と `POST /v1/executions/{id}/events` で、Studio はどちらも変えない。
+
+| 置き場 | 役割 |
+| --- | --- |
+| `ui/ExecutionHeader` | 見出しの右に「キャンセル」（`danger`）・「比較」（`outline`）・「イベントを送信」（`lead`。待機があり送れるときだけ） |
+| `ui/ExecutionWaitNotice` | 見出しの下の待機のお知らせ。待機が 2 つ以上なら行ごとに「このイベントを送る」 |
+| `ui/SendEventDialog` | 届け先（待っているノード、またはイベント名を指定して実行へ）を選んで送る。失敗してもダイアログを閉じずにエラーを中に出す |
+| `ui/NodeDetail`・`ui/NodeGraphView` | 待機中のノードの「このノードへ送る」。そのノードを選んだ状態でダイアログを開く |
+| `hooks/useSendEvent` | 2 つの API の呼び分け。失敗はトーストではなく戻り値の文言で返す |
+| `lib/waitTargets` | 実行のノードから届け先の候補（待機）を作る |
+
+操作は `executions.write` があるときだけ出す（認可の正本は Service API）。イベント名で送るときは、当てはまる待機が 1 つのときだけ届く。0 件や複数のときは Service API が受け付けない。

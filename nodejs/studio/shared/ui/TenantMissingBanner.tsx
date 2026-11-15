@@ -56,13 +56,13 @@ export function TenantMissingBanner() {
 
   return (
     <div
-      className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+      className="rounded-card border border-md-warning/40 bg-md-warning-container px-3 py-2 text-xs text-md-on-warning-container dark:bg-[color-mix(in_srgb,var(--md-sys-color-warning-container)_30%,transparent)]"
       role="alert"
     >
       {noticeParts.beforePrimaryEnv}
-      <code className="mx-1 rounded-sm bg-amber-100 px-1">NEXT_PUBLIC_TENANT_ID</code>
+      <code className="mx-1 rounded-control bg-md-surface px-1">NEXT_PUBLIC_TENANT_ID</code>
       {noticeParts.betweenEnvs}
-      <code className="mx-1 rounded-sm bg-amber-100 px-1">SERVICE_API_TENANT_ID</code>
+      <code className="mx-1 rounded-control bg-md-surface px-1">SERVICE_API_TENANT_ID</code>
       {noticeParts.afterSecondaryEnv}
       <span className="mt-1 block">{uiText.auth.login.sessionHint}</span>
     </div>

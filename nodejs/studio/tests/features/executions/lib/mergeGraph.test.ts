@@ -12,6 +12,7 @@ function execution(nodes: ExecutionNodeDTO[], graphId = "g-1"): ExecutionView {
     startedAt: "2026-01-01T00:00:00Z",
     cancelRequested: false,
     restartLost: false,
+    waiting: false,
     graphId,
     nodes,
     runtimeEdges: []

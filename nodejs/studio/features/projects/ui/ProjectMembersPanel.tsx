@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
+import { Button } from "@/shared/ui/Button";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { FieldLabel } from "@/shared/ui/FormField";
+import { SelectField } from "@/shared/ui/SelectField";
 import { Toast } from "@/shared/ui/Toast";
 import {
   listGrantCandidates,
@@ -35,7 +39,7 @@ function availableCandidates(
 /**
  * メンバーの付与、ロール変更、剥奪。
  * 表示はユーザー名と API キー名。Principal UUID は画面に出さない。
- * 定義エディタへの導線は持たない。
+ * 定義エディタへの導線は持たない。メンバーから外す操作は確認ダイアログを経てから送る。
  * @param props 対象 Project。
  * @returns メンバーパネル。
  */
@@ -49,6 +53,7 @@ export function ProjectMembersPanel({ projectId }: Readonly<ProjectMembersPanelP
   const [busyPrincipalId, setBusyPrincipalId] = useState<string | null>(null);
   const [granting, setGranting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ProjectMember | null>(null);
   const grantChoices = availableCandidates(candidates, members);
 
   const load = useCallback(async () => {
@@ -136,7 +141,7 @@ export function ProjectMembersPanel({ projectId }: Readonly<ProjectMembersPanelP
   };
 
   return (
-    <section className="space-y-4 rounded-lg border border-md-outline bg-md-surface p-4">
+    <section className="flex flex-col gap-4 rounded-card border border-md-outline bg-md-surface p-5">
       <Toast toast={toast} onClose={() => setToast(null)} />
       <form
         className="flex flex-wrap items-end gap-3"
@@ -145,28 +150,25 @@ export function ProjectMembersPanel({ projectId }: Readonly<ProjectMembersPanelP
           void grant();
         }}
       >
-        <label className="min-w-[240px] flex-1 text-sm">
-          <span className="text-md-on-surface-variant">{text.candidateLabel}</span>
+        <div className="min-w-[240px] flex-1">
           {grantChoices.length === 0 ? (
-            <p className="mt-1 text-sm text-md-on-surface-variant">{text.emptyCandidates}</p>
+            <>
+              <FieldLabel label={text.candidateLabel} />
+              <p className="mt-1.5 text-sm text-md-on-surface-variant">{text.emptyCandidates}</p>
+            </>
           ) : (
-            <select
-              className="mt-1 w-full rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
-              value={selectedId}
-              onChange={(event) => setSelectedId(event.target.value)}
-            >
+            <SelectField label={text.candidateLabel} value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
               {grantChoices.map((candidate) => (
                 <option key={candidate.principalId} value={candidate.principalId}>
                   {labelOf(candidate.displayName, candidate.kind)}
                 </option>
               ))}
-            </select>
+            </SelectField>
           )}
-        </label>
-        <label className="text-sm">
-          <span className="text-md-on-surface-variant">{text.roleLabel}</span>
-          <select
-            className="mt-1 rounded-sm border border-md-outline-variant bg-md-surface-container px-3 py-2 text-sm text-md-on-surface"
+        </div>
+        <div className="w-48">
+          <SelectField
+            label={text.roleLabel}
             value={role}
             onChange={(event) => {
               const next = PROJECT_ROLES.find((item) => item === event.target.value);
@@ -176,27 +178,23 @@ export function ProjectMembersPanel({ projectId }: Readonly<ProjectMembersPanelP
             {PROJECT_ROLES.map((item) => (
               <option key={item} value={item}>{uiText.projects.roles[item]}</option>
             ))}
-          </select>
-        </label>
-        <button
-          type="submit"
-          className="rounded-sm border-2 border-brand-cta-border bg-brand-cta-bg px-4 py-2 text-sm font-medium text-brand-cta-fg hover:bg-brand-cta-bg-hover disabled:opacity-60"
-          disabled={granting || grantChoices.length === 0}
-        >
+          </SelectField>
+        </div>
+        <Button variant="standard" type="submit" loading={granting} disabled={grantChoices.length === 0}>
           {granting ? text.granting : text.grant}
-        </button>
+        </Button>
       </form>
       {members.length === 0 ? (
         <p className="text-sm text-md-on-surface-variant">{text.empty}</p>
       ) : (
-        <ul className="divide-y divide-md-outline">
+        <ul className="divide-y divide-md-outline-variant border-t border-md-outline-variant">
           {members.map((member) => (
             <li key={member.principalId} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <span className="text-sm text-md-on-surface">{labelOf(member.displayName, member.kind)}</span>
               <div className="flex items-center gap-2">
                 <select
                   aria-label={`${labelOf(member.displayName, member.kind)} ${text.roleLabel}`}
-                  className="rounded-sm border border-md-outline-variant bg-md-surface-container px-2 py-1 text-sm"
+                  className="h-8 w-40 rounded-control border border-md-outline-variant bg-md-surface-container px-2 text-sm text-md-on-surface disabled:opacity-60"
                   value={member.role}
                   disabled={busyPrincipalId === member.principalId}
                   onChange={(event) => {
@@ -208,19 +206,31 @@ export function ProjectMembersPanel({ projectId }: Readonly<ProjectMembersPanelP
                     <option key={item} value={item}>{uiText.projects.roles[item]}</option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="rounded-sm border border-md-outline-variant px-3 py-1.5 text-sm text-md-on-surface disabled:opacity-60"
+                <Button
+                  variant="danger"
+                  size="sm"
                   disabled={busyPrincipalId === member.principalId}
-                  onClick={() => void revoke(member)}
+                  onClick={() => setRevokeTarget(member)}
                 >
                   {busyPrincipalId === member.principalId ? text.revoking : text.revoke}
-                </button>
+                </Button>
               </div>
             </li>
           ))}
         </ul>
       )}
+      <ConfirmDialog
+        open={revokeTarget !== null}
+        title={revokeTarget ? text.revokeConfirmTitle(labelOf(revokeTarget.displayName, revokeTarget.kind)) : ""}
+        message={text.revokeConfirmMessage}
+        confirmLabel={text.revokeConfirmSubmit}
+        onConfirm={() => {
+          if (revokeTarget === null) return;
+          setRevokeTarget(null);
+          void revoke(revokeTarget);
+        }}
+        onCancel={() => setRevokeTarget(null)}
+      />
     </section>
   );
 }

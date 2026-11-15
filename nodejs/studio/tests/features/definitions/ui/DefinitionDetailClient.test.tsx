@@ -38,7 +38,7 @@ describe("DefinitionDetailClient", () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText("Demo")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Demo" })).toBeInTheDocument();
     });
     expect(apiGet).toHaveBeenCalledWith("/definitions/def-1");
   });
@@ -47,11 +47,12 @@ describe("DefinitionDetailClient", () => {
     // Arrange
     renderWithUiText(<DefinitionDetailClient definitionId="def-1" />);
     await waitFor(() => {
-      expect(screen.getByText("Demo")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Demo" })).toBeInTheDocument();
     });
 
     // Act
     fireEvent.click(screen.getByRole("button", { name: "定義を削除" }));
+    fireEvent.change(screen.getByLabelText("確認のため、「Demo」と入力してください"), { target: { value: "Demo" } });
     fireEvent.click(screen.getByRole("button", { name: "削除する" }));
 
     // Assert
@@ -66,7 +67,7 @@ describe("DefinitionDetailClient", () => {
     renderWithUiText(<DefinitionDetailClient definitionId="def-1" />);
 
     // Assert
-    expect(await screen.findByRole("button", { name: "新規実行を開始" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "新規実行を開始" })).toBeInTheDocument();
   });
 
   it("Project ロールが足りても executions.write が無ければ新規実行ボタンを出さない", async () => {
@@ -77,9 +78,9 @@ describe("DefinitionDetailClient", () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText("Demo")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Demo" })).toBeInTheDocument();
     });
-    expect(screen.queryByRole("button", { name: "新規実行を開始" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "新規実行を開始" })).not.toBeInTheDocument();
   });
 
   it("Project ロールが足りても definitions.write が無ければ編集ボタンを出さない", async () => {
@@ -89,8 +90,8 @@ describe("DefinitionDetailClient", () => {
     });
 
     // Assert
-    expect(await screen.findByRole("button", { name: "新規実行を開始" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "定義の編集" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "新規実行を開始" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "定義の編集" })).not.toBeInTheDocument();
   });
 
   it("definitions.write が無ければ削除ボタンを出さない", async () => {
@@ -100,7 +101,7 @@ describe("DefinitionDetailClient", () => {
     });
 
     // Assert
-    expect(await screen.findByRole("button", { name: "新規実行を開始" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "新規実行を開始" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "定義を削除" })).not.toBeInTheDocument();
   });
 });

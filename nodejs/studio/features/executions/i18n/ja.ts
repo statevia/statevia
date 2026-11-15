@@ -5,13 +5,43 @@ import type { ExecutionsFeatureUiText } from "./types";
  */
 export const executionsUiTextJa: ExecutionsFeatureUiText = {
   executionDashboard: {
-    header: {
-      titleDefault: "実行の詳細",
-    },
-    actions: {
-      sectionTitle: "実行操作",
+    viewModeLabel: "ノードの表示",
+    sendEvent: {
+      open: "イベントを送信",
+      title: "イベントを送信",
+      descriptionNone: (executionId: string) => `${executionId} へイベントを送ります。`,
+      descriptionSingle: (executionId: string, nodeName: string) =>
+        `${executionId} は ${nodeName} でイベントを待っています。`,
+      descriptionMulti: (executionId: string, count: number) =>
+        `${executionId} は ${count} つのノードでイベントを待っています。届け先を選んでください。`,
+      targetLabel: "届け先",
+      nodeOptionLabel: (nodeName: string, eventName: string | null) =>
+        eventName ? `${nodeName} に ${eventName} を届ける` : `${nodeName} にイベントを届ける`,
+      nodeOptionHint: (waitingSince: string | null) =>
+        waitingSince ? `このノードだけが進みます。${waitingSince} から待機中。` : "このノードだけが進みます。",
+      nodeEventSelectLabel: (nodeName: string) => `${nodeName} に届けるイベント`,
+      executionOptionLabel: "イベント名を指定して実行へ送る",
+      executionOptionHint: "実行が受け付けるイベントとして送ります。",
       eventNameLabel: "イベント名",
       eventNamePlaceholder: "event-name",
+      previewNode: (nodeName: string, remainingNodeNames: readonly string[]) =>
+        remainingNodeNames.length > 0
+          ? `送信すると ${nodeName} が進みます。${remainingNodeNames.join("、")} は待機のまま残ります。`
+          : `送信すると ${nodeName} が進みます。`,
+      previewExecution:
+        "このイベントを待っている待機が 1 つだけのとき、その待機が進みます。当てはまる待機が無いときや複数あるときは受け付けられません。",
+      submit: "送信",
+      cancel: "キャンセル",
+      sendToNode: "このノードへ送る",
+      sendThisEvent: "このイベントを送る",
+    },
+    waitNotice: {
+      singleTitle: (nodeName: string) => `${nodeName} でイベントを待っています`,
+      singleBody: (eventNames: string) => `イベント ${eventNames} が届くと先へ進みます。`,
+      multiTitle: (count: number) => `${count} つのノードがイベントを待っています`,
+      multiBody: "並列分岐のそれぞれがイベントを待っています。",
+      waitingSince: (time: string) => `${time} から`,
+      listLabel: "待機の一覧",
     },
     validation: {
       eventNameTooLong: "イベント名は64文字以内で入力してください。",
@@ -82,10 +112,7 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       title: "待機の詳細",
       reasonWaitByWaitKeyAndResumeWait: "理由: 再開のイベントを待機キーで待っています。",
       resumeEventName: (eventName: string) => `再開イベント名: ${eventName}`,
-      selectResumeEvent: "再開するイベント",
-      selectInternalResumeEvent: "イベント名",
       subscribeOnlyHint: "この実行だけを、イベント名を指定して再開します。\n同じトピック / キーを待つ実行への一斉配送ではありません。",
-      subscribeResumeAction: "この実行だけ再開",
     },
     cancel: {
       detailTitle: (cancelLabel: string) => `${cancelLabel}の詳細`,
@@ -133,13 +160,10 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
 
   },
   executionHeader: {
-    placeholderExecutionId: "例: a1B2c3D4e5",
-    executionIdLabel: (executionLabel: string) => `${executionLabel} ID`,
+    startedAt: (time: string) => `開始 ${time}`,
+    cancelRequested: "キャンセル要求あり",
     compareLabel: "比較",
     realtimeSseLabel: "リアルタイム更新",
-    cancelRequestedLabel: "キャンセル要求",
-    cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) =>
-      `${cancelRequestedLabel}: ${cancelRequested ? "あり" : "なし"}`,
 
   },
   executionsPage: {
@@ -149,32 +173,33 @@ export const executionsUiTextJa: ExecutionsFeatureUiText = {
       prev: "前へ",
       next: "次へ",
     },
+    description: "定義から始めた実行の状態を確かめます。待機中の実行は詳細の画面から進めます。",
     filter: {
-      contextActivePrefix: "定義で絞り込み中:",
-      clearDefinition: "定義条件を外す",
-      title: "フィルタ",
-      all: "（すべて）",
+      all: "すべて",
       definitionInputHint: "定義の ID または UUID",
       definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel}（ID または UUID）`,
       definitionPlaceholder: "例: a1B2c3D4e5",
       nameInputHint: "実行の ID（部分一致）または UUID（完全一致）",
       search: "検索",
-      clear: "クリア",
-      sortByLabel: "ソート項目",
-      sortOrderLabel: "順序",
+      sortLabel: "並び順",
+      nameChip: (keyword: string) => `実行 ID: ${keyword}`,
+      definitionChip: (definitionId: string) => `定義: ${definitionId}`,
       sortByUpdatedAt: "更新日時",
       sortByDisplayId: "ID",
+      sortByStartedAt: "開始日時",
+      needsAttention: "要対応（待機中・FAILED）",
       sortOrderDesc: "降順",
       sortOrderAsc: "昇順",
       invalidName: "実行の ID は半角英数字と . - _ のみ、100文字以内で入力してください。",
       invalidDefinitionId: "定義IDは半角英数字と - _ のみ、80文字以内で入力してください。",
-      pageInfo: (limit: number) => `1 ページに ${limit} 件まで表示します。`,
     },
     loading: "実行一覧を読み込み中です。",
     listSummary: (totalCount: number, page: number) => `合計 ${totalCount} 件（${page} ページ目）`,
-    updatedAt: (formattedDateTime: string) => `更新: ${formattedDateTime}`,
-    actions: {
-      openDetail: "詳細",
+    columns: {
+      status: "状態",
+      execution: "実行 ID",
+      startedAt: "開始",
+      updatedAt: "更新",
     },
     ingress: {
       open: "イベントを送信",

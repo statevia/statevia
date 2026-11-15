@@ -22,6 +22,8 @@ export type ExecutionsListQuery = {
   sort: SortQuery;
   /** ステータスで絞り込む。未指定なら絞り込まない。 */
   status?: string;
+  /** true なら要対応（待機中または `FAILED`）の実行だけ。未指定なら絞り込まない。 */
+  needsAttention?: boolean;
   /** 定義名で絞り込む。未指定なら絞り込まない。 */
   name?: string;
   /** 定義で絞り込む。未指定なら絞り込まない。 */
@@ -41,6 +43,7 @@ export function buildExecutionsListPath(params: ExecutionsListQuery): string {
   query.set("limit", String(params.pagination.limit));
   query.set("offset", String(params.pagination.offset));
   if (params.status?.trim()) query.set("status", params.status.trim());
+  if (params.needsAttention) query.set("needsAttention", "true");
   if (params.name?.trim()) query.set("name", params.name.trim());
   if (params.definitionId?.trim()) query.set("definitionId", params.definitionId.trim());
   if (params.projectId) query.set("projectId", params.projectId);
@@ -55,6 +58,46 @@ export function buildExecutionsListPath(params: ExecutionsListQuery): string {
  */
 export async function listExecutions(query: ExecutionsListQuery): Promise<PagedExecutions> {
   return apiGet<PagedExecutions>(buildExecutionsListPath(query));
+}
+
+/** `GET /v1/executions/counts` の応答（実行の件数）。 */
+export type ExecutionCounts = {
+  /** 全件数。`byStatus` の和と等しい。 */
+  total: number;
+  /** 状態ごとの件数（契約の 5 値）。 */
+  byStatus: Record<"ACTIVE" | "COMPLETED" | "FAILED" | "CANCELED" | "UNKNOWN", number>;
+  /** 待機中の件数。 */
+  waiting: number;
+  /** 要対応（待機中または `FAILED`）の件数。 */
+  needsAttention: number;
+};
+
+/** 実行の件数の絞り込み。一覧と同じ意味で、状態・待機・要対応は受けない（それごとに数えて返すため）。 */
+export type ExecutionCountsQuery = {
+  /** 定義で絞り込む。 */
+  definitionId?: string;
+  /** 実行 ID の検索語で絞り込む。 */
+  name?: string;
+  /** その Project の実行だけ数える。 */
+  projectId?: string;
+  /** 開始日時の下限（含む。ISO 8601、タイムゾーン必須）。 */
+  startedFrom?: string;
+};
+
+/**
+ * 実行の件数を取得する（状態ごと・待機中・要対応）。
+ * @remarks 一覧とは別の呼び出しのため、間に書き込みがあれば一覧の件数と一致しないことがある。
+ * @param query 絞り込み。空の値は送らない。
+ * @returns 件数。
+ */
+export async function getExecutionCounts(query: ExecutionCountsQuery): Promise<ExecutionCounts> {
+  const params = new URLSearchParams();
+  if (query.definitionId?.trim()) params.set("definitionId", query.definitionId.trim());
+  if (query.name?.trim()) params.set("name", query.name.trim());
+  if (query.projectId) params.set("projectId", query.projectId);
+  if (query.startedFrom) params.set("startedFrom", query.startedFrom);
+  const search = params.toString();
+  return apiGet<ExecutionCounts>(search ? `/executions/counts?${search}` : "/executions/counts");
 }
 
 /**

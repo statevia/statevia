@@ -119,6 +119,30 @@ export const uiTextEn: UiText = {
     error: "Failed to load data.",
 
   },
+  dialog: {
+    close: "Close",
+    typeNameToConfirm: (name: string) => `Type "${name}" to confirm`,
+    required: "Required",
+  },
+  breadcrumbs: {
+    aria: "Breadcrumb",
+  },
+  searchableCheckList: {
+    searchLabel: (listLabel) => `Search ${listLabel}`,
+    searchPlaceholder: "Filter by name",
+    selectedCount: (selected, total) => `${selected} of ${total} selected`,
+    noMatch: "No items match.",
+    added: "Add",
+    removed: "Remove",
+  },
+  filterChips: {
+    ariaLabel: "Active filters",
+    remove: (label) => `Remove ${label}`,
+    clearAll: "Clear all",
+  },
+  statusBadge: {
+    waiting: "Waiting",
+  },
   errorPrefixes: {
     unauthorized401: "401 Authentication required",
     forbidden403: "403 Insufficient permission or tenant is missing",

@@ -8,7 +8,6 @@ import { useUiText } from "@/shared/i18n/uiTextContext";
 import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getUtf8ByteLength, matchesPattern } from "@/shared/lib/validation/primitives";
 import { DEFINITION_NAME_PATTERN, DEFINITION_YAML_MAX_BYTES } from "@/shared/lib/validation/formRules";
-import type { ActionLinkItem } from "@/shared/ui/ActionLinkGroup";
 import type { ActionInputValidationDetail } from "../actionSchema/types";
 import { defaultDefinitionYaml } from "../lib/defaultDefinitionYaml";
 import { parseDefinitionYaml, type ParseDefinitionYamlMessageOptions } from "../lib/parseDefinitionYaml";
@@ -113,12 +112,10 @@ export type DefinitionEditorPageModel = {
   saving: boolean;
   /** 検証して POST または PUT する。 */
   save: () => Promise<void>;
-  /** 読み込み直後の内容と違うか。 */
+  /** 読み込み直後（保存したあとは最後に保存した内容）と違うか。未保存の変更の表示にも使う。 */
   canResetToInitial: boolean;
-  /** 読み込み直後の名前と YAML に戻す。 */
+  /** 読み込み直後（保存したあとは最後に保存した内容）の名前と YAML に戻す。 */
   resetToInitial: () => void;
-  /** ヘッダの導線。 */
-  actionLinks: ActionLinkItem[];
   /** 保存結果と失敗のトースト。無ければ null。 */
   toast: ToastState | null;
   /** トーストを閉じる。 */
@@ -392,20 +389,6 @@ export function useDefinitionEditorPage({
     }
     return initialSnapshot.name !== definitionName || initialSnapshot.yaml !== yaml;
   }, [definitionName, initialSnapshot, yaml]);
-  const actionLinks = useMemo((): ActionLinkItem[] => {
-    if (!definitionId) {
-      return [{ label: uiText.lists.definitions, href: "/definitions", priority: "primary" }];
-    }
-    return [
-      {
-        label: uiText.definitionEditor.backToDetail,
-        href: `/definitions/${encodeURIComponent(definitionId)}`,
-        priority: "primary"
-      },
-      { label: uiText.lists.definitions, href: "/definitions" }
-    ];
-  }, [definitionId, uiText.definitionEditor.backToDetail, uiText.lists.definitions]);
-
   const loadDefinition = useCallback(async () => {
     if (!definitionId) {
       setLoadingMeta(false);
@@ -619,6 +602,7 @@ export function useDefinitionEditorPage({
         ? await apiPut<DefinitionDTO>(`/definitions/${encodeURIComponent(definitionId)}`, { name, yaml: yamlForSave })
         : await apiPost<DefinitionDTO>("/definitions", { name, yaml: yamlForSave, projectId });
       setSavedDefinition(saved);
+      setInitialSnapshot({ name: definitionName, yaml: yamlForSave });
       setToast({
         tone: "success",
         message: uiText.definitionEditor.toasts.savedWithDisplayId(uiText.labels.displayId, saved.displayId)
@@ -759,7 +743,6 @@ export function useDefinitionEditorPage({
     save,
     canResetToInitial,
     resetToInitial,
-    actionLinks,
     toast,
     dismissToast,
     savedDefinition,

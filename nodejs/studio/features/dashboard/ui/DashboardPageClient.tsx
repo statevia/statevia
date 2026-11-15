@@ -1,139 +1,166 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { useProject } from "@/shared/project/projectContext";
+import { RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/Card";
+import { DataList, type DataListColumn } from "@/shared/ui/DataList";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import { TenantMissingBanner } from "@/shared/ui/TenantMissingBanner";
-import { NAVIGATION_BUTTON_CLASS, OPERATION_TEXT_BUTTON_CLASS } from "@/shared/ui/navigationButtonClass";
 import { PageShell } from "@/shared/ui/PageShell";
 import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
-import { apiGet } from "@/shared/api";
 import { formatDateTimeLocalized } from "@/shared/lib/dateTime";
-import { toToastError, type ToastState } from "@/shared/lib/errors";
 import { getDateTimeLocale } from "@/shared/i18n/i18n";
-import type { DashboardExecutionItem, DashboardExecutionsPage } from "../types";
 import { useI18n } from "@/shared/i18n/uiTextContext";
+import { useDashboard } from "../hooks/useDashboard";
+import type { DashboardExecutionItem } from "../types";
+import { DashboardTiles } from "./DashboardTiles";
 
 /**
- * 直近実行の取得パス。
- * @param projectId 選択中 Project。Service API は未指定だと所属 Project の和を返すため、必ず付ける。
- * @returns `/executions` の相対パス。
+ * ダッシュボードの実行の列（状態・実行 ID・更新日時）。直近の実行と対応が必要な実行で使う。
+ * @param text ダッシュボードの辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @returns 列の定義。
  */
-function buildRecentExecutionsPath(projectId: string): string {
-  const query = new URLSearchParams({ limit: "10", offset: "0", projectId });
-  return `/executions?${query.toString()}`;
+function buildDashboardColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["dashboard"],
+  dateTimeLocale: string
+): DataListColumn<DashboardExecutionItem>[] {
+  return [
+    {
+      id: "status",
+      header: text.columns.status,
+      // 状態の文字の長さと待機中の印で右の ID の開始位置がずれないよう、状態の列幅を固定する
+      width: "11rem",
+      hideLabelOnMobile: true,
+      cell: (execution) => <StatusBadge status={execution.status} waiting={execution.waiting} />,
+    },
+    {
+      id: "execution",
+      header: text.columns.execution,
+      width: "minmax(0,1fr)",
+      hideLabelOnMobile: true,
+      cell: (execution) => (
+        <Link
+          href={`/executions/${encodeURIComponent(execution.displayId)}`}
+          className="block truncate font-mono text-md-primary hover:underline"
+          title={execution.displayId}
+        >
+          {execution.displayId}
+        </Link>
+      ),
+    },
+    {
+      id: "updatedAt",
+      header: text.columns.updatedAt,
+      width: "10rem",
+      align: "end",
+      cell: (execution) => (
+        <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
+          {formatDateTimeLocalized(execution.updatedAt ?? execution.startedAt, dateTimeLocale)}
+        </span>
+      ),
+    },
+  ];
 }
 
 /**
- * 直近実行 10 件のダッシュボード（一覧取得・空状態・詳細への導線）。
+ * ダッシュボード（モック 09）。件数のタイル、対応が必要な実行、直近の実行 10 件を並べる。
  * 一覧はサイドメニューで選択中の Project に絞る。所属一覧の取得前は取得せず、所属が無いときは空表示にする。
+ * 見出しの右に最後に読み込んだ時刻と再読み込みを置く。
  */
 export function DashboardPageClient() {
   const { uiText, locale } = useI18n();
-  const router = useRouter();
+  const text = uiText.dashboard;
   const dateTimeLocale = getDateTimeLocale(locale);
-  const [items, setItems] = useState<DashboardExecutionItem[] | null>(null);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const { selectedProject, loaded: projectsLoaded } = useProject();
-  const projectId = selectedProject?.projectId ?? null;
+  const { recent, totalCount, attention, countsAll, countsRecent, loading, lastLoadedAt, toast, dismissToast, reload } =
+    useDashboard();
 
-  const load = useCallback(async () => {
-    if (!projectsLoaded) {
-      return;
-    }
-    if (projectId === null) {
-      // 未指定で呼ぶと所属の和が返る。選択が無いときは取得せず空にする。
-      setItems([]);
-      setTotalCount(0);
-      setToast(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setToast(null);
-    try {
-      const page = await apiGet<DashboardExecutionsPage>(buildRecentExecutionsPath(projectId));
-      setItems(page.items);
-      setTotalCount(page.totalCount);
-    } catch (error) {
-      setToast(toToastError(error));
-      setItems(null);
-      setTotalCount(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, projectsLoaded]);
+  const empty = !loading && recent !== null && recent.length === 0;
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const empty = !loading && items !== null && items.length === 0;
-  const totalCountLabel = uiText.dashboard.totalCount(totalCount);
+  const columns = buildDashboardColumns(text, dateTimeLocale);
 
   return (
     <PageShell
-      title={uiText.dashboard.title}
-      description={uiText.dashboard.descriptionRecent}
+      title={text.title}
+      description={text.descriptionRecent}
+      primaryActions={
+        <>
+          {lastLoadedAt ? (
+            <span className="text-xs text-md-on-surface-variant">
+              {text.lastLoadedAt(lastLoadedAt.toLocaleTimeString(dateTimeLocale, { hour: "2-digit", minute: "2-digit" }))}
+            </span>
+          ) : null}
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={uiText.actions.reload}
+            title={uiText.actions.reload}
+            disabled={loading}
+            onClick={() => void reload()}
+          >
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+          </Button>
+        </>
+      }
     >
       <TenantMissingBanner />
 
-      <Toast toast={toast} onClose={() => setToast(null)} />
+      <Toast toast={toast} onClose={dismissToast} />
 
-      {loading && (
-        <PageState state="loading" message={uiText.dashboard.loadingRecent} />
+      {loading && <PageState state="loading" message={text.loadingRecent} />}
+
+      {!loading && <DashboardTiles countsAll={countsAll} countsRecent={countsRecent} />}
+
+      {!loading && attention !== null && (
+        <Card
+          title={text.attention.title}
+          description={text.attention.description}
+          actions={
+            <Link href="/executions?needsAttention=true" className="text-sm text-md-primary hover:underline">
+              {text.attention.openAll}
+            </Link>
+          }
+          padding="none"
+        >
+          {attention.length > 0 ? (
+            <DataList
+              ariaLabel={text.attention.title}
+              columns={columns}
+              items={attention}
+              getRowKey={(execution) => execution.displayId}
+            />
+          ) : (
+            <p className="px-5 py-4 text-sm text-md-on-surface-variant">{text.attention.empty}</p>
+          )}
+        </Card>
       )}
 
-      {empty && (
-        <PageState state="empty" message={uiText.dashboard.emptyStartFromDefinitionsOrExecutions} />
-      )}
+      {empty && <PageState state="empty" message={text.emptyStartFromDefinitionsOrExecutions} />}
 
-      {!loading && items !== null && items.length > 0 && (
-        <section aria-label={uiText.dashboard.aria.recentExecutionsList}>
-          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-            <p className="text-xs text-md-on-surface-variant">{totalCountLabel}</p>
-            <button
-              type="button"
-              className={`self-start ${OPERATION_TEXT_BUTTON_CLASS}`}
-              onClick={() => void load()}
-            >
-              {uiText.actions.reload}
-            </button>
+      {!loading && recent !== null && recent.length > 0 && (
+        <section aria-label={text.aria.recentExecutionsList} className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-base font-semibold text-md-on-surface">{text.recentTitle}</h2>
+              <p className="text-xs text-md-on-surface-variant">{text.totalCount(totalCount)}</p>
+            </div>
+            <Link href="/executions" className="text-sm text-md-primary hover:underline">
+              {text.openExecutions}
+            </Link>
           </div>
-          <ul className="divide-y divide-md-outline overflow-hidden rounded-lg border border-md-outline bg-md-surface shadow-xs">
-            {items.map((execution) => {
-              const updated = execution.updatedAt ?? execution.startedAt;
-              return (
-                <li key={execution.displayId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge status={execution.status} />
-                      <span className="truncate font-mono text-sm text-md-on-surface" title={execution.displayId}>
-                        {execution.displayId}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-md-on-surface-variant">{uiText.dashboard.updatedAt(formatDateTimeLocalized(updated, dateTimeLocale))}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`shrink-0 ${NAVIGATION_BUTTON_CLASS}`}
-                    onClick={() => router.push(`/executions/${encodeURIComponent(execution.displayId)}`)}
-                  >
-                    {uiText.dashboard.actions.openDetail}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <DataList
+            ariaLabel={text.aria.recentExecutionsList}
+            columns={columns}
+            items={recent}
+            getRowKey={(execution) => execution.displayId}
+          />
         </section>
       )}
 
-      {!loading && items === null && !toast && (
-        <PageState state="error" message={uiText.dashboard.error.fetchFailed} onRetry={() => void load()} />
+      {!loading && recent === null && !toast && (
+        <PageState state="error" message={text.error.fetchFailed} onRetry={() => void reload()} />
       )}
     </PageShell>
   );

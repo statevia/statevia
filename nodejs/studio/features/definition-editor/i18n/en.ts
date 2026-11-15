@@ -8,7 +8,6 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
   ...definitionEditorUiTextJa,
   definitionEditor: {
     ...definitionEditorUiTextJa.definitionEditor,
-    backToDetail: "Back to definition detail",
     descriptionCreating: "Create a new definition.",
     descriptionEditingTarget: (definitionId: string) => `Editing target: ${definitionId}`,
     loadingMeta: "Loading definition metadata...",
@@ -38,6 +37,10 @@ export const definitionEditorUiTextEn: DefinitionEditorFeatureUiText = {
       downloadYaml: "Download",
       confirmOverwrite: "Overwrite",
       cancelOverwrite: "Cancel",
+      overwriteConfirmTitle: "Overwrite your current edits?",
+      overwriteConfirmMessage: "Unsaved changes are replaced with the loaded YAML. The definition name does not change.",
+      editorModeLabel: "Editor view",
+      unsavedChanges: "You have unsaved changes",
     },
     graph: {
       fieldName: "name",

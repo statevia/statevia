@@ -27,6 +27,7 @@ function execution(nodes: ExecutionNodeDTO[], graphId = "hello"): ExecutionView 
     startedAt: "2026-01-01T00:00:00Z",
     cancelRequested: false,
     restartLost: false,
+    waiting: false,
     graphId,
     nodes
   };

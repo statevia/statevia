@@ -369,6 +369,18 @@ describe("buildExecutionsListPath", () => {
     // Assert
     expect(a).toBe("/executions?limit=20&offset=40&status=ACTIVE&name=x&definitionId=def-1");
   });
+
+  it("要対応は needsAttention=true で渡し、開始日時の並び順を付ける", () => {
+    // Act
+    const path = buildExecutionsListPath({
+      pagination: { limit: 20, offset: 0 },
+      sort: { sortBy: "startedAt", sortOrder: "desc" },
+      needsAttention: true
+    });
+
+    // Assert
+    expect(path).toBe("/executions?limit=20&offset=0&needsAttention=true&sortBy=startedAt&sortOrder=desc");
+  });
 });
 
 describe("getApiConfig / getApiHeaders", () => {

@@ -1,26 +1,37 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { Breadcrumbs } from "@/shared/ui/Breadcrumbs";
+import { Button } from "@/shared/ui/Button";
+import { Card } from "@/shared/ui/Card";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { EmptyState } from "@/shared/ui/EmptyState";
+import { Notice } from "@/shared/ui/Notice";
 import { PageShell } from "@/shared/ui/PageShell";
+import { SelectField } from "@/shared/ui/SelectField";
+import { TextAreaField } from "@/shared/ui/TextAreaField";
+import { TextField } from "@/shared/ui/TextField";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import type { TenantActionBinding } from "../actionBindings";
 import { useAdminActionBindingsPage } from "../hooks/useAdminActionBindingsPage";
 
 /**
  * テナント管理者向けの Action バインディング画面。
+ * 作成の送信だけを緑（主導線）にし、行の保存は紺、削除は赤枠で確認ダイアログを経てから送る。
  * @returns 一覧、作成、更新、削除。
  */
 export function AdminActionBindingsPageClient() {
   const uiText = useUiText();
   const page = useAdminActionBindingsPage();
   const text = uiText.admin.actionBindings;
+  const [deleteTargetName, setDeleteTargetName] = useState<string | null>(null);
 
   const onCreate = (event: FormEvent) => {
     event.preventDefault();
     void page.createBinding();
   };
   const bindingList = page.bindings.length === 0 ? (
-    <p className="text-sm">{text.empty}</p>
+    <EmptyState title={text.empty} />
   ) : (
     <ul className="space-y-4">
       {page.bindings.map((binding) => (
@@ -43,7 +54,7 @@ export function AdminActionBindingsPageClient() {
               }))
             }
             onSave={() => void page.saveBinding(binding)}
-            onDelete={() => void page.deleteBinding(binding.name)}
+            onDelete={() => setDeleteTargetName(binding.name)}
           />
         </li>
       ))}
@@ -51,64 +62,63 @@ export function AdminActionBindingsPageClient() {
   );
 
   return (
-    <PageShell title={text.title} description={text.description}>
-      {page.errorMessage ? <p className="mb-4 text-sm text-red-700">{page.errorMessage}</p> : null}
-      <form onSubmit={onCreate} className="mb-6 rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs">
-        <h2 className="mb-3 text-lg font-medium">{text.createTitle}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-medium">
-            {text.nameLabel}
-            <input
-              value={page.name}
-              onChange={(event) => page.setName(event.target.value)}
-              required
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            {text.kindLabel}
-            <select
+    <PageShell
+      title={text.title}
+      description={text.description}
+      breadcrumbs={<Breadcrumbs items={[{ label: uiText.navigation.groups.tenantSettings }, { label: text.title }]} />}
+    >
+      {page.errorMessage ? <Notice tone="error" title={page.errorMessage} /> : null}
+      <Card title={text.createTitle}>
+        <form onSubmit={onCreate} className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label={text.nameLabel} value={page.name} onChange={(event) => page.setName(event.target.value)} required />
+            <SelectField
+              label={text.kindLabel}
               value={page.kind}
               onChange={(event) => page.setKind(event.target.value === "variable" ? "variable" : "secret")}
-              className="mt-1 w-full rounded-lg border border-md-outline bg-md-surface px-3 py-2 text-sm text-md-on-surface"
             >
-              <option value="secret" className="bg-md-surface text-md-on-surface">{text.kindSecret}</option>
-              <option value="variable" className="bg-md-surface text-md-on-surface">{text.kindVariable}</option>
-            </select>
-          </label>
-          <label className="block text-sm font-medium">
-            {text.valueLabel}
-            <input
+              <option value="secret">{text.kindSecret}</option>
+              <option value="variable">{text.kindVariable}</option>
+            </SelectField>
+            <TextField
+              label={text.valueLabel}
               type={page.kind === "secret" ? "password" : "text"}
               value={page.value}
               autoComplete="off"
               onChange={(event) => page.setValue(event.target.value)}
               required
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
             />
-          </label>
-          <label className="block text-sm font-medium">
-            {text.allowedActionIdsLabel}
-            <textarea
+            <TextAreaField
+              label={text.allowedActionIdsLabel}
               value={page.allowedActionIdsText}
               onChange={(event) => page.setAllowedActionIdsText(event.target.value)}
               required
               rows={3}
-              className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
+              hint={text.allowedActionIdsHint}
             />
-            <span className="mt-1 block text-xs font-normal">{text.allowedActionIdsHint}</span>
-          </label>
-        </div>
-        <button
-          type="submit"
-          disabled={page.submitting}
-          className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {page.submitting ? text.creating : text.createSubmit}
-        </button>
-      </form>
+          </div>
+          <div className="flex justify-end">
+            <Button variant="lead" type="submit" loading={page.submitting}>
+              {page.submitting ? text.creating : text.createSubmit}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
       {page.loading ? null : bindingList}
+
+      <ConfirmDialog
+        open={deleteTargetName !== null}
+        title={deleteTargetName ? text.deleteConfirmTitle(deleteTargetName) : ""}
+        message={text.deleteConfirmMessage}
+        confirmLabel={text.deleteConfirmSubmit}
+        onConfirm={() => {
+          if (deleteTargetName === null) return;
+          setDeleteTargetName(null);
+          void page.deleteBinding(deleteTargetName);
+        }}
+        onCancel={() => setDeleteTargetName(null)}
+      />
     </PageShell>
   );
 }
@@ -153,54 +163,36 @@ function BindingRow({
   const text = useUiText().admin.actionBindings;
   return (
     <form
-      className="rounded-xl border border-md-outline bg-md-surface p-4"
+      className="flex flex-col gap-3 rounded-card border border-md-outline bg-md-surface p-5"
       onSubmit={(event) => {
         event.preventDefault();
         onSave();
       }}
     >
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h3 className="font-medium">{binding.name}</h3>
-        <span className="text-xs">{binding.kind === "secret" ? text.kindSecret : text.kindVariable}</span>
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="font-semibold text-md-on-surface">{binding.name}</h3>
+        <span className="inline-flex h-5 items-center rounded-pill bg-md-surface-container-high px-2 text-[11px] font-semibold text-md-on-surface-variant">
+          {binding.kind === "secret" ? text.kindSecret : text.kindVariable}
+        </span>
       </div>
-      <p className="mb-3 text-xs">{text.updatedAt(binding.updatedAt)}</p>
-      {binding.kind === "secret" ? <p className="mb-2 text-sm">{text.valueConfigured}</p> : null}
-      <label className="mb-3 block text-sm font-medium">
-        {text.valueLabel}
-        <input
-          type={binding.kind === "secret" ? "password" : "text"}
-          value={draftValue}
-          autoComplete="off"
-          onChange={(event) => onDraftValue(event.target.value)}
-          className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-        />
-        {binding.kind === "secret" ? <span className="mt-1 block text-xs font-normal">{text.secretValueHint}</span> : null}
-      </label>
-      <label className="mb-3 block text-sm font-medium">
-        {text.allowedActionIdsLabel}
-        <textarea
-          value={draftActions}
-          rows={3}
-          onChange={(event) => onDraftActions(event.target.value)}
-          className="mt-1 w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-        />
-      </label>
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {submitting ? text.saving : text.save}
-        </button>
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={onDelete}
-          className="rounded-lg border border-md-outline px-3 py-1.5 text-sm text-md-on-surface hover:bg-md-surface-container disabled:opacity-60"
-        >
+      <p className="text-xs text-md-on-surface-variant">{text.updatedAt(binding.updatedAt)}</p>
+      {binding.kind === "secret" ? <p className="text-sm text-md-on-surface">{text.valueConfigured}</p> : null}
+      <TextField
+        label={text.valueLabel}
+        type={binding.kind === "secret" ? "password" : "text"}
+        value={draftValue}
+        autoComplete="off"
+        onChange={(event) => onDraftValue(event.target.value)}
+        hint={binding.kind === "secret" ? text.secretValueHint : undefined}
+      />
+      <TextAreaField label={text.allowedActionIdsLabel} value={draftActions} rows={3} onChange={(event) => onDraftActions(event.target.value)} />
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button variant="danger" disabled={submitting} onClick={onDelete}>
           {submitting ? text.deleting : text.delete}
-        </button>
+        </Button>
+        <Button variant="standard" type="submit" loading={submitting}>
+          {submitting ? text.saving : text.save}
+        </Button>
       </div>
     </form>
   );

@@ -41,12 +41,14 @@ export const schedulesUiTextEn: SchedulesFeatureUiText = {
       runConfirmNote:
         "Starts one execution. The next scheduled run does not move. It starts even if the previous run is still going.",
       runStarted: (displayId) => `Started execution ${displayId}.`,
-      deleted: (name) => `Deleted ${name}.`
+      deleted: (name) => `Deleted ${name}.`,
+      deleteConfirmTitle: (name) => `Delete ${name}?`,
+      deleteConfirmMessage: "A deleted schedule cannot be restored.",
+      runConfirmTitle: (name) => `Run ${name} now?`
     },
     form: {
       createTitle: "Create schedule",
       editTitle: "Edit schedule",
-      backToList: "Back to schedules",
       notFound: "This schedule was not found. It was deleted, or it belongs to a definition in a project you are not a member of.",
       forbidden: "This schedule's definition is not in your definition access.",
       loadFailed: "Failed to load the schedule.",

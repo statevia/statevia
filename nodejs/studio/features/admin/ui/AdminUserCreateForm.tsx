@@ -10,9 +10,19 @@ import {
   USERNAME_PATTERN
 } from "@/shared/auth/userIdentity";
 import { useUiText } from "@/shared/i18n/uiTextContext";
+import { Button } from "@/shared/ui/Button";
+import { Dialog } from "@/shared/ui/Dialog";
+import { TextField } from "@/shared/ui/TextField";
 
-/** ユーザー作成フォームの入力。 */
+/** 作成フォームの `<form>` の id。ダイアログ下部の送信ボタンから `form` 属性で結ぶ。 */
+const CREATE_FORM_ID = "admin-user-create-form";
+
+/** ユーザー作成ダイアログの入力。 */
 export type AdminUserCreateFormProps = {
+  /** ダイアログが開いているか。 */
+  open: boolean;
+  /** ダイアログを閉じる。 */
+  onClose: () => void;
   /** ユーザー名。 */
   username: string;
   /** メール。 */
@@ -58,11 +68,14 @@ export type AdminUserCreateFormProps = {
 };
 
 /**
- * テナントユーザーの作成フォーム。検証と API は呼び出し側に渡す。
- * @param props 入力値とコマンド。
- * @returns 作成フォーム。
+ * テナントユーザーの作成ダイアログ。一覧の見出しの「ユーザーを作成」から開く（studio-ui-visual-refresh の U5）。
+ * 検証と API は呼び出し側に渡す。送信中は閉じさせない。
+ * @param props 開閉・入力値・コマンド。
+ * @returns 作成ダイアログ。
  */
 export function AdminUserCreateForm({
+  open,
+  onClose,
   username,
   email,
   password,
@@ -77,91 +90,68 @@ export function AdminUserCreateForm({
   onSubmit
 }: Readonly<AdminUserCreateFormProps>) {
   const uiText = useUiText();
+  const text = uiText.admin.users;
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="rounded-xl border border-md-outline bg-md-surface p-4 shadow-xs"
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={text.createTitle}
+      size="lg"
+      dismissible={!submitting}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {text.cancel}
+          </Button>
+          <Button variant="lead" type="submit" form={CREATE_FORM_ID} loading={submitting}>
+            {submitting ? text.creating : text.createSubmit}
+          </Button>
+        </>
+      }
     >
-      <h2 className="mb-3 text-lg font-medium">{uiText.admin.users.createTitle}</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="admin-user-username" className="mb-1 block text-sm font-medium">
-            {uiText.admin.users.usernameLabel}
-          </label>
-          <input
-            id="admin-user-username"
-            type="text"
-            autoComplete="username"
-            required
-            maxLength={USERNAME_MAX_LENGTH}
-            pattern={USERNAME_PATTERN}
-            value={username}
-            onChange={(event) => onUsernameChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="admin-user-email" className="mb-1 block text-sm font-medium">
-            {uiText.admin.users.emailLabel}
-          </label>
-          <input
-            id="admin-user-email"
-            type="email"
-            maxLength={USER_EMAIL_MAX_LENGTH}
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="admin-user-password" className="mb-1 block text-sm font-medium">
-            {uiText.admin.users.passwordLabel}
-          </label>
-          <input
-            id="admin-user-password"
-            type="password"
-            required
-            minLength={PASSWORD_MIN_LENGTH}
-            maxLength={PASSWORD_MAX_LENGTH}
-            pattern={PASSWORD_PATTERN}
-            title={uiText.admin.users.passwordPolicyHint}
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-          <p className="mt-1 text-xs text-md-on-surface-variant">
-            {uiText.admin.users.passwordPolicyHint}
-          </p>
-        </div>
-        <div>
-          <label htmlFor="admin-user-display" className="mb-1 block text-sm font-medium">
-            {uiText.admin.users.displayNameLabel}
-          </label>
-          <input
-            id="admin-user-display"
-            type="text"
-            value={displayName}
-            onChange={(event) => onDisplayNameChange(event.target.value)}
-            className="w-full rounded-lg border border-md-outline px-3 py-2 text-sm"
-          />
-        </div>
-        <label className="flex items-center gap-2 self-end text-sm">
-          <input
-            type="checkbox"
-            checked={isTenantAdmin}
-            onChange={(event) => onTenantAdminChange(event.target.checked)}
-          />
-          {uiText.admin.users.isTenantAdminLabel}
+      <form id={CREATE_FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
+        <TextField
+          label={text.usernameLabel}
+          type="text"
+          autoComplete="username"
+          required
+          maxLength={USERNAME_MAX_LENGTH}
+          pattern={USERNAME_PATTERN}
+          value={username}
+          onChange={(event) => onUsernameChange(event.target.value)}
+        />
+        <TextField
+          label={text.emailLabel}
+          type="email"
+          maxLength={USER_EMAIL_MAX_LENGTH}
+          value={email}
+          onChange={(event) => onEmailChange(event.target.value)}
+        />
+        <TextField
+          label={text.displayNameLabel}
+          type="text"
+          value={displayName}
+          onChange={(event) => onDisplayNameChange(event.target.value)}
+        />
+        <TextField
+          label={text.passwordLabel}
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={PASSWORD_MIN_LENGTH}
+          maxLength={PASSWORD_MAX_LENGTH}
+          pattern={PASSWORD_PATTERN}
+          title={text.passwordPolicyHint}
+          hint={text.passwordPolicyHint}
+          value={password}
+          onChange={(event) => onPasswordChange(event.target.value)}
+        />
+        <label className="flex items-center gap-2 rounded-card border border-md-outline px-3.5 py-3 text-sm">
+          <input type="checkbox" checked={isTenantAdmin} onChange={(event) => onTenantAdminChange(event.target.checked)} />
+          {text.isTenantAdminLabel}
         </label>
-      </div>
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-      >
-        {submitting ? uiText.admin.users.creating : uiText.admin.users.createSubmit}
-      </button>
-    </form>
+      </form>
+    </Dialog>
   );
 }

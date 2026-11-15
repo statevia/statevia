@@ -8,13 +8,43 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   ...executionsUiTextJa,
   executionDashboard: {
     ...executionsUiTextJa.executionDashboard,
-    header: {
-      titleDefault: "Execution detail",
-    },
-    actions: {
-      sectionTitle: "Execution actions",
+    viewModeLabel: "Node view",
+    sendEvent: {
+      open: "Send event",
+      title: "Send event",
+      descriptionNone: (executionId: string) => `Send an event to ${executionId}.`,
+      descriptionSingle: (executionId: string, nodeName: string) =>
+        `${executionId} is waiting for an event at ${nodeName}.`,
+      descriptionMulti: (executionId: string, count: number) =>
+        `${executionId} is waiting for events at ${count} nodes. Choose where to deliver.`,
+      targetLabel: "Deliver to",
+      nodeOptionLabel: (nodeName: string, eventName: string | null) =>
+        eventName ? `Deliver ${eventName} to ${nodeName}` : `Deliver an event to ${nodeName}`,
+      nodeOptionHint: (waitingSince: string | null) =>
+        waitingSince ? `Only this node moves on. Waiting since ${waitingSince}.` : "Only this node moves on.",
+      nodeEventSelectLabel: (nodeName: string) => `Event to deliver to ${nodeName}`,
+      executionOptionLabel: "Send to the execution by event name",
+      executionOptionHint: "Sends the event to the execution.",
       eventNameLabel: "Event name",
       eventNamePlaceholder: "event-name",
+      previewNode: (nodeName: string, remainingNodeNames: readonly string[]) =>
+        remainingNodeNames.length > 0
+          ? `Sending moves ${nodeName} on. ${remainingNodeNames.join(", ")} will keep waiting.`
+          : `Sending moves ${nodeName} on.`,
+      previewExecution:
+        "If exactly one wait is waiting for this event, that wait moves on. It is rejected when no wait or more than one wait matches.",
+      submit: "Send",
+      cancel: "Cancel",
+      sendToNode: "Send to this node",
+      sendThisEvent: "Send this event",
+    },
+    waitNotice: {
+      singleTitle: (nodeName: string) => `Waiting for an event at ${nodeName}`,
+      singleBody: (eventNames: string) => `Moves on when the event ${eventNames} arrives.`,
+      multiTitle: (count: number) => `${count} nodes are waiting for events`,
+      multiBody: "Each parallel branch is waiting for an event.",
+      waitingSince: (time: string) => `since ${time}`,
+      listLabel: "Waits",
     },
     validation: {
       eventNameTooLong: "Event name must be within 64 characters.",
@@ -88,10 +118,7 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
       title: "Wait details",
       reasonWaitByWaitKeyAndResumeWait: "Reason: waiting for a resume event on the wait key.",
       resumeEventName: (eventName: string) => `Resume event name: ${eventName}`,
-      selectResumeEvent: "Event to resume with",
-      selectInternalResumeEvent: "Event name",
       subscribeOnlyHint: "This resumes only this execution, using an event name.\nIt is not delivered to every execution waiting on the same topic / key.",
-      subscribeResumeAction: "Resume this execution only",
     },
     cancel: {
       detailTitle: (cancelLabel: string) => `${cancelLabel} details`,
@@ -141,20 +168,23 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
   },
   executionHeader: {
     ...executionsUiTextJa.executionHeader,
-    placeholderExecutionId: "e.g. a1B2c3D4e5",
-    executionIdLabel: (executionLabel: string) => `${executionLabel} ID`,
+    startedAt: (time: string) => `Started ${time}`,
+    cancelRequested: "Cancel requested",
     compareLabel: "Compare",
     realtimeSseLabel: "Realtime updates",
-    cancelRequestedLabel: "Cancel requested",
-    cancelRequestedLine: (cancelRequestedLabel: string, cancelRequested: boolean) =>
-      `${cancelRequestedLabel}: ${cancelRequested ? "Yes" : "No"}`,
 
   },
   executionsPage: {
     ...executionsUiTextJa.executionsPage,
     loading: "Loading executions.",
     listSummary: (totalCount: number, page: number) => `Total ${totalCount} (page ${page})`,
-    updatedAt: (formattedDateTime: string) => `Updated: ${formattedDateTime}`,
+    description: "Check the status of executions started from definitions. Advance waiting executions from the detail page.",
+    columns: {
+      status: "Status",
+      execution: "Execution ID",
+      startedAt: "Started",
+      updatedAt: "Updated",
+    },
     empty: "No executions found.",
     error: "Failed to load executions. Please try again later.",
     pagination: {
@@ -166,28 +196,23 @@ export const executionsUiTextEn: ExecutionsFeatureUiText = {
     },
     filter: {
       ...executionsUiTextJa.executionsPage.filter,
-      contextActivePrefix: "Filtered by definition:",
-      clearDefinition: "Clear definition filter",
-      title: "Filters",
-      all: "(All)",
+      all: "All",
       definitionInputHint: "Definition ID or UUID",
       definitionLabelWithHint: (definitionLabel: string) => `${definitionLabel} (ID or UUID)`,
       definitionPlaceholder: "e.g. a1B2c3D4e5",
       nameInputHint: "Execution ID (partial match) or UUID (exact match)",
       search: "Search",
-      clear: "Clear",
-      sortByLabel: "Sort by",
-      sortOrderLabel: "Order",
+      sortLabel: "Sort",
+      nameChip: (keyword: string) => `Execution ID: ${keyword}`,
+      definitionChip: (definitionId: string) => `Definition: ${definitionId}`,
       sortByUpdatedAt: "Updated at",
       sortByDisplayId: "ID",
+      sortByStartedAt: "Started at",
+      needsAttention: "Needs attention (waiting / FAILED)",
       sortOrderDesc: "Descending",
       sortOrderAsc: "Ascending",
       invalidName: "Execution ID allows only ASCII alphanumerics plus . - _ within 100 characters.",
       invalidDefinitionId: "Definition ID allows only ASCII alphanumerics plus - _ within 80 characters.",
-      pageInfo: (limit: number) => `Showing up to ${limit} items per page.`,
-    },
-    actions: {
-      openDetail: "Details",
     },
     ingress: {
       open: "Event submission",
