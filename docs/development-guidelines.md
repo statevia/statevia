@@ -55,7 +55,9 @@ Markdown 執筆ルールは [`DOCUMENTATION-STANDARD.md`](DOCUMENTATION-STANDARD
   - feature 間の内部 import は禁止。長期の互換 re-export は残さない。
   - Tailwind CSS 4 はクラスをソースから自動検出する。色は `app/globals.css` の CSS 変数と `@theme` が正本。
   - 色は `app/globals.css` の CSS 変数を正本とし、Tailwind では `md-*` / `brand-*` / `editor-*` を使う。`text-[var(--md-sys-color-on-surface)]` のような任意値は新規に書かない。
-  - フォームの送信・キャンセルは `shared/ui/Button`、ラベル付き 1 行入力は `shared/ui/TextField`。クラス列が一致する集合配送ダイアログだけが部品を使う。他画面はトークンクラスの直書きとする。hover・余白・ラベル色が違う箇所、不透明度付き class、パレット色、style の色は部品やトークンへ寄せない。
+  - 画面は `shared/ui` の部品で組む。ボタンは `Button`、入力は `TextField` / `SelectField` / `TextAreaField`（または `inputClassName`）、お知らせは `Notice`、確認は `ConfirmDialog`、一覧は `DataList`。部品の一覧と使い分けの正本は [ui-studio-structure.md](architecture/ui-studio-structure.md) §8。
+  - ボタンの色は役割で選ぶ。緑（`lead`）は主導線で 1 画面に 1 つまで、紺（`standard`）は通常の操作、枠線（`outline`）は補助、赤枠（`danger`）は削除・キャンセルなど取り消しにくい操作。赤の塗り（`dangerSolid`）は確認ダイアログの確定だけに使う。
+  - Tailwind の既定パレットの色（`bg-gray-100`・`text-red-600` など）を `features` / `shared` に直書きしない。ESLint の `no-restricted-syntax` が error にする。トークン（`md-*` / `brand-*`）か部品を使う。
 - 静的解析: `npm run lint`（ESLint 9 strict）。型チェック: `npm run typecheck`（`tsc --noEmit`）。テスト: `npm run test:run`（Vitest）。Sonar は **§5.2**。
 
 ---
@@ -287,6 +289,7 @@ dotnet build-server shutdown
 
 | 日付 | 内容 |
 |------|------|
+| 2026-11-15 | §3.3 の部品の使い方を、全画面を `shared/ui` の部品で組む形に改め、ボタンの色の役割と既定パレットの色の直書きの禁止を書いた |
 | 2026-11-10 | §4.3 から埋め戻しの途中を前提にした記述を外し、新しいプロジェクト・ディレクトリの扱いとマイグレーションの除外の仕組みを書いた |
 | 2026-11-10 | §4.3 の ESLint の検出の現状を更新（export した型の公開メンバーも、プロダクトコード全体で検出する） |
 | 2026-11-09 | §4.3 の検出の現状を更新（C# のプロダクトプロジェクトはすべて StyleCop のドキュメント欠落規則が有効で、CS1591 の抑制は無い） |
