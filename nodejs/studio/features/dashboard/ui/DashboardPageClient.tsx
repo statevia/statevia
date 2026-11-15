@@ -18,20 +18,16 @@ import type { DashboardExecutionItem } from "../types";
 import { DashboardTiles } from "./DashboardTiles";
 
 /**
- * ダッシュボード（モック 09）。件数のタイル、対応が必要な実行、直近の実行 10 件を並べる。
- * 一覧はサイドメニューで選択中の Project に絞る。所属一覧の取得前は取得せず、所属が無いときは空表示にする。
- * 見出しの右に最後に読み込んだ時刻と再読み込みを置く。
+ * ダッシュボードの実行の列（状態・実行 ID・更新日時）。直近の実行と対応が必要な実行で使う。
+ * @param text ダッシュボードの辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @returns 列の定義。
  */
-export function DashboardPageClient() {
-  const { uiText, locale } = useI18n();
-  const text = uiText.dashboard;
-  const dateTimeLocale = getDateTimeLocale(locale);
-  const { recent, totalCount, attention, countsAll, countsRecent, loading, lastLoadedAt, toast, dismissToast, reload } =
-    useDashboard();
-
-  const empty = !loading && recent !== null && recent.length === 0;
-
-  const columns: DataListColumn<DashboardExecutionItem>[] = [
+function buildDashboardColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["dashboard"],
+  dateTimeLocale: string
+): DataListColumn<DashboardExecutionItem>[] {
+  return [
     {
       id: "status",
       header: text.columns.status,
@@ -67,6 +63,23 @@ export function DashboardPageClient() {
       ),
     },
   ];
+}
+
+/**
+ * ダッシュボード（モック 09）。件数のタイル、対応が必要な実行、直近の実行 10 件を並べる。
+ * 一覧はサイドメニューで選択中の Project に絞る。所属一覧の取得前は取得せず、所属が無いときは空表示にする。
+ * 見出しの右に最後に読み込んだ時刻と再読み込みを置く。
+ */
+export function DashboardPageClient() {
+  const { uiText, locale } = useI18n();
+  const text = uiText.dashboard;
+  const dateTimeLocale = getDateTimeLocale(locale);
+  const { recent, totalCount, attention, countsAll, countsRecent, loading, lastLoadedAt, toast, dismissToast, reload } =
+    useDashboard();
+
+  const empty = !loading && recent !== null && recent.length === 0;
+
+  const columns = buildDashboardColumns(text, dateTimeLocale);
 
   return (
     <PageShell

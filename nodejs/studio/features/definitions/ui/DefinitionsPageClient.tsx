@@ -115,6 +115,97 @@ function sortOptionLabel(
 }
 
 /**
+ * 定義一覧の列（名前・最後の実行・作成日時・操作）。
+ * @param text 定義一覧の辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @param rowActions 行の操作に渡す状態とコマンド（定義そのものを除く）。
+ * @returns 列の定義。
+ */
+function buildDefinitionColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["definitionsPage"],
+  dateTimeLocale: string,
+  rowActions: Omit<DefinitionRowActionsProps, "definition">
+): DataListColumn<DefinitionDTO>[] {
+  return [
+    {
+      id: "name",
+      header: text.columns.name,
+      width: "minmax(0,1fr)",
+      hideLabelOnMobile: true,
+      cell: (definition) => (
+        <>
+          <p className="flex min-w-0 items-center gap-2 font-medium text-md-on-surface" title={definition.name}>
+            {isDeletedDefinition(definition) ? (
+              <span className="truncate">{definition.name}</span>
+            ) : (
+              <Link
+                href={`/definitions/${encodeURIComponent(definition.displayId)}`}
+                className="truncate hover:text-md-primary hover:underline"
+              >
+                {definition.name}
+              </Link>
+            )}
+            {isDeletedDefinition(definition) ? (
+              <span className="inline-flex h-5 shrink-0 items-center rounded-pill bg-md-surface-container-high px-2 text-[11px] font-semibold text-md-on-surface-variant">
+                {text.deletedBadge}
+              </span>
+            ) : null}
+          </p>
+          <p className="mt-0.5 truncate font-mono text-xs text-md-on-surface-variant">{definition.displayId}</p>
+        </>
+      ),
+    },
+    {
+      id: "lastExecution",
+      header: text.columns.lastExecution,
+      width: "12rem",
+      cell: (definition) =>
+        definition.lastExecution ? (
+          <Link
+            href={`/executions/${encodeURIComponent(definition.lastExecution.displayId)}`}
+            className="inline-flex flex-col items-start gap-0.5 rounded-control hover:opacity-80"
+            title={definition.lastExecution.displayId}
+          >
+            <StatusBadge status={definition.lastExecution.status} waiting={definition.lastExecution.waiting} />
+            <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
+              {formatDateTimeLocalized(definition.lastExecution.startedAt, dateTimeLocale)}
+            </span>
+          </Link>
+        ) : (
+          <span className="text-sm text-md-on-surface-variant">{text.neverExecuted}</span>
+        ),
+    },
+    {
+      id: "createdAt",
+      header: text.columns.createdAt,
+      width: "11rem",
+      cell: (definition) => (
+        <>
+          <p className="whitespace-nowrap text-md-on-surface">
+            {formatDateTimeLocalized(definition.createdAt, dateTimeLocale)}
+          </p>
+          {isDeletedDefinition(definition) && definition.deletedAt ? (
+            <p className="mt-0.5 whitespace-nowrap text-xs text-md-on-surface-variant">
+              {text.deletedAt(formatDateTimeLocalized(definition.deletedAt, dateTimeLocale))}
+            </p>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "actions",
+      header: text.columns.actions,
+      width: "12rem",
+      align: "end",
+      hideLabelOnMobile: true,
+      cell: (definition) => (
+        <DefinitionRowActions definition={definition} {...rowActions} />
+      ),
+    },
+  ];
+}
+
+/**
  * Definition 一覧（検索・並び順・ページング・catalog 論理削除/復元）を表示する。
  * 条件は URL に反映し（`useDefinitionsListQuery`）、かけている条件はチップで出す（要件 8）。
  * 削除は定義名の入力を求める確認ダイアログ（U6）、復元は確認ダイアログを経てから送る。
@@ -250,91 +341,14 @@ export function DefinitionsPageClient() {
       ? undefined
       : items?.find((definition) => definition.displayId === pendingConfirm.displayId);
 
-  const columns: DataListColumn<DefinitionDTO>[] = [
-    {
-      id: "name",
-      header: text.columns.name,
-      width: "minmax(0,1fr)",
-      hideLabelOnMobile: true,
-      cell: (definition) => (
-        <>
-          <p className="flex min-w-0 items-center gap-2 font-medium text-md-on-surface" title={definition.name}>
-            {isDeletedDefinition(definition) ? (
-              <span className="truncate">{definition.name}</span>
-            ) : (
-              <Link
-                href={`/definitions/${encodeURIComponent(definition.displayId)}`}
-                className="truncate hover:text-md-primary hover:underline"
-              >
-                {definition.name}
-              </Link>
-            )}
-            {isDeletedDefinition(definition) ? (
-              <span className="inline-flex h-5 shrink-0 items-center rounded-pill bg-md-surface-container-high px-2 text-[11px] font-semibold text-md-on-surface-variant">
-                {text.deletedBadge}
-              </span>
-            ) : null}
-          </p>
-          <p className="mt-0.5 truncate font-mono text-xs text-md-on-surface-variant">{definition.displayId}</p>
-        </>
-      ),
-    },
-    {
-      id: "lastExecution",
-      header: text.columns.lastExecution,
-      width: "12rem",
-      cell: (definition) =>
-        definition.lastExecution ? (
-          <Link
-            href={`/executions/${encodeURIComponent(definition.lastExecution.displayId)}`}
-            className="inline-flex flex-col items-start gap-0.5 rounded-control hover:opacity-80"
-            title={definition.lastExecution.displayId}
-          >
-            <StatusBadge status={definition.lastExecution.status} waiting={definition.lastExecution.waiting} />
-            <span className="whitespace-nowrap text-xs text-md-on-surface-variant">
-              {formatDateTimeLocalized(definition.lastExecution.startedAt, dateTimeLocale)}
-            </span>
-          </Link>
-        ) : (
-          <span className="text-sm text-md-on-surface-variant">{text.neverExecuted}</span>
-        ),
-    },
-    {
-      id: "createdAt",
-      header: text.columns.createdAt,
-      width: "11rem",
-      cell: (definition) => (
-        <>
-          <p className="whitespace-nowrap text-md-on-surface">
-            {formatDateTimeLocalized(definition.createdAt, dateTimeLocale)}
-          </p>
-          {isDeletedDefinition(definition) && definition.deletedAt ? (
-            <p className="mt-0.5 whitespace-nowrap text-xs text-md-on-surface-variant">
-              {text.deletedAt(formatDateTimeLocalized(definition.deletedAt, dateTimeLocale))}
-            </p>
-          ) : null}
-        </>
-      ),
-    },
-    {
-      id: "actions",
-      header: text.columns.actions,
-      width: "12rem",
-      align: "end",
-      hideLabelOnMobile: true,
-      cell: (definition) => (
-        <DefinitionRowActions
-          definition={definition}
-          canManageCatalog={canManageCatalog}
-          busy={busy}
-          deletingId={deletingId}
-          restoringId={restoringId}
-          onRequestDelete={(displayId) => setPendingConfirm({ kind: "delete", displayId })}
-          onRequestRestore={(displayId) => setPendingConfirm({ kind: "restore", displayId })}
-        />
-      ),
-    },
-  ];
+  const columns = buildDefinitionColumns(text, dateTimeLocale, {
+    canManageCatalog,
+    busy,
+    deletingId,
+    restoringId,
+    onRequestDelete: (displayId) => setPendingConfirm({ kind: "delete", displayId }),
+    onRequestRestore: (displayId) => setPendingConfirm({ kind: "restore", displayId }),
+  });
 
   return (
     <PageShell

@@ -15,17 +15,16 @@ export type ExecutionsListProps = {
 };
 
 /**
- * 実行一覧の行（共通の `DataList`。デスクトップは表、スマートフォンはカード）。ページングと空・失敗の出し分けは呼び出し側に残す。
- * 実行 ID が詳細へのリンクを兼ねる。状態の列は幅を固定し、右の ID の開始位置を揃える。
- * @param props 行。
- * @returns 実行の一覧。
+ * 実行一覧の列（状態・実行 ID・開始・更新）。
+ * @param text 実行一覧の辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @returns 列の定義。
  */
-export function ExecutionsList({ items }: Readonly<ExecutionsListProps>) {
-  const { uiText, locale } = useI18n();
-  const text = uiText.executionsPage;
-  const dateTimeLocale = getDateTimeLocale(locale);
-
-  const columns: DataListColumn<ExecutionDTO>[] = [
+function buildExecutionColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["executionsPage"],
+  dateTimeLocale: string
+): DataListColumn<ExecutionDTO>[] {
+  return [
     {
       id: "status",
       header: text.columns.status,
@@ -70,6 +69,20 @@ export function ExecutionsList({ items }: Readonly<ExecutionsListProps>) {
       )
     }
   ];
+}
+
+/**
+ * 実行一覧の行（共通の `DataList`。デスクトップは表、スマートフォンはカード）。ページングと空・失敗の出し分けは呼び出し側に残す。
+ * 実行 ID が詳細へのリンクを兼ねる。状態の列は幅を固定し、右の ID の開始位置を揃える。
+ * @param props 行。
+ * @returns 実行の一覧。
+ */
+export function ExecutionsList({ items }: Readonly<ExecutionsListProps>) {
+  const { uiText, locale } = useI18n();
+  const text = uiText.executionsPage;
+  const dateTimeLocale = getDateTimeLocale(locale);
+
+  const columns = buildExecutionColumns(text, dateTimeLocale);
 
   return (
     <DataList
