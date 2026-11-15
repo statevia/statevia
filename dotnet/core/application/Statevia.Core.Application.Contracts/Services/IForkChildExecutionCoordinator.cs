@@ -189,7 +189,7 @@ public interface IForkChildExecutionCoordinator
     /// <param name="eventName">再開イベント名。</param>
     /// <param name="ct">キャンセル トークン。</param>
     /// <returns>子への振替先。振替不要または一致なしのとき null。</returns>
-    /// <exception cref="InvalidOperationException">複数子に一致 Wait があり曖昧なとき。</exception>
+    /// <exception cref="ApiValidationException">複数子に一致 Wait があり曖昧なとき（422）。</exception>
     Task<ForkWaitDeliveryTarget?> TryResolveChildWaitDeliveryAsync(
         Guid requestedExecutionId,
         string? nodeId,

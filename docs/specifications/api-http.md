@@ -28,6 +28,8 @@
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
+**Version 1.43（2026-11-15）**: 不具合の修正。`POST …/events` で当てはまる待機が無い・複数あるとき、`POST …/nodes/{nodeId}/resume` で許可外のイベントを送ったときに、契約の 422（`VALIDATION_ERROR`）ではなく 500（`INTERNAL_ERROR`）を返していたのを 422 にそろえる。Engine の例外を原因として包んだ検証エラーを、エラーの写像が内側の例外の型で判定していたのが原因。契約は変えない。
+
 **Version 1.42（2026-11-14）**: **破壊的な変更を含む。** 一覧 API を広げる。`GET /v1/executions` に `waiting` / `needsAttention`（待機中・要対応の絞り込み）と `startedFrom` / `startedTo`（開始日時の期間）、`sortBy=startedAt` を足し、各要素と単体 GET に `waiting` を足す。件数の読み取り `GET /v1/executions/counts` を足す。`GET /v1/definitions` の各要素に `lastExecution`（最後の実行）を足し、`sortBy=updatedAt` を足す。破壊的な変更は 2 つ: (1) 実行・定義の一覧で許可していない `sortBy` / `sortOrder`（大文字小文字を区別する）を 422 にする（これまでは黙って既定の順で返した）、(2) `GET /v1/definitions` の `sortOrder` を省略したときの順を、契約どおり `desc` にする（これまでの実装は `asc`）。移行期間は置かない。`executions` に `(tenant_id, started_at)` と `(definition_id, started_at)` の索引を足す。
 
 **Version 1.41（2026-11-13）**: **破壊的な変更。** 実行ステータスを契約の値にそろえる。`POST /v1/executions` の 201、`GET /v1/executions` / `GET /v1/executions/{executionId}`、`/state` の `status` と、`/events` の `ExecutionStatusChanged` の `to` は、`Running` → `ACTIVE`、`Cancelled` → `CANCELED` のように契約の値になる。`GET /v1/executions?status=` は契約の値だけを受け、投影の値・`UNKNOWN`・それ以外は 422 にする（これまでは任意の文字列を受けて 0 件を返した）。移行期間は置かない。`statevia.action.builtin.workflow.invoke` の output の `status` も同じ値になる。ノードの状態、DB の `executions.status`、保存済みのデータは変えない。冪等キーで再生する応答は、保存時の本文をそのまま返す。
@@ -563,6 +565,7 @@ Request:
 
 - `name`: イベント名。必須。ASCII 識別子（1〜64）。不正時は 422。
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
+- 並列分岐の子 execution に待機があるときは、`name` に当てはまる子の待機が **1 件**だけならその子へ振り替える。当てはまる待機が **0 件**（親にも子にも無い）または子で **複数**のときは **422**（`VALIDATION_ERROR`）。`message` は原因の説明（例: `PublishEvent requires exactly one active Wait node (found 0).`、`Ambiguous Wait delivery …`）。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。

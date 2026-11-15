@@ -32,17 +32,36 @@ public sealed class ApiExceptionFilter : IExceptionFilter
     /// <summary>
     /// 未処理例外を <see cref="ExceptionContext.Result"/> に変換する。
     /// </summary>
+    /// <remarks>
+    /// 例外の連鎖（<see cref="Exception.InnerException"/>）を外側からたどり、最初に契約エラーへ写せた例外で応答を決める。
+    /// 原因を内側に残した <see cref="ApiValidationException"/>（例: Engine の <see cref="InvalidOperationException"/> を包んだもの）を
+    /// 内側の型で判定して 500 にしないため。どれにも当てはまらなければ 500。
+    /// </remarks>
     /// <param name="context">例外コンテキスト。</param>
     public void OnException(ExceptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var ex = context.Exception;
-        var root = ex;
-        while (root.InnerException is { } inner)
-            root = inner;
+        var result = EnumerateExceptionChain(ex)
+            .Select(TryMapToContractError)
+            .FirstOrDefault(mapped => mapped is not null)
+            ?? LogInternalError(context.HttpContext, ex);
 
-        var result = root switch
+        context.Result = result;
+        context.ExceptionHandled = true;
+    }
+
+    /// <summary>外側の例外から順に <see cref="Exception.InnerException"/> をたどる。</summary>
+    private static IEnumerable<Exception> EnumerateExceptionChain(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+            yield return current;
+    }
+
+    /// <summary>契約エラーへ写せる例外なら応答を返す。写せなければ null。</summary>
+    private static ObjectResult? TryMapToContractError(Exception exception) =>
+        exception switch
         {
             ApiValidationException validation => ApiErrorResult.ValidationError(validation.Message, validation.Details),
             NotFoundException nf => ApiErrorResult.NotFound(nf.Message),
@@ -59,12 +78,8 @@ public sealed class ApiExceptionFilter : IExceptionFilter
             ArgumentException arg => ApiErrorResult.ValidationError(arg.Message),
             // [RequestSizeLimit] 超過時に Kestrel がボディ読み込み（モデルバインド）で投げる。想定内のため 500 にしない。
             BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } => ApiErrorResult.PayloadTooLarge(),
-            _ => LogInternalError(context.HttpContext, ex)
+            _ => null
         };
-
-        context.Result = result;
-        context.ExceptionHandled = true;
-    }
 
     private ObjectResult LogInternalError(HttpContext httpContext, Exception exception)
     {

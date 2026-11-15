@@ -95,6 +95,47 @@ public sealed class ApiExceptionFilterTests
         Assert.NotNull(payload.Error.Details);
     }
 
+    /// <summary>
+    /// 原因の InvalidOperationException を内側に持つ ApiValidationException は、外側の型で 422 として返す。
+    /// </summary>
+    /// <remarks>イベント送信で当てはまる待機が 0 件のとき、Engine の例外を包んだ検証例外が 500 になった不具合の回帰。</remarks>
+    [Fact]
+    public void OnException_WhenApiValidationExceptionWrapsInvalidOperation_Maps422()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var filter = CreateFilter();
+        var cause = new InvalidOperationException("PublishEvent requires exactly one active Wait node (found 0).");
+        var ctx = CreateContext(http, new ApiValidationException(cause.Message, cause));
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(ctx.Result);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
+        var payload = Assert.IsType<ErrorResponse>(result.Value);
+        Assert.Equal("VALIDATION_ERROR", payload.Error.Code);
+        Assert.Equal(cause.Message, payload.Error.Message);
+    }
+
+    /// <summary>外側が契約外の例外でも、内側の契約例外で写す。</summary>
+    [Fact]
+    public void OnException_WhenUnmappedExceptionWrapsNotFound_Maps404()
+    {
+        // Arrange
+        var http = new DefaultHttpContext();
+        var filter = CreateFilter();
+        var ctx = CreateContext(http, new InvalidOperationException("outer", new NotFoundException("missing")));
+
+        // Act
+        filter.OnException(ctx);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(ctx.Result);
+        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+    }
+
     /// <summary>IdempotencyConflictException を 409 に写像する。</summary>
     [Fact]
     public void OnException_MapsIdempotencyConflictExceptionTo409()
