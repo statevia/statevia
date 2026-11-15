@@ -7967,6 +7967,36 @@ public sealed class ExecutionServiceTests
     }
 
     /// <summary>
+    /// 初期 State（種別 Start）から Fork した親で、Join → End の途中に遅れた Fork Unload が来ても、エンジンを破棄しない。
+    /// </summary>
+    /// <remarks>
+    /// 親の復元で Fork 展開の通知が再発火し、その Persist が Join 後の End 実行中に届く再現。
+    /// ここで Unload すると End の後の Completed が投影されず、Execution が ACTIVE のまま残る。
+    /// </remarks>
+    [Fact]
+    public async Task PersistCheckpointAndUnloadAsync_WhenStartNodeForkedAndEndRunning_SkipsUnload()
+    {
+        // Arrange
+        var executionId = Guid.Parse("e6e6e6e6-e6e6-e6e6-e6e6-e6e6e6e6e6e6");
+        var endRunning = CreateForkExpansionCheckpointWithSourceType(
+            executionId.ToString(),
+            "start-1",
+            "Start",
+            joinCompleted: true);
+        var engine = new FakeExecutionEngine { CheckpointToExport = endRunning };
+        var checkpointStore = new FakeExecutionCheckpointStore();
+        using var sqlite = new SqliteTestDatabase();
+        var sut = BuildForkUnloadSut(sqlite, executionId, engine, checkpointStore);
+
+        // Act
+        await sut.PersistCheckpointAndUnloadAsync(executionId, "start-1", CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, engine.UnloadCalls);
+        Assert.Equal(0, checkpointStore.UpsertCalls);
+    }
+
+    /// <summary>
     /// Again を 2 回分、遅れた Fork Unload が Join 後の decide を消さず Running のまま残す。
     /// </summary>
     [Fact]
@@ -8170,6 +8200,22 @@ public sealed class ExecutionServiceTests
         string forkNodeId,
         bool joinCompleted,
         IReadOnlyList<CheckpointPendingWait>? pendingWaits = null,
+        params string[] decideNodeIds) =>
+        CreateForkExpansionCheckpointWithSourceType(
+            executionId,
+            forkNodeId,
+            "Fork",
+            joinCompleted,
+            pendingWaits,
+            decideNodeIds);
+
+    /// <summary>Fork の元ノードの種別を指定して Fork 展開後の断面を作る。元ノードは完了済み（Fork 展開の通知は完了後に出る）。</summary>
+    private static ExecutionRuntimeCheckpoint CreateForkExpansionCheckpointWithSourceType(
+        string executionId,
+        string forkNodeId,
+        string forkNodeType,
+        bool joinCompleted,
+        IReadOnlyList<CheckpointPendingWait>? pendingWaits = null,
         params string[] decideNodeIds)
     {
         var started = new DateTime(2026, 10, 6, 0, 0, 0, DateTimeKind.Utc);
@@ -8179,8 +8225,10 @@ public sealed class ExecutionServiceTests
             {
                 NodeId = forkNodeId,
                 NodeName = "cycle.fork",
-                NodeType = "Fork",
-                StartedAt = started
+                NodeType = forkNodeType,
+                StartedAt = started,
+                CompletedAt = started,
+                Fact = "Completed"
             }
         };
         if (joinCompleted)

@@ -559,7 +559,14 @@ internal sealed class ExecutionCheckpointService(
     /// <c>ExpandFork</c> 完了より先に進みうる。その場合の Unload は decide Wait を失わせる。
     /// </para>
     /// <para>
-    /// <paramref name="nodeId"/> が Fork ノードでない呼び出し（Wait Suspend）は常に false。
+    /// 親を checkpoint から復元すると、物理 Fork の元ノードは出辺が無いため完了フロンティアとして再処理され、
+    /// Fork 展開の通知がもう一度出る。この遅れた Persist が Join → 後続 State の途中で Running の断面を書いて
+    /// Unload すると、後続の完了（Execution の Completed）が投影されずに失われる。
+    /// </para>
+    /// <para>
+    /// Fork 展開の要求元は、ノード種別ではなく「<paramref name="nodeId"/> のノードが完了済みか」で見分ける。
+    /// Fork の元 State は初期 State（種別 Start）や Wait でもよく、種別は Fork に限らない。
+    /// Fork 展開の通知は元ノードの完了後にだけ出る。Wait Suspend や復旧の Persist は未完了の Wait ノードで呼ばれるので、常に false。
     /// </para>
     /// <para>
     /// Persist 開始時と、DB 書き込み後の Unload 直前の両方で評価する。
@@ -568,7 +575,7 @@ internal sealed class ExecutionCheckpointService(
     /// <para>単体テストから到達するため internal。</para>
     /// </remarks>
     /// <param name="checkpoint">Export 直後の断面。</param>
-    /// <param name="nodeId">Persist 要求元のノード ID（Fork 展開時は Fork ノード）。</param>
+    /// <param name="nodeId">Persist 要求元のノード ID（Fork 展開時は Fork の元ノード）。</param>
     /// <returns>Unload をスキップすべきなら true。</returns>
     internal static bool IsForkExpansionUnloadObsolete(
         ExecutionRuntimeCheckpoint checkpoint,
@@ -577,7 +584,7 @@ internal sealed class ExecutionCheckpointService(
         var forkNode = checkpoint.Graph.Nodes
             .FirstOrDefault(n =>
                 string.Equals(n.NodeId, nodeId, StringComparison.Ordinal)
-                && string.Equals(n.NodeType, "Fork", StringComparison.OrdinalIgnoreCase));
+                && n.CompletedAt is not null);
         if (forkNode is null)
             return false;
 
