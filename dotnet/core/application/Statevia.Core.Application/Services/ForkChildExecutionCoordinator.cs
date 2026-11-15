@@ -305,7 +305,7 @@ public sealed class ForkChildExecutionCoordinator(
                     {
                         0 => null,
                         1 => matches[0],
-                        _ => throw new InvalidOperationException(
+                        _ => throw new ApiValidationException(
                             $"Ambiguous Wait delivery for execution {requestedExecutionId:D} event '{normalizedEvent}': "
                             + $"{matches.Count} child waits match.")
                     };

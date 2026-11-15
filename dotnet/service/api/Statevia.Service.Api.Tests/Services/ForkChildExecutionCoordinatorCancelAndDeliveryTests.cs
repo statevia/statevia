@@ -107,7 +107,7 @@ public sealed class ForkChildExecutionCoordinatorCancelAndDeliveryTests
         Assert.Equal("BranchWait", delivery.NodeId);
     }
 
-    /// <summary>複数子に同一イベント Wait があるとき曖昧として例外になる。</summary>
+    /// <summary>複数子に同一イベント Wait があるとき曖昧として 422 の検証例外になる。</summary>
     [Fact]
     public async Task TryResolveChildWaitDeliveryAsync_WhenAmbiguous_Throws()
     {
@@ -127,7 +127,7 @@ public sealed class ForkChildExecutionCoordinatorCancelAndDeliveryTests
             parentId, nodeId: null, "Approve", CancellationToken.None);
 
         // Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(act);
+        await Assert.ThrowsAsync<ApiValidationException>(act);
     }
 
     private static ForkChildExecutionCoordinator CreateSut(InMemoryTestDatabase db, IExecutionWorkQueue workQueue)
