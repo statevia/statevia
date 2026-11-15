@@ -117,6 +117,7 @@ Join は Fork のすべての枝が Join に入るのを待ってから次に進
 - Resume（Again → Fork）後に Suspend Unload した場合、in-process 投影が欠けても SuspendHandler が書いた DB 断面を使い 500 にしない。
 - 同一実行の checkpoint Persist/Unload は直列化する。加えて、永続済みに `pendingWaits` があるのに空の Fork 待ち断面で上書きしようとした Persist は拒否する（遅延 Fork Unload が decide Wait を消す競合の防止）。
 - Fork 展開通知は非同期のため、`ExpandFork` 完了後の Persist が Join→decide より遅れることがある。Persist 開始時に加え、DB 書き込みのあと Unload の直前にもう一度見て、Engine に `activeStates` / `pendingWaits` がある、または当該 Fork 以降の Join が既に `Joined` なら **Unload しない**。書き込み中に進んだ次の Wait は残し、その後の Persist が古い断面を上書きする。既に Wait が無い Join 済みの実行を、この判定だけで decide まで進めることはしない。
+- 親を checkpoint から復元すると、物理 Fork の元ノードは出辺が無いため完了フロンティアとして再処理され、Fork 展開通知がもう一度出る（`ExpandFork` は冪等）。この遅れた Persist も上の判定で止める。Fork の元 State は初期 State や Wait でもよいので、判定の対象はノード種別（`Fork`）ではなく **要求元ノードが完了済みか** で見分ける（Wait の Suspend や復旧の Persist は未完了の Wait ノードで呼ばれる）。止めないと Join → 後続 State の途中で Running の断面を書いて Unload し、実行の Completed が投影されずに `ACTIVE` のまま残る。
 - 定義グラフ（Studio）の Join 辺は `joinTable` 依存のうち、当該 Join へ**直接**着くものだけを描く。Fork 状態、および枝内の内側 Fork へ進む action（`mid → inner.fork` など）は除外する。ネストの描画経路は InnerJoin→OuterJoin（transitions）とし、枝先頭→OuterJoin の幽霊辺を作らない。
 
 ### Context マージと兄弟参照

@@ -72,7 +72,7 @@ public sealed class ExecutionServiceCheckpointGuardTests
         Assert.True(lessAdvanced);
     }
 
-    /// <summary>Wait ノード向け Persist は Unload 廃止判定しない。</summary>
+    /// <summary>未完了の Wait ノード向け Persist（Wait Suspend）は Unload 廃止判定しない。</summary>
     [Fact]
     public void IsForkExpansionUnloadObsolete_WhenNotForkNode_ReturnsFalse()
     {
@@ -111,7 +111,9 @@ public sealed class ExecutionServiceCheckpointGuardTests
                     NodeId = "fork1",
                     NodeName = "Fork1",
                     NodeType = "Fork",
-                    StartedAt = started
+                    StartedAt = started,
+                    CompletedAt = started,
+                    Fact = "Completed"
                 }
             ],
             activeStates: ["Decide1"]);
@@ -137,7 +139,9 @@ public sealed class ExecutionServiceCheckpointGuardTests
                     NodeId = "fork1",
                     NodeName = "Fork1",
                     NodeType = "Fork",
-                    StartedAt = forkStarted
+                    StartedAt = forkStarted,
+                    CompletedAt = forkStarted,
+                    Fact = "Completed"
                 },
                 new CheckpointGraphNode
                 {
@@ -152,6 +156,85 @@ public sealed class ExecutionServiceCheckpointGuardTests
 
         // Act
         var obsolete = ExecutionCheckpointService.IsForkExpansionUnloadObsolete(checkpoint, "fork1");
+
+        // Assert
+        Assert.True(obsolete);
+    }
+
+    /// <summary>
+    /// 初期 State（種別 Start）から Fork した親でも、Fork 以降に Join が完了していれば Unload は廃止。
+    /// </summary>
+    /// <remarks>
+    /// 親の復元で Fork 展開の通知が再発火し、Join → End の途中で Running の断面を書いて Unload すると、
+    /// Execution の Completed が投影されずに残る（ACTIVE のまま）。種別が Fork でなくても止める。
+    /// </remarks>
+    [Fact]
+    public void IsForkExpansionUnloadObsolete_WhenStartNodeForkedAndJoinCompleted_ReturnsTrue()
+    {
+        // Arrange
+        var forkStarted = DateTime.UtcNow;
+        var checkpoint = CreateCheckpoint(
+            nodes:
+            [
+                new CheckpointGraphNode
+                {
+                    NodeId = "start1",
+                    NodeName = "Start",
+                    NodeType = "Start",
+                    StartedAt = forkStarted,
+                    CompletedAt = forkStarted,
+                    Fact = "Completed"
+                },
+                new CheckpointGraphNode
+                {
+                    NodeId = "join1",
+                    NodeName = "Join1",
+                    NodeType = "Join",
+                    StartedAt = forkStarted.AddSeconds(1),
+                    CompletedAt = forkStarted.AddSeconds(1),
+                    Fact = "Joined"
+                },
+                new CheckpointGraphNode
+                {
+                    NodeId = "end1",
+                    NodeName = "End",
+                    NodeType = "End",
+                    StartedAt = forkStarted.AddSeconds(1),
+                    CompletedAt = forkStarted.AddSeconds(1),
+                    Fact = "Completed"
+                }
+            ]);
+
+        // Act
+        var obsolete = ExecutionCheckpointService.IsForkExpansionUnloadObsolete(checkpoint, "start1");
+
+        // Assert
+        Assert.True(obsolete);
+    }
+
+    /// <summary>Wait から Fork した親で、後続 State の実行中なら Unload は廃止。</summary>
+    [Fact]
+    public void IsForkExpansionUnloadObsolete_WhenWaitNodeForkedAndActiveAfterFork_ReturnsTrue()
+    {
+        // Arrange
+        var started = DateTime.UtcNow;
+        var checkpoint = CreateCheckpoint(
+            nodes:
+            [
+                new CheckpointGraphNode
+                {
+                    NodeId = "wait1",
+                    NodeName = "Wait1",
+                    NodeType = "Wait",
+                    StartedAt = started,
+                    CompletedAt = started,
+                    Fact = "Completed"
+                }
+            ],
+            activeStates: ["End"]);
+
+        // Act
+        var obsolete = ExecutionCheckpointService.IsForkExpansionUnloadObsolete(checkpoint, "wait1");
 
         // Assert
         Assert.True(obsolete);
