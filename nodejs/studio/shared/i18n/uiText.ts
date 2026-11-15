@@ -147,6 +147,21 @@ export type UiText = DefinitionsFeatureUiText &
     aria: string;
   },
   /** 一覧の絞り込みのチップの文言。 */
+  /** 検索できる選択の部品（`SearchableCheckList`）。 */
+  searchableCheckList: {
+    /** 検索欄の aria-label。引数は一覧の名前。 */
+    searchLabel: (listLabel: string) => string;
+    /** 検索欄のプレースホルダ。 */
+    searchPlaceholder: string;
+    /** 選択の件数。 */
+    selectedCount: (selected: number, total: number) => string;
+    /** 検索に当てはまる項目が無いとき。 */
+    noMatch: string;
+    /** 保存済みに無く、今は選んでいる行の印。 */
+    added: string;
+    /** 保存済みにあって、今は外した行の印。 */
+    removed: string;
+  },
   filterChips: {
     /** チップのまとまりの aria-label。 */
     ariaLabel: string;
@@ -288,6 +303,14 @@ export const uiText: UiText = {
   },
   breadcrumbs: {
     aria: "パンくずリスト",
+  },
+  searchableCheckList: {
+    searchLabel: (listLabel) => `${listLabel}を検索`,
+    searchPlaceholder: "名前で絞り込む",
+    selectedCount: (selected, total) => `${total} 件中 ${selected} 件を選択`,
+    noMatch: "当てはまる項目はありません。",
+    added: "追加",
+    removed: "解除",
   },
   filterChips: {
     ariaLabel: "かけている条件",

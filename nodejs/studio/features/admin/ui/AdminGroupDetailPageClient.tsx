@@ -7,8 +7,8 @@ import { PageState } from "@/shared/ui/PageState";
 import { Toast } from "@/shared/ui/Toast";
 import { useUiText } from "@/shared/i18n/uiTextContext";
 import { useAdminGroupDetail } from "../hooks/useAdminGroupDetail";
-import { AdminGroupMembersSection } from "./AdminGroupMembersSection";
-import { AdminGroupPermissionsSection } from "./AdminGroupPermissionsSection";
+import { resolvePermissionLabel } from "../permissionLabel";
+import { AdminGroupSelectionSection } from "./AdminGroupSelectionSection";
 
 type AdminGroupDetailPageClientProps = {
   /** 編集対象のグループ ID。 */
@@ -16,13 +16,14 @@ type AdminGroupDetailPageClientProps = {
 };
 
 /**
- * グループのメンバー・権限を編集する。
+ * グループのメンバー・権限を編集する。どちらも検索して選び、保存前に追加と解除の差分を確かめる（要件 9.5）。
  * @param props グループ ID。
  * @returns グループ詳細画面。
  */
 export function AdminGroupDetailPageClient({ groupId }: Readonly<AdminGroupDetailPageClientProps>) {
   const uiText = useUiText();
   const page = useAdminGroupDetail({ groupId });
+  const text = uiText.admin.groupManagement;
 
   if (page.loading) {
     return (
@@ -60,18 +61,36 @@ export function AdminGroupDetailPageClient({ groupId }: Readonly<AdminGroupDetai
         </Link>
       }
     >
-      <AdminGroupMembersSection
-        users={page.users}
-        selectedUserIds={page.selectedUserIds}
+      <AdminGroupSelectionSection
+        title={text.membersTitle}
+        saveLabel={text.saveMembers}
+        confirmTitle={text.confirmMembersTitle}
+        items={page.users.map((user) => ({
+          value: user.userId,
+          label: user.isActive ? user.username : `${user.username} (${uiText.admin.users.inactive})`,
+          description: user.displayName || (user.email ?? undefined)
+        }))}
+        selected={page.selectedUserIds}
+        saved={page.savedUserIds}
         saving={page.savingMembers}
-        onToggleUser={page.toggleUser}
+        onToggle={page.toggleUser}
+        onReset={page.resetMembers}
         onSave={page.saveMembers}
       />
-      <AdminGroupPermissionsSection
-        permissions={page.assignablePermissions}
-        selectedPermissionKeys={page.selectedPermissionKeys}
+      <AdminGroupSelectionSection
+        title={text.permissionsTitle}
+        saveLabel={text.savePermissions}
+        confirmTitle={text.confirmPermissionsTitle}
+        items={page.assignablePermissions.map((permission) => ({
+          value: permission.permissionKey,
+          label: resolvePermissionLabel(permission, uiText.admin.permissions.names),
+          description: permission.permissionKey
+        }))}
+        selected={page.selectedPermissionKeys}
+        saved={page.savedPermissionKeys}
         saving={page.savingPermissions}
-        onTogglePermission={page.togglePermission}
+        onToggle={page.togglePermission}
+        onReset={page.resetPermissions}
         onSave={page.savePermissions}
       />
       {page.toast ? <Toast toast={page.toast} onClose={page.dismissToast} /> : null}

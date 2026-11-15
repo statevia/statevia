@@ -127,6 +127,14 @@ export const uiTextEn: UiText = {
   breadcrumbs: {
     aria: "Breadcrumb",
   },
+  searchableCheckList: {
+    searchLabel: (listLabel) => `Search ${listLabel}`,
+    searchPlaceholder: "Filter by name",
+    selectedCount: (selected, total) => `${selected} of ${total} selected`,
+    noMatch: "No items match.",
+    added: "Add",
+    removed: "Remove",
+  },
   filterChips: {
     ariaLabel: "Active filters",
     remove: (label) => `Remove ${label}`,

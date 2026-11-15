@@ -7,7 +7,7 @@
 | 更新日 | 2026-11-15 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
 
-**Version 0.14（2026-11-15）**: 全画面を `shared/ui` の部品で組む形にした（§8）。ボタンの色の役割（緑は主導線で 1 画面 1 つ、紺、枠線、赤枠）、部品の一覧、既定パレットの色の直書きを ESLint で禁止したこと、実行詳細のイベント送信の部品の分担を書いた。0.10 の「部品を使うのは集合配送ダイアログだけ」は廃止した。
+**Version 0.14（2026-11-15）**: 全画面を `shared/ui` の部品で組む形にした（§8）。ボタンの色の役割（緑は主導線で 1 画面 1 つ、紺、枠線、赤枠）、部品の一覧、既定パレットの色の直書きを ESLint で禁止したこと、実行詳細のイベント送信の部品の分担、グループのメンバーと権限の検索できる選択と保存前の差分の確認を書いた。0.10 の「部品を使うのは集合配送ダイアログだけ」は廃止した。
 
 **Version 0.13（2026-11-01）**: Project の文脈・ロール判定・所属一覧を `shared/project/` へ、`isApiNotFound` を `shared/api/` へ移した。feature 間の依存は公開面（`features/<name>/index.ts`）だけにし、他 feature の内部への import と、`@/app/*`・`@/tests/*` をアプリのコードで使うことを ESLint で禁止した。
 
@@ -243,6 +243,7 @@ flowchart LR
 | `FilterPills` | 一覧の単一選択の絞り込み（件数付き） |
 | `FilterChips` | かけている条件のチップ。1 つずつ外す・すべて外す |
 | `SegmentedControl` | 表示の切り替え（一覧 / グラフなど） |
+| `SearchableCheckList` | 検索で絞り込める複数選択。保存済みと違う行に「追加」「解除」の印を出す（グループのメンバーと権限）。保存前の差分は `shared/lib/selectionDiff` で求め、確認ダイアログに並べる |
 | `ListPagination` | ページ移動 |
 | `StatusBadge` / `StatusDot` | 状態の表示。待機中のときは `ACTIVE` の横に「待機中」の印を足す（状態の値は増やさない） |
 | `BrandMark` | ロゴのマーク |

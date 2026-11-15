@@ -54,6 +54,20 @@ export type AdminFeatureUiText = {
       permissionsTitle: string;
       saveMembers: string;
       savePermissions: string;
+      /** 選択を保存済みの状態へ戻すボタン。 */
+      resetSelection: string;
+      /** 保存前の差分の要約。 */
+      diffSummary: (added: number, removed: number) => string;
+      /** 確認ダイアログの追加の見出し。 */
+      diffAddedTitle: (count: number) => string;
+      /** 確認ダイアログの解除の見出し。 */
+      diffRemovedTitle: (count: number) => string;
+      /** メンバーの確認ダイアログの見出し。 */
+      confirmMembersTitle: string;
+      /** 権限の確認ダイアログの見出し。 */
+      confirmPermissionsTitle: string;
+      /** 確認ダイアログの決定。 */
+      confirmSave: string;
       saving: string;
       systemBadge: string;
       memberCount: (count: number) => string;
