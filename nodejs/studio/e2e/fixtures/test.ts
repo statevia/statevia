@@ -1,5 +1,6 @@
 import { test as base, expect } from "@playwright/test";
 import { ExecutionDetailPage } from "../pages/ExecutionDetailPage";
+import { ExecutionsListPage } from "../pages/ExecutionsListPage";
 import {
   mockExecutionApi,
   recordUnmockedCoreApiCalls,
@@ -11,7 +12,7 @@ import { loginServiceApi, type ServiceApiSession } from "./serviceApi";
 /** モックの API を組み立てる口。 */
 export type MockApi = {
   /**
-   * 実行詳細の API と `/api/auth/me` をモックする。
+   * 実行一覧・実行詳細の API と `/api/auth/me` をモックする。
    * @param options 応答の差し替え。省略すると閲覧だけの利用者と既定の実行。
    * @returns 届いたコマンド（POST）の記録。
    */
@@ -20,6 +21,8 @@ export type MockApi = {
 
 /** mock と real-api の両方で使う Page Object。 */
 type PageFixtures = {
+  /** 実行一覧の Page Object。 */
+  executionsListPage: ExecutionsListPage;
   /** 実行詳細の Page Object。 */
   executionDetailPage: ExecutionDetailPage;
 };
@@ -37,6 +40,9 @@ type RealApiWorkerFixtures = {
 };
 
 const pageTest = base.extend<PageFixtures>({
+  executionsListPage: async ({ page }, use) => {
+    await use(new ExecutionsListPage(page));
+  },
   executionDetailPage: async ({ page }, use) => {
     await use(new ExecutionDetailPage(page));
   }

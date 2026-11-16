@@ -40,7 +40,8 @@ e2e/
   - `expect`・`waitFor` を持たない。読み込みを待つときは、spec で見出しなどを `expect` する。
   - 複数の画面に出る部品は `components/` に置き、Page Object が合成で持つ。継承は使わない。
 - **モック**
-  - `mockApi`（auto fixture）は、どの mock の spec でも有効です。`await mockApi.setup(options)` で実行詳細の API と `/api/auth/me` を返します。
+  - `mockApi`（auto fixture）は、どの mock の spec でも有効です。`await mockApi.setup(options)` で実行一覧・実行詳細の API と `/api/auth/me` を返します。
+  - 実行一覧は所属 Project の先頭を選んでから一覧を取得します。既定の所属 Project は空なので、一覧を出すシナリオでは `projects` も渡してください。
   - **モックしていない `/api/core/**` が呼ばれるとシナリオが失敗します**（呼ばれたメソッドとパスがエラーに出る）。画面が新しい API を呼ぶようになったら、`mockStudioApi.ts` に足してください。
   - 応答は HTTP の契約の型（`ExecutionDTO` など）で書き、契約が変わったら `tsc --noEmit` で検出します。
 
@@ -68,6 +69,7 @@ Playwright が起動する Next には、開発時の認証バイパス（`SERVI
 | ファイル | project | 内容 |
 | --- | --- | --- |
 | `specs/mock/smoke.spec.ts` | mock | ルートからダッシュボードへの移動、実行詳細の見出し（実行 ID の入力欄が無い） |
+| `specs/mock/executions-list.spec.ts` | mock | 一覧の表示と件数、所属 Project が無いときの空の表示、実行詳細への移動、権限による「イベントを送信」の出し分け |
 | `specs/mock/execution-detail.spec.ts` | mock | パンくず、ノードの一覧とグラフ、権限による見出しの操作の出し分け、「このノードへ送る」からの再開 |
 | `specs/mock/execution-timeline.spec.ts` | mock | イベントタイムラインの開閉・続きの読み込み・リプレイ |
 | `specs/real-api/execution-commands.spec.ts` | real-api | 一覧から詳細への移動、キャンセル、待機 1 つと並列分岐の待機 2 つへのイベント送信 |

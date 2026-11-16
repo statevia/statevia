@@ -2,8 +2,11 @@ import type {
   ExecutionDTO,
   ExecutionGraphDTO,
   ExecutionGraphNodeDTO,
-  ExecutionView
+  ExecutionView,
+  PagedExecutions
 } from "@/features/executions/types";
+import type { ExecutionCounts } from "@/features/executions/api";
+import type { ProjectSummary } from "@/shared/project/types";
 
 /** モック E2E の実行 ID。 */
 export const MOCK_EXECUTION_ID = "ex-1";
@@ -85,4 +88,43 @@ export const mockExecution: ExecutionView = {
     { nodeId: "start", nodeName: "Start", nodeType: "Start", status: "SUCCEEDED", attempt: 1, workerId: null, waitKey: null, canceledByExecution: false },
     { nodeId: "task-a", nodeName: "TaskA", nodeType: "Task", status: "RUNNING", attempt: 1, workerId: "w1", waitKey: null, canceledByExecution: false },
   ],
+};
+
+/** 実行一覧で、既定の実行（ACTIVE）と並べる完了済みの実行。 */
+export const mockCompletedExecutionDto: ExecutionDTO = {
+  ...mockExecutionDto,
+  displayId: "ex-2",
+  resourceId: "00000000-0000-0000-0000-000000000002",
+  status: "COMPLETED",
+  startedAt: "2025-12-31T00:00:00Z",
+  updatedAt: "2025-12-31T00:00:05Z"
+};
+
+/** `GET /v1/projects` の応答（所属 Project が 1 件）。実行一覧はこの Project を選んで一覧を取得する。 */
+export const mockProjects: ProjectSummary[] = [
+  {
+    projectId: "00000000-0000-0000-0000-0000000000a1",
+    slug: "default",
+    displayName: "Default",
+    description: null,
+    createdAt: "2026-01-01T00:00:00Z",
+    role: "executor"
+  }
+];
+
+/** `GET /v1/executions` の応答（ACTIVE の ex-1 と COMPLETED の ex-2）。 */
+export const mockExecutionsPage: PagedExecutions = {
+  items: [mockExecutionDto, mockCompletedExecutionDto],
+  totalCount: 2,
+  offset: 0,
+  limit: 20,
+  hasMore: false
+};
+
+/** `GET /v1/executions/counts` の応答（`mockExecutionsPage` と合う件数）。 */
+export const mockExecutionCounts: ExecutionCounts = {
+  total: 2,
+  byStatus: { ACTIVE: 1, COMPLETED: 1, FAILED: 0, CANCELED: 0, UNKNOWN: 0 },
+  waiting: 0,
+  needsAttention: 0
 };

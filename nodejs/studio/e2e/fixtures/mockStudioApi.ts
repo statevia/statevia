@@ -11,10 +11,19 @@ import type { ExecutionCounts } from "@/features/executions/api";
 import type { ProjectSummary } from "@/shared/project/types";
 import { MOCK_EXECUTION_ID, mockExecution, mockExecutionDto, mockExecutionGraph } from "./mockExecution";
 
-/** モックする実行詳細の API の応答。 */
+/** モックする Studio の API の応答。 */
 export type MockExecutionApiOptions = {
   /** ログイン中の利用者の権限キー。既定は閲覧だけ（`executions.write` を持たない）。 */
   permissions?: string[];
+  /**
+   * `GET /v1/projects` の応答（所属 Project）。既定は空。
+   * @remarks 実行一覧は先頭の Project を選んでから一覧を取得する。空のままだと一覧の API を呼ばずに空と表示する。
+   */
+  projects?: ProjectSummary[];
+  /** `GET /v1/executions` の応答（実行一覧）。既定は空の一覧。 */
+  executions?: PagedExecutions;
+  /** `GET /v1/executions/counts` の応答（状態ごとの件数）。既定はすべて 0。 */
+  executionCounts?: ExecutionCounts;
   /** `GET /v1/executions/{id}` の応答。 */
   execution?: ExecutionDTO;
   /** `GET /v1/executions/{id}/graph` の応答。 */
@@ -60,7 +69,7 @@ const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
 /**
- * Service API を使わずに Studio の実行詳細を開くため、ブラウザ側で `/api/core/**` と `/api/auth/me` をモックする。
+ * Service API を使わずに Studio の実行一覧と実行詳細を開くため、ブラウザ側で `/api/core/**` と `/api/auth/me` をモックする。
  * @remarks 扱わないパスは `route.fallback()` で、`fixtures/test.ts` の `mockApi` が先に登録した受け皿へ渡す。
  * 受け皿は呼び出しを記録して 404 を返し（401 だとログイン画面へ飛ぶため）、シナリオの終わりに失敗にする。
  * Next 側の認証は `playwright.config.ts` の開発バイパスで通す。
@@ -97,16 +106,16 @@ export async function mockExecutionApi(page: Page, options: MockExecutionApiOpti
 
     switch (path) {
       case "/projects":
-        // 画面の外枠が所属 Project を引く。所属なしにして、Project の切り替えを出さない。
-        return json(route, [] satisfies ProjectSummary[]);
+        // 画面の外枠が所属 Project を引く。既定は所属なしにして、Project の切り替えを出さない。
+        return json(route, options.projects ?? ([] satisfies ProjectSummary[]));
       case `/graphs/${graphId}`:
         // 定義のグラフは無いことにして、画面を手元の registry の定義へ倒す（useGraphDefinition の既定の経路）。
         return json(route, { error: { code: "NOT_FOUND", message: "graph definition is not mocked" } }, 404);
       case "/executions":
-        // パンくずなどで実行一覧へ移ったときの一覧。中身は検証しないので空にする。
-        return json(route, emptyExecutions);
+        // 既定は空。パンくずなどで実行一覧へ移るだけのシナリオは中身を検証しない。
+        return json(route, options.executions ?? emptyExecutions);
       case "/executions/counts":
-        return json(route, emptyExecutionCounts);
+        return json(route, options.executionCounts ?? emptyExecutionCounts);
       case executionPrefix:
         return json(route, options.execution ?? mockExecutionDto);
       case `${executionPrefix}/graph`:
