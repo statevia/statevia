@@ -1,153 +1,112 @@
+import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test";
-import { mockExecution } from "./fixtures/mockExecution";
-import {
-  timelineEventsPage1,
-  timelineEventsPage2,
-  getStateAtSeq,
-} from "./fixtures/mockTimeline";
+import { MOCK_EXECUTION_ID } from "./fixtures/mockExecution";
+import { mockExecutionApi } from "./fixtures/mockStudioApi";
+import { timelineEventsPage1, timelineEventsPage2, getStateAtSeq } from "./fixtures/mockTimeline";
+import type { ExecutionDetailPage } from "./pages/ExecutionDetailPage";
+import { uiText } from "@/shared/i18n/uiText";
+
+/** 1 ページ目（seq 1〜3）の続きに 2 ページ目（seq 4〜5）を返すタイムラインをモックし、実行詳細を開く。 */
+async function openWithTimeline(page: Page, executionDetailPage: ExecutionDetailPage): Promise<void> {
+  await mockExecutionApi(page, {
+    events: (afterSeq) =>
+      afterSeq >= 3 ? { events: timelineEventsPage2, hasMore: false } : { events: timelineEventsPage1, hasMore: true },
+    stateAtSeq: getStateAtSeq
+  });
+  await executionDetailPage.goto(MOCK_EXECUTION_ID);
+  await executionDetailPage.expectLoaded(MOCK_EXECUTION_ID);
+}
 
 test.describe("イベントタイムライン・リプレイ", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route("**/api/core/executions/**", (route) => {
-      const url = route.request().url();
+  test("イベントタイムラインの開閉ボタンが出て、最初は閉じている", async ({ executionDetailPage, page }) => {
+    // Arrange / Act
+    await openWithTimeline(page, executionDetailPage);
 
-      if (url.includes("/stream")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "text/event-stream",
-          body: "",
-        });
-      }
-
-      if (url.includes("/events")) {
-        const parsed = new URL(url);
-        const afterSeq = parsed.searchParams.get("afterSeq");
-        const after = afterSeq !== null ? parseInt(afterSeq, 10) : 0;
-        const hasMore = after < 3;
-        const events = after >= 3 ? timelineEventsPage2 : timelineEventsPage1;
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ events, hasMore }),
-        });
-      }
-
-      if (url.includes("/state?")) {
-        const parsed = new URL(url);
-        const atSeq = parsed.searchParams.get("atSeq");
-        const seq = atSeq !== null ? parseInt(atSeq, 10) : 0;
-        const state = getStateAtSeq(seq);
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify(state),
-        });
-      }
-
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(mockExecution),
-      });
-    });
+    // Assert
+    await expect(executionDetailPage.timelineToggle).toBeVisible();
+    await expect(executionDetailPage.timelineBody).toBeHidden();
   });
 
-  test("イベントタイムラインの見出しが表示される", async ({ executionPage }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("タイムラインを開くとイベント一覧が表示される", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
 
-    await expect(executionPage.timelineHeading).toBeVisible();
+    // Act
+    await executionDetailPage.expandTimeline();
+
+    // Assert
+    const list = executionDetailPage.timelineEventList;
+    await expect(executionDetailPage.timelineEvent(1)).toBeVisible();
+    await expect(executionDetailPage.timelineEvent(2)).toBeVisible();
+    await expect(executionDetailPage.timelineEvent(3)).toBeVisible();
+    await expect(list.getByText(/GraphUpdated/).first()).toBeVisible();
+    await expect(list.getByText(/Status →|ExecutionStatusChanged/).first()).toBeVisible();
   });
 
-  test("タイムラインを開くとイベント一覧が表示される", async ({ executionPage }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("時点 seq=1 を選ぶとリプレイ表示になり、その時点のノードと「現在に戻る」が出る", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
+    await executionDetailPage.expandTimeline();
 
-    await executionPage.expandTimeline();
+    // Act
+    await executionDetailPage.selectTimelineSeq(1);
 
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#1/ })).toBeVisible();
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#2/ })).toBeVisible();
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#3/ })).toBeVisible();
-    await expect(executionPage.timelineEventList.getByText(/GraphUpdated/).first()).toBeVisible();
-    await expect(executionPage.timelineEventList.getByText(/Status →|ExecutionStatusChanged/).first()).toBeVisible();
+    // Assert
+    await expect(executionDetailPage.backToCurrentButton.first()).toBeVisible({ timeout: 10_000 });
+    await expect(executionDetailPage.nodeListCell("start")).toBeVisible();
+    await expect(executionDetailPage.nodeListCell("task-a")).toBeVisible();
   });
 
-  test("時点を選択するとリプレイ表示になり「現在に戻る」が表示される", async ({ executionPage, page }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("「現在に戻る」を押すとリプレイが解除される", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
+    await executionDetailPage.expandTimeline();
+    await executionDetailPage.selectTimelineSeq(1);
+    await expect(executionDetailPage.backToCurrentButton.first()).toBeVisible({ timeout: 10_000 });
 
-    await executionPage.expandTimeline();
-    await executionPage.timelineEventList.getByRole("button", { name: /#1/ }).first().click();
+    // Act
+    await executionDetailPage.backToCurrentButton.first().click();
 
-    await expect(page.getByRole("button", { name: "現在に戻る" }).first()).toBeVisible({ timeout: 10000 });
+    // Assert
+    await expect(executionDetailPage.backToCurrentButton).toHaveCount(0);
   });
 
-  test("時点 seq=1 を選択するとリプレイ状態のノードが表示される", async ({ executionPage, page }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("リプレイ表示中は「過去の時点を表示中」のバナーが出る", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
+    await executionDetailPage.expandTimeline();
 
-    await executionPage.expandTimeline();
-    await executionPage.timelineEventList.getByRole("button", { name: /#1/ }).first().click();
+    // Act
+    await executionDetailPage.selectTimelineSeq(3);
 
-    await expect(page.getByRole("button", { name: "現在に戻る" }).first()).toBeVisible({ timeout: 10000 });
-    await expect(executionPage.getNodeListCell("start")).toBeVisible();
-    await expect(executionPage.getNodeListCell("task-a")).toBeVisible();
+    // Assert
+    await expect(page.getByText(uiText.executionTimeline.replayingPastStateMessage)).toBeVisible({ timeout: 10_000 });
   });
 
-  test("「現在に戻る」を押すとリプレイが解除され最新状態に戻る", async ({ executionPage, page }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("「続きを読み込む」で 2 ページ目のイベントが足される", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
+    await executionDetailPage.expandTimeline();
+    await expect(executionDetailPage.timelineEvent(3)).toBeVisible();
+    await expect(executionDetailPage.timelineEvent(4)).toHaveCount(0);
 
-    await executionPage.expandTimeline();
-    await executionPage.timelineEventList.getByRole("button", { name: /#1/ }).first().click();
+    // Act
+    await executionDetailPage.timelineLoadMoreButton.click();
 
-    await expect(page.getByRole("button", { name: "現在に戻る" }).first()).toBeVisible({ timeout: 10000 });
-    await page.getByRole("button", { name: "現在に戻る" }).first().click();
-
-    await expect(page.getByRole("button", { name: "現在に戻る" })).toHaveCount(0);
+    // Assert
+    await expect(executionDetailPage.timelineEvent(4)).toBeVisible({ timeout: 5000 });
+    await expect(executionDetailPage.timelineEvent(5)).toBeVisible();
   });
 
-  test("リプレイ表示中は「過去の時点を表示中」バナーが表示される", async ({ executionPage, page }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
+  test("開閉ボタンをもう一度押すとタイムラインが閉じる", async ({ executionDetailPage, page }) => {
+    // Arrange
+    await openWithTimeline(page, executionDetailPage);
+    await executionDetailPage.expandTimeline();
 
-    await executionPage.expandTimeline();
-    await executionPage.timelineEventList.getByRole("button", { name: /#3/ }).first().click();
+    // Act
+    await executionDetailPage.timelineToggle.click();
 
-    await expect(page.getByText(/過去の時点を表示中/)).toBeVisible({ timeout: 10000 });
-  });
-
-  test("「続きを読み込む」で2ページ目のイベントが追加される", async ({ executionPage }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
-
-    await executionPage.expandTimeline();
-
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#3/ })).toBeVisible();
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#4/ })).not.toBeVisible();
-
-    await executionPage.timelineLoadMoreButton.click();
-
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#4/ })).toBeVisible({ timeout: 5000 });
-    await expect(executionPage.timelineEventList.getByRole("button", { name: /#5/ })).toBeVisible();
-  });
-
-  test("タイムラインを再度クリックすると閉じる", async ({ executionPage }) => {
-    await executionPage.goto();
-    await executionPage.loadExecution();
-    await executionPage.waitForExecutionLoaded();
-
-    await executionPage.expandTimeline();
-    await expect(executionPage.timelineEventList).toBeVisible();
-
-    await executionPage.timelineHeading.click();
-    await expect(executionPage.timelineBody).toBeHidden();
+    // Assert
+    await expect(executionDetailPage.timelineBody).toBeHidden();
   });
 });
