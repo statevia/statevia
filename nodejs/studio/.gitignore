@@ -27,6 +27,8 @@ logs/
 test-results/
 playwright-report/
 playwright/.cache/
+# 実 API E2E の setup が保存するログイン済みの Cookie
+e2e/.auth/
 
 # Coverage
 coverage/

@@ -1,30 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
-
-/** 実 API E2E の Service API のオリジン（`SERVICE_API_E2E_URL`）。未設定なら空文字。 */
-export const serviceApiBase = process.env.SERVICE_API_E2E_URL?.replace(/\/$/, "") ?? "";
-
-/**
- * 実 API E2E でログインする資格情報（環境変数）。
- * @remarks ローカルでは Service API の `appsettings.Development.json` の `Statevia:Bootstrap:DevAdmin` の値を渡す。
- * 値はコードに書かない。
- */
-export const serviceApiCredentials = {
-  tenantKey: process.env.E2E_TENANT_KEY ?? "",
-  username: process.env.E2E_USERNAME ?? "",
-  password: process.env.E2E_PASSWORD ?? ""
-};
-
-/** 実 API E2E を走らせる条件（オリジンと資格情報がそろっている）。 */
-export const serviceApiE2EEnabled =
-  serviceApiBase.length > 0 &&
-  serviceApiCredentials.tenantKey.length > 0 &&
-  serviceApiCredentials.username.length > 0 &&
-  serviceApiCredentials.password.length > 0;
-
-/** 実 API E2E をスキップするときの理由。 */
-export const serviceApiE2ESkipReason =
-  "SERVICE_API_E2E_URL と E2E_TENANT_KEY / E2E_USERNAME / E2E_PASSWORD が未設定のためスキップ";
+import { serviceApiBase, serviceApiCredentials } from "../support/env";
 
 /** ログイン済みの Service API の呼び出し口。 */
 export type ServiceApiSession = {
