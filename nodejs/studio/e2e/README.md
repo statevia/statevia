@@ -65,6 +65,14 @@ npx playwright install chromium
 
 Playwright が起動する Next には、開発時の認証バイパス（`SERVICE_API_AUTH_TOKEN` にダミー値）を渡します。mock の spec はログインせずに画面へ入れます。管理画面と定期実行の画面はサーバー側で Service API を呼ぶのでモックできず、real-api でだけ扱います。
 
+## CI
+
+`.github/workflows/ci.yml` の `UI E2E (mock)` ジョブが、PR と main への push で `npx playwright test --project=mock` を回します。real-api は CI で回しません（Service API などを起動しないため）。
+
+- `CI` が設定されるので、worker 1・再試行 2・`test.only` の禁止・既存サーバーの再利用なしで動きます。手元で同じ条件にするときは `CI=1` を付けてください。
+- Chromium は Playwright の版ごとにキャッシュします。
+- 失敗したときは、`playwright-report/` と `test-results/`（スクリーンショット・トレース）を成果物 `playwright-report-mock` に 7 日残します。
+
 ## スペック
 
 | ファイル | project | 内容 |
