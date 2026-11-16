@@ -83,7 +83,9 @@ jobs:
   ui-e2e-mock:
     name: UI E2E (mock)
     needs: ui-lint-typecheck
-    runs-on: ubuntu-latest
+    # ubuntu-latest（26.04）には Playwright 1.58 が Chromium を入れられないので 24.04 に固定する。
+    # Playwright を 26.04 に対応した版へ上げたら ubuntu-latest に戻す。
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
