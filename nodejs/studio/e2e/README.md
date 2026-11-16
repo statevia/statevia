@@ -74,6 +74,7 @@ Playwright が起動する Next には、開発時の認証バイパス（`SERVI
 | `specs/mock/execution-detail.spec.ts` | mock | パンくず、ノードの一覧とグラフ、権限による見出しの操作の出し分け、キャンセルの送信と成功のトースト、終端の実行でキャンセルが押せないこと、「このノードへ送る」からの再開 |
 | `specs/mock/execution-timeline.spec.ts` | mock | イベントタイムラインの開閉・続きの読み込み・リプレイ |
 | `specs/real-api/execution-commands.spec.ts` | real-api | 一覧から詳細への移動、キャンセル、待機 1 つと並列分岐の待機 2 つへのイベント送信 |
+| `specs/real-api/admin-screens.spec.ts` | real-api | テナント管理者の Cookie で、管理画面（ユーザー管理）と定期実行の一覧が開き、一覧の API が返ること。データは作らない |
 
 ### Service API 実体を使う real-api
 
@@ -88,7 +89,7 @@ Playwright が起動する Next には、開発時の認証バイパス（`SERVI
 | `E2E_USERNAME` | ログインするユーザー名 |
 | `E2E_PASSWORD` | ログインするパスワード |
 
-ローカルの開発環境では、資格情報に Service API の `appsettings.Development.json` の `Statevia:Bootstrap:DevAdmin`（`TenantKey` / `Username` / `Password`）を使えます。ユーザーは `executions.write` を持ち、テナントに slug が `default` の Project が要ります（定義をそこに作る）。
+ローカルの開発環境では、資格情報に Service API の `appsettings.Development.json` の `Statevia:Bootstrap:DevAdmin`（`TenantKey` / `Username` / `Password`）を使えます。ユーザーは `executions.write` を持つテナント管理者で（管理画面と定期実行の画面はテナント管理者だけが開ける）、テナントに slug が `default` の Project が要ります（定義をそこに作る）。
 
 **PowerShell の例**
 
@@ -109,7 +110,7 @@ export SERVICE_API_E2E_URL=http://localhost:8080 E2E_TENANT_KEY='<テナント�
 npx playwright test --project=real-api
 ```
 
-`--project=real-api` は依存する `setup-real` を先に走らせます。setup-real は Next の `/api/auth/login` で 1 回だけログインし、Cookie を `e2e/.auth/studio.json` に保存します（`.gitignore` の対象。コミットしない）。各シナリオはこの Cookie を読み込みます。定義の作成と実行の開始は Service API を直接呼びます（fixture `serviceApi`）。E2E で作った定義と実行は消さずに残ります（名前は `e2e_` で始まる）。
+`--project=real-api` は依存する `setup-real` を先に走らせます。setup-real は Next の `/api/auth/login` で 1 回だけログインし、Cookie を `e2e/.auth/studio.json` に保存します（`.gitignore` の対象。コミットしない）。各シナリオはこの Cookie を読み込みます。setup-real はトレースを取りません（ログインに失敗したときのトレースにパスワードが残るため）。ユーザー名などの資格情報の値は、ロケーターやステップ名に使わないでください。定義の作成と実行の開始は Service API を直接呼びます（fixture `serviceApi`）。E2E で作った定義と実行は消さずに残ります（名前は `e2e_` で始まる）。
 
 `playwright.config.ts` は `SERVICE_API_E2E_URL` があるとき、Next のプロキシ用に **`SERVICE_API_INTERNAL_BASE`** を同じ値で渡します。別 URL にしたい場合は **`SERVICE_API_INTERNAL_BASE`** を明示してください。
 

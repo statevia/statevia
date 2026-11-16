@@ -28,7 +28,13 @@ function resolveWorkers(): number | undefined {
  */
 const realApiProjects: Project[] = realApiEnabled
   ? [
-      { name: "setup-real", testDir: "./e2e/setup", testMatch: /.*\.setup\.ts/, use: { ...desktopChrome } },
+      {
+        name: "setup-real",
+        testDir: "./e2e/setup",
+        testMatch: /.*\.setup\.ts/,
+        // Reason: ログインに失敗したときのトレースに、ログインの要求の本文（パスワード）が残らないようにする。
+        use: { ...desktopChrome, trace: "off" },
+      },
       {
         name: "real-api",
         testDir: "./e2e/specs/real-api",

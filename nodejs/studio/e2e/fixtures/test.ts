@@ -1,6 +1,8 @@
 import { test as base, expect } from "@playwright/test";
+import { AdminUsersPage } from "../pages/AdminUsersPage";
 import { ExecutionDetailPage } from "../pages/ExecutionDetailPage";
 import { ExecutionsListPage } from "../pages/ExecutionsListPage";
+import { SchedulesPage } from "../pages/SchedulesPage";
 import {
   mockExecutionApi,
   recordUnmockedCoreApiCalls,
@@ -31,6 +33,14 @@ type PageFixtures = {
 type MockFixtures = {
   /** モックの API。宣言しなくても有効で、モックしていない `/api/core/**` の呼び出しをシナリオの失敗にする。 */
   mockApi: MockApi;
+};
+
+/** real-api project だけで使う Page Object（サーバー側で `auth/me` を呼ぶのでモックできない画面。U1=A）。 */
+type RealApiFixtures = {
+  /** 管理画面のユーザー管理の Page Object。 */
+  adminUsersPage: AdminUsersPage;
+  /** 定期実行の一覧の Page Object。 */
+  schedulesPage: SchedulesPage;
 };
 
 /** real-api project だけで使う worker 範囲の fixture。 */
@@ -68,7 +78,13 @@ export const test = pageTest.extend<MockFixtures>({
  * real-api project（`e2e/specs/real-api`）の `test`。モックの fixture を含まない。
  * @remarks ブラウザのログインは `e2e/setup/auth.setup.ts` が保存した Cookie（`storageState`）で済んでいる。
  */
-export const realTest = pageTest.extend<object, RealApiWorkerFixtures>({
+export const realTest = pageTest.extend<RealApiFixtures, RealApiWorkerFixtures>({
+  adminUsersPage: async ({ page }, use) => {
+    await use(new AdminUsersPage(page));
+  },
+  schedulesPage: async ({ page }, use) => {
+    await use(new SchedulesPage(page));
+  },
   serviceApi: [
     async ({ playwright }, use) => {
       const request = await playwright.request.newContext();
