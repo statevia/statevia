@@ -72,6 +72,40 @@ test.describe("実行詳細（モック）", () => {
     await expect(executionDetailPage.sendEventButton).toHaveCount(0);
   });
 
+  test("「キャンセル」を押すと実行へキャンセルを送り、成功のトーストと「キャンセル要求あり」が出る", async ({
+    executionDetailPage,
+    mockApi
+  }) => {
+    // Arrange
+    const commands = await mockApi.setup({
+      permissions: [EXECUTIONS_WRITE],
+      executionAfterCommand: { ...mockExecutionDto, cancelRequested: true }
+    });
+    await executionDetailPage.goto(MOCK_EXECUTION_ID);
+    await expect(executionDetailPage.cancelButton).toBeEnabled();
+    await expect(executionDetailPage.cancelRequestedNotice).toHaveCount(0);
+
+    // Act
+    await executionDetailPage.cancel();
+
+    // Assert
+    await expect(executionDetailPage.toasts.withText(uiText.executionDashboard.toasts.cancelAccepted)).toBeVisible();
+    await expect(executionDetailPage.cancelRequestedNotice).toBeVisible();
+    expect(commands).toEqual([{ path: `/executions/${MOCK_EXECUTION_ID}/cancel`, body: { reason: "ui" } }]);
+  });
+
+  test("終端（COMPLETED）の実行では「キャンセル」を出すが押せない", async ({ executionDetailPage, mockApi }) => {
+    // Arrange
+    await mockApi.setup({ permissions: [EXECUTIONS_WRITE], execution: { ...mockExecutionDto, status: "COMPLETED" } });
+
+    // Act
+    await executionDetailPage.goto(MOCK_EXECUTION_ID);
+
+    // Assert
+    await expect(executionDetailPage.statusBadge("COMPLETED")).toBeVisible();
+    await expect(executionDetailPage.cancelButton).toBeDisabled();
+  });
+
   test("待機中のノードの「このノードへ送る」から、そのノードへ再開を送る", async ({ executionDetailPage, mockApi, page }) => {
     // Arrange
     const commands = await mockApi.setup({

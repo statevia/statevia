@@ -26,6 +26,11 @@ export type MockExecutionApiOptions = {
   executionCounts?: ExecutionCounts;
   /** `GET /v1/executions/{id}` の応答。 */
   execution?: ExecutionDTO;
+  /**
+   * コマンド（POST）を 1 つでも受け付けた後の `GET /v1/executions/{id}` の応答。省略すると `execution` のまま。
+   * @remarks 画面はキャンセルなどを受け付けた後に実行を取り直す。取り直した結果が画面に出ることを確かめるときに渡す。
+   */
+  executionAfterCommand?: ExecutionDTO;
   /** `GET /v1/executions/{id}/graph` の応答。 */
   graph?: ExecutionGraphDTO;
   /**
@@ -116,8 +121,10 @@ export async function mockExecutionApi(page: Page, options: MockExecutionApiOpti
         return json(route, options.executions ?? emptyExecutions);
       case "/executions/counts":
         return json(route, options.executionCounts ?? emptyExecutionCounts);
-      case executionPrefix:
-        return json(route, options.execution ?? mockExecutionDto);
+      case executionPrefix: {
+        const initial = options.execution ?? mockExecutionDto;
+        return json(route, commands.length > 0 ? (options.executionAfterCommand ?? initial) : initial);
+      }
       case `${executionPrefix}/graph`:
         return json(route, options.graph ?? mockExecutionGraph);
       case `${executionPrefix}/events`: {

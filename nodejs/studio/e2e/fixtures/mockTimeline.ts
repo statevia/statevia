@@ -2,9 +2,9 @@
  * イベントタイムライン・リプレイ機能の e2e 用テストデータ
  */
 import type { ExecutionEventWithSeq, ExecutionView } from "@/features/executions/types";
-import { mockExecution } from "./mockExecution";
+import { MOCK_EXECUTION_ID, mockExecution } from "./mockExecution";
 
-const EXECUTION_ID = "ex-1";
+const EXECUTION_ID = MOCK_EXECUTION_ID;
 const at = (iso: string) => iso;
 
 /** タイムライン用: 1ページ目（seq 1-3）。続きを読み込むで2ページ目を返す想定 */

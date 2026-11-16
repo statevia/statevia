@@ -18,6 +18,8 @@ export class ExecutionDetailPage {
   readonly executionsBreadcrumbLink: Locator;
   /** 見出しの「キャンセル」。 */
   readonly cancelButton: Locator;
+  /** 見出しの下の「キャンセル要求あり」（開始日時と同じ行に並ぶ）。 */
+  readonly cancelRequestedNotice: Locator;
   /** 見出しの「比較」。 */
   readonly compareButton: Locator;
   /** 見出しの「イベントを送信」。 */
@@ -49,6 +51,7 @@ export class ExecutionDetailPage {
       .getByRole("navigation", { name: uiText.breadcrumbs.aria })
       .getByRole("link", { name: uiText.lists.executions });
     this.cancelButton = this.header.getByRole("button", { name: uiText.actions.cancel, exact: true });
+    this.cancelRequestedNotice = this.header.getByText(uiText.executionHeader.cancelRequested);
     this.compareButton = this.header.getByRole("button", { name: uiText.executionHeader.compareLabel });
     this.sendEventButton = this.header.getByRole("button", { name: sendEventText.open });
     this.sendToNodeButton = page.getByRole("button", { name: sendEventText.sendToNode });
