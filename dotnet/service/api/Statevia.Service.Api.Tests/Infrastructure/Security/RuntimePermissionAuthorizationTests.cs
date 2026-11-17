@@ -26,7 +26,7 @@ public sealed class RuntimePermissionAuthorizationTests
             authorization.EnsurePermissionAsync(WellKnownPermissionKeys.DefinitionsRead, CancellationToken.None));
 
         // Assert
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, ex.Code);
     }
 
     /// <summary>permissionKey 未指定は ArgumentException。</summary>
@@ -127,6 +127,6 @@ public sealed class RuntimePermissionAuthorizationTests
 
         // Assert
         Assert.Null(readException);
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, writeException.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, writeException.Code);
     }
 }

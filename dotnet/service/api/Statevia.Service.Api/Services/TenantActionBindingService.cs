@@ -73,9 +73,6 @@ internal sealed class TenantActionBindingService(
     /// <summary>値の UTF-8 上限。保護 API の平文上限と同じ。</summary>
     public const int MaxValueUtf8Bytes = 4096;
 
-    private const string UnauthorizedCode = "UNAUTHORIZED";
-    private const string ForbiddenCode = "FORBIDDEN";
-
     /// <inheritdoc />
     public async Task<IReadOnlyList<TenantActionBindingDto>> ListAsync(
         Guid callerPrincipalId,
@@ -343,7 +340,7 @@ internal sealed class TenantActionBindingService(
             return tenantId;
         }
 
-        throw new UnauthorizedException("Authentication required.", UnauthorizedCode);
+        throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
     }
 
     /// <summary>テナント管理者でなければ拒否する。</summary>
@@ -351,7 +348,7 @@ internal sealed class TenantActionBindingService(
     {
         if (!await tenantAdminAuthorization.IsTenantAdminAsync(principalId, cancellationToken).ConfigureAwait(false))
         {
-            throw new ForbiddenException("Tenant administrator required.", ForbiddenCode);
+            throw new ForbiddenException("Tenant administrator required.", ApiErrorCodes.Forbidden);
         }
     }
 

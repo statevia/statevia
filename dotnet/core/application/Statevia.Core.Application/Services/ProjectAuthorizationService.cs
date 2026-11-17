@@ -71,7 +71,7 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
         CancellationToken ct)
     {
         if (_tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         if (!await _projects.ExistsInTenantAsync(uow, tenantId, projectId, ct).ConfigureAwait(false))
             throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
@@ -87,7 +87,7 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
             return;
 
         if (effectiveRole is not null && effectiveRole.Value >= ProjectAccessRole.Reader)
-            throw new ForbiddenException(ProjectAuthorizationMessages.InsufficientProjectRole, "PROJECT_ACCESS_DENIED");
+            throw new ForbiddenException(ProjectAuthorizationMessages.InsufficientProjectRole, ApiErrorCodes.ProjectAccessDenied);
 
         throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
     }
@@ -115,7 +115,7 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
         CancellationToken ct)
     {
         if (_tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         var effectiveRole = await _projects
             .ResolveEffectiveRoleAsync(uow, tenantId, principalId, projectId, ct)
@@ -128,7 +128,7 @@ internal sealed class ProjectAuthorizationService : IProjectAuthorizationService
             return;
 
         if (forbiddenWhenBelowMinimum && effectiveRole.Value >= ProjectAccessRole.Reader)
-            throw new ForbiddenException(ProjectAuthorizationMessages.InsufficientProjectRole, "PROJECT_ACCESS_DENIED");
+            throw new ForbiddenException(ProjectAuthorizationMessages.InsufficientProjectRole, ApiErrorCodes.ProjectAccessDenied);
 
         throw new NotFoundException(ProjectAuthorizationMessages.ProjectNotFound);
     }

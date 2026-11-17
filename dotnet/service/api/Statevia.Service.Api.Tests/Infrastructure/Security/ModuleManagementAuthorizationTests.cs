@@ -71,7 +71,7 @@ public sealed class ModuleManagementAuthorizationTests
             authorization.EnsureReloadAllowedAsync(CancellationToken.None));
 
         // Assert
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, ex.Code);
     }
 
     /// <summary>非管理者でも modules.read があれば一覧できる。</summary>
@@ -126,7 +126,7 @@ public sealed class ModuleManagementAuthorizationTests
         public Task EnsurePermissionAsync(string permissionKey, CancellationToken cancellationToken)
         {
             if (!keys.Contains(permissionKey, StringComparer.Ordinal))
-                throw new ForbiddenException("Insufficient permission.", RuntimePermissionAuthorization.PermissionDeniedCode);
+                throw new ForbiddenException("Insufficient permission.", ApiErrorCodes.PermissionDenied);
             return Task.CompletedTask;
         }
     }

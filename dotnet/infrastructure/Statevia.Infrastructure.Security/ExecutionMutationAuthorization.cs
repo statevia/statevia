@@ -1,3 +1,5 @@
+using Statevia.Core.Application.Contracts;
+
 
 
 namespace Statevia.Infrastructure.Security;
@@ -37,14 +39,14 @@ internal sealed class ExecutionMutationAuthorization : IExecutionMutationAuthori
             if (_tenantContext.EffectivePermissionKeys?.Contains(permissionKey) == true)
                 return;
 
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
         }
 
         var principal = await _platformDataAccess
             .FindPrincipalAsync(callerPrincipalId, cancellationToken)
             .ConfigureAwait(false);
         if (principal is null)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         PrincipalIdentityAuthorization.EnsureLive(principal);
 
@@ -57,7 +59,7 @@ internal sealed class ExecutionMutationAuthorization : IExecutionMutationAuthori
         if (!snapshot!.EffectivePermissionKeys.Contains(permissionKey, StringComparer.Ordinal))
             throw new ForbiddenException(
                 "Insufficient permission.",
-                RuntimePermissionAuthorization.PermissionDeniedCode);
+                ApiErrorCodes.PermissionDenied);
     }
 
     /// <summary>

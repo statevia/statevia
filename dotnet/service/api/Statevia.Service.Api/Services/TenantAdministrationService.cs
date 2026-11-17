@@ -227,8 +227,6 @@ public interface ITenantAdministrationService
 /// <inheritdoc />
 internal sealed class TenantAdministrationService : ITenantAdministrationService
 {
-    private const string UnauthorizedCode = "UNAUTHORIZED";
-    private const string ForbiddenCode = "FORBIDDEN";
     private const string PrincipalNotFoundMessage = "Principal not found.";
     private static readonly JsonSerializerOptions AllowedScopesJsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -1177,7 +1175,7 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
     private Guid RequireTenantId()
     {
         if (!_tenantContext.IsResolved || _tenantContext.TenantId is not { } tenantId)
-            throw new UnauthorizedException("Authentication required.", UnauthorizedCode);
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
         return tenantId;
     }
 
@@ -1329,6 +1327,6 @@ internal sealed class TenantAdministrationService : ITenantAdministrationService
     private async Task EnsureTenantAdminAsync(Guid principalId, CancellationToken cancellationToken)
     {
         if (!await _tenantAdminAuthorization.IsTenantAdminAsync(principalId, cancellationToken).ConfigureAwait(false))
-            throw new ForbiddenException("Tenant administrator required.", ForbiddenCode);
+            throw new ForbiddenException("Tenant administrator required.", ApiErrorCodes.Forbidden);
     }
 }

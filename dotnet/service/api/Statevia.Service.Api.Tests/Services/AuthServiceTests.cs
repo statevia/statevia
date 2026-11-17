@@ -168,6 +168,35 @@ public sealed class AuthServiceTests
         Assert.Equal("TENANT_ARCHIVED", ex.Code);
     }
 
+    /// <summary>テナントの状態が列挙に無い値（DB の文字列が想定外）なら、汎用の FORBIDDEN に倒して 403。</summary>
+    [Fact]
+    public async Task LoginAsync_UnknownTenantLifecycle_ThrowsForbidden()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        await SecurityTestSeed.SeedUserAsync(database, "admin@example.com", "password123");
+
+        await using (var db = database.Factory.CreateDbContext())
+        {
+            var tenant = await db.Tenants.IgnoreQueryFilters().SingleAsync(t => t.TenantKey == "default");
+            tenant.Lifecycle = (TenantLifecycle)9;
+            await db.SaveChangesAsync();
+        }
+
+        var auth = CreateAuthService(database);
+
+        // Act
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() => auth.LoginAsync(new LoginRequest
+        {
+            TenantKey = "default",
+            Username = "admin",
+            Password = "password123"
+        }, CancellationToken.None));
+
+        // Assert
+        Assert.Equal(ApiErrorCodes.Forbidden, ex.Code);
+    }
+
     /// <summary>GetMeAsync は認証済み Principal 情報を返す。</summary>
     [Fact]
     public async Task GetMeAsync_ValidPrincipal_ReturnsProfile()

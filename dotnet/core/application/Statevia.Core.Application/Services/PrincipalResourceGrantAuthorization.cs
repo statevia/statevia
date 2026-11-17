@@ -46,7 +46,7 @@ internal sealed class PrincipalResourceGrantAuthorization(
 
         var grants = await resourceGrants.ListAsync(principalId, ct).ConfigureAwait(false);
         if (!Allows(grants, projectId, definitionId))
-            throw new ForbiddenException("Resource grant denied.", "RESOURCE_GRANT_DENIED");
+            throw new ForbiddenException("Resource grant denied.", ApiErrorCodes.ResourceGrantDenied);
     }
 
     /// <summary>行が無い種別は制限せず、両方あるときは AND にする。</summary>

@@ -9,7 +9,7 @@ public static class ApiErrorResult
     /// <param name="message">クライアント向けメッセージ。</param>
     /// <returns>NOT_FOUND のエラーボディ。</returns>
     public static ObjectResult NotFound(string message = "Resource not found")
-        => new(new ErrorResponse { Error = new ApiError { Code = "NOT_FOUND", Message = message } })
+        => new(new ErrorResponse { Error = new ApiError { Code = ApiErrorCodes.NotFound, Message = message } })
         { StatusCode = StatusCodes.Status404NotFound };
 
     /// <summary>422 Unprocessable Entity の <see cref="ObjectResult"/> を生成する。</summary>
@@ -17,7 +17,7 @@ public static class ApiErrorResult
     /// <param name="details">フィールド別エラー等（任意）。</param>
     /// <returns>VALIDATION_ERROR のエラーボディ。</returns>
     public static ObjectResult ValidationError(string message, object? details = null)
-        => ValidationError("VALIDATION_ERROR", message, details);
+        => ValidationError(ApiErrorCodes.ValidationError, message, details);
 
     /// <summary>422 Unprocessable Entity の <see cref="ObjectResult"/> を生成する（コード指定）。</summary>
     /// <param name="code">エラーコード。</param>
@@ -57,6 +57,6 @@ public static class ApiErrorResult
     /// <param name="message">説明メッセージ。上限値など内部構成に依存しない文言にする。</param>
     /// <returns>PAYLOAD_TOO_LARGE のエラーボディ。</returns>
     public static ObjectResult PayloadTooLarge(string message = "Request body too large")
-        => new(new ErrorResponse { Error = new ApiError { Code = "PAYLOAD_TOO_LARGE", Message = message } })
+        => new(new ErrorResponse { Error = new ApiError { Code = ApiErrorCodes.PayloadTooLarge, Message = message } })
         { StatusCode = StatusCodes.Status413PayloadTooLarge };
 }

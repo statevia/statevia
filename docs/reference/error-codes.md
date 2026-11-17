@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.4 |
-| 更新日 | 2026-11-01 |
+| Version | 1.5 |
+| 更新日 | 2026-11-18 |
 | 関連 | [api-http.md](../specifications/api-http.md), [data-integration.md](../specifications/data-integration.md) |
 
 ---
 
 Service API が返す `error.code` の**調べ物**一覧。Normative 契約は [api-http.md](../specifications/api-http.md) §4.3、[data-integration.md](../specifications/data-integration.md) §7 を正とする。
+
+**Version 1.5（2026-11-18）**: コードの正本実装を `ApiErrorCodes` に集め、本書の表との一致を CI のテストで確かめる。定期実行の結果のコードは本書の対象外と明記した。
 
 **Version 1.4（2026-11-01）**: リクエストボディ上限超過の `PAYLOAD_TOO_LARGE`（413）を載せる。
 
@@ -19,7 +21,9 @@ Service API が返す `error.code` の**調べ物**一覧。Normative 契約は 
 
 **Version 1.1（2026-09-01）**: 実装に無い `COMMAND_REJECTED` を外し、`STATE_CONFLICT` を載せる。
 
-実装の写像は主に `ApiExceptionFilter` / `ApiErrorResult` / `TenantContextMiddleware` / 各 Service。
+コードの正本実装は `ApiErrorCodes`（`dotnet/core/application/Statevia.Core.Application.Contracts/ApiErrorCodes.cs`）。例外から応答への写像は主に `ApiExceptionFilter` / `ApiErrorResult` / `TenantContextMiddleware` / 各 Service。本書の表と `ApiErrorCodes` の一致は CI のテスト（`ErrorCodeDocsConsistencyTests`）が確かめるので、コードを足すときは両方を同じ変更で直す。
+
+定期実行の失敗の記録（`schedule_runs.error_code`。`START_FAILED`・`REPORT_FAILED`・`TENANT_NOT_ACTIVE` など）と、Action の実行結果のコードは HTTP の応答に出ないので、本書の対象外とする。
 
 ## 応答形（共通）
 

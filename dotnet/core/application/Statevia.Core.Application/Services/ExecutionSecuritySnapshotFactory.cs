@@ -37,13 +37,13 @@ internal sealed class ExecutionSecuritySnapshotFactory : IExecutionSecuritySnaps
         CancellationToken cancellationToken)
     {
         if (_tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         var principal = await _principalDataAccess
             .FindPrincipalAsync(principalId, cancellationToken)
             .ConfigureAwait(false);
         if (principal is null)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         PrincipalIdentityAuthorization.EnsureLive(principal);
 

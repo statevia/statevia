@@ -36,6 +36,6 @@ public static class TenantContextExtensions
     {
         ArgumentNullException.ThrowIfNull(context);
         return context.PrincipalId
-            ?? throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            ?? throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
     }
 }

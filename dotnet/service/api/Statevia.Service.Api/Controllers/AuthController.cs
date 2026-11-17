@@ -42,7 +42,7 @@ public sealed class AuthController : ControllerBase
     {
         if (!_tenantContext.IsResolved || _tenantContext.TenantId is not { } tenantId ||
             _tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         var response = await _authService.GetMeAsync(tenantId, principalId, ct).ConfigureAwait(false);
         return Ok(response);
@@ -60,7 +60,7 @@ public sealed class AuthController : ControllerBase
     {
         if (!_tenantContext.IsResolved || _tenantContext.TenantId is not { } tenantId ||
             _tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         await _authService.ChangeOwnPasswordAsync(tenantId, principalId, request, ct).ConfigureAwait(false);
         return NoContent();

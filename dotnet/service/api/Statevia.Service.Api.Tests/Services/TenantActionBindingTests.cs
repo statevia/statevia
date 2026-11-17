@@ -294,6 +294,24 @@ public sealed class TenantActionBindingTests
             AllowedActionIds = actionIds ?? [ActionId],
         };
 
+    /// <summary>テナント文脈が未解決なら、管理者でも一覧を取れず 401 の UNAUTHORIZED になる。</summary>
+    [Fact]
+    public async Task ListAsync_UnresolvedTenantContext_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "bind-unresolved@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        tenantContext.Set(null);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<UnauthorizedException>(() => service.ListAsync(adminId, CancellationToken.None));
+
+        // Assert
+        Assert.Equal(ApiErrorCodes.Unauthorized, exception.Code);
+    }
+
     private static TenantActionBindingService CreateService(
         SqliteTestDatabase database,
         SettableTenantContextAccessor tenantContext,

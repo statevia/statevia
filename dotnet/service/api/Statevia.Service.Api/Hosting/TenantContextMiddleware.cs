@@ -49,15 +49,15 @@ internal sealed class TenantContextMiddleware
             .ConfigureAwait(false);
 
         if (tenant is null)
-            throw new UnauthorizedException("Tenant not found.", "TENANT_UNRESOLVED");
+            throw new UnauthorizedException("Tenant not found.", ApiErrorCodes.TenantUnresolved);
 
         EnsureTenantActive(tenant.Lifecycle);
 
         if (resolvedIdentity.TenantId is not null && tenant.TenantId != resolvedIdentity.TenantId)
-            throw new ForbiddenException("JWT tenant does not match resolved tenant.", "TENANT_HEADER_MISMATCH");
+            throw new ForbiddenException("JWT tenant does not match resolved tenant.", ApiErrorCodes.TenantHeaderMismatch);
 
         if (RequiresPrincipal(context.Request.Path) && resolvedIdentity.PrincipalId is null)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         var state = new TenantContextState(
             tenant.TenantId,
@@ -94,7 +94,7 @@ internal sealed class TenantContextMiddleware
             .ValidateAsync(plainApiKey, context.RequestAborted)
             .ConfigureAwait(false);
         if (apiKeyResult is null)
-            throw new UnauthorizedException("Invalid API key.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Invalid API key.", ApiErrorCodes.Unauthorized);
         return new ResolvedIdentity(
             apiKeyResult.Tenant.TenantKey,
             apiKeyResult.Tenant.TenantId,
@@ -118,11 +118,11 @@ internal sealed class TenantContextMiddleware
         var jwtTenantKey = jwtPrincipal.FindFirstValue(JwtTokenService.TenantKeyClaim);
         var principalId = ParseGuidClaim(jwtPrincipal, JwtTokenService.PrincipalIdClaim);
         if (tenantId is null || string.IsNullOrWhiteSpace(jwtTenantKey) || principalId is null)
-            throw new UnauthorizedException("Invalid token claims.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Invalid token claims.", ApiErrorCodes.Unauthorized);
 
         if (context.Request.Headers.ContainsKey(TenantRequestHeaders.HeaderName) &&
             !string.Equals(headerTenantKey, jwtTenantKey, StringComparison.Ordinal))
-            throw new ForbiddenException("X-Tenant-Id does not match JWT tenant.", "TENANT_HEADER_MISMATCH");
+            throw new ForbiddenException("X-Tenant-Id does not match JWT tenant.", ApiErrorCodes.TenantHeaderMismatch);
 
         return new ResolvedIdentity(jwtTenantKey, tenantId, principalId);
     }
@@ -217,13 +217,13 @@ internal sealed class TenantContextMiddleware
         switch (lifecycle)
         {
             case TenantLifecycle.Suspended:
-                throw new ForbiddenException("Tenant is suspended.", "TENANT_SUSPENDED");
+                throw new ForbiddenException("Tenant is suspended.", ApiErrorCodes.TenantSuspended);
             case TenantLifecycle.Archived:
-                throw new ForbiddenException("Tenant is archived.", "TENANT_ARCHIVED");
+                throw new ForbiddenException("Tenant is archived.", ApiErrorCodes.TenantArchived);
             case TenantLifecycle.Active:
                 return;
             default:
-                throw new ForbiddenException("Tenant is not active.", "FORBIDDEN");
+                throw new ForbiddenException("Tenant is not active.", ApiErrorCodes.Forbidden);
         }
     }
 }

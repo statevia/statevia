@@ -223,6 +223,24 @@ public sealed class TenantNotificationSmtpTests
             Password = password
         };
 
+    /// <summary>テナント文脈が未解決なら、管理者でも削除できず 401 の UNAUTHORIZED になる。</summary>
+    [Fact]
+    public async Task DeleteAsync_UnresolvedTenantContext_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "smtp-unresolved@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        tenantContext.Set(null);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<UnauthorizedException>(() => service.DeleteAsync(adminId, CancellationToken.None));
+
+        // Assert
+        Assert.Equal(ApiErrorCodes.Unauthorized, exception.Code);
+    }
+
     private static TenantNotificationSmtpService CreateService(
         SqliteTestDatabase database,
         SettableTenantContextAccessor tenantContext,

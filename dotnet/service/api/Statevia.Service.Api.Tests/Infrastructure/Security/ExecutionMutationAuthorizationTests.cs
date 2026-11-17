@@ -78,7 +78,7 @@ public sealed class ExecutionMutationAuthorizationTests
                 CancellationToken.None));
 
         // Assert
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, ex.Code);
     }
 
     /// <summary>Operator は常に Live 評価で、Live に key が無ければ Forbidden。</summary>
@@ -109,7 +109,7 @@ public sealed class ExecutionMutationAuthorizationTests
                 CancellationToken.None));
 
         // Assert
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, ex.Code);
     }
 
     /// <summary>Operator は Live 権限があれば Owner の Snapshot に関係なく成功する。</summary>
@@ -193,7 +193,7 @@ public sealed class ExecutionMutationAuthorizationTests
                 CancellationToken.None));
 
         // Assert
-        Assert.Equal(RuntimePermissionAuthorization.PermissionDeniedCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PermissionDenied, ex.Code);
     }
 
     /// <summary>無効 Principal は Identity で Forbidden。</summary>
@@ -219,7 +219,7 @@ public sealed class ExecutionMutationAuthorizationTests
                 CancellationToken.None));
 
         // Assert
-        Assert.Equal(PrincipalIdentityAuthorization.PrincipalInactiveCode, ex.Code);
+        Assert.Equal(ApiErrorCodes.PrincipalInactive, ex.Code);
     }
 
     /// <summary>permissionKey 未指定は ArgumentException。</summary>

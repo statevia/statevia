@@ -44,6 +44,25 @@ public sealed class AdminControllerTests
         Assert.Single(payload);
     }
 
+    /// <summary>テナント文脈が未解決（認証が無い）なら、サービスを呼ばずに 401 の UNAUTHORIZED を投げる。</summary>
+    [Fact]
+    public async Task DeleteActionBinding_UnresolvedTenantContext_ThrowsUnauthorized()
+    {
+        // Arrange
+        var controller = new AdminController(
+            new FakeAdminService(),
+            new FakeNotificationSmtpService(),
+            new FakeActionBindingService(),
+            new SettableTenantContextAccessor());
+
+        // Act
+        var exception = await Assert.ThrowsAsync<UnauthorizedException>(
+            () => controller.DeleteActionBinding("order-db", CancellationToken.None));
+
+        // Assert
+        Assert.Equal(ApiErrorCodes.Unauthorized, exception.Code);
+    }
+
     private sealed class FakeAdminService : ITenantAdministrationService
     {
         public IReadOnlyList<AdminUserListItemDto>? Users { get; init; }
