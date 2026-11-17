@@ -77,6 +77,33 @@ public sealed class TenantAdministrationServiceTests
         Assert.False(created.IsTenantAdmin);
     }
 
+    /// <summary>テナント文脈が未解決なら、管理者でもユーザーを作成できず 401 の UNAUTHORIZED になる。</summary>
+    [Fact]
+    public async Task CreateUserAsync_UnresolvedTenantContext_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var adminId = await SecurityTestSeed.SeedUserAsync(database, "admin@example.com", "password", isTenantAdmin: true);
+        var tenantContext = new SettableTenantContextAccessor();
+        var service = CreateService(database, tenantContext, adminId);
+        tenantContext.Set(null);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<UnauthorizedException>(() => service.CreateUserAsync(
+            adminId,
+            new CreateAdminUserRequest
+            {
+                Username = "new-user",
+                Email = "new-user@example.com",
+                Password = "initialpw1",
+                DisplayName = "New User"
+            },
+            CancellationToken.None));
+
+        // Assert
+        Assert.Equal(ApiErrorCodes.Unauthorized, exception.Code);
+    }
+
     /// <summary>管理者はユーザーを無効化できる。</summary>
     [Fact]
     public async Task UpdateUserAsync_Admin_DisablesUser()

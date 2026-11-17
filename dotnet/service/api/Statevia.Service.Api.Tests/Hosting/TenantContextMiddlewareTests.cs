@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -406,6 +407,50 @@ public sealed class TenantContextMiddlewareTests
 
         // Assert
         Assert.True(nextInvoked);
+    }
+
+    /// <summary>
+    /// テナントが Active でなければ downstream を呼ばずに 403 を投げ、状態ごとのコードを返す。
+    /// 列挙に無い値（DB の文字列が想定外）は汎用の FORBIDDEN に倒す。
+    /// </summary>
+    /// <param name="lifecycle">DB に置くテナントの状態。</param>
+    /// <param name="expectedCode">期待する <c>error.code</c>。</param>
+    [Theory]
+    [InlineData(TenantLifecycle.Suspended, ApiErrorCodes.TenantSuspended)]
+    [InlineData(TenantLifecycle.Archived, ApiErrorCodes.TenantArchived)]
+    [InlineData((TenantLifecycle)9, ApiErrorCodes.Forbidden)]
+    public async Task InvokeAsync_InactiveTenant_ThrowsForbiddenWithLifecycleCode(TenantLifecycle lifecycle, string expectedCode)
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        await using (var db = database.Factory.CreateDbContext())
+        {
+            var tenant = await db.Tenants.IgnoreQueryFilters().SingleAsync(row => row.TenantKey == "default");
+            tenant.Lifecycle = lifecycle;
+            await db.SaveChangesAsync();
+        }
+
+        var jwt = new JwtTokenService(Options.Create(new JwtAuthOptions()));
+        var (token, _) = jwt.IssueAccessToken(TestTenantIds.DefaultTenantId, "default", Guid.NewGuid());
+        var platform = new PlatformDataAccess(database.Factory, new DefaultIdGenerator());
+        var nextInvoked = false;
+        var middleware = new TenantContextMiddleware(_ =>
+        {
+            nextInvoked = true;
+            return Task.CompletedTask;
+        }, jwt);
+
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/v1/executions";
+        context.Request.Headers.Authorization = $"Bearer {token}";
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            middleware.InvokeAsync(context, new SettableTenantContextAccessor(), platform));
+
+        // Assert
+        Assert.Equal(expectedCode, exception.Code);
+        Assert.False(nextInvoked);
     }
 
     private static void AttachApiKeyAuthenticationService(
