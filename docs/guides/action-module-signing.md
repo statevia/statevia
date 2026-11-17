@@ -1,7 +1,11 @@
 # Action Module 署名の運用フロー（発行者・運用者）
 
-Version: 1.0  
-Project: 実行型ステートマシン
+| 項目 | 値 |
+| --- | --- |
+| 種別 | Guide |
+| Version | 1.0 |
+| 更新日 | 2026-10-31 |
+| 関連 | [module-zip-layout.md](../specifications/actions/module-zip-layout.md), [operations-docker.md](operations-docker.md) |
 
 ---
 

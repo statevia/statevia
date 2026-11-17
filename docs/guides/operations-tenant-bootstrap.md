@@ -1,8 +1,11 @@
 # テナント・初回管理者ブートストラップ
 
-- Version: 1.4.0
-- 更新日: 2026-09-29
-- 関連: [security-runtime.md](../specifications/platform/security-runtime.md), [operations-docker.md](operations-docker.md)
+| 項目 | 値 |
+| --- | --- |
+| 種別 | Guide |
+| Version | 1.4.0 |
+| 更新日 | 2026-09-29 |
+| 関連 | [security-runtime.md](../specifications/platform/security-runtime.md), [operations-docker.md](operations-docker.md) |
 
 ---
 
