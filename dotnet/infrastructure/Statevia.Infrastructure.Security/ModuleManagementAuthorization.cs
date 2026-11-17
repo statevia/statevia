@@ -1,3 +1,5 @@
+using Statevia.Core.Application.Contracts;
+
 namespace Statevia.Infrastructure.Security;
 
 /// <summary>Module 管理 API の認可（テナント管理者または semantic permission）。</summary>
@@ -21,7 +23,7 @@ internal sealed class ModuleManagementAuthorization(
     private async Task EnsureAdminOrPermissionAsync(string permissionKey, CancellationToken cancellationToken)
     {
         if (!tenantContext.IsResolved || tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         if (await tenantAdminAuthorization.IsTenantAdminAsync(principalId, cancellationToken).ConfigureAwait(false))
             return;

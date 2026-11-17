@@ -365,6 +365,6 @@ public sealed class AdminController : ControllerBase
         if (_tenantContext.IsResolved && _tenantContext.PrincipalId is { } principalId)
             return principalId;
 
-        throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+        throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
     }
 }

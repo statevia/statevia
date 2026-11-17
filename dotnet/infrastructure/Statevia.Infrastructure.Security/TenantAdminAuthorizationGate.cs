@@ -1,3 +1,5 @@
+using Statevia.Core.Application.Contracts;
+
 
 namespace Statevia.Infrastructure.Security;
 
@@ -18,12 +20,12 @@ internal static class TenantAdminAuthorizationGate
     {
         if (!tenantContext.IsResolved || tenantContext.PrincipalId is not { } principalId)
         {
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
         }
 
         if (!await tenantAdminAuthorization.IsTenantAdminAsync(principalId, cancellationToken).ConfigureAwait(false))
         {
-            throw new ForbiddenException("Tenant administrator required.", "FORBIDDEN");
+            throw new ForbiddenException("Tenant administrator required.", ApiErrorCodes.Forbidden);
         }
     }
 }

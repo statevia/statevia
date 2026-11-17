@@ -1,12 +1,10 @@
+using Statevia.Core.Application.Contracts;
 
 namespace Statevia.Infrastructure.Security;
 
 /// <inheritdoc />
 internal sealed class RuntimePermissionAuthorization : IRuntimePermissionAuthorization
 {
-    /// <summary>権限が足りないときの <see cref="ForbiddenException"/> のエラーコード。</summary>
-    internal const string PermissionDeniedCode = "PERMISSION_DENIED";
-
     private readonly ITenantContextAccessor _tenantContext;
     private readonly IPlatformDataAccess _platformDataAccess;
 
@@ -30,18 +28,18 @@ internal sealed class RuntimePermissionAuthorization : IRuntimePermissionAuthori
         if (_tenantContext.EffectivePermissionKeys is { } fixedKeys)
         {
             if (!fixedKeys.Contains(permissionKey))
-                throw new ForbiddenException("Insufficient permission.", PermissionDeniedCode);
+                throw new ForbiddenException("Insufficient permission.", ApiErrorCodes.PermissionDenied);
             return;
         }
 
         if (_tenantContext.PrincipalId is not { } principalId)
-            throw new UnauthorizedException("Authentication required.", "UNAUTHORIZED");
+            throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
 
         var expandedKeys = await _platformDataAccess
             .ExpandPrincipalPermissionKeysAsync(principalId, cancellationToken)
             .ConfigureAwait(false);
 
         if (!expandedKeys.Contains(permissionKey))
-            throw new ForbiddenException("Insufficient permission.", PermissionDeniedCode);
+            throw new ForbiddenException("Insufficient permission.", ApiErrorCodes.PermissionDenied);
     }
 }

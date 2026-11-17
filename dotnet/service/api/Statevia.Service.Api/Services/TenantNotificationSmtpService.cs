@@ -48,9 +48,6 @@ internal sealed class TenantNotificationSmtpService(
     ITenantSecretProtector secretProtector,
     ILogger<TenantNotificationSmtpService> logger) : ITenantNotificationSmtpService
 {
-    private const string UnauthorizedCode = "UNAUTHORIZED";
-    private const string ForbiddenCode = "FORBIDDEN";
-
     /// <inheritdoc />
     public async Task<TenantNotificationSmtpDto> GetAsync(
         Guid callerPrincipalId,
@@ -173,7 +170,7 @@ internal sealed class TenantNotificationSmtpService(
         if (tenantContext.IsResolved && tenantContext.TenantId is { } tenantId)
             return tenantId;
 
-        throw new UnauthorizedException("Authentication required.", UnauthorizedCode);
+        throw new UnauthorizedException("Authentication required.", ApiErrorCodes.Unauthorized);
     }
 
     /// <summary>テナント管理者でなければ拒否する。</summary>
@@ -182,7 +179,7 @@ internal sealed class TenantNotificationSmtpService(
     private async Task EnsureTenantAdminAsync(Guid principalId, CancellationToken cancellationToken)
     {
         if (!await tenantAdminAuthorization.IsTenantAdminAsync(principalId, cancellationToken).ConfigureAwait(false))
-            throw new ForbiddenException("Tenant administrator required.", ForbiddenCode);
+            throw new ForbiddenException("Tenant administrator required.", ApiErrorCodes.Forbidden);
     }
 
     /// <summary>正規化済みの SMTP 置換。</summary>

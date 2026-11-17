@@ -3,8 +3,6 @@ namespace Statevia.Core.Application.Contracts.Security;
 /// <summary>401 Unauthorized。</summary>
 public sealed class UnauthorizedException : Exception
 {
-    private const string DefaultCode = "UNAUTHORIZED";
-
     /// <summary>新しいインスタンスを初期化する。</summary>
     public UnauthorizedException()
         : this("Unauthorized.")
@@ -14,7 +12,7 @@ public sealed class UnauthorizedException : Exception
     /// <summary>新しいインスタンスを初期化する。</summary>
     /// <param name="message">クライアント向けメッセージ。</param>
     public UnauthorizedException(string message)
-        : this(message, DefaultCode)
+        : this(message, ApiErrorCodes.Unauthorized)
     {
     }
 
@@ -28,7 +26,7 @@ public sealed class UnauthorizedException : Exception
     /// <param name="message">クライアント向けメッセージ。</param>
     /// <param name="innerException">内部例外。</param>
     public UnauthorizedException(string message, Exception innerException)
-        : base(message, innerException) => Code = DefaultCode;
+        : base(message, innerException) => Code = ApiErrorCodes.Unauthorized;
 
     /// <summary>エラーコード。</summary>
     public string Code { get; }
@@ -37,8 +35,6 @@ public sealed class UnauthorizedException : Exception
 /// <summary>403 Forbidden。</summary>
 public sealed class ForbiddenException : Exception
 {
-    private const string DefaultCode = "FORBIDDEN";
-
     /// <summary>新しいインスタンスを初期化する。</summary>
     public ForbiddenException()
         : this("Forbidden.")
@@ -48,7 +44,7 @@ public sealed class ForbiddenException : Exception
     /// <summary>新しいインスタンスを初期化する。</summary>
     /// <param name="message">クライアント向けメッセージ。</param>
     public ForbiddenException(string message)
-        : this(message, DefaultCode)
+        : this(message, ApiErrorCodes.Forbidden)
     {
     }
 
@@ -62,7 +58,7 @@ public sealed class ForbiddenException : Exception
     /// <param name="message">クライアント向けメッセージ。</param>
     /// <param name="innerException">内部例外。</param>
     public ForbiddenException(string message, Exception innerException)
-        : base(message, innerException) => Code = DefaultCode;
+        : base(message, innerException) => Code = ApiErrorCodes.Forbidden;
 
     /// <summary>エラーコード。</summary>
     public string Code { get; }

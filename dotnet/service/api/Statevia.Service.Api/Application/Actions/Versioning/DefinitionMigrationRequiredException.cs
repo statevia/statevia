@@ -16,9 +16,6 @@ namespace Statevia.Service.Api.Application.Actions.Versioning;
     Justification = "例外型は呼び出し側が捕捉できるよう公開する（S3871）。")]
 public sealed class DefinitionMigrationRequiredException : Exception
 {
-    /// <summary>API エラーコード。</summary>
-    public const string ErrorCode = "DEFINITION_MIGRATION_REQUIRED";
-
     /// <summary>既定メッセージで生成する。</summary>
     public DefinitionMigrationRequiredException()
     {

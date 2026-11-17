@@ -496,7 +496,7 @@ public static class ServiceCollectionExtensions
                 {
                     Error = new ApiError
                     {
-                        Code = "VALIDATION_ERROR",
+                        Code = ApiErrorCodes.ValidationError,
                         Message = message,
                         Details = detailItems
                     }

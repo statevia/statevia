@@ -211,7 +211,7 @@ public sealed class ApiExceptionFilterTests
         var result = Assert.IsType<ObjectResult>(ctx.Result);
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
         var payload = Assert.IsType<ErrorResponse>(result.Value);
-        Assert.Equal(DefinitionMigrationRequiredException.ErrorCode, payload.Error.Code);
+        Assert.Equal(ApiErrorCodes.DefinitionMigrationRequired, payload.Error.Code);
     }
 
     /// <summary>

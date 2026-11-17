@@ -67,13 +67,13 @@ public sealed class ApiExceptionFilter : IExceptionFilter
             NotFoundException nf => ApiErrorResult.NotFound(nf.Message),
             UnauthorizedException unauthorized => ApiErrorResult.Unauthorized(unauthorized.Code, unauthorized.Message),
             ForbiddenException forbidden => ApiErrorResult.Forbidden(forbidden.Code, forbidden.Message),
-            IdempotencyConflictException idem => ApiErrorResult.Conflict("IDEMPOTENCY_KEY_CONFLICT", idem.Message),
-            StateConflictException state => ApiErrorResult.Conflict("STATE_CONFLICT", state.Message),
+            IdempotencyConflictException idem => ApiErrorResult.Conflict(ApiErrorCodes.IdempotencyKeyConflict, idem.Message),
+            StateConflictException state => ApiErrorResult.Conflict(ApiErrorCodes.StateConflict, state.Message),
             DefinitionMigrationRequiredException migration => ApiErrorResult.ValidationError(
-                DefinitionMigrationRequiredException.ErrorCode,
+                ApiErrorCodes.DefinitionMigrationRequired,
                 migration.Message),
             ModuleVersionResolutionException versionResolution => ApiErrorResult.ValidationError(
-                "MODULE_VERSION_RESOLUTION_FAILED",
+                ApiErrorCodes.ModuleVersionResolutionFailed,
                 versionResolution.Message),
             ArgumentException arg => ApiErrorResult.ValidationError(arg.Message),
             // [RequestSizeLimit] 超過時に Kestrel がボディ読み込み（モデルバインド）で投げる。想定内のため 500 にしない。
@@ -89,7 +89,7 @@ public sealed class ApiExceptionFilter : IExceptionFilter
         {
             Error = new ApiError
             {
-                Code = "INTERNAL_ERROR",
+                Code = ApiErrorCodes.InternalError,
                 Message = "Internal server error"
             }
         })

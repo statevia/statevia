@@ -267,7 +267,7 @@ internal sealed class ProjectService(
         var tenantId = tenantContext.GetRequiredTenantId();
         var principalId = tenantContext.GetRequiredPrincipalId();
         if (!await tenantAdmin.IsTenantAdminAsync(principalId, ct).ConfigureAwait(false))
-            throw new ForbiddenException("Tenant administrator required.", "FORBIDDEN");
+            throw new ForbiddenException("Tenant administrator required.", ApiErrorCodes.Forbidden);
 
         return await executor.ExecuteReadOnlyAsync(
             async (uow, innerCt) =>

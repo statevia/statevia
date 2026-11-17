@@ -35,7 +35,6 @@ public interface IAuthService
 /// <inheritdoc />
 internal sealed class AuthService : IAuthService
 {
-    private const string UnauthorizedCode = "UNAUTHORIZED";
     private const string InvalidCredentialsMessage = "Invalid credentials.";
 
     private readonly IPlatformDataAccess _platformDataAccess;
@@ -68,7 +67,7 @@ internal sealed class AuthService : IAuthService
         var tenantKey = request.TenantKey;
         var username = request.Username;
         if (_loginFailureLockStore.IsLocked(tenantKey, username))
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
 
         var lookup = await _platformDataAccess
             .FindLoginCredentialAsync(request.TenantKey, request.Username, cancellationToken)
@@ -76,14 +75,14 @@ internal sealed class AuthService : IAuthService
 
         // 未知のテナント／ユーザーはロック対象にしない（ランダムキーでの表肥大を避ける）。
         if (lookup is null)
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
 
         EnsureTenantActive(lookup.Tenant.Lifecycle);
 
         if (!_passwordCredentialService.VerifyPassword(request.Password, lookup.User.PasswordHash))
         {
             _loginFailureLockStore.RecordFailure(tenantKey, username);
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
         }
 
         _loginFailureLockStore.Reset(tenantKey, username);
@@ -111,7 +110,7 @@ internal sealed class AuthService : IAuthService
             .ConfigureAwait(false);
 
         if (lookup is null)
-            throw new UnauthorizedException("Principal not found.", UnauthorizedCode);
+            throw new UnauthorizedException("Principal not found.", ApiErrorCodes.Unauthorized);
 
         EnsureTenantActive(lookup.Tenant.Lifecycle);
 
@@ -145,19 +144,19 @@ internal sealed class AuthService : IAuthService
             .ConfigureAwait(false);
 
         if (lookup is null)
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
 
         EnsureTenantActive(lookup.Tenant.Lifecycle);
 
         if (!_passwordCredentialService.VerifyPassword(request.CurrentPassword, lookup.User.PasswordHash))
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
 
         var passwordHash = _passwordCredentialService.HashPassword(request.NewPassword);
         var updated = await _platformDataAccess
             .TryUpdateUserPasswordHashAsync(tenantId, lookup.User.UserId, passwordHash, cancellationToken)
             .ConfigureAwait(false);
         if (!updated)
-            throw new UnauthorizedException(InvalidCredentialsMessage, UnauthorizedCode);
+            throw new UnauthorizedException(InvalidCredentialsMessage, ApiErrorCodes.Unauthorized);
     }
 
     private static void EnsureTenantActive(TenantLifecycle lifecycle)
@@ -165,13 +164,13 @@ internal sealed class AuthService : IAuthService
         switch (lifecycle)
         {
             case TenantLifecycle.Suspended:
-                throw new ForbiddenException("Tenant is suspended.", "TENANT_SUSPENDED");
+                throw new ForbiddenException("Tenant is suspended.", ApiErrorCodes.TenantSuspended);
             case TenantLifecycle.Archived:
-                throw new ForbiddenException("Tenant is archived.", "TENANT_ARCHIVED");
+                throw new ForbiddenException("Tenant is archived.", ApiErrorCodes.TenantArchived);
             case TenantLifecycle.Active:
                 return;
             default:
-                throw new ForbiddenException("Tenant is not active.", "FORBIDDEN");
+                throw new ForbiddenException("Tenant is not active.", ApiErrorCodes.Forbidden);
         }
     }
 }
