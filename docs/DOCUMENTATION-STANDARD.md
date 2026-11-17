@@ -3,12 +3,14 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | 参照（執筆者向け） |
-| Version | 1.2 |
-| 更新日 | 2026-09-01 |
+| Version | 1.3 |
+| 更新日 | 2026-11-17 |
 
 ---
 
 本文書は **Markdown の書き方** の正本である。知識体系・索引・学習導線は [`README.md`](README.md) を参照すること。
+
+**Version 1.3（2026-11-17）**: メタブロックを CI で検査する。Version は `x.y` か `x.y.z`、必須の項目は種別・Version・更新日とする。
 
 **Version 1.2（2026-09-01）**: 第一読者を利用者・ライブラリ利用者と明示する。`AGENTS.md` を正本にしない。samples 導線を書く。
 
@@ -29,7 +31,11 @@
 | 関連 | [他 doc へのリンク] |
 ```
 
-- **変更履歴**: 重要な変更は `**Version x.y（日付）**: 概要` を最大 5 件まで
+- **必須の項目**は種別・Version・更新日。関連は任意。Decision の `ステータス` のように、種別に固有の項目を足してよい
+- **Version** は `x.y` か `x.y.z`（数字だけ）。ファイルの中ではどちらかに揃える
+- **更新日**は暦に存在する日付を `YYYY-MM-DD` で書く
+- **変更履歴**: 重要な変更は `**Version x.y（日付）**: 概要` を最大 5 件まで。最初の履歴の版はメタブロックの Version と一致させる
+- 上の決まりは CI の `Docs meta check`（[`scripts/docs/check-doc-meta.mjs`](../scripts/docs/check-doc-meta.mjs)）が検査する。関連の有無と本文の書き方は検査しない
 - **種別**の定義一覧は [`README.md`](README.md) に委譲する
 
 ## 配置ルール
@@ -76,6 +82,7 @@ Guide / Concept / Architecture / Reference / Decision / Future では MUST/SHOUL
 
 ```bash
 npx markdownlint-cli2 "docs/<変更したファイルパス>"
+node scripts/docs/check-doc-meta.mjs "docs/<変更したファイルパス>"
 ```
 
 ## リンク

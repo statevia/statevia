@@ -13,6 +13,8 @@ Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を
 
 定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
 
+**Version 1.8（2026-10-31）**: マイグレーションの手順のパスを `dotnet/` への移動に合わせた（`dotnet/service/api`、`dotnet/global.json`）。
+
 **Version 1.7（2026-10-31）**: 必要な SDK を .NET 10 に更新。
 
 **Version 1.6（2026-10-30）**: 定義登録に必須の `projectId` を、所属 Project の一覧から取る（無ければ作る）手順を追加。

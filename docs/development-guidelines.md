@@ -1,5 +1,12 @@
 # 開発ガイドライン
 
+| 項目 | 値 |
+| --- | --- |
+| 種別 | Guide |
+| Version | 1.0 |
+| 更新日 | 2026-11-15 |
+| 関連 | [DOCUMENTATION-STANDARD.md](DOCUMENTATION-STANDARD.md), [README.md](README.md) |
+
 本ドキュメントは、リポジトリでコードを書く際の**共通ルールの正本**です。  
 アーキテクチャ・契約・利用者向けドキュメントの入口は **[`docs/README.md`](README.md)**。起動・テスト・主要 env は **[`AGENTS.md`](../AGENTS.md)** を参照してください。
 

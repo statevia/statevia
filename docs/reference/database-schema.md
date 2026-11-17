@@ -1,7 +1,10 @@
 # スキーマ定義
 
-Version: 1.27
-Project: 実行型ステートマシン
+| 項目 | 値 |
+| --- | --- |
+| 種別 | Reference |
+| Version | 1.27 |
+| 更新日 | 2026-11-14 |
 
 **Version 1.27（2026-11-14）**: `executions` に `(tenant_id, started_at)` と `(definition_id, started_at)` の索引を足した（マイグレーション `AddExecutionStartedAtIndexes`）。FK 用の `IX_executions_tenant_id` は `(tenant_id, started_at)` に置き換わる。
 
