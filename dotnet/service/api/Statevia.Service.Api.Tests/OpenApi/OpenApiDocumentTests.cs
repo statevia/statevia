@@ -9,6 +9,9 @@ namespace Statevia.Service.Api.Tests.OpenApi;
 /// </summary>
 public sealed class OpenApiDocumentTests : IClassFixture<StateviaApiWebApplicationFactory>
 {
+    /// <summary>OpenAPI の Path Item のうち、HTTP メソッドを表すキー。</summary>
+    private static readonly HashSet<string> HttpMethodKeys = ["get", "post", "put", "patch", "delete", "head", "options"];
+
     private readonly StateviaApiWebApplicationFactory _factory;
 
     /// <summary>
@@ -73,14 +76,72 @@ public sealed class OpenApiDocumentTests : IClassFixture<StateviaApiWebApplicati
         using var response = await client.GetAsync(new Uri("/swagger/v1/swagger.json", UriKind.Relative));
         var json = await response.Content.ReadAsStringAsync();
 
-        var dotnetRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".."));
-        var outputPath = Path.Combine(dotnetRoot, "service", "api", "openapi", "core-api-v1.openapi.json");
+        var outputPath = CommittedOpenApiPath;
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         await File.WriteAllTextAsync(outputPath, json);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(File.Exists(outputPath));
+    }
+
+    /// <summary>
+    /// リポジトリにコミットした OpenAPI の操作（メソッドとパス）が、今の実装が生成する OpenAPI と一致する。
+    /// </summary>
+    /// <remarks>
+    /// コミット済みの JSON は、文書と実装の照合テスト（<c>Statevia.Architecture.Tests</c> の <c>ApiRouteDocsConsistencyTests</c>）が
+    /// 実装の正本として読む。書き出しを忘れると照合テストが古い JSON と比べて通ってしまうので、ここで鮮度を確かめる。
+    /// スキーマの細部まで一致は求めない（操作の集合だけを比べる）。
+    /// </remarks>
+    [Fact]
+    public async Task CommittedOpenApi_HasSameOperationsAsGenerated()
+    {
+        // Arrange
+        using var client = _factory.CreateClient();
+        var committedJson = await File.ReadAllTextAsync(CommittedOpenApiPath);
+
+        // Act
+        using var response = await client.GetAsync(new Uri("/swagger/v1/swagger.json", UriKind.Relative));
+        var generatedJson = await response.Content.ReadAsStringAsync();
+        var generated = ReadOperations(generatedJson);
+        var committed = ReadOperations(committedJson);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var missingFromCommitted = generated.Except(committed).Order(StringComparer.Ordinal).ToList();
+        var missingFromGenerated = committed.Except(generated).Order(StringComparer.Ordinal).ToList();
+        Assert.True(
+            missingFromCommitted.Count == 0 && missingFromGenerated.Count == 0,
+            "コミット済みの core-api-v1.openapi.json が実装と一致しません。リポジトリルートで "
+            + "scripts/export-core-api-openapi.ps1 を実行して書き出し直してください。\n"
+            + "実装にあってコミット済みに無い: " + string.Join(", ", missingFromCommitted) + "\n"
+            + "コミット済みにあって実装に無い: " + string.Join(", ", missingFromGenerated));
+    }
+
+    /// <summary>コミット済みの OpenAPI の絶対パス（<c>dotnet/service/api/openapi/core-api-v1.openapi.json</c>）。</summary>
+    /// <remarks>テストの出力（<c>Statevia.Service.Api.Tests/bin/{構成}/{TFM}/</c>）から 6 段上が <c>dotnet/</c>。</remarks>
+    private static string CommittedOpenApiPath =>
+        Path.Combine(
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..")),
+            "service",
+            "api",
+            "openapi",
+            "core-api-v1.openapi.json");
+
+    /// <summary>OpenAPI の JSON から <c>METHOD /path</c> の集合を読む。</summary>
+    /// <param name="json">OpenAPI の JSON。</param>
+    /// <returns>操作の集合。</returns>
+    private static HashSet<string> ReadOperations(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement
+            .GetProperty("paths")
+            .EnumerateObject()
+            .SelectMany(path => path.Value
+                .EnumerateObject()
+                .Where(operation => HttpMethodKeys.Contains(operation.Name))
+                .Select(operation => $"{operation.Name.ToUpperInvariant()} {path.Name}"))
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     private static void AssertRequiredPath(JsonElement paths, string path)
