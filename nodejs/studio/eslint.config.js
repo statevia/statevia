@@ -11,6 +11,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import jsdoc from "eslint-plugin-jsdoc";
 import sonarjs from "eslint-plugin-sonarjs";
+import playwright from "eslint-plugin-playwright";
 import globals from "globals";
 
 const tsconfigRootDir = path.dirname(fileURLToPath(
@@ -103,8 +104,6 @@ export default defineConfig({
         "postcss.config.js",
         "vitest.config.ts",
         "eslint.config.js",
-        "playwright.config.ts",
-        "e2e/**",
     ],
 }, {
     files: ["**/*.{ts,tsx}"],
@@ -299,6 +298,38 @@ export default defineConfig({
                 ],
             },
         ],
+    },
+}, {
+    // E2E（Playwright）。テストコードなので JSDoc の必須は外し、Playwright の書き方の規則を当てる。
+    // 規約の正本は e2e/README.md（Page Object は検証を持たない・固定の待ち時間を使わない・spec で分岐しない）。
+    ...playwright.configs["flat/recommended"],
+    files: ["e2e/**/*.ts"],
+    rules: {
+        ...playwright.configs["flat/recommended"].rules,
+        "playwright/no-wait-for-timeout": "error",
+        "playwright/no-wait-for-selector": "error",
+        "playwright/no-force-option": "error",
+        "playwright/no-conditional-in-test": "error",
+        "playwright/no-conditional-expect": "error",
+        "playwright/prefer-web-first-assertions": "error",
+        "playwright/no-skipped-test": "error",
+        "playwright/no-focused-test": "error",
+        "playwright/no-page-pause": "error",
+        "playwright/no-networkidle": "error",
+        "playwright/no-element-handle": "error",
+        "playwright/no-eval": "error",
+        "playwright/prefer-to-have-count": "error",
+        "playwright/prefer-to-have-length": "error",
+        "jsdoc/require-jsdoc": "off",
+        "jsdoc/require-description": "off",
+        // Playwright の fixture の `use` を React の Hook と誤認するため。e2e に React のコンポーネントは無い。
+        "react-hooks/rules-of-hooks": "off",
+    },
+}, {
+    // setup project はログインして Cookie を保存するだけで、検証を持たない。
+    files: ["e2e/setup/**/*.ts"],
+    rules: {
+        "playwright/expect-expect": "off",
     },
 }, {
     files: ["tests/**/*.{ts,tsx}"],

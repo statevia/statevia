@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Architecture |
-| Version | 0.14 |
-| 更新日 | 2026-11-15 |
+| Version | 0.15 |
+| 更新日 | 2026-11-17 |
 | 関連 | [repository-layout.md](repository-layout.md), [development-guidelines.md](../development-guidelines.md), [ui-user-guide.md](../guides/ui-user-guide.md) |
+
+**Version 0.15（2026-11-17）**: E2E（Playwright）の `e2e/` の構成を §5 に書いた（project の分け方、spec・fixture・Page Object・部品の置き場所、CI で回す範囲）。
 
 **Version 0.14（2026-11-15）**: 全画面を `shared/ui` の部品で組む形にした（§8）。ボタンの色の役割（緑は主導線で 1 画面 1 つ、紺、枠線、赤枠）、部品の一覧、既定パレットの色の直書きを ESLint で禁止したこと、実行詳細のイベント送信の部品の分担、グループのメンバーと権限の検索できる選択と保存前の差分の確認を書いた。0.10 の「部品を使うのは集合配送ダイアログだけ」は廃止した。
 
@@ -160,7 +162,11 @@ flowchart LR
 - 複数のソースにまたがるテストは、それらに共通する最も近いディレクトリに置く（例: 複数のページのスモーク → `tests/app/pages.smoke.test.tsx`）。
 - テストから `tests/` の外のソースとテスト用ヘルパーを import するときは、相対パスではなくエイリアス（§2）を使う。同じディレクトリに置くテスト専用の補助ファイルだけは `./` で import してよい。
 - テスト用の共通部品は、`tests/testUtils.tsx`・`tests/helpers/`・`tests/mocks/`・`tests/setup.ts` に置く。
-- E2E（Playwright）は `e2e/` に置き、この規則の対象外とする。
+- E2E（Playwright）は `e2e/` に置き、この規則の対象外とする（次の小節）。
+
+### E2E の配置
+
+E2E は `e2e/` に置き、画面をまたぐ導線と、画面と API の契約のつなぎ目だけを検証する（分岐の網羅は単体テストに任せる）。spec は project ごとに分ける。`e2e/specs/mock/` はブラウザで `/api/core/**` をモックし、Service API なしで動く。`e2e/specs/real-api/` は Service API の実体を使い、`e2e/setup/` が 1 回だけログインして保存した Cookie で画面に入る。layout がサーバー側で `auth/me` を呼ぶ管理画面と定期実行の画面は、ブラウザでモックできないので real-api でだけ扱う。spec は `e2e/fixtures/test.ts` の `test`（mock）か `realTest`（real-api）を使い、画面の操作は `e2e/pages/` の Page Object（画面 1 つに 1 クラス）と、複数の画面に出る部品の `e2e/components/` を通す。Page Object は検証を持たない。CI は mock だけを PR ごとに回す。書き方の規約と実行方法の正本は [`nodejs/studio/e2e/README.md`](../../nodejs/studio/e2e/README.md) である。
 
 ## 6. 段階移行チェックリスト
 

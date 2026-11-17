@@ -78,6 +78,65 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  # Studio の E2E（Playwright）の mock project だけを回す。ブラウザで API をモックするので Service API は要らない。
+  # 実 API の project（real-api）は回さない（studio-e2e-foundation の U2=A）。環境変数が無いので project ごと定義されない。
+  ui-e2e-mock:
+    name: UI E2E (mock)
+    needs: ui-lint-typecheck
+    # ubuntu-latest（26.04）には Playwright 1.58 が Chromium を入れられないので 24.04 に固定する。
+    # Playwright を 26.04 に対応した版へ上げたら ubuntu-latest に戻す。
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: nodejs/studio
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nodejs/studio/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ブラウザのキャッシュは Playwright の版ごとに分ける（版が変わるとブラウザの版も変わる）。
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-chromium
+
+      - name: Install Chromium with system dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # キャッシュはブラウザの本体だけなので、OS のライブラリは毎回入れる。
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # CI では playwright.config.ts が worker 1・再試行 2・test.only の禁止・既存サーバーの再利用なしになる。
+      - name: Run E2E (mock)
+        run: npx playwright test --project=mock
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report-mock
+          path: |
+            nodejs/studio/playwright-report/
+            nodejs/studio/test-results/
+          retention-days: 7
+
   markdown-lint:
     name: Markdown lint
     runs-on: ubuntu-latest
