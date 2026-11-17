@@ -90,7 +90,7 @@ public sealed partial class LoggerMessageEventIdTests
     /// <exception cref="Xunit.Sdk.XunitException">EventId を持たない <c>[LoggerMessage]</c> があったとき。</exception>
     private static IReadOnlyList<LoggerMessageEventId> ScanEventIds()
     {
-        var repositoryRoot = FindRepositoryRoot();
+        var repositoryRoot = RepositoryPaths.RepositoryRoot;
         var sourceFiles = Directory
             .EnumerateFiles(repositoryRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsExcludedDirectory(Path.GetRelativePath(repositoryRoot, path)));
@@ -119,29 +119,11 @@ public sealed partial class LoggerMessageEventIdTests
     /// <returns>docs に記載された帯の一覧。</returns>
     private static IReadOnlyList<(int Start, int End)> ReadDocumentedBands()
     {
-        var document = File.ReadAllText(Path.Combine(FindRepositoryRoot(), LoggingPropertyKeysDocPath));
+        var document = File.ReadAllText(Path.Combine(RepositoryPaths.RepositoryRoot, LoggingPropertyKeysDocPath));
         return DocumentedBandRegex()
             .Matches(document)
             .Select(match => (int.Parse(match.Groups["start"].Value), int.Parse(match.Groups["end"].Value)))
             .ToList();
-    }
-
-    /// <summary>
-    /// テスト実行ディレクトリから親をたどり、<c>dotnet/statevia.sln</c> があるリポジトリルートを返す。
-    /// </summary>
-    /// <returns>リポジトリルートの絶対パス。</returns>
-    /// <exception cref="DirectoryNotFoundException">ルートが見つからないとき。</exception>
-    private static string FindRepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "dotnet", "statevia.sln")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new DirectoryNotFoundException("dotnet/statevia.sln を含むリポジトリルートが見つかりません。");
     }
 
     /// <summary>ビルド出力・依存パッケージ・worktree など、走査しないディレクトリかを判定する。</summary>
