@@ -1,3 +1,3 @@
-# docs/ 内部リンク検証（CI: .github/workflows/ci.yml の docs-link-check）
+# docs/ と各 README の内部リンク検証（CI: .github/workflows/ci.yml の docs-link-check。対象のファイルは CI の引数で渡す）
 # 外部 URL はオフライン検証対象外（レート制限・不安定さを避ける）
 offline = true

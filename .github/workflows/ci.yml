@@ -35,10 +35,17 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Check internal links in docs
+      # nodejs は glob にすると node_modules まで拾うので、README を名指しする。
+      - name: Check internal links in docs and READMEs
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
         with:
-          args: --config .lychee.toml --no-progress 'docs/**/*.md'
+          args: >-
+            --config .lychee.toml --no-progress
+            'docs/**/*.md'
+            'README.md'
+            'dotnet/**/README.md'
+            'nodejs/studio/e2e/README.md'
+            'scripts/**/README.md'
 
   format-check:
     name: C# format check
@@ -144,5 +151,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # .spec/specs などは gitignore。checkout 上は templates / steering のみ。
-      - name: Lint docs and spec markdown
-        run: npx --yes markdownlint-cli2 "docs/**/*.md" ".spec/**/*.md"
+      # README はリポジトリの各所にあるので、node_modules と .NET のビルド出力を除いて拾う。
+      - name: Lint docs, spec and README markdown
+        run: >-
+          npx --yes markdownlint-cli2
+          "docs/**/*.md" ".spec/**/*.md"
+          "README.md" "dotnet/**/README.md" "nodejs/**/README.md" "scripts/**/README.md"
+          "#**/node_modules/**" "#**/bin/**" "#**/obj/**"

@@ -15,4 +15,4 @@ See `hello.yaml` for the workflow definition.
 ## ドキュメント
 
 - Engine 単体ガイド: [docs/guides/engine-standalone-guide.md](../../../../../docs/guides/engine-standalone-guide.md)（実行器の登録とコンパイル時の検査）
-- ドキュメント索引: [docs/README.md](../../../docs/README.md)
+- ドキュメント索引: [docs/README.md](../../../../../docs/README.md)
