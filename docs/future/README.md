@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Future |
-| Version | 1.2 |
-| 更新日 | 2026-09-01 |
+| Version | 1.3 |
+| 更新日 | 2026-11-18 |
 | 関連 | [product-roadmap.md](product-roadmap.md), [sse-and-projection-extensions.md](sse-and-projection-extensions.md), [../README.md](../README.md) |
 
 ---
 
 契約・実装の正本ではない。論理到達像と成熟度・フェーズ展望を置く。現行の挙動・契約は [`../specifications/`](../specifications/) および [`../architecture/`](../architecture/) を参照すること。
+
+**Version 1.3（2026-11-18）**: 監査・再現性（hash chain）の構想を `specifications/` から移して載せる。
 
 **Version 1.2（2026-09-01）**: 未実装 Push / 投影拡張の Future を索引に載せる。
 
@@ -19,5 +21,6 @@
 | --- | --- |
 | [`product-roadmap.md`](product-roadmap.md) | 能力成熟度（ある／部分／ない）と Near / Mid / Long |
 | [`sse-and-projection-extensions.md`](sse-and-projection-extensions.md) | 未実装の Push 種別と投影キューの拡張案 |
+| [`audit-hash-chain.md`](audit-hash-chain.md) | 監査イベントの hash chain と再現性（未実装の設計） |
 
 入口の索引では [`../README.md`](../README.md) の **Future** セクション（最後）にのみ掲載する。

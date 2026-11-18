@@ -1,25 +1,30 @@
-# 監査・再現性仕様（Level 2: ハッシュチェーン）
+# 監査・再現性の構想（Level 2: ハッシュチェーン）
 
 | 項目 | 値 |
 | --- | --- |
-| 種別 | Specification |
-| Version | 1.0 |
-| 更新日 | 2026-07-07 |
+| 種別 | Future |
+| Version | 1.1 |
+| 更新日 | 2026-11-18 |
 | Focus | 完全監査可能 / 再現性 / BI |
+| 関連 | [product-roadmap.md](product-roadmap.md), [../specifications/platform/execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md), [../reference/glossary.md](../reference/glossary.md) |
 
 ---
 
-## Normative 要約
+**本書は未実装の設計で、現行の契約ではない。** 2026-11-18 の時点で、hash chain（`prev_hash` / `event_hash`）、reducer による再現、本書に出てくる監査イベントの一覧（`COMMAND_ACCEPTED` / `COMMAND_REJECTED`、`ACTION_DISPATCHED`、`NODE_WAITING` など）はどれも実装に無い。実装にあるのは append-only の `event_store` と、actor・相関 ID の列までである。実装にある監査イベントは `WorkflowStarted` / `WorkflowCancelled` / `EventPublished` の 3 種だけで、語は [用語集](../reference/glossary.md) を正とする。監査の正本の設計は別途検討中で、決まった内容は `specifications/` に書く。
 
-- **MUST**: 監査イベントは改ざん検知可能な hash chain で連結する（Level 2 設計）。
-- **MUST**: 同一イベント列から同一状態が再現できること（reducer 純粋性）。
-- **SHOULD**: EventEnvelope は [events-and-commands.md](../execution/events-and-commands.md) を踏襲し、監査必須フィールドを追加固定する。
+**Version 1.1（2026-11-18）**: `specifications/platform/audit-and-repro.md` から移した。現行の契約と誤解されないよう、種別を Future にし、規範表現（MUST / SHOULD）を外した。本文の設計は変えていない。
+
+## 構想の要約
+
+- 監査イベントを改ざん検知できる hash chain で連結する（Level 2 設計）。
+- 同じイベント列から同じ状態を再現できるようにする（reducer の純粋性）。
+- EventEnvelope は [events-and-commands.md](../specifications/execution/events-and-commands.md) に合わせ、監査に使う項目を足して固定する。
 
 ---
 
 ## 0. 目的
 
-本仕様は以下を実現するためのルールを定義する。
+本構想は以下を実現するためのルールを描く。
 
 - **改ざん検知**（hash chain）
 - **完全監査**（誰が・いつ・何を・なぜ）
@@ -36,7 +41,7 @@
 
 2. **Eventは不変（append-only）**
 
-- Update/Delete禁止
+- Update/Delete はしない
 - 訂正は「訂正イベント」を追加で表現する
 
 3. **決定性（Determinism）**
@@ -53,9 +58,9 @@
 
 ## 2. EventEnvelope（監査強化版）
 
-EventEnvelope は [events-and-commands.md](../execution/events-and-commands.md) を踏襲し、監査上の必須フィールドを追加固定する。
+EventEnvelope は [events-and-commands.md](../specifications/execution/events-and-commands.md) に合わせ、監査に使う項目を足して固定する。
 
-### 2.1 必須
+### 2.1 常に持たせる項目
 
 - eventId: UUID
 - executionId: string
@@ -67,7 +72,7 @@ EventEnvelope は [events-and-commands.md](../execution/events-and-commands.md) 
 - schemaVersion: 1
 - payload: object
 
-### 2.2 強く推奨（監査・追跡性）
+### 2.2 あると望ましい項目（監査・追跡性）
 
 - correlationId?: string
 - causationId?: UUID
@@ -142,7 +147,7 @@ event_hash = SHA256( prev_hash + "\n" + canonical_json(envelope_without_hash_fie
 
 ### 4.1 目的
 
-JSONは通常「キー順」が保証されないため、hash計算には **canonical** が必須。
+JSONは通常「キー順」が保証されないため、hash計算には **canonical** が欠かせない。
 
 ### 4.2 ルール（固定）
 
@@ -157,9 +162,9 @@ JSONは通常「キー順」が保証されないため、hash計算には **can
 
 ---
 
-## 5. 受理/拒否も監査対象（推奨）
+## 5. 受理/拒否も監査対象にする案
 
-### 5.1 推奨イベント（監査の実務で効く）
+### 5.1 案のイベント（監査の実務で効く）
 
 - COMMAND_ACCEPTED
 - COMMAND_REJECTED
@@ -213,6 +218,6 @@ Slack送信等は以下の“事実”をイベント化する（Action領域の
 
 ## 8. 運用ガイド（Level 2）
 
-- DBの events テーブルは update/delete を禁止（権限でも縛る）
+- DBの events テーブルは update/delete をさせない（権限でも縛る）
 - hash chain 検証ジョブ（夜間）を用意し、異常検知したらアラート
 - export（CSV/Parquet）時も event_hash を含めると監査が強くなる

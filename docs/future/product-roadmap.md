@@ -3,9 +3,9 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Future |
-| Version | 1.0.2 |
-| 更新日 | 2026-09-27 |
-| 関連 | [platform-architecture.md](platform-architecture.md), [../architecture/overview.md](../architecture/overview.md), [../specifications/execution/fork-join.md](../specifications/execution/fork-join.md), [../specifications/platform/audit-and-repro.md](../specifications/platform/audit-and-repro.md) |
+| Version | 1.0.3 |
+| 更新日 | 2026-11-18 |
+| 関連 | [platform-architecture.md](platform-architecture.md), [../architecture/overview.md](../architecture/overview.md), [../specifications/execution/fork-join.md](../specifications/execution/fork-join.md), [audit-hash-chain.md](audit-hash-chain.md) |
 
 ---
 
@@ -88,9 +88,9 @@ flowchart LR
 
 | 状態 | 内容 | ギャップ / 備考 |
 | --- | --- | --- |
-| **ある** | append-only `event_store`、実行 events API、actor / correlation 列のスキーマ、Execution Security Snapshot、監査・再現性の契約文書 | [audit-and-repro.md](../specifications/platform/audit-and-repro.md)、[execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md) |
+| **ある** | append-only `event_store`、実行 events API、actor / correlation 列のスキーマ、Execution Security Snapshot | [execution-security-snapshot.md](../specifications/platform/execution-security-snapshot.md) |
 | **部分** | イベント履歴による「何が起きたか」 | 定期実行の `WorkflowStarted` は `actor_kind=scheduler` とスケジュール ID を書く。それ以外の actor / correlation / causation は未配線。監査専用テーブルの活用が未整備 |
-| **ない** | hash chain 実装、管理操作（設定・Module 配置等）の監査、夜間 hash 検証ジョブ | Level 2 設計は仕様のみ |
+| **ない** | hash chain 実装、管理操作（設定・Module 配置等）の監査、夜間 hash 検証ジョブ | Level 2 の設計は構想のみ（[audit-hash-chain.md](audit-hash-chain.md)） |
 
 ### 4.4 分析
 
@@ -98,7 +98,7 @@ flowchart LR
 | --- | --- | --- |
 | **ある** | 実行一覧・詳細・グラフ（運用 UI） | BI / KPI 製品ではない |
 | **部分** | BI 指標の構想（成功率・待機時間等）、実行分析の内部検討 | 公開製品機能としては未提供 |
-| **ない** | ノードライフサイクル投影 API、テナント横断 KPI / DWH、Replay UI | [audit-and-repro.md](../specifications/platform/audit-and-repro.md) §7 の方向性のみ |
+| **ない** | ノードライフサイクル投影 API、テナント横断 KPI / DWH、Replay UI | [audit-hash-chain.md](audit-hash-chain.md) §7 の方向性のみ |
 
 ### 4.5 SaaS 向けセキュリティ
 
@@ -131,7 +131,7 @@ flowchart LR
 
 1. 合成 read model の終端固定（終端後の都度合成コスト削減。Running 中は GET 時合成のまま）
 2. 可観測性: readiness / 依存ヘルス、メトリクス、分散トレース（OpenTelemetry 方向）
-3. 監査: actor 埋込 → hash chain の段階適用（[audit-and-repro.md](../specifications/platform/audit-and-repro.md) に実装を寄せる）
+3. 監査: actor 埋込 → hash chain の段階適用（構想は [audit-hash-chain.md](audit-hash-chain.md)）
 4. 実行分析 Phase 1（ノードイベント投影＋読取 API）
 5. Action: Container 運用成熟、Org / Project Policy 階層、Module version 共存
 
