@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.8 |
-| 更新日 | 2026-10-31 |
+| Version | 1.9 |
+| 更新日 | 2026-11-18 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
 ---
@@ -12,6 +12,8 @@
 Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を publish して実行するまでの最短手順。定義 YAML の例は [samples/](../samples/)。
 
 定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
+
+**Version 1.9（2026-11-18）**: 既定の構成で Worker と Scheduler が Service API の中で動くことと、分離構成・ログ収集への導線を書いた。開発用の管理者は Development でだけ作られることを明記した。
 
 **Version 1.8（2026-10-31）**: マイグレーションの手順のパスを `dotnet/` への移動に合わせた（`dotnet/service/api`、`dotnet/global.json`）。
 
@@ -67,6 +69,15 @@ docker compose up -d
 
 §1 で postgres のみ起動してマイグレーションしたあと、上記で残りのサービスを起動する。すでに全サービスを起動済みで API が DB エラーになっている場合は、マイグレーション後に `docker compose restart service-api`。
 
+`docker-compose.yml` だけで起動すると、PostgreSQL・Service API・Action Host（2 台）・UI が動く。Worker（実行の進行）と Scheduler（Wait の期限・定期実行の発火）は Service API のプロセスの中で動くので、この構成だけで実行は完了まで進み、定期実行も発火する。
+
+| 足したいもの | 重ねるファイル | 手順 |
+| --- | --- | --- |
+| Worker / Scheduler を別コンテナに分ける | `compose/split-runtime.yml` | [operations-docker.md](operations-docker.md) のランタイム分離 |
+| JSON ログを Fluent Bit / Loki / Grafana で集める | `compose/logging.yml`（分離時は `compose/logging-split.yml` も） | [operations-logging.md](operations-logging.md) |
+
+毎回 `-f` を並べる代わりに、`.env` の `COMPOSE_FILE` に重ねるファイルを書くと `docker compose up -d --build` だけで同じ構成になる（例は `.env.example`）。
+
 | サービス | URL |
 | --- | --- |
 | Service API | `http://localhost:8080` |
@@ -81,7 +92,7 @@ docker compose up -d
 
 `/v1/definitions` / `/v1/executions` / `/v1/projects` / `/v1/events` / `/v1/actions` は **Principal 必須**（JWT または `X-Api-Key`）+ `X-Tenant-Id`（`tenant_key`、既定 `default`）。
 
-**Development**（`docker compose` の既定）では API 起動時に次の管理者が自動作成される（`skip-if-exists`、マイグレーション適用後）:
+**Development**（`docker compose` の既定）では API 起動時に次の管理者が自動作成される（`skip-if-exists`、マイグレーション適用後）。Development 以外では作られないので、手元の開発専用の資格情報として扱う:
 
 | 項目 | 値 |
 | --- | --- |

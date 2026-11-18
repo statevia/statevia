@@ -16,6 +16,9 @@ Definition（定義）を正本に、ビジネスプロセスを **実行可能�
 | **Event Driven** | 事実（完了・失敗・キャンセル等）に基づいて状態が遷移する |
 | **Extensible Actions** | Action Module としてビジネスロジックを追加・配布できる |
 | **Visual Workflow** | Studio UI で実行グラフを可視化し、進行を追える |
+| **定期実行** | cron とタイムゾーンを指定し、決まった時刻に実行を開始する |
+| **権限とマルチテナント** | テナント・Project・ロールと permission key で、誰が何を操作できるかを分ける。API キーとサービスアカウントで外部から呼び出せる |
+| **実行の履歴** | 実行の開始・キャンセル・イベントを append-only の履歴に残し、タイムラインで追える |
 
 Fork / Join、Wait、協調的キャンセルなど、非同期・並列の業務処理向けの制御を定義から組み立てられます。
 
@@ -45,13 +48,15 @@ docker compose up -d
 
 既に `docker compose up -d` 済みで API が落ちている場合は、マイグレーション後に `docker compose restart service-api`。
 
+この構成では、Worker（実行の進行）と Scheduler（Wait の期限・定期実行）は Service API のプロセスの中で動きます。プロセスを分ける構成（`compose/split-runtime.yml`）やログ収集（Fluent Bit / Loki / Grafana の `compose/logging.yml`）を重ねる方法は [operations-docker](docs/guides/operations-docker.md) を参照してください。
+
 | 確認 | URL / コマンド |
 | --- | --- |
 | API ヘルス | `curl -s http://localhost:8080/v1/health` |
 | API ドキュメント | [http://localhost:8080/scalar/v1](http://localhost:8080/scalar/v1) |
 | Studio UI | [http://localhost:3000](http://localhost:3000) |
 
-**開発用の既定アカウント**（`ASPNETCORE_ENVIRONMENT=Development` で API 起動時に自動作成。初回マイグレーション後）:
+**開発用の既定アカウント**（`ASPNETCORE_ENVIRONMENT=Development` で API 起動時に自動作成。初回マイグレーション後）。compose は Development で動くので、手元の開発専用です。Development 以外では作られません。公開する環境では [operations-tenant-bootstrap](docs/guides/operations-tenant-bootstrap.md) の手順で管理者を作ってください。
 
 | 項目 | 値 |
 | --- | --- |
