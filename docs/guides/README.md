@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.5 |
-| 更新日 | 2026-09-20 |
+| Version | 1.6 |
+| 更新日 | 2026-11-18 |
 | 関連 | [getting-started.md](getting-started.md), [capacity-load-testing.md](capacity-load-testing.md), [../samples/](../samples/), [../README.md](../README.md) |
 
 ---
 
 **どうやるか** を説明する手順書。利用者の第一入口。第一読者は API / UI / 運用の利用者と Engine ライブラリ利用者。
+
+**Version 1.6（2026-11-18）**: 最初のワークフローを書くチュートリアルを載せる。
 
 **Version 1.5（2026-09-20）**: 実行系以外の API request/sec 計測への導線を追加。
 
@@ -24,6 +26,7 @@
 | ドキュメント | 内容 |
 | --- | --- |
 | [`getting-started.md`](getting-started.md) | Quick Start — DB・API・UI・初回実行 |
+| [`first-workflow-tutorial.md`](first-workflow-tutorial.md) | 最初のワークフローを書く（Wait → Fork / Join → Action をサンプルで動かす） |
 | [`http-request-examples.md`](http-request-examples.md) | curl による API 呼び出し例 |
 | [`engine-standalone-guide.md`](engine-standalone-guide.md) | Engine ライブラリ単体・hello サンプル |
 | [`ui-user-guide.md`](ui-user-guide.md) | Studio の起動と基本操作 |
