@@ -58,11 +58,16 @@ jobs:
         with:
           node-version: 22
 
-      - name: Test the meta checker
+      # scripts/docs の検査（メタブロック・画面の一覧）の単体テスト。ジョブ名は必須チェックの名前を変えないため据え置く。
+      - name: Test the docs checkers
         run: node --test "scripts/docs/__tests__/*.test.mjs"
 
       - name: Check docs meta blocks
         run: node scripts/docs/check-doc-meta.mjs
+
+      # Studio の画面（nodejs/studio/app/**/page.tsx）と ui-user-guide.md の「画面の一覧」を突き合わせる。
+      - name: Check UI guide screen list
+        run: node scripts/docs/check-ui-routes.mjs
 
   format-check:
     name: C# format check
