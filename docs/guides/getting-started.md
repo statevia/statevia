@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.9 |
+| Version | 1.10 |
 | 更新日 | 2026-11-18 |
 | 関連 | [operations-docker.md](operations-docker.md), [operations-tenant-bootstrap.md](operations-tenant-bootstrap.md), [api-http.md](../specifications/api-http.md), [samples/](../samples/) |
 
@@ -12,6 +12,8 @@
 Docker Compose で PostgreSQL・Service API・UI を起動し、API で定義を publish して実行するまでの最短手順。定義 YAML の例は [samples/](../samples/)。
 
 定義名・状態名・イベント名は ASCII 識別子のみ（日本語はコメントと `description` に限る）。既存の非 ASCII 識別子は次回の create / update / publish で 422 になる。パスワードの文字種は制限しない。
+
+**Version 1.10（2026-11-18）**: 詰まったときのトラブルシュートと、最初のワークフローのチュートリアルへの導線を足した。
 
 **Version 1.9（2026-11-18）**: 既定の構成で Worker と Scheduler が Service API の中で動くことと、分離構成・ログ収集への導線を書いた。開発用の管理者は Development でだけ作られることを明記した。
 
@@ -86,7 +88,7 @@ docker compose up -d
 
 ヘルス確認: `GET http://localhost:8080/v1/health` → `{ "status": "ok" }`
 
-トラブルシュートは [operations-docker.md](operations-docker.md) を参照。
+詰まったときは [troubleshooting.md](troubleshooting.md)（API と画面の症状）と [operations-docker.md](operations-docker.md)（コンテナと設定）を参照。
 
 ## 3. 認証（Runtime API）
 
@@ -165,6 +167,8 @@ curl -s -X POST "http://localhost:8080/v1/executions" \
 
 ## 次に読むもの
 
+- 最初のワークフローを書く: [first-workflow-tutorial.md](first-workflow-tutorial.md)
+- 詰まったとき: [troubleshooting.md](troubleshooting.md)
 - 定義の詳細: [definition.md](../specifications/definition.md)
 - 思想・全体像: [concepts/README.md](../concepts/README.md)
 - 索引全体: [docs/README.md](../README.md)
