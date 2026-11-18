@@ -132,7 +132,7 @@ Reference — 辞書・一覧（必要になったら）
 
 | やりたいこと | ドキュメント |
 | --- | --- |
-| **定義を書く** | [concepts/definition](docs/concepts/definition.md) → [specifications/definition](docs/specifications/definition.md) |
+| **定義を書く** | [チュートリアル](docs/guides/first-workflow-tutorial.md) → [concepts/definition](docs/concepts/definition.md) → [specifications/definition](docs/specifications/definition.md) |
 | **実行する** | [getting-started](docs/guides/getting-started.md) · [http-request-examples](docs/guides/http-request-examples.md) |
 | **状態を確認する** | [ui-user-guide](docs/guides/ui-user-guide.md) |
 | **拡張する** | [actions 概念](docs/concepts/actions.md) · [module-zip-layout](docs/specifications/actions/module-zip-layout.md) |

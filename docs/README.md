@@ -41,7 +41,7 @@
 | --- | --- |
 | **初回セットアップ・起動** | [getting-started.md](guides/getting-started.md) |
 | **HTTP で API を叩く** | [http-request-examples.md](guides/http-request-examples.md) |
-| **定義を書く** | [concepts/definition.md](concepts/definition.md) → [specifications/definition.md](specifications/definition.md) |
+| **定義を書く** | [first-workflow-tutorial.md](guides/first-workflow-tutorial.md) → [concepts/definition.md](concepts/definition.md) → [specifications/definition.md](specifications/definition.md) |
 | **実行する** | [getting-started.md](guides/getting-started.md)、[specifications/api-http.md](specifications/api-http.md) |
 | **状態を確認する** | [ui-user-guide.md](guides/ui-user-guide.md)、[specifications/ui/visual.md](specifications/ui/visual.md) |
 | **拡張する（Module / Engine）** | [engine-standalone-guide.md](guides/engine-standalone-guide.md)、[specifications/actions/module-zip-layout.md](specifications/actions/module-zip-layout.md) |
