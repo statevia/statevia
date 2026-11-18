@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.43 |
-| 更新日 | 2026-11-15 |
+| Version | 1.44 |
+| 更新日 | 2026-11-19 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.44（2026-11-19）**: 不具合の修正。ヘッダやペイロードが読めない形の崩れた Bearer トークン（例: `Bearer abc.def.ghi`）で、契約の 401（`UNAUTHORIZED`）ではなく 500 を返していたのを 401 にそろえる。JWT の読み取り失敗を検証失敗として扱っていなかったのが原因。契約は変えず、§4.1.2 に明記する。
 
 **Version 1.43（2026-11-15）**: 不具合の修正。`POST …/events` で当てはまる待機が無い・複数あるとき、`POST …/nodes/{nodeId}/resume` で許可外のイベントを送ったときに、契約の 422（`VALIDATION_ERROR`）ではなく 500（`INTERNAL_ERROR`）を返していたのを 422 にそろえる。Engine の例外を原因として包んだ検証エラーを、エラーの写像が内側の例外の型で判定していたのが原因。契約は変えない。
 
@@ -792,6 +794,7 @@ Response（`GET /v1/admin/modules` の 1 件）: `moduleId`, `name`, `version`, 
 - **保護対象（Middleware で Principal 必須）**: `/v1/definitions`、`/v1/executions`、`/v1/projects`、`/v1/schedules`、`/v1/events`、`/v1/event-subscriptions`、`/v1/graphs`、`/v1/actions`、`/v1/admin`、`/internal/modules`、`/v1/auth/me` 配下。
 - **必須**: Principal が解決済みであること（JWT または `X-Api-Key`）。
 - **拒否**: `X-Tenant-Id` のみ（Bearer / API キーなし）は **401**（`UNAUTHORIZED`）。
+- **拒否**: 検証に失敗した Bearer トークンは Principal を解決しない。署名・発行者・対象者・有効期限の不一致に加え、ヘッダやペイロードが読めない形の崩れたトークンも同じ扱いで、API キーも無ければ **401**（`UNAUTHORIZED`）。500 にはしない。
 - **除外パス**: `/v1/auth/login`、`/v1/health`、`/swagger/*`、`/scalar/*`。
 - **JWT 署名鍵**: Service API のみ。Production / Staging では開発既定値および 32 文字未満の `Auth:Jwt:SigningKey` で起動しない（[environment-variables.md](../reference/environment-variables.md)）。Development の開発既定値は可。ログに鍵値は出さない。専用 Worker / Scheduler は JWT を発行せず、この検証の対象外。
 

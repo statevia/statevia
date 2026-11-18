@@ -264,6 +264,33 @@ public sealed class TenantContextMiddlewareTests
         Assert.Equal("UNAUTHORIZED", ex.Code);
     }
 
+    /// <summary>ヘッダが読めない形の崩れた Bearer トークンは、500 ではなく 401（UNAUTHORIZED）になる。</summary>
+    [Fact]
+    public async Task InvokeAsync_MalformedBearerToken_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var database = new SqliteTestDatabase();
+        var jwt = new JwtTokenService(Options.Create(new JwtAuthOptions()));
+        var platform = new PlatformDataAccess(database.Factory, new DefaultIdGenerator());
+        var accessor = new SettableTenantContextAccessor();
+        var nextInvoked = false;
+        var middleware = new TenantContextMiddleware(_ =>
+        {
+            nextInvoked = true;
+            return Task.CompletedTask;
+        }, jwt);
+
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/v1/executions";
+        context.Request.Headers.Authorization = "Bearer abc.def.ghi";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            middleware.InvokeAsync(context, accessor, platform));
+        Assert.False(nextInvoked);
+        Assert.Equal(ApiErrorCodes.Unauthorized, ex.Code);
+    }
+
     /// <summary>/v1/graphs も Principal 必須。</summary>
     [Fact]
     public async Task InvokeAsync_HeaderOnlyOnGraphsPath_ThrowsUnauthorized()

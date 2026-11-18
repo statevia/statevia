@@ -74,4 +74,18 @@ public sealed class JwtTokenServiceTests
         // Assert
         Assert.Null(principal);
     }
+
+    /// <summary>ヘッダが Base64Url / JSON として読めない形の崩れたトークンは、例外を投げずに検証失敗（null）になる。</summary>
+    [Fact]
+    public void ValidateToken_MalformedToken_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var principal = service.ValidateToken("abc.def.ghi");
+
+        // Assert
+        Assert.Null(principal);
+    }
 }

@@ -55,6 +55,12 @@ internal sealed class JwtTokenService
     }
 
     /// <summary>JWT を検証しクレームを返す。</summary>
+    /// <remarks>
+    /// 署名・発行者・対象者・有効期限の検証失敗に加え、形の崩れたトークン（ヘッダやペイロードが Base64Url / JSON として読めない、
+    /// サイズ上限を超えるなど）も検証失敗として null を返す。<see cref="JwtSecurityTokenHandler"/> は読み取り失敗を
+    /// <see cref="SecurityTokenException"/> ではなく <see cref="ArgumentException"/>（IDX12729 など）で投げるため、両方を捕まえる。
+    /// 呼び出し側の誤りである <see cref="ArgumentNullException"/> と、そのほかの想定外の例外は捕まえない。
+    /// </remarks>
     /// <param name="token">Bearer トークン。</param>
     /// <returns>検証済みクレーム。失敗時は null。</returns>
     public ClaimsPrincipal? ValidateToken(string token)
@@ -65,6 +71,10 @@ internal sealed class JwtTokenService
             return handler.ValidateToken(token, BuildValidationParameters(), out _);
         }
         catch (SecurityTokenException)
+        {
+            return null;
+        }
+        catch (ArgumentException exception) when (exception is not ArgumentNullException)
         {
             return null;
         }
