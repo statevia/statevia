@@ -89,7 +89,7 @@ Guide のあと、なぜそうなっているかを理解する。
 | データ連携 | [data-integration.md](specifications/data-integration.md) |
 | Engine 実行 | [execution/](specifications/execution/)（fsm, events-and-commands, wait-cancel, fork-join, execution-graph） |
 | Action プラットフォーム | [actions/platform.md](specifications/actions/platform.md)、[module-zip-layout.md](specifications/actions/module-zip-layout.md) |
-| セキュリティ・監査・運用ログ | [platform/](specifications/platform/)（[logging-operations.md](specifications/platform/logging-operations.md) を含む） |
+| セキュリティ・運用ログ | [platform/](specifications/platform/)（[logging-operations.md](specifications/platform/logging-operations.md) を含む） |
 | UI | [ui/visual.md](specifications/ui/visual.md)、[ui/push-api.md](specifications/ui/push-api.md) |
 
 一覧: [specifications/README.md](specifications/README.md)
@@ -126,6 +126,7 @@ Guide のあと、なぜそうなっているかを理解する。
 | [product-roadmap.md](future/product-roadmap.md) | 能力成熟度（ある／部分／ない）と Near / Mid / Long |
 | [platform-architecture.md](future/platform-architecture.md) | プラットフォーム構成（将来構想） |
 | [sse-and-projection-extensions.md](future/sse-and-projection-extensions.md) | 未実装の Push 種別と投影キューの拡張案 |
+| [audit-hash-chain.md](future/audit-hash-chain.md) | 監査イベントの hash chain と再現性（未実装の設計） |
 
 一覧: [future/README.md](future/README.md)
 

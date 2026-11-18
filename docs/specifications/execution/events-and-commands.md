@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 2.0 |
-| 更新日 | 2026-11-08 |
+| Version | 2.0.1 |
+| 更新日 | 2026-11-18 |
 | 関連 | [fsm.md](fsm.md), [wait-cancel.md](wait-cancel.md), [../api-http.md](../api-http.md), [../../reference/glossary.md](../../reference/glossary.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -105,4 +105,4 @@ Fact は実行グラフのノードの `fact` に記録される（[execution-gr
 
 ## 6. 本書の範囲外
 
-以前の版にあった 24 種のイベント一覧、12 種のコマンド一覧、それらを適用する reducer の規則は実装されておらず、Version 2.0 で外した。監査の改ざん検知と Actor の拡充は [audit-and-repro.md](../platform/audit-and-repro.md) の段階的な目標である。
+以前の版にあった 24 種のイベント一覧、12 種のコマンド一覧、それらを適用する reducer の規則は実装されておらず、Version 2.0 で外した。監査の改ざん検知と Actor の拡充は未実装で、構想は [audit-hash-chain.md](../../future/audit-hash-chain.md) にある。

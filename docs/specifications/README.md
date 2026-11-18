@@ -3,12 +3,14 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.1 |
-| 更新日 | 2026-09-16 |
+| Version | 1.2 |
+| 更新日 | 2026-11-18 |
 
 ---
 
 **契約・振る舞い** の Normative 正本（必須 / 推奨 / 任意 / 禁止）。背景の「なぜ」は [`../concepts/`](../concepts/) へ。
+
+**Version 1.2（2026-11-18）**: 未実装の設計だった監査・再現性（hash chain）を [`../future/audit-hash-chain.md`](../future/audit-hash-chain.md) へ移した。
 
 **Version 1.1（2026-09-16）**: 運用ログ契約（JSON stdout）を platform に追加。
 
@@ -45,7 +47,6 @@
 | [`platform/execution-security-snapshot.md`](platform/execution-security-snapshot.md) | Execution Security Snapshot |
 | [`platform/io-log-masking.md`](platform/io-log-masking.md) | workflow IO ログマスキング |
 | [`platform/logging-operations.md`](platform/logging-operations.md) | 運用ログ（JSON stdout。ベンダー非必須） |
-| [`platform/audit-and-repro.md`](platform/audit-and-repro.md) | 監査・再現性 |
 
 ## ui/
 
