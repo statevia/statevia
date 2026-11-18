@@ -78,8 +78,46 @@ jobs:
         shell: pwsh
         run: ./scripts/dotnet-format-all.ps1 -VerifyNoChanges -Verbosity minimal
 
+  # Studio（nodejs/studio）とこのワークフローに変更があるかを判定する。UI のジョブはこの結果で動かすかを決める。
+  # 差分を取れないとき（main の初回 push や、force push で基点が消えたとき）は変更ありとして扱う。
+  studio-changes:
+    name: Detect Studio changes
+    runs-on: ubuntu-latest
+    outputs:
+      studio: ${{ steps.filter.outputs.studio }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      # PR は base と merge コミットの差分、main への push は push 前後の差分を見る。
+      - name: Diff against base
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "studio=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! changed_files=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA"); then
+            echo "差分を取れなかったので、変更ありとして扱う。"
+            echo "studio=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if printf '%s\n' "$changed_files" | grep -qE '^(nodejs/studio/|\.github/workflows/ci\.yml$)'; then
+            echo "studio=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "studio=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 必須チェックなので、ジョブの if でスキップする（スキップは成功として扱われる）。
+  # 判定のジョブが失敗したときは、黙ってスキップせずに動かす。
   ui-lint-typecheck:
     name: UI lint and typecheck
+    needs: studio-changes
+    if: ${{ !cancelled() && (needs.studio-changes.result != 'success' || needs.studio-changes.outputs.studio == 'true') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -107,6 +145,8 @@ jobs:
   ui-e2e-mock:
     name: UI E2E (mock)
     needs: ui-lint-typecheck
+    # lint が動いて成功したときだけ動く。lint がスキップされたら E2E もスキップされる。
+    if: ${{ !cancelled() && needs.ui-lint-typecheck.result == 'success' }}
     # ubuntu-latest（26.04）には Playwright 1.58 が Chromium を入れられないので 24.04 に固定する。
     # Playwright を 26.04 に対応した版へ上げたら ubuntu-latest に戻す。
     runs-on: ubuntu-24.04
