@@ -45,6 +45,7 @@
 | **実行する** | [getting-started.md](guides/getting-started.md)、[specifications/api-http.md](specifications/api-http.md) |
 | **状態を確認する** | [ui-user-guide.md](guides/ui-user-guide.md)、[specifications/ui/visual.md](specifications/ui/visual.md) |
 | **拡張する（Module / Engine）** | [engine-standalone-guide.md](guides/engine-standalone-guide.md)、[specifications/actions/module-zip-layout.md](specifications/actions/module-zip-layout.md) |
+| **詰まったとき** | [troubleshooting.md](guides/troubleshooting.md)、[error-codes.md](reference/error-codes.md) |
 | **運用する** | [operations-docker.md](guides/operations-docker.md)、[operations-logging.md](guides/operations-logging.md)、[operations-tenant-bootstrap.md](guides/operations-tenant-bootstrap.md)、[capacity-load-testing.md](guides/capacity-load-testing.md) |
 
 一覧: [guides/README.md](guides/README.md)

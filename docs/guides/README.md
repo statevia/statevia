@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.6 |
+| Version | 1.7 |
 | 更新日 | 2026-11-18 |
 | 関連 | [getting-started.md](getting-started.md), [capacity-load-testing.md](capacity-load-testing.md), [../samples/](../samples/), [../README.md](../README.md) |
 
 ---
 
 **どうやるか** を説明する手順書。利用者の第一入口。第一読者は API / UI / 運用の利用者と Engine ライブラリ利用者。
+
+**Version 1.7（2026-11-18）**: トラブルシュートを載せる。
 
 **Version 1.6（2026-11-18）**: 最初のワークフローを書くチュートリアルを載せる。
 
@@ -30,6 +32,7 @@
 | [`http-request-examples.md`](http-request-examples.md) | curl による API 呼び出し例 |
 | [`engine-standalone-guide.md`](engine-standalone-guide.md) | Engine ライブラリ単体・hello サンプル |
 | [`ui-user-guide.md`](ui-user-guide.md) | Studio の起動と基本操作 |
+| [`troubleshooting.md`](troubleshooting.md) | 詰まったとき（症状 → 原因 → 対処。認証・権限・定義・実行） |
 | [`action-host.md`](action-host.md) | OutOfProcess 用 Action Host |
 | [`cli-reference.md`](cli-reference.md) | `statevia` CLI |
 | [`operations-docker.md`](operations-docker.md) | Docker Compose 運用 |
