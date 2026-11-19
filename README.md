@@ -5,6 +5,12 @@
 Definition（定義）を正本に、ビジネスプロセスを **実行可能なワークフロー** として動かします。  
 初めての方は、まず [Quick Start](#quick-start) で動かしてみてください。
 
+| 実行グラフ | 定義エディタ |
+| --- | --- |
+| ![実行詳細のグラフ表示。受注の並列処理で、分岐の片方の出荷が完了し、もう片方が在庫移動のイベントを待っている](docs/images/screenshots/execution-graph.webp) | ![定義エディタのグラフ表示。受付・検証・並列出荷・合流・通知のノードが矢印でつながっている](docs/images/screenshots/definition-editor.webp) |
+
+画面は架空のデータで撮っています。定義は [docs/samples/ui-customer-order-parallel.yaml](docs/samples/ui-customer-order-parallel.yaml)、画面の使い方は [UI ガイド](docs/guides/ui-user-guide.md) を参照してください。
+
 ---
 
 ## Statevia でできること
@@ -158,11 +164,8 @@ Reference — 辞書・一覧（必要になったら）
 
 ## 実行イメージ
 
-定義（Definition）→ 実行フロー → ExecutionGraph として観測されます。
+定義（Definition）→ 実行フロー → ExecutionGraph として観測されます。冒頭の画像は、[サンプル定義](docs/samples/ui-customer-order-parallel.yaml) の実行が、並列の片方で在庫移動のイベントを待っているところです。
 
-![ExecutionGraph の例](docs/images/execution-graph-example.png)
-
-サンプル定義: [docs/samples/ui-customer-order-parallel.yaml](docs/samples/ui-customer-order-parallel.yaml)  
 実行モデルの概要: [docs/concepts/execution-model.md](docs/concepts/execution-model.md)
 
 ---
