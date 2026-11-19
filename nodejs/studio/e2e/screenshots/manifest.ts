@@ -1,6 +1,7 @@
 import { PROJECT_IDS, screenshotAdmin, screenshotProjects } from "./data/common";
 import {
   ORDER_DEFINITION_ID,
+  screenshotActionSchemaIndex,
   screenshotDefinitionsPage,
   screenshotNodesSchema,
   screenshotOrderDefinition
@@ -101,7 +102,8 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
     },
     responses: {
       [`/definitions/${ORDER_DEFINITION_ID}`]: () => screenshotOrderDefinition,
-      "/definitions/schema/nodes": () => screenshotNodesSchema
+      "/definitions/schema/nodes": () => screenshotNodesSchema,
+      "/actions/schema/index": () => screenshotActionSchemaIndex
     }
   },
   {

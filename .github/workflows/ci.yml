@@ -206,6 +206,70 @@ jobs:
             nodejs/studio/test-results/
           retention-days: 7
 
+  # 文書のスクリーンショット（README と UI ガイドの画像）が撮れることを確かめる。
+  # 架空データのモックで撮るので Service API は要らない。画像はコミットせず、差分も比べない（docs-readme-refresh の U2=A）。
+  # 撮れた画像は成果物に残し、レビューで画面の写りを見られるようにする。
+  docs-screenshots-check:
+    name: Docs screenshots check
+    needs: ui-lint-typecheck
+    if: ${{ !cancelled() && needs.ui-lint-typecheck.result == 'success' }}
+    # ui-e2e-mock と同じ理由で 24.04 に固定する。
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: nodejs/studio
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nodejs/studio/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-chromium
+
+      - name: Install Chromium with system dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # 応答の書き忘れ（モックしていない API の呼び出し）、画面の壊れ、200KB の超過で失敗する。
+      - name: Take docs screenshots
+        run: npm run docs:screenshots
+
+      - name: Upload screenshots
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docs-screenshots
+          path: docs/images/screenshots/
+          retention-days: 7
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docs-screenshots-results
+          path: nodejs/studio/test-results/
+          retention-days: 7
+
   markdown-lint:
     name: Markdown lint
     runs-on: ubuntu-latest

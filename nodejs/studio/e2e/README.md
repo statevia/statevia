@@ -18,6 +18,7 @@ e2e/
 │  └─ e2eWaitWorkflowYaml.ts
 ├─ pages/            # 画面 1 つに 1 クラスの Page Object
 ├─ components/       # 複数の画面に出る部品（タイムライン・イベント送信ダイアログ・トースト）
+├─ screenshots/      # 文書のスクリーンショットの撮影（npm run docs:screenshots。通常の E2E には含めない）
 └─ support/
    ├─ env.ts         # 実 API の環境変数と Cookie の保存先
    └─ step.ts        # 操作を利用者の語のステップ名でレポートに出す
@@ -123,3 +124,30 @@ npx playwright test --project=real-api
 `playwright.config.ts` は `SERVICE_API_E2E_URL` があるとき、Next のプロキシ用に **`SERVICE_API_INTERNAL_BASE`** を同じ値で渡します。別 URL にしたい場合は **`SERVICE_API_INTERNAL_BASE`** を明示してください。
 
 環境変数をそろえたまま `npm run test:e2e` を叩くと、mock と real-api の両方が走ります。片方だけにするときは `--project` で選んでください。
+
+## 文書のスクリーンショット
+
+README と UI ガイドに載せる画面の画像を、架空データのモックで撮ります。全サービスは起動しません。
+
+```bash
+npm run docs:screenshots
+```
+
+画像は `docs/images/screenshots/<画面の ID>.webp`（幅 1280px、1 枚 200KB 以下）に書き出します。設定は `playwright.screenshots.config.ts` で、`npm run test:e2e` には含まれません。
+
+| ファイル | 内容 |
+| --- | --- |
+| `screenshots/manifest.ts` | 撮る画面の一覧。画面ごとの ID・開くパス・画像を載せる文書・代替テキスト（日英）・API の応答 |
+| `screenshots/data/*.ts` | 架空データ。形はローカルの Service API の実際の応答に合わせ、Studio の API の型を付ける |
+| `screenshots/scenes.ts` | 画面ごとに撮れる状態を作る（グラフ表示への切り替え、ダイアログを開く、データが描かれるまで待つ） |
+| `screenshots/docs-screenshots.spec.ts` | manifest の画面を順に撮り、WebP にしてサイズを確かめる |
+| `screenshots/server/authMeStub.mjs` | Next のサーバー側が呼ぶ `GET /v1/auth/me` にだけ答えるスタブ |
+
+- **mock の `test` を使います。** manifest に無い `/api/core/**` が呼ばれると失敗します。画面が新しい API を呼ぶようになったら、`data/` と manifest に応答を足してください。
+- 管理画面と定期実行の `layout.tsx` は、サーバー側で `GET /v1/auth/me` を呼んでテナント管理者かを確かめます。ブラウザのモックは届かないので、`SERVICE_API_INTERNAL_BASE` をスタブに向けます。スタブは `auth/me` 以外の要求を記録し、spec が最後に記録が空であることを確かめます。
+- 時計は `data/common.ts` の `SCREENSHOT_NOW` に止めます。ライト表示・日本語・`Asia/Tokyo` で撮ります。
+- next dev の開発表示は隠して撮ります。WebP への変換はブラウザの canvas で行い、画像処理の依存は足していません。
+- 画面を足すときは、manifest・`data/`・`scenes.ts` の 3 つに足します。`scenes.ts` に足し忘れると spec が失敗します。
+- ポートは Studio が 3210、スタブが 3299 です（`SCREENSHOT_PORT` / `SCREENSHOT_STUB_PORT` で変えられる）。
+
+CI の `Docs screenshots check` ジョブが、Studio に変更のある PR で撮影が通ることを確かめます。画像はコミットせず、成果物 `docs-screenshots` に 7 日残します。

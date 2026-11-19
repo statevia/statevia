@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type { ActionSchemaIndexResponse } from "@/features/definition-editor/actionSchema/types";
 import type { DefinitionSchemaResponse } from "@/features/definition-editor/types";
 import type { DefinitionDTO, PagedDefinitions } from "@/features/definitions/types";
 import { PROJECT_IDS } from "./common";
@@ -91,4 +92,19 @@ export const screenshotNodesSchema: DefinitionSchemaResponse = {
   schemaVersion: "1.0.2",
   nodesVersion: 1,
   schema: {}
+};
+
+/**
+ * `GET /v1/actions/schema/index` の応答（定義エディタのグラフ表示が読む Action の一覧）。
+ * @remarks 組み込みと参照実装の Action（実 API の値。2026-11-19 に取得）。手元で足した Action は含めない。
+ */
+export const screenshotActionSchemaIndex: ActionSchemaIndexResponse = {
+  items: [
+    { actionId: "statevia.action.builtin.event.publish", displayName: "Publish", version: "1.0.0" },
+    { actionId: "statevia.action.builtin.execution.noop", displayName: "No-op", version: "1.0.0" },
+    { actionId: "statevia.action.builtin.execution.sleep", displayName: "Sleep", version: "1.0.0" },
+    { actionId: "statevia.action.builtin.workflow.invoke", displayName: "Workflow", version: "1.0.0" },
+    { actionId: "statevia.action.reference.http.request", displayName: "HTTP Request", version: "1.0.0" },
+    { actionId: "statevia.action.reference.notification.send", displayName: "Notification", version: "1.0.0" }
+  ]
 };
