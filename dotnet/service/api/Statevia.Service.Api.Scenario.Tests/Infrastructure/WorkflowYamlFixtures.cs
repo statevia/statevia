@@ -12,7 +12,7 @@ public static class WorkflowYamlFixtures
     /// <summary>
     /// action 省略（builtin noop）の 2 状態を直線につなぎ、Wait なしで完了する最小ワークフロー定義 YAML を返す。
     /// </summary>
-    /// <remarks>Action Host を使わずに <c>COMPLETED</c> へ収束する。直線完了と、Start 直後の Cancel の Arrange に使う。</remarks>
+    /// <remarks>Action Host を使わずに <c>COMPLETED</c> へ収束する。直線完了の Arrange に使う。</remarks>
     /// <param name="nameSuffix">定義名に付与する一意サフィックス（Guid 推奨）。</param>
     /// <returns>YAML 文字列。</returns>
     public static string LinearNoopWorkflow(string nameSuffix) => $"""

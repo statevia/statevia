@@ -11,8 +11,18 @@ public sealed record ObservedWait(string NodeId, string NodeName, IReadOnlyList<
 /// <summary>グラフ上の 1 ノードの観測値。</summary>
 /// <param name="NodeId">実行グラフの opaque ノード ID。</param>
 /// <param name="NodeName">定義上の状態名。</param>
-/// <param name="Status">ノードの状態文字列（グラフ JSON の <c>status</c>）。</param>
-public sealed record ObservedGraphNode(string NodeId, string NodeName, string Status);
+/// <param name="Fact">ノードの結果（グラフ JSON の <c>fact</c>。未完了は空文字）。</param>
+public sealed record ObservedGraphNode(string NodeId, string NodeName, string Fact);
+
+/// <summary>タイムラインの 1 イベントの観測値。</summary>
+/// <remarks>GET events は event_store の type をそのまま返さず、開始とキャンセルを <c>ExecutionStatusChanged</c>（<see cref="To"/> が実行ステータスの契約の値）に合成する。</remarks>
+/// <param name="Type">イベント種別（<c>ExecutionStatusChanged</c> / <c>GraphUpdated</c> など）。</param>
+/// <param name="To">遷移先（<c>ExecutionStatusChanged</c> では <c>ACTIVE</c> / <c>CANCELED</c> など）。無いときは空文字。</param>
+public sealed record ObservedEvent(string Type, string To)
+{
+    /// <inheritdoc />
+    public override string ToString() => string.IsNullOrEmpty(To) ? Type : $"{Type}->{To}";
+}
 
 /// <summary>
 /// ある時点の Execution を GET 4 種（execution / graph / waits / events）で観測した結果。
@@ -25,19 +35,19 @@ public sealed record ObservedGraphNode(string NodeId, string NodeName, string St
 /// <param name="CancelRequested">キャンセル要求フラグ。</param>
 /// <param name="Nodes">グラフ上のノード。</param>
 /// <param name="Waits">未完了 Wait の一覧。</param>
-/// <param name="EventTypes">event_store 由来のイベント type の列（seq 順）。</param>
+/// <param name="Events">タイムラインのイベントの列（seq 順）。</param>
 public sealed record ExecutionSnapshot(
     string Status,
     bool CancelRequested,
     IReadOnlyList<ObservedGraphNode> Nodes,
     IReadOnlyList<ObservedWait> Waits,
-    IReadOnlyList<string> EventTypes)
+    IReadOnlyList<ObservedEvent> Events)
 {
-    /// <summary>失敗メッセージ用の 1 行要約を返す（status・cancelRequested・waits 件数・イベント type 列・ノード状態）。</summary>
+    /// <summary>失敗メッセージ用の 1 行要約を返す（status・cancelRequested・waits 件数・イベントの列・ノードの結果）。</summary>
     public string Describe() =>
         $"status={Status}, cancelRequested={CancelRequested}, waits={Waits.Count}, " +
-        $"nodes=[{string.Join(", ", Nodes.Select(node => $"{node.NodeName}:{node.Status}"))}], " +
-        $"events=[{string.Join(", ", EventTypes)}]";
+        $"nodes=[{string.Join(", ", Nodes.Select(node => $"{node.NodeName}:{node.Fact}"))}], " +
+        $"events=[{string.Join(", ", Events)}]";
 }
 
 /// <summary>
@@ -73,7 +83,7 @@ public static class ExecutionSettleProbe
                 .Select(node => new ObservedGraphNode(
                     ReadString(node, "nodeId"),
                     ReadString(node, "nodeName"),
-                    ReadString(node, "status")))
+                    ReadString(node, "fact")))
                 .ToList()
             : [];
 
@@ -84,8 +94,8 @@ public static class ExecutionSettleProbe
                 wait.GetProperty("allowedEvents").EnumerateArray().Select(item => item.GetString() ?? "").ToList()))
             .ToList();
 
-        var eventTypes = events.RootElement.GetProperty("events").EnumerateArray()
-            .Select(item => ReadString(item, "type"))
+        var observedEvents = events.RootElement.GetProperty("events").EnumerateArray()
+            .Select(item => new ObservedEvent(ReadString(item, "type"), ReadString(item, "to")))
             .ToList();
 
         return new ExecutionSnapshot(
@@ -93,7 +103,7 @@ public static class ExecutionSettleProbe
             execution.RootElement.GetProperty("cancelRequested").GetBoolean(),
             nodes,
             observedWaits,
-            eventTypes);
+            observedEvents);
     }
 
     /// <summary>述語が成り立つまで観測を繰り返す。</summary>
