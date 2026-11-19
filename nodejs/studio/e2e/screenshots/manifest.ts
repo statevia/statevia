@@ -42,6 +42,19 @@ export type ScreenshotResponder = (query: URLSearchParams) => unknown;
  */
 export type ScreenshotResponses = Readonly<Record<string, ScreenshotResponder>>;
 
+/** 画面を撮る言語。Studio の表示言語（Cookie の `ui-lang`）に渡す。 */
+export type ScreenshotLocale = "ja" | "en";
+
+/**
+ * 画像のファイル名（拡張子なし）。日本語は `<id>`、英語は `<id>.en`。
+ * @param id 画面の ID。
+ * @param locale 撮った言語。
+ * @returns `docs/images/screenshots/` の下のファイル名（拡張子なし）。
+ */
+export function screenshotFileName(id: string, locale: ScreenshotLocale): string {
+  return locale === "ja" ? id : `${id}.${locale}`;
+}
+
 /** 撮る画面 1 つ。 */
 export type ScreenshotEntry = {
   /** 画面の ID。画像のファイル名（`docs/images/screenshots/<id>.webp`）にも使う。 */
@@ -52,6 +65,11 @@ export type ScreenshotEntry = {
   docs: readonly string[];
   /** 代替テキスト。何が写っているかを書く。 */
   alt: { ja: string; en: string };
+  /**
+   * 撮る言語。日本語の文書に載せる画面は `["ja"]`、英語の README（`README.en.md`）にも載せる画面は `["ja", "en"]`。
+   * @remarks 英語で撮っても架空データ（Project 名や人名）は日本語のままなので、架空データが写らない画面だけを英語でも撮る。
+   */
+  locales: readonly ScreenshotLocale[];
   /** 画面が呼ぶ API の応答。全画面に共通の応答（`commonResponses`）に足す。 */
   responses: ScreenshotResponses;
 };
@@ -74,6 +92,7 @@ const waitingExecutionResponses: ScreenshotResponses = {
 };
 
 const README = "README.md";
+const README_EN = "README.en.md";
 const UI_GUIDE = "docs/guides/ui-user-guide.md";
 
 /**
@@ -85,21 +104,23 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
   {
     id: "execution-graph",
     route: `/executions/${WAITING_EXECUTION_ID}`,
-    docs: [README],
+    docs: [README, README_EN],
     alt: {
       ja: "実行詳細のグラフ表示。受注の並列処理で、分岐の片方の出荷が完了し、もう片方が在庫移動のイベントを待っている",
       en: "Execution graph of a parallel order workflow: one branch has shipped and the other is waiting for a stock transfer event"
     },
+    locales: ["ja", "en"],
     responses: waitingExecutionResponses
   },
   {
     id: "definition-editor",
     route: `/definitions/${ORDER_DEFINITION_ID}/edit`,
-    docs: [README],
+    docs: [README, README_EN],
     alt: {
       ja: "定義エディタのグラフ表示。受付・検証・並列出荷・合流・通知のノードが矢印でつながっている",
       en: "Definition editor in graph view, showing intake, validation, parallel shipping, join and notification nodes"
     },
+    locales: ["ja", "en"],
     responses: {
       [`/definitions/${ORDER_DEFINITION_ID}`]: () => screenshotOrderDefinition,
       "/definitions/schema/nodes": () => screenshotNodesSchema,
@@ -114,6 +135,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "ダッシュボード。実行中・待機中・直近 24 時間の失敗と完了の件数、対応が必要な実行、直近の実行が並ぶ",
       en: "Dashboard with counts of running, waiting, failed and completed executions, executions needing attention, and recent executions"
     },
+    locales: ["ja"],
     responses: {
       "/executions": screenshotExecutionsPage,
       "/executions/counts": screenshotExecutionCounts
@@ -127,6 +149,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "定義一覧。定義ごとに名前・登録日時・最後の実行の状態が並ぶ",
       en: "Definition list with each definition's name, creation time and the status of its last execution"
     },
+    locales: ["ja"],
     responses: { "/definitions": definitionsPage }
   },
   {
@@ -137,6 +160,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "実行一覧。状態ごとの件数と、実行中・完了・失敗・キャンセルの実行が並ぶ",
       en: "Execution list with counts by status and running, completed, failed and canceled executions"
     },
+    locales: ["ja"],
     responses: {
       "/executions": screenshotExecutionsPage,
       "/executions/counts": screenshotExecutionCounts
@@ -150,6 +174,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "実行詳細のイベント送信ダイアログ。待機中のノードに StockTransferred を送る",
       en: "Send event dialog on the execution detail page, sending StockTransferred to the waiting node"
     },
+    locales: ["ja"],
     responses: waitingExecutionResponses
   },
   {
@@ -160,6 +185,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "定期実行の一覧。名前・定義・cron・タイムゾーン・次の実行・有効かが並ぶ",
       en: "Schedule list with name, definition, cron, time zone, next run and whether each schedule is enabled"
     },
+    locales: ["ja"],
     responses: {
       "/schedules": () => screenshotSchedules,
       "/definitions": definitionsPage
@@ -173,6 +199,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "定期実行の編集。定義・cron・タイムゾーン・同時実行・実行するサービスアカウント・入力データの欄がある",
       en: "Schedule edit form with definition, cron, time zone, overlap policy, run-as service account and input fields"
     },
+    locales: ["ja"],
     responses: {
       [`/schedules/${EDIT_SCHEDULE_ID}`]: () => screenshotEditSchedule,
       "/admin/service-accounts": () => screenshotServiceAccounts,
@@ -187,6 +214,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "プロジェクトメンバー。ユーザーとサービスアカウントがロールつきで並び、追加の欄がある",
       en: "Project members page listing users and service accounts with their roles, and a form to add members"
     },
+    locales: ["ja"],
     responses: {
       [`/projects/${PROJECT_IDS.orders}/members`]: () => screenshotProjectMembers,
       [`/projects/${PROJECT_IDS.orders}/member-candidates`]: () => screenshotMemberCandidates
@@ -200,6 +228,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "ユーザー管理。ユーザーごとに表示名・ユーザー名・メール・管理者か・有効かが並ぶ",
       en: "User management with each user's display name, username, email, admin flag and active status"
     },
+    locales: ["ja"],
     responses: { "/admin/users": () => screenshotUsers }
   },
   {
@@ -210,6 +239,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "グループの編集。operators グループのメンバーと権限を選ぶ",
       en: "Group edit page for the operators group, choosing members and permissions"
     },
+    locales: ["ja"],
     responses: {
       [`/admin/groups/${GROUP_IDS.operators}`]: () => screenshotOperatorsGroup,
       "/admin/users": () => screenshotUsers,
@@ -224,6 +254,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "API キー。発行の欄と、キーの先頭・権限・有効期限・最終利用が並ぶ一覧",
       en: "API keys page with an issue form and a list of key prefixes, scopes, expiry and last use"
     },
+    locales: ["ja"],
     responses: {
       "/admin/api-keys": () => screenshotApiKeys,
       "/admin/permissions": () => screenshotPermissions
@@ -237,6 +268,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "サービスアカウント。作成の欄と、名前・所属グループ・有効かが並ぶ一覧",
       en: "Service accounts page with a create form and a list of names, groups and active status"
     },
+    locales: ["ja"],
     responses: {
       "/admin/service-accounts": () => screenshotServiceAccounts,
       "/admin/groups": () => screenshotGroups
@@ -250,6 +282,7 @@ export const screenshotManifest: readonly ScreenshotEntry[] = [
       ja: "ユーザーの操作できる定義。Project と定義を選んで、閲覧・開始・再開・キャンセルできる範囲を絞る",
       en: "Resource grants for a user, choosing the projects and definitions they can view, start, resume and cancel"
     },
+    locales: ["ja"],
     responses: {
       [`/admin/users/${RESOURCE_GRANT_USER_ID}/resource-grants`]: () => screenshotUserResourceGrants,
       "/admin/projects": () => screenshotProjects,

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { APIRequestContext, BrowserContext, Page } from "@playwright/test";
 import { AUTH_COOKIE_ACCESS, AUTH_COOKIE_TENANT_KEY } from "@/shared/auth/authSession";
-import { commonResponses, screenshotUser, type ScreenshotEntry } from "../manifest";
+import { commonResponses, screenshotUser, type ScreenshotEntry, type ScreenshotLocale } from "../manifest";
 import { SCREENSHOT_STUB_BASE, SCREENSHOT_STUDIO_BASE } from "./servers";
 
 /** 画像の置き場所（`docs/images/screenshots/`）。 */
@@ -20,6 +20,9 @@ export const SCREENSHOT_MAX_BYTES = 200 * 1024;
  */
 const WEBP_QUALITY = 0.85;
 
+/** Studio の表示言語の Cookie（`app/layout.tsx` が読む）。 */
+const UI_LANGUAGE_COOKIE = "ui-lang";
+
 const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
 
 /**
@@ -31,11 +34,18 @@ const json = (body: unknown, status = 200) => ({ status, contentType: "applicati
  * @param page 対象のページ。
  * @param context ページのブラウザコンテキスト。
  * @param entry 撮る画面。
+ * @param locale 撮る言語。Studio の表示言語の Cookie（`ui-lang`）に置く。
  */
-export async function prepareScreenshot(page: Page, context: BrowserContext, entry: ScreenshotEntry): Promise<void> {
+export async function prepareScreenshot(
+  page: Page,
+  context: BrowserContext,
+  entry: ScreenshotEntry,
+  locale: ScreenshotLocale
+): Promise<void> {
   await context.addCookies([
     { name: AUTH_COOKIE_ACCESS, value: "docs-screenshots-dummy-token", url: SCREENSHOT_STUDIO_BASE },
-    { name: AUTH_COOKIE_TENANT_KEY, value: screenshotUser.tenantKey, url: SCREENSHOT_STUDIO_BASE }
+    { name: AUTH_COOKIE_TENANT_KEY, value: screenshotUser.tenantKey, url: SCREENSHOT_STUDIO_BASE },
+    { name: UI_LANGUAGE_COOKIE, value: locale, url: SCREENSHOT_STUDIO_BASE }
   ]);
   const responses = { ...commonResponses, ...entry.responses };
   await page.route("**/api/auth/me", (route) => route.fulfill(json(screenshotUser)));
@@ -52,15 +62,15 @@ export async function prepareScreenshot(page: Page, context: BrowserContext, ent
 }
 
 /**
- * 画面を撮り、WebP にして `docs/images/screenshots/<id>.webp` に書く。
+ * 画面を撮り、WebP にして `docs/images/screenshots/<fileName>.webp` に書く。
  * @remarks
  * - 撮る前に next dev の開発表示（`nextjs-portal`）を隠し、Web フォントの読み込みを待つ。アニメーションとカーソルは止める。
  * - WebP への変換はページの canvas（Chromium の符号化）で行い、画像処理の依存を足さない。
  * @param page 撮るページ。準備（`scenes.ts`）が済んでいること。
- * @param id 画面の ID。
+ * @param fileName 画像のファイル名（拡張子なし。manifest の `screenshotFileName`）。
  * @returns 書いた WebP のバイト数。
  */
-export async function captureWebp(page: Page, id: string): Promise<number> {
+export async function captureWebp(page: Page, fileName: string): Promise<number> {
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const png = await page.screenshot({ animations: "disabled", caret: "hide" });
@@ -80,11 +90,11 @@ export async function captureWebp(page: Page, id: string): Promise<number> {
   const webpPrefix = "data:image/webp;base64,";
   if (!dataUrl.startsWith(webpPrefix)) {
     // canvas は符号化できない形式を黙って PNG にするので、WebP でなければ止める。
-    throw new Error(`${id}: ブラウザが WebP に符号化しなかった（${dataUrl.slice(0, 30)}）`);
+    throw new Error(`${fileName}: ブラウザが WebP に符号化しなかった（${dataUrl.slice(0, 30)}）`);
   }
   const webp = Buffer.from(dataUrl.slice(webpPrefix.length), "base64");
   mkdirSync(SCREENSHOT_OUTPUT_DIRECTORY, { recursive: true });
-  writeFileSync(`${SCREENSHOT_OUTPUT_DIRECTORY}${id}.webp`, webp);
+  writeFileSync(`${SCREENSHOT_OUTPUT_DIRECTORY}${fileName}.webp`, webp);
   return webp.length;
 }
 
