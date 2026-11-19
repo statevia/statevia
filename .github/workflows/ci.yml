@@ -29,6 +29,41 @@ jobs:
       - name: Run architecture tests
         run: dotnet test tests/Statevia.Architecture.Tests/Statevia.Architecture.Tests.csproj --configuration Release --verbosity minimal
 
+  # Service API のシナリオ（Testcontainers の PostgreSQL 16 + API 内 Worker + 実 HTTP）。実行コマンド E2E を含む必須ゲート。
+  # STATEVIA_REQUIRE_SCENARIO_TESTS=true で、Docker 起動失敗を Skipped にせず失敗にする（ローカルは Skipped のまま）。
+  # ubuntu-latest には Docker が入っている。
+  api-scenario-tests:
+    name: API scenario tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STATEVIA_REQUIRE_SCENARIO_TESTS: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Run scenario tests
+        run: >-
+          dotnet test dotnet/service/api/Statevia.Service.Api.Scenario.Tests
+          --configuration Release --filter "Category=Scenario"
+          --logger "trx;LogFileName=scenario.trx" --results-directory "$RUNNER_TEMP/scenario-results"
+
+      # フィルタが本スイートに一致し、Skipped が 0 件であることを確かめる（必須ゲートを空にしない）。
+      - name: Verify no skipped scenarios
+        run: |
+          trx="$RUNNER_TEMP/scenario-results/scenario.trx"
+          counters=$(grep -o '<Counters [^>]*>' "$trx")
+          echo "$counters"
+          total=$(echo "$counters" | grep -o ' total="[0-9]*"' | grep -o '[0-9]*')
+          executed=$(echo "$counters" | grep -o ' executed="[0-9]*"' | grep -o '[0-9]*')
+          if [ -z "$total" ] || [ "$total" -eq 0 ] || [ "$total" != "$executed" ]; then
+            echo "シナリオが 0 件、または Skipped がある（total=$total, executed=$executed）。"
+            exit 1
+          fi
+
   docs-link-check:
     name: Docs link check
     runs-on: ubuntu-latest
