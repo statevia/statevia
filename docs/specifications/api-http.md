@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.44 |
-| 更新日 | 2026-11-19 |
+| Version | 1.45 |
+| 更新日 | 2026-11-20 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.45（2026-11-20）**: 文書の修正（契約は変えない）。§3.8 のキャンセルを実装と [execution/wait-cancel.md](execution/wait-cancel.md) に合わせる。204 は work item を積んだ受理で、Engine への適用ではない。`cancelRequested` は受理時、`CANCELED` は Worker の適用後に立つ。Engine に実行が無くても Cancel は 422 にならない。§3.9 の「キャンセルと同様」も直す。
 
 **Version 1.44（2026-11-19）**: 不具合の修正。ヘッダやペイロードが読めない形の崩れた Bearer トークン（例: `Bearer abc.def.ghi`）で、契約の 401（`UNAUTHORIZED`）ではなく 500 を返していたのを 401 にそろえる。JWT の読み取り失敗を検証失敗として扱っていなかったのが原因。契約は変えず、§4.1.2 に明記する。
 
@@ -548,10 +550,10 @@ Response: 200 OK、Content-Type: application/json。`execution_graph_snapshots` 
 **POST /v1/executions/{executionId}/cancel**
 
 - **X-Idempotency-Key**: 任意だが推奨。同一キー＋同一リクエストの再送は `command_dedup` により初回と同じ結果（通常 204）を返す。キーは `event_delivery_dedup` の `client_event_id` 導出にも使われる（[data-integration.md](data-integration.md) §3.3）。
-- Response: 204 No Content。エンジンで Cancel を適用し、projection を更新。
+- Response: 204 No Content。**受理のみ**で、Cancel の work item を積み、投影の `cancelRequested` を立てる。Engine への適用と終端（`status=CANCELED`、待機の解消）は Worker が行うので、204 の直後の `GET` は `cancelRequested=true` かつ未終端でよい。`WorkflowCancelled` の事実は 204 の時点では無い（[execution/wait-cancel.md](execution/wait-cancel.md)）。
+- Start の直後など Engine がまだ実行を開始していない間の Cancel も 204 で受理する（422 にしない）。Worker が投影を `CANCELED` にし、残った Start work item は処理済みにする。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
 - User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。Snapshot の許可キーでは決めない。
-- Engine に当該実行が無い（例: API 再起動直後）場合は **422**（`ArgumentException`。データ連携契約のセクション7）。
 
 ### 3.9 イベント発行（Write・互換シム）
 
@@ -571,7 +573,7 @@ Request:
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
-- Engine に当該実行が無い場合は **422**（キャンセルと同様）。
+- HTTP が同期で Engine へ適用するため、非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（`ArgumentException`。データ連携契約のセクション7）。Cancel は受理のみなので、この 422 は起きない（§3.8）。
 
 ### 3.10 ノード再開（Wait 正本）
 

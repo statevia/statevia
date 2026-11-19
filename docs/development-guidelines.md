@@ -198,7 +198,9 @@ dotnet build-server shutdown
 
 - `dotnet/service/api/sonar-project.properties` は **Scanner for .NET では使わない**（設定は `begin` の `/d:` で渡す）。
 - `sonar.exclusions` だけでは `scanAll` が `nodejs/studio/tsconfig.json` を拾う。UI は **`statevia_statevia_ui`**（§5.2）で解析する。
-- `STATEVIA_SKIP_SCENARIO_TESTS=true` のとき、API のカバレッジ収集は `Category!=Scenario` でシナリオテストを除外する。CI はこの環境変数を付ける。
+- `STATEVIA_SKIP_SCENARIO_TESTS=true` のとき、API のカバレッジ収集は `Category!=Scenario` でシナリオテストを除外する。Sonar のワークフローはこの環境変数を付ける。
+- シナリオ（`Statevia.Service.Api.Scenario.Tests`。Testcontainers の PostgreSQL 16 と API 内 Worker を通す HTTP E2E。実行コマンドの Start / Resume / Cancel を含む）は、手元では `./scripts/test-api.ps1 -ScenarioOnly`（Docker 必要）で回す。Docker が無いと `Skipped` になる。
+- CI（`ci.yml` の `API scenario tests`）は `STATEVIA_REQUIRE_SCENARIO_TESTS=true` を付けて `--filter Category=Scenario` を回す。Docker の起動失敗は `Skipped` にせず失敗にし、`Skipped` が 1 件でもあれば落とす。
 - スキャン直後は Sonar UI の数値が遅れて反映されることがある。Quality Gate 判定は Sonar のプロジェクト画面を正とする。
 
 ### 5.2 UI Studio — カバレッジと Sonar（手動）
