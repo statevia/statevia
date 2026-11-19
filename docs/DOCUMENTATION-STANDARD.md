@@ -3,12 +3,14 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | 参照（執筆者向け） |
-| Version | 1.4 |
+| Version | 1.5 |
 | 更新日 | 2026-11-19 |
 
 ---
 
 本文書は **Markdown の書き方** の正本である。知識体系・索引・学習導線は [`README.md`](README.md) を参照すること。
+
+**Version 1.5（2026-11-19）**: 画面の画像を撮るコマンドを書く。
 
 **Version 1.4（2026-11-19）**: CI の検査と除外一覧の書き方、種別ごとの構成、画像の決まりを足す。
 
@@ -98,7 +100,7 @@ Guide / Concept / Architecture / Reference / Decision / Future では MUST/SHOUL
 ## 画像
 
 - **画面の画像**は `docs/images/screenshots/<画面の ID>.webp` に置く。幅 1280px、1 枚 200KB 以下にする
-- 画面の画像は Studio のモック E2E で生成し、手で撮らない。全サービスを起動せずに、同じデータ・同じ時刻で作り直せるようにするため
+- 画面の画像は Studio のモック E2E で生成し、手で撮らない。全サービスを起動せずに、同じデータ・同じ時刻で作り直せるようにするため。`nodejs/studio` で `npm run docs:screenshots` を実行すると、全画面を撮り直す。撮る画面と架空データは [`nodejs/studio/e2e/README.md`](../nodejs/studio/e2e/README.md) の「文書のスクリーンショット」を参照する
 - 写すのは**架空のデータだけ**にする。資格情報・トークン・実在の個人情報・社内のホスト名を写さない
 - すべての画像に、何が写っているかを示す**代替テキスト**を付ける（`![実行グラフ。Fork から 2 つの分岐が並ぶ](...)`）。「画像」「スクリーンショット」だけの代替テキストにしない
 - 画面の文言や配置を変える PR では、その画面の画像も同じ PR で作り直す
@@ -115,12 +117,14 @@ PR では次の検査が走る。手元では同じコマンドで確かめら�
 | Docs meta check | `docs/` のメタブロック | 種別が 7 種以外、Version と最初の履歴の不一致、存在しない更新日 |
 | Docs meta check（画面の一覧） | [`guides/ui-user-guide.md`](guides/ui-user-guide.md) の「画面の一覧」の表 | Studio の画面（`nodejs/studio/app/**/page.tsx`）が表に無い、または表の画面が実装に無い |
 | Architecture tests | [`specifications/api-http.md`](specifications/api-http.md) §1、[`reference/permission-keys.md`](reference/permission-keys.md)、[`reference/error-codes.md`](reference/error-codes.md) の表 | 実装のエンドポイント（コミット済みの OpenAPI）・権限キー・エラーコード（`ApiErrorCodes`）と、表の行が食い違う |
+| Docs screenshots check | 画面の画像の撮影（Studio に変更のある PR） | 架空データに無い API を画面が呼ぶ、画面が描けない、画像が 200KB を超える |
 
 ```bash
 npx markdownlint-cli2 "docs/<変更したファイルパス>"
 node scripts/docs/check-doc-meta.mjs "docs/<変更したファイルパス>"
 node scripts/docs/check-ui-routes.mjs
 dotnet test dotnet/tests/Statevia.Architecture.Tests/Statevia.Architecture.Tests.csproj
+(cd nodejs/studio && npm run docs:screenshots)
 ```
 
 - 照合の対象の表は、見出し（節の名前）と列の見出し（`パス`・`メソッド`・`Permission key`・`error.code`）で探す。見出しを変えると、表が見つからずに検査が失敗する
