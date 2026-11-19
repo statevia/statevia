@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { definitionEditorUiTextJa } from "@/features/definition-editor/i18n";
+import type { UiText } from "@/shared/i18n/uiText";
 import { ExecutionDetailPage } from "../pages/ExecutionDetailPage";
 import { screenshotApiKeys, screenshotServiceAccounts, screenshotUsers } from "./data/admin";
 import { screenshotDefinitions } from "./data/definitions";
@@ -10,8 +10,9 @@ import { screenshotEditSchedule, screenshotSchedules } from "./data/schedules";
 /**
  * 画面を撮れる状態にする。表示の切り替えやダイアログを開き、架空データが描かれるまで待つ。
  * @param page 画面を開いたページ。
+ * @param text 撮る言語の UI 文言の辞書。ボタンなどを撮る言語の名前で探す。
  */
-type Scene = (page: Page) => Promise<void>;
+type Scene = (page: Page, text: UiText) => Promise<void>;
 
 /**
  * 架空データの文字が見えるまで待つ場面を作る。
@@ -24,8 +25,6 @@ const waitForText =
   async (page) => {
     await expect(page.getByText(text, { exact }).first()).toBeVisible();
   };
-
-const editorText = definitionEditorUiTextJa.definitionEditor;
 
 /**
  * グラフ（React Flow）の「全体を表示」を押す。全画面に広げた直後は、広げる前の大きさで合わせた表示のまま端が切れるため。
@@ -42,17 +41,18 @@ async function fitGraphToView(page: Page): Promise<void> {
  * 待つ文字は data の値から取り、文言の直書きを避ける。
  */
 export const screenshotScenes: Readonly<Record<string, Scene>> = {
-  "execution-graph": async (page) => {
-    const detail = new ExecutionDetailPage(page);
-    await expect(detail.heading(WAITING_EXECUTION_ID)).toBeVisible();
-    await detail.showGraph();
+  "execution-graph": async (page, text) => {
+    // 英語でも撮るので、日本語の辞書で作る Page Object（ExecutionDetailPage）は使わない。
+    await expect(page.getByRole("heading", { level: 1, name: WAITING_EXECUTION_ID })).toBeVisible();
+    await page.getByRole("button", { name: text.actions.viewGraph, exact: true }).click();
     // README で目を引くよう、グラフを全画面に広げて撮る。
-    await detail.fullscreenButton.click();
+    await page.getByRole("button", { name: text.executionDashboard.graph.fullscreenEnter }).click();
     await fitGraphToView(page);
     // グラフにだけ出る、まだ到達していないノード。
     await expect(page.getByText("order.merge", { exact: true }).first()).toBeVisible();
   },
-  "definition-editor": async (page) => {
+  "definition-editor": async (page, text) => {
+    const editorText = text.definitionEditor;
     await expect(page.getByRole("textbox", { name: editorText.labels.name })).toHaveValue(screenshotDefinitions[0].name);
     await page
       .getByRole("toolbar", { name: editorText.actions.editorModeLabel })

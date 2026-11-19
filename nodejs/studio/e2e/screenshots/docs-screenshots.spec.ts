@@ -1,6 +1,8 @@
 import { expect, test } from "../fixtures/test";
 import { SCREENSHOT_NOW } from "./data/common";
-import { screenshotManifest } from "./manifest";
+import { uiTextEn } from "@/shared/i18n/uiText.en";
+import { uiTextJa } from "@/shared/i18n/uiText";
+import { screenshotFileName, screenshotManifest } from "./manifest";
 import { screenshotScenes, sceneFor } from "./scenes";
 import { captureWebp, prepareScreenshot, readUnexpectedServerCalls, SCREENSHOT_MAX_BYTES } from "./support/capture";
 
@@ -18,19 +20,25 @@ test("manifest のすべての画面に撮影の場面がある", () => {
   expect([...sceneIds].sort()).toEqual([...manifestIds].sort());
 });
 
+const uiTextByLocale = { ja: uiTextJa, en: uiTextEn } as const;
+
 for (const entry of screenshotManifest) {
-  test(`${entry.id} を架空データで撮ると、200KB 以下の WebP ができる`, async ({ page, context, request }) => {
-    // Arrange
-    await page.clock.setFixedTime(new Date(SCREENSHOT_NOW));
-    await prepareScreenshot(page, context, entry);
-    await page.goto(entry.route);
-    await sceneFor(entry.id)(page);
+  for (const locale of entry.locales) {
+    const fileName = screenshotFileName(entry.id, locale);
 
-    // Act
-    const bytes = await captureWebp(page, entry.id);
+    test(`${fileName} を架空データで撮ると、200KB 以下の WebP ができる`, async ({ page, context, request }) => {
+      // Arrange
+      await page.clock.setFixedTime(new Date(SCREENSHOT_NOW));
+      await prepareScreenshot(page, context, entry, locale);
+      await page.goto(entry.route);
+      await sceneFor(entry.id)(page, uiTextByLocale[locale]);
 
-    // Assert
-    expect(bytes, `${entry.id}.webp のサイズ`).toBeLessThanOrEqual(SCREENSHOT_MAX_BYTES);
-    expect(await readUnexpectedServerCalls(request), "サーバー側から auth/me 以外が呼ばれた").toEqual([]);
-  });
+      // Act
+      const bytes = await captureWebp(page, fileName);
+
+      // Assert
+      expect(bytes, `${fileName}.webp のサイズ`).toBeLessThanOrEqual(SCREENSHOT_MAX_BYTES);
+      expect(await readUnexpectedServerCalls(request), "サーバー側から auth/me 以外が呼ばれた").toEqual([]);
+    });
+  }
 }

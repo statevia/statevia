@@ -1,5 +1,7 @@
 # ![statevia icon](docs/images/icon-mark-32.png) statevia
 
+日本語 | [English](README.en.md)
+
 **YAML でワークフローを宣言し、実行・可視化・拡張まで一貫して扱えるプラットフォーム**です。
 
 Definition（定義）を正本に、ビジネスプロセスを **実行可能なワークフロー** として動かします。  

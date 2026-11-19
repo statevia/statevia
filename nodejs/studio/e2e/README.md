@@ -133,19 +133,19 @@ README と UI ガイドに載せる画面の画像を、架空データのモッ
 npm run docs:screenshots
 ```
 
-画像は `docs/images/screenshots/<画面の ID>.webp`（幅 1280px、1 枚 200KB 以下）に書き出します。設定は `playwright.screenshots.config.ts` で、`npm run test:e2e` には含まれません。
+画像は `docs/images/screenshots/<画面の ID>.webp`（幅 1280px、1 枚 200KB 以下）に書き出します。英語の README（`README.en.md`）に載せる画面は、Studio を英語表示（Cookie の `ui-lang=en`）にして `<画面の ID>.en.webp` にも撮ります。設定は `playwright.screenshots.config.ts` で、`npm run test:e2e` には含まれません。
 
 | ファイル | 内容 |
 | --- | --- |
-| `screenshots/manifest.ts` | 撮る画面の一覧。画面ごとの ID・開くパス・画像を載せる文書・代替テキスト（日英）・API の応答 |
+| `screenshots/manifest.ts` | 撮る画面の一覧。画面ごとの ID・開くパス・画像を載せる文書・代替テキスト（日英）・撮る言語・API の応答 |
 | `screenshots/data/*.ts` | 架空データ。形はローカルの Service API の実際の応答に合わせ、Studio の API の型を付ける |
-| `screenshots/scenes.ts` | 画面ごとに撮れる状態を作る（グラフ表示への切り替え、ダイアログを開く、データが描かれるまで待つ） |
+| `screenshots/scenes.ts` | 画面ごとに撮れる状態を作る（グラフ表示への切り替え、ダイアログを開く、データが描かれるまで待つ）。ボタンは撮る言語の辞書の名前で探す |
 | `screenshots/docs-screenshots.spec.ts` | manifest の画面を順に撮り、WebP にしてサイズを確かめる |
 | `screenshots/server/authMeStub.mjs` | Next のサーバー側が呼ぶ `GET /v1/auth/me` にだけ答えるスタブ |
 
 - **mock の `test` を使います。** manifest に無い `/api/core/**` が呼ばれると失敗します。画面が新しい API を呼ぶようになったら、`data/` と manifest に応答を足してください。
 - 管理画面と定期実行の `layout.tsx` は、サーバー側で `GET /v1/auth/me` を呼んでテナント管理者かを確かめます。ブラウザのモックは届かないので、`SERVICE_API_INTERNAL_BASE` をスタブに向けます。スタブは `auth/me` 以外の要求を記録し、spec が最後に記録が空であることを確かめます。
-- 時計は `data/common.ts` の `SCREENSHOT_NOW` に止めます。ライト表示・日本語・`Asia/Tokyo` で撮ります。
+- 時計は `data/common.ts` の `SCREENSHOT_NOW` に止めます。ライト表示・`Asia/Tokyo` で撮ります。言語は manifest の `locales` で決め、既定は日本語です。架空データ（Project 名や人名）は日本語のままなので、英語でも撮るのは架空データが写らない画面だけにします。
 - next dev の開発表示は隠して撮ります。WebP への変換はブラウザの canvas で行い、画像処理の依存は足していません。
 - 画面を足すときは、manifest・`data/`・`scenes.ts` の 3 つに足します。`scenes.ts` に足し忘れると spec が失敗します。
 - ポートは Studio が 3210、スタブが 3299 です（`SCREENSHOT_PORT` / `SCREENSHOT_STUB_PORT` で変えられる）。

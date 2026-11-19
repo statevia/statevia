@@ -43,6 +43,7 @@ jobs:
             --config .lychee.toml --no-progress
             'docs/**/*.md'
             'README.md'
+            'README.en.md'
             'dotnet/**/README.md'
             'nodejs/studio/e2e/README.md'
             'scripts/**/README.md'
@@ -282,5 +283,5 @@ jobs:
         run: >-
           npx --yes markdownlint-cli2
           "docs/**/*.md" ".spec/**/*.md"
-          "README.md" "dotnet/**/README.md" "nodejs/**/README.md" "scripts/**/README.md"
+          "README.md" "README.en.md" "dotnet/**/README.md" "nodejs/**/README.md" "scripts/**/README.md"
           "#**/node_modules/**" "#**/bin/**" "#**/obj/**"
