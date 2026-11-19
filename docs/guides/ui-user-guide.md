@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.18 |
-| 更新日 | 2026-11-18 |
+| Version | 1.19 |
+| 更新日 | 2026-11-19 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.19（2026-11-19）**: 画面の移動・所属 Project・定義の削除と復元・イベント送信・実行一覧・定期実行・テナント管理の節に、架空データで撮った画面の画像を置いた。
 
 **Version 1.18（2026-11-18）**: 画面の一覧をパスつきで全画面に広げ、定期実行とテナント管理（ユーザー・API キー・サービスアカウント・操作できる定義・アクションバインディング・通知メール）の節を足した。定期実行の画面とサイドメニューの項目は tenant.admin だけに出る（以前の表の「全員」を直した）。
 
@@ -67,6 +69,8 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 ## 画面の移動
 
 ログイン後は左のサイドメニューから画面を開きます（ログイン画面では出しません）。項目はグループに分かれ、権限が無いグループは見出しごと出ません。今いる画面の項目は強調されます。
+
+![ダッシュボード。実行中・待機中・直近 24 時間の失敗と完了の件数、対応が必要な実行、直近の実行が並ぶ](../images/screenshots/dashboard.webp)
 
 | グループ | 項目 | 表示される利用者 |
 | --- | --- | --- |
@@ -137,6 +141,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §4.1.1 / �
 
 ログイン後のサイドメニュー先頭で、自分が所属する Project を選びます。ダッシュボードの直近実行、定義一覧、定義の作成、実行一覧は、その Project に従います。所属が無い定義の詳細は開きません。
 
+![プロジェクトメンバー。ユーザーとサービスアカウントがロールつきで並び、追加の欄がある](../images/screenshots/project-members.webp)
+
 | 操作 | 画面 | 備考 |
 | --- | --- | --- |
 | 切替 | サイドメニュー先頭のプロジェクト | 所属だけが出る。選択はブラウザのセッションに残る |
@@ -174,6 +180,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.7。
 
 Studio の定義一覧・詳細から Service API の catalog ライフサイクルを操作できる。
 
+![定義一覧。定義ごとに名前・登録日時・最後の実行の状態が並ぶ](../images/screenshots/definitions.webp)
+
 | 操作 | 画面 | 備考 |
 | --- | --- | --- |
 | 論理削除 | 一覧（active 行）・詳細 | 確認ダイアログで定義名を入力して確定したあと `DELETE /v1/definitions/{id}` |
@@ -196,6 +204,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 待機中の実行（状態の横に「待機中」の印が出ます）は、実行詳細から先へ進めます。操作は実行の操作（`executions.write`）の権限があるときだけ出ます。
 
+![実行詳細のイベント送信ダイアログ。待機中のノードに StockTransferred を送る](../images/screenshots/execution-send-event.webp)
+
 | 操作 | 場所 | 結果 |
 | --- | --- | --- |
 | イベントを送信 | 見出しの右（待機があるときだけ） | イベント送信ダイアログを開く。届け先は先頭の待機 |
@@ -217,6 +227,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 状態とノードのタイプは訳さず、API の値を大文字にして出します（例: 実行の `ACTIVE`・`CANCELED`、ノードの `WAITING`、タイプの `TASK`）。実行一覧のステータスの絞り込みも同じ表記です。
 
+![実行一覧。状態ごとの件数と、実行中・完了・失敗・キャンセルの実行が並ぶ](../images/screenshots/executions.webp)
+
 グラフのマージ規則・ノード表現の Normative 契約は [visual 仕様](../specifications/ui/visual.md)。実行グラフ上の代表と詳細の訪問の対応は [execution-graph 仕様](../specifications/execution/execution-graph.md) を参照します。リアルタイム更新は SSE（[push-api 仕様](../specifications/ui/push-api.md)）。SSE も Principal 必須（未認証は 401）。Studio はプロキシ経由でセッション Cookie を付ける。
 
 ### 定期実行
@@ -225,6 +237,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 一覧（`/schedules`）には、所属している Project の定義の定期実行だけが出ます。
 
+![定期実行の一覧。名前・定義・cron・タイムゾーン・次の実行・有効かが並ぶ](../images/screenshots/schedules.webp)
+
 | 操作 | 結果 |
 | --- | --- |
 | 今すぐ実行 | 確認のあと 1 回だけ実行を開始する。次の実行の予定は進まない。前の実行が残っていても開始する |
@@ -232,6 +246,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 | 編集 | 編集画面（`/schedules/{scheduleId}`）へ進む |
 
 作成と編集の項目は次のとおりです。
+
+![定期実行の編集。定義・cron・タイムゾーン・同時実行・実行するサービスアカウント・入力データの欄がある](../images/screenshots/schedule-edit.webp)
 
 | 項目 | 必須 | 内容 |
 | --- | --- | --- |
@@ -251,11 +267,17 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 テナント管理の画面はすべて tenant.admin だけが使えます。HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §4.1.3。
 
+![グループの編集。operators グループのメンバーと権限を選ぶ](../images/screenshots/admin-group-edit.webp)
+
 #### ユーザー管理
+
+![ユーザー管理。ユーザーごとに表示名・ユーザー名・メール・管理者か・有効かが並ぶ](../images/screenshots/admin-users.webp)
 
 ユーザーを作成し、有効化・無効化します。作成の項目は、ユーザー名・メールアドレス（任意）・初期パスワード（8〜128 文字・空白なし）・表示名（任意）・テナント管理者です。無効にしたユーザーはログインできなくなり、あとで有効化できます。パスワードの上書きは[パスワード更新](#パスワード更新)を、各行の「操作できる定義」は[操作できる定義](#操作できる定義)を参照します。
 
 #### API キー
+
+![API キー。発行の欄と、キーの先頭・権限・有効期限・最終利用が並ぶ一覧](../images/screenshots/admin-api-keys.webp)
 
 サーバー間や CI から Service API を呼ぶための API キーを発行・失効します。
 
@@ -268,6 +290,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 
 #### サービスアカウント
 
+![サービスアカウント。作成の欄と、名前・所属グループ・有効かが並ぶ一覧](../images/screenshots/admin-service-accounts.webp)
+
 サービスアカウントは人ではないアカウントで、定期実行が実行を開始するときに使います。
 
 | 操作 | 内容 |
@@ -279,6 +303,8 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 API キーを持つサービスアカウントには「API キーあり」と出ます。キーの失効は API キーの画面で行います。
 
 #### 操作できる定義
+
+![ユーザーの操作できる定義。Project と定義を選んで、閲覧・開始・再開・キャンセルできる範囲を絞る](../images/screenshots/admin-user-resource-grants.webp)
 
 ユーザーとサービスアカウントが、閲覧・開始・再開・キャンセル（定期実行を含む）できる定義を絞ります。ユーザー管理の各行、またはサービスアカウントの詳細から開きます。
 
