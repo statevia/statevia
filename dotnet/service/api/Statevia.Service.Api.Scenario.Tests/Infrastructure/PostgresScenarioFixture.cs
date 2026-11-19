@@ -12,7 +12,7 @@ namespace Statevia.Service.Api.Scenario.Tests.Infrastructure;
 /// <para>Docker が利用可能な場合に PostgreSQL 16 コンテナを起動し、EF Core マイグレーション後に
 /// <see cref="StateviaScenarioWebApplicationFactory"/> を構築する。</para>
 /// <para>Docker 未検出時は <see cref="SkipReason"/> を設定し、各テストで <c>Skip.IfNot</c> を呼ぶことで
-/// Skipped（Failed にならない）状態にする。</para>
+/// Skipped（Failed にならない）状態にする。CI で必須にする場合は <see cref="ScenarioRequirement"/> を参照。</para>
 /// </remarks>
 public sealed class PostgresScenarioFixture : IAsyncLifetime
 {

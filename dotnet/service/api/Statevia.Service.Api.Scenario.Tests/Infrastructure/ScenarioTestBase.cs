@@ -28,13 +28,14 @@ public abstract class ScenarioTestBase
     }
 
     /// <summary>
-    /// Docker が利用できない場合にテストをスキップする。
+    /// Docker が利用できない場合にテストをスキップする。必須指定（CI）のときは失敗にする。
     /// </summary>
     /// <remarks>
-    /// 各テストメソッドの冒頭で呼ぶことで、Docker 未起動環境での Failed を防ぐ。
+    /// 各テストメソッドの冒頭で呼ぶことで、Docker 未起動のローカルでの Failed を防ぐ。
+    /// 必須指定の扱いは <see cref="ScenarioRequirement"/> を参照。
     /// </remarks>
     protected void SkipIfDockerUnavailable()
     {
-        Skip.IfNot(Fixture.IsReady, Fixture.SkipReason ?? "Docker が利用できません。");
+        ScenarioRequirement.SkipOrFailIfNotReady(Fixture.IsReady, Fixture.SkipReason);
     }
 }
