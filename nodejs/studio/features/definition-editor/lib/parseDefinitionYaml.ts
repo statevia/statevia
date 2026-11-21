@@ -1,6 +1,7 @@
 import { parseDocument } from "yaml";
 import { NODE_TYPES } from "./types";
 import type {
+  DefinitionGraphActionRetry,
   DefinitionGraphDocument,
   DefinitionGraphEdge,
   DefinitionGraphMeta,
@@ -186,7 +187,80 @@ function applyOptionalNodeFields(node: DefinitionGraphNode, value: Record<string
   if (bindings !== undefined) {
     node.bindings = bindings;
   }
+  applyActionRetryAndOutputFields(node, value);
   applyJoinModeField(node, value);
+}
+
+/**
+ * action ノードの `retry` と `output` をドキュメントへ載せる。編集フォームは作らない。
+ * action 以外のノードと、空の値は載せない。
+ * @param node 組み立て中のノード。
+ * @param value YAML のノード。
+ */
+function applyActionRetryAndOutputFields(node: DefinitionGraphNode, value: Record<string, unknown>): void {
+  if (node.type !== "action") {
+    return;
+  }
+  const retry = parseActionRetry(value.retry);
+  if (retry !== undefined) {
+    node.retry = retry;
+  }
+  if (typeof value.output === "string" && value.output.trim().length > 0) {
+    node.output = value.output;
+  }
+}
+
+/**
+ * `retry` の `limit` / `backoff` / `errors` を読む。ローダーの `ParseRetryDefinition` と同じ 3 項目に限る。
+ * `limit` は整数か整数の文字列（ローダーと同じく数として読む）。`errors` はスカラーの要素を文字列にする。
+ * @param value YAML の retry。
+ * @returns 1 項目以上あるときだけ返す。
+ */
+function parseActionRetry(value: unknown): DefinitionGraphActionRetry | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const limit = parseRetryLimit(value.limit);
+  const backoff = typeof value.backoff === "string" && value.backoff.trim().length > 0 ? value.backoff : undefined;
+  const errors = Array.isArray(value.errors)
+    ? value.errors
+        .filter((entry): entry is string | number | boolean =>
+          ["string", "number", "boolean"].includes(typeof entry)
+        )
+        .map((entry) => String(entry))
+    : undefined;
+  if (limit === undefined && backoff === undefined && errors === undefined) {
+    return undefined;
+  }
+  return {
+    ...(limit === undefined ? {} : { limit }),
+    ...(backoff === undefined ? {} : { backoff }),
+    ...(errors === undefined ? {} : { errors })
+  };
+}
+
+/**
+ * `retry.limit` を整数として読む。
+ * @param value YAML の limit。
+ * @returns 整数または整数の文字列なら数。それ以外は undefined。
+ */
+function parseRetryLimit(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? value : undefined;
+  }
+  if (typeof value === "string" && /^[+-]?\d+$/.test(value.trim())) {
+    return Number.parseInt(value.trim(), 10);
+  }
+  return undefined;
+}
+
+/**
+ * `workflow.modules` の文字列の値だけを読む。import 値は分解せず、版レンジ（`@` 以降）も文字列のまま残す。
+ * @param value YAML の workflow.modules。
+ * @returns 1 件以上あるときだけ返す。
+ */
+function parseWorkflowModules(value: unknown): Record<string, string> | undefined {
+  return parseBindingNameMap(value);
 }
 
 /**
@@ -322,6 +396,10 @@ export function parseDefinitionYaml(
   }
   if (typeof workflow.description === "string" && workflow.description.trim().length > 0) {
     workflowDoc.description = workflow.description.trim();
+  }
+  const modules = parseWorkflowModules(workflow.modules);
+  if (modules !== undefined) {
+    workflowDoc.modules = modules;
   }
 
   const document: DefinitionGraphDocument = {

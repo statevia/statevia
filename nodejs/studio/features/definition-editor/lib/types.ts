@@ -76,8 +76,31 @@ export type DefinitionGraphNode = {
     secrets?: Record<string, string>;
     variables?: Record<string, string>;
   };
+  /**
+   * action: 失敗時の再試行（YAML `retry`）。
+   * グラフの編集フォームは無い。YAML 往復で落とさない。意味の検証は API のローダーが行う。
+   */
+  retry?: DefinitionGraphActionRetry;
+  /**
+   * action: 完了時に結果を書き込む Execution Context のパス（YAML `output`。例: `$.vars.order`）。
+   * グラフの編集フォームは無い。YAML 往復で落とさない。
+   */
+  output?: string;
   /** join: conversion spec では省略可。指定時は `all` のみ */
   mode?: "all";
+};
+
+/**
+ * action ノードの `retry`。ローダーの `ParseRetryDefinition` が読む 3 項目だけを持つ。
+ * どれも任意で、3 つとも無い `retry` はドキュメントに載せない。
+ */
+export type DefinitionGraphActionRetry = {
+  /** 再試行の上限回数。 */
+  limit?: number;
+  /** 再試行の間隔の決め方（例: `exponential`）。 */
+  backoff?: string;
+  /** 再試行の対象にするエラーの種類。 */
+  errors?: string[];
 };
 
 /** エディタ専用メタ（実行エンジンは無視） */
@@ -96,6 +119,12 @@ export type DefinitionGraphDocument = {
     /** YAML の workflow.id（名前未指定時ローダーが名前解決に利用） */
     id?: string;
     description?: string;
+    /**
+     * YAML の `workflow.modules`（Module の別名 → import 値）。
+     * import 値は `moduleId` または `moduleId@版レンジ` の文字列のまま持ち、分解しない。
+     * グラフの編集フォームは無い。保存で落とすと別名の action が `Unknown module alias` の 422 になる。
+     */
+    modules?: Record<string, string>;
   };
   /** ノード。 */
   nodes: DefinitionGraphNode[];
