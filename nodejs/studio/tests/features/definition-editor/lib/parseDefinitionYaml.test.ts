@@ -337,4 +337,174 @@ nodes:
     });
     expect(omitted).not.toContain("bindings:");
   });
+
+  it("workflow.modules の別名と版レンジ付きの import 値を往復で残す", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+  modules:
+    notification: statevia.action.reference.notification
+    orders: acme.orders@^1.2
+nodes:
+  - name: s
+    type: start
+    next: a
+  - name: a
+    type: action
+    action: notification.send
+    next: e
+  - name: e
+    type: end
+`;
+
+    // Act
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+    const again = parseDefinitionYaml(serializeDefinitionYaml(parsed.document), parseOpts);
+
+    // Assert
+    const expected = {
+      notification: "statevia.action.reference.notification",
+      orders: "acme.orders@^1.2"
+    };
+    expect(parsed.document.workflow.modules).toEqual(expected);
+    expect(again.document?.workflow.modules).toEqual(expected);
+  });
+
+  it("workflow.modules が無い YAML の保存に modules を足さない", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: e
+  - name: e
+    type: end
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+
+    // Act
+    const round = serializeDefinitionYaml(parsed.document);
+
+    // Assert
+    expect(parsed.document.workflow.modules).toBeUndefined();
+    expect(round).not.toContain("modules:");
+  });
+
+  it("action の retry と output を往復で残す", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: s
+    type: start
+    next: a
+  - name: a
+    type: action
+    action: orders.fetch
+    retry:
+      limit: 3
+      backoff: exponential
+      errors:
+        - Timeout
+        - Transient
+    output: $.vars.order
+    next: e
+  - name: e
+    type: end
+`;
+
+    // Act
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+    const again = parseDefinitionYaml(serializeDefinitionYaml(parsed.document), parseOpts);
+
+    // Assert
+    const node = parsed.document.nodes.find((candidate) => candidate.name === "a");
+    const roundNode = again.document?.nodes.find((candidate) => candidate.name === "a");
+    expect(node?.retry).toEqual({ limit: 3, backoff: "exponential", errors: ["Timeout", "Transient"] });
+    expect(node?.output).toBe("$.vars.order");
+    expect(roundNode?.retry).toEqual(node?.retry);
+    expect(roundNode?.output).toBe("$.vars.order");
+  });
+
+  it("retry.limit が整数の文字列のときはローダーと同じく数として読む", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: a
+    type: action
+    action: noop
+    retry:
+      limit: "2"
+`;
+
+    // Act
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+
+    // Assert
+    expect(parsed.document?.nodes[0]?.retry).toEqual({ limit: 2 });
+  });
+
+  it("retry も output も無い action の保存にその 2 キーを足さない", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: a
+    type: action
+    action: noop
+    retry: {}
+    output: ""
+`;
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+    if (!parsed.document) {
+      throw new Error("document should not be null");
+    }
+
+    // Act
+    const round = serializeDefinitionYaml(parsed.document);
+
+    // Assert
+    expect(parsed.document.nodes[0]?.retry).toBeUndefined();
+    expect(parsed.document.nodes[0]?.output).toBeUndefined();
+    expect(round).not.toContain("retry:");
+    expect(round).not.toContain("output:");
+  });
+
+  it("action 以外のノードの retry と output は読まない", () => {
+    // Arrange
+    const yaml = `version: 1
+workflow:
+  name: W
+nodes:
+  - name: w
+    type: wait
+    event: go
+    retry:
+      limit: 1
+    output: $.vars.x
+`;
+
+    // Act
+    const parsed = parseDefinitionYaml(yaml, parseOpts);
+
+    // Assert
+    expect(parsed.document?.nodes[0]?.retry).toBeUndefined();
+    expect(parsed.document?.nodes[0]?.output).toBeUndefined();
+  });
 });

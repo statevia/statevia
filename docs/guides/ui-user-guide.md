@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.19 |
-| 更新日 | 2026-11-19 |
+| Version | 1.20 |
+| 更新日 | 2026-11-20 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.20（2026-11-20）**: 定義エディタの保存で、`workflow.modules` と action の `retry` / `output` が消えなくなった（[定義エディタの保存で残す項目](#定義エディタの保存で残す項目)）。
 
 **Version 1.19（2026-11-19）**: 画面の移動・所属 Project・定義の削除と復元・イベント送信・実行一覧・定期実行・テナント管理の節に、架空データで撮った画面の画像を置いた。
 
@@ -199,6 +201,21 @@ HTTP 契約の正本は [api-http.md](../specifications/api-http.md) §2.1.2–2
 | アップロード | `.yaml` / `.yml`。UTF-8。先頭の BOM は除く。256KB（262144 バイト）を超えるファイルは読み込まない |
 | 未保存の上書き | 編集中の内容があるときは、確認のあとだけ差し替える。「やめる」を押すと内容は残る |
 | ダウンロード | YAML 表示中は画面のテキスト。グラフ表示中は保存時と同じ YAML。定義名が空なら `definition.yaml` |
+
+### 定義エディタの保存で残す項目
+
+定義エディタは、YAML 表示でもグラフ表示でも、保存の直前に画面の内容から YAML を作り直します。次の項目はグラフに入力欄がありませんが、作り直しのあとも YAML に残ります。グラフ表示で編集して保存しても消えません。
+
+| 項目 | 残し方 |
+| --- | --- |
+| `workflow.modules` | 別名と値を書いたまま残す。別名の action（例: `notification.send`）を完全な Action ID へ書き換えない |
+| action の `retry` | `limit` / `backoff` / `errors` を残す。`limit` の整数の文字列（`"3"`）は数（`3`）で書く |
+| action の `output` | 書いたパスのまま残す |
+| action の `bindings` | スロット名と参照名を残す |
+
+- 空の値（空の `retry`、空文字の `output`、空の `modules`）は保存で消える。もとから無い項目を足すことはない。
+- action 以外のノードに書いた `retry` / `output` は残らない。
+- 値の意味（別名の解決、再試行、出力先）の検証は、これまでどおり保存時に Service API が行う。各項目の意味は [definition.md](../specifications/definition.md) を参照。
 
 ### 実行詳細のイベント送信
 

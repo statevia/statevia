@@ -103,6 +103,41 @@ function assignOptionalNodeFields(
   if (bindings !== undefined) {
     target.bindings = bindings;
   }
+  if (node.type === "action") {
+    assignActionRetryAndOutput(node, target);
+  }
+}
+
+/**
+ * action ノードの `retry` と `output` を YAML オブジェクトへ載せる。空の値は書かない。
+ * @param node action ノード。
+ * @param target 出力中のプレーンオブジェクト。
+ */
+function assignActionRetryAndOutput(node: DefinitionGraphNode, target: Record<string, unknown>): void {
+  const retry = copyActionRetry(node.retry);
+  if (retry !== undefined) {
+    target.retry = retry;
+  }
+  if (node.output?.trim()) {
+    target.output = node.output;
+  }
+}
+
+/**
+ * `retry` を YAML に戻す。無い項目は書かず、3 項目とも無ければ `retry` ごと書かない。
+ * @param retry ノードの retry。未設定可。
+ * @returns limit / backoff / errors。どれも無ければ undefined。
+ */
+function copyActionRetry(retry: DefinitionGraphNode["retry"]): Record<string, unknown> | undefined {
+  if (retry === undefined) {
+    return undefined;
+  }
+  const copied: Record<string, unknown> = {
+    ...(retry.limit === undefined ? {} : { limit: retry.limit }),
+    ...(retry.backoff?.trim() ? { backoff: retry.backoff } : {}),
+    ...(retry.errors === undefined ? {} : { errors: [...retry.errors] })
+  };
+  return isNonEmptyRecord(copied) ? copied : undefined;
 }
 
 /**
@@ -234,6 +269,10 @@ export function serializeDefinitionYaml(document: DefinitionGraphDocument): stri
   }
   if (document.workflow.description?.trim()) {
     workflowOut.description = document.workflow.description.trim();
+  }
+  const modules = copyStringMap(document.workflow.modules);
+  if (modules !== undefined) {
+    workflowOut.modules = modules;
   }
 
   const root: Record<string, unknown> = {
