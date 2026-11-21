@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.10 |
-| 更新日 | 2026-11-04 |
+| Version | 1.5.11 |
+| 更新日 | 2026-11-20 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -21,6 +21,8 @@
 - **禁止**: 利用者向け文書に `exit` 語彙を出さない。
 
 ---
+
+**Version 1.5.11（2026-11-20）**: Cancel の 204 は受理のみで、Engine に実行が無くても未開始でも 422 にならないことを明記する（契約は変えない）。
 
 **Version 1.5.10（2026-11-04）**: Wait の遷移先は Engine が記録した再開イベントで決める（output の `event` に依らない）。遷移先が決まらない Wait は実行を Failed にする。
 
@@ -80,7 +82,7 @@ Subscribe は入れ子ワークフローの **公式な子→親 Resume では�
 - Cancelled は実行が実際に停止したときにのみ発行されます。
 - 依存状態は自動的にキャンセルされます。
 - Hosted で親を Cancel した場合、未終端の物理子へ Cancel work item をカスケードする（[fork-join.md](fork-join.md)）。
-- `POST /v1/executions/{id}/cancel` は受理のみで **204** を返す（enqueue）。新パスは無い。投影の `cancelRequested` は **受理時点**で立つ。
+- `POST /v1/executions/{id}/cancel` は受理のみで **204** を返す（enqueue）。新パスは無い。投影の `cancelRequested` は **受理時点**で立ち、`CANCELED`（投影は `Cancelled`）は Worker の適用後になる。Engine に実行が無くても、未開始でも、HTTP の Cancel は 422 にならない（[../api-http.md](../api-http.md) §3.8）。
 - 同一プロセスが Engine に載荷済みのとき、Worker は Engine `CancelAsync` を先に呼び、その後 AwaitLoad を IRQ する。IRQ だけでは完走させない。
 - HTTP Start のあと Engine Start 前（正当な runtime checkpoint が無い）でも、Worker は hydrate せず投影を `Cancelled` にし、Cancelled 事実を発行する。残 Start work item は Complete し、後続の `engine.Start` は走らない。未 Start 終端と実行中停止は別契約である。
 - 204 時点では Cancelled 事実を発行しない。

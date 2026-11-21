@@ -63,6 +63,7 @@ OpenAPI / Scalar: [`docs/reference/api-openapi.md`](docs/reference/api-openapi.m
 
 > **シナリオテスト（`Statevia.Service.Api.Scenario.Tests`）**は Testcontainers で PostgreSQL 16 を起動する。
 > Docker が利用できない環境では `Skipped`（Failed にならない）。フィルタ: `Category=Scenario`。
+> 環境変数 `STATEVIA_REQUIRE_SCENARIO_TESTS=true` のときは、フィクスチャの起動失敗を `Skipped` にせず失敗にする（CI のシナリオのジョブが付ける。必須ゲートを空にしないため）。
 
 Sonar / Analyzer: [`docs/development-guidelines.md`](docs/development-guidelines.md) §4.3 / §5
 

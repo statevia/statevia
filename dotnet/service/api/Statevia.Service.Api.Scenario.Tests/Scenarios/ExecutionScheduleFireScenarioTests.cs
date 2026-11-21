@@ -6,6 +6,7 @@ using Statevia.Core.Application.Contracts;
 using Statevia.Core.Application.Contracts.Services;
 using Statevia.Infrastructure.Security;
 using Statevia.Service.Api.Hosting;
+using Statevia.Service.Api.Scenario.Tests.Infrastructure;
 using Testcontainers.PostgreSql;
 
 namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
@@ -46,7 +47,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task DispatchDue_StartsExecutionOwnedByServiceAccount()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "nightly");
         using var tenant = context.BeginOperator();
         var created = await context.CreateScheduleAsync();
@@ -89,7 +90,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task DispatchDue_WhenOverlapSkipAndRunning_SkipsWithoutSecondStart()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "overlap");
         using var tenant = context.BeginOperator();
         var created = await context.CreateScheduleAsync();
@@ -122,7 +123,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task RunNow_StartsWithoutAdvancingNextFire()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "manual");
         using var tenant = context.BeginOperator();
         var created = await context.CreateScheduleAsync();
@@ -152,7 +153,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task CreateSchedule_WhenRunAsNotMember_ThrowsValidationWithoutSaving()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "not-member");
         await context.RemoveRunAsMembershipAsync();
         using var tenant = context.BeginOperator();
@@ -173,7 +174,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task RunNow_WhenRunAsLeftProject_ThrowsValidationWithoutRun()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "left-project");
         using var tenant = context.BeginOperator();
         var created = await context.CreateScheduleAsync();
@@ -196,7 +197,7 @@ public sealed class ExecutionScheduleFireScenarioTests
     public async Task DispatchDue_AfterPinnedScheduleMovedWithVersion_StartsTargetDefinitionVersion()
     {
         // Arrange
-        Skip.IfNot(_fixture.IsReady, _fixture.SkipReason);
+        ScenarioRequirement.SkipOrFailIfNotReady(_fixture.IsReady, _fixture.SkipReason);
         await using var context = await FireArrangement.OpenAsync(_fixture, "repin");
         using var tenant = context.BeginOperator();
         var targetDefinitionId = await context.AddDefinitionAsync();
