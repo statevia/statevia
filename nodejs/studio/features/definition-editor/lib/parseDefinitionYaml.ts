@@ -227,7 +227,7 @@ function parseActionRetry(value: unknown): DefinitionGraphActionRetry | undefine
         .filter((entry): entry is string | number | boolean =>
           ["string", "number", "boolean"].includes(typeof entry)
         )
-        .map((entry) => String(entry))
+        .map(String)
     : undefined;
   if (limit === undefined && backoff === undefined && errors === undefined) {
     return undefined;
