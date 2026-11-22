@@ -332,7 +332,26 @@ public sealed class ExecutionCommandScenarioTests : ScenarioTestBase
             new { resumeKey });
 
     /// <summary>補助アサート: 当該実行に未完了（キューに残っている）work item の件数。完了した item は削除される。</summary>
+    /// <summary>
+    /// 実行の未完了 work item の件数を返す。0 件になるまで <see cref="ExecutionSettleProbe.DefaultTimeout"/> まで待つ。
+    /// </summary>
+    /// <remarks>
+    /// 投影の status が終端になった時点では、Worker が work item を片付け終えていないことがある。
+    /// 片付けの遅れで落ちないように、0 件になるまで読み直す。期限を過ぎたら最後に読んだ件数を返す。
+    /// </remarks>
     private async Task<int> CountOutstandingWorkItemsAsync(Guid executionResourceId)
+    {
+        var deadline = DateTime.UtcNow + ExecutionSettleProbe.DefaultTimeout;
+        while (true)
+        {
+            var count = await ReadOutstandingWorkItemCountAsync(executionResourceId);
+            if (count == 0 || DateTime.UtcNow >= deadline)
+                return count;
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+        }
+    }
+
+    private async Task<int> ReadOutstandingWorkItemCountAsync(Guid executionResourceId)
     {
         using var scope = Fixture.Factory!.Services.CreateScope();
         var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<CoreDbContext>>();
