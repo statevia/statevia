@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.5 |
-| 更新日 | 2026-11-14 |
+| Version | 1.6 |
+| 更新日 | 2026-11-22 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -73,7 +73,7 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | --- | --- | --- | --- | --- |
 | Action | アクション | State に紐づく実行可能な単位 | 定義 YAML の `action`、`actionId`、`IActionExecutor` | Task / Activity は使わない（`Task` は C# の型と `nodeType` の値 `Task` にだけ使う）。エンジンの副作用の総称（`fsm.md` の Effect）を Action と呼ばない |
 | actionId | アクションの ID | Action の論理 ID。`{moduleId}.{actionName}` の形で、版を含まない | `actionId` | — |
-| Module | — | Action を束ねた配布単位。zip にまとめ、署名・信頼レベル付与の対象になる | `module.json`、`ModuleHost`、`IModuleSource` | Plugin / Package は使わない |
+| Module | アクションモジュール（Action module） | Action を束ねた配布単位。zip にまとめ、署名・信頼レベル付与の対象になる | `module.json`、`ModuleHost`、`IModuleSource` | Plugin / Package は使わない |
 | Catalog | — | 登録済み Action の一覧。publish 時に Action ID を照合する | `IActionCatalog`、`ActionDescriptor` | — |
 | Action Binding | アクションバインディング | 独自の Action に渡す変数とシークレット。定義の外にテナント単位で保存する | `/v1/admin/action-bindings` | — |
 | TrustLevel | — | 署名と検証結果から決まる Module の信頼レベル | `TrustLevel` | — |

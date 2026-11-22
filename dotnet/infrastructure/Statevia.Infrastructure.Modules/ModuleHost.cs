@@ -188,7 +188,7 @@ internal sealed class ModuleHost
                 sha256,
                 loadedAt,
                 ownerTenantId,
-                message: ex.Message);
+                message: $"Failed to load module assembly ({ex.GetType().Name})");
         }
     }
 

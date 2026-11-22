@@ -60,6 +60,7 @@ describe("SideNav", () => {
     expect(screen.getByRole("heading", { name: uiText.navigation.groups.workflow })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: uiText.navigation.groups.tenantAccess })).toBeNull();
     expect(screen.queryByRole("link", { name: uiText.navigation.adminUsers })).toBeNull();
+    expect(screen.queryByRole("link", { name: uiText.navigation.adminModules })).toBeNull();
   });
 
   it("テナント管理者には管理系の項目を遷移先つきで出す", () => {
@@ -72,6 +73,7 @@ describe("SideNav", () => {
       "href",
       "/admin/notification-smtp",
     );
+    expect(screen.getByRole("link", { name: uiText.navigation.adminModules })).toHaveAttribute("href", "/admin/modules");
   });
 
   it("選択中の項目にだけ aria-current=page を付ける", () => {

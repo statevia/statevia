@@ -61,6 +61,22 @@ public sealed class ModuleManagementServiceTests
         Assert.Equal("abc", item.Sha256);
     }
 
+    /// <summary>一覧の 1 件はサーバーのファイル配置（entry DLL のパス）を項目に持たない。</summary>
+    [Fact]
+    public void AdminModuleListItemDto_DoesNotExposeEntryAssemblyPath()
+    {
+        // Arrange
+        var propertyNames = typeof(Statevia.Service.Api.Contracts.Admin.AdminModuleListItemDto)
+            .GetProperties()
+            .Select(property => property.Name);
+
+        // Act
+        var pathProperties = propertyNames.Where(name => name.Contains("Path", StringComparison.Ordinal)).ToList();
+
+        // Assert
+        Assert.Empty(pathProperties);
+    }
+
     /// <summary>OwnerTenantId 設定時は ModuleHost reload が成功する。</summary>
     [Fact]
     public async Task ReloadAsync_WhenOwnerTenantConfigured_Completes()

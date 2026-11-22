@@ -3,9 +3,11 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.20 |
-| 更新日 | 2026-11-20 |
+| Version | 1.21 |
+| 更新日 | 2026-11-22 |
 | 関連 | [../specifications/ui/visual.md](../specifications/ui/visual.md)、[../specifications/api-http.md](../specifications/api-http.md) §2.1.2–2.2 |
+
+**Version 1.21（2026-11-22）**: テナント管理に「アクションモジュール」（`/admin/modules`）を足した。アクションモジュールを読み込んだ結果を見るだけの画面で、再読み込みは CLI のまま（[アクションモジュール](#アクションモジュール)）。
 
 **Version 1.20（2026-11-20）**: 定義エディタの保存で、`workflow.modules` と action の `retry` / `output` が消えなくなった（[定義エディタの保存で残す項目](#定義エディタの保存で残す項目)）。
 
@@ -82,7 +84,7 @@ SERVICE_API_INTERNAL_BASE="http://localhost:8080" npm run dev
 | プロジェクト | メンバー | 選択中 Project の project.admin |
 | プロジェクト | プロジェクトを作成 | グループ権限 `projects.create` を持つ利用者（所属が無くても出る） |
 | テナント管理：アクセス | ユーザー管理、グループ管理、API キー、サービスアカウント | tenant.admin |
-| テナント管理：連携・設定 | プロジェクト、アクションバインディング、通知メールの設定 | tenant.admin |
+| テナント管理：連携・設定 | プロジェクト、アクションバインディング、通知メールの設定、アクションモジュール | tenant.admin |
 
 | 操作 | 方法 | 備考 |
 | --- | --- | --- |
@@ -127,6 +129,7 @@ Studio の画面をすべて挙げる。パスの `{…}` は ID が入る部分
 | プロジェクト（管理） | `/admin/projects` | tenant.admin | テナント内の全 Project とメンバーを見て、メンバーを付ける。定義エディタは開かない |
 | アクションバインディング | `/admin/action-bindings` | tenant.admin | 独自のアクションに渡す変数とシークレットを作成・更新・削除する |
 | 通知メールの設定 | `/admin/notification-smtp` | tenant.admin | 通知メールの送信に使う SMTP の設定を置き換え・削除する |
+| アクションモジュール | `/admin/modules` | tenant.admin | アクションモジュールを読み込んだ結果（`LOADED` / `FAILED` / `SKIPPED` / `DUPLICATE`）を見る。再読み込みはしない |
 
 ロールとグループ権限の組み合わせは [所属 Project](#所属-project) の表を参照。
 
@@ -355,6 +358,18 @@ API キーを持つサービスアカウントには「API キーあり」と出
 - パスワードは保存後に再表示しない（保存済みなら、その旨だけを出す）。
 - ユーザーとパスワードは、両方入れるか両方空にする。パスワードは UTF-8 で 1〜1024 バイト。
 - 削除すると、このテナントに保存した SMTP の設定を消す。
+
+#### アクションモジュール
+
+このテナントのアクションモジュールを、Service API が読み込んだ結果を見ます。見るだけの画面で、モジュールの配置・再読み込み・削除はできません。配置と再読み込みは CLI で行います（[operations-docker.md](operations-docker.md) の Action Module の節）。
+
+| 項目 | 内容 |
+| --- | --- |
+| 結果 | `LOADED`（読み込めた）・`FAILED`（失敗）・`SKIPPED`（規約違反などで飛ばした）・`DUPLICATE`（同じ actionId が既にある）。値は訳さず大文字で出す。これ以外の値もそのまま出す |
+| 取得元 | modules ルートに置いたモジュールは `filesystem`、OCI から取ったモジュールは `oci:…` のラベル |
+| 行の下 | メッセージ（失敗の理由など。あるときだけ）、entry DLL の SHA256。サーバーのファイルのパスは出さない |
+
+「一覧を読み直す」は最新の結果を読み直すだけで、モジュールを読み込み直しません。HTTP の `GET /v1/admin/modules` は、グループ権限 `modules.read` があれば tenant.admin でなくても呼べますが、画面は tenant.admin だけが使えます。
 
 ## コントリビュータ向け
 

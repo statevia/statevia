@@ -1,4 +1,5 @@
 import { actionBindingText } from "./actionBindingText";
+import { moduleText } from "./moduleText";
 import { notificationSmtpText } from "./notificationSmtpText";
 import { resourceGrantText } from "./resourceGrantText";
 import { serviceAccountText } from "./serviceAccountText";
@@ -118,6 +119,7 @@ export const adminUiTextEn: AdminFeatureUiText = {
       forbidden: "Tenant administrators only.",
     },
     actionBindings: actionBindingText("en"),
+    modules: moduleText("en"),
     notificationSmtp: notificationSmtpText("en"),
     serviceAccounts: serviceAccountText("en"),
     resourceGrants: resourceGrantText("en"),

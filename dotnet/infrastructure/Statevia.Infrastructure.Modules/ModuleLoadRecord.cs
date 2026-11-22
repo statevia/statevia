@@ -26,7 +26,7 @@ internal sealed record ModuleLoadRecord
     /// <summary>load 完了 UTC。</summary>
     public required DateTimeOffset LoadedAtUtc { get; init; }
 
-    /// <summary>状態説明（skip / failed 理由等）。</summary>
+    /// <summary>状態説明（skip / failed 理由等）。テナント向けの一覧（<c>GET /v1/admin/modules</c>）にそのまま出るので、例外の本文やファイルのパスを入れない。</summary>
     public string? Message { get; init; }
 
     /// <summary>entry DLL の絶対パス。</summary>

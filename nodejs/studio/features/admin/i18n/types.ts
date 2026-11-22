@@ -149,6 +149,26 @@ export type AdminFeatureUiText = {
       /** 削除の確認の決定ボタン。 */
       deleteConfirmSubmit: string;
     };
+    /** Module のロード結果の一覧（`/admin/modules`）。読み取りだけで、再ロードは置かない。 */
+    modules: {
+      title: string;
+      description: string;
+      /** 一覧の `aria-label`。 */
+      listLabel: string;
+      moduleColumn: string;
+      versionColumn: string;
+      statusColumn: string;
+      sourceColumn: string;
+      loadedAtColumn: string;
+      messageLabel: string;
+      sha256Label: string;
+      /** 「一覧を読み直す」が Module を読み込み直さないことの案内。 */
+      reloadNote: string;
+      empty: string;
+      loadFailed: string;
+      retry: string;
+      refresh: string;
+    };
     notificationSmtp: {
       title: string;
       description: string;

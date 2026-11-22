@@ -46,6 +46,7 @@ export const uiTextEn: UiText = {
     adminServiceAccounts: "Service accounts",
     adminActionBindings: "Action bindings",
     adminNotificationSmtp: "Notification email",
+    adminModules: "Action modules",
     adminProjects: "Projects",
     account: "Account",
     logout: "Sign out",
