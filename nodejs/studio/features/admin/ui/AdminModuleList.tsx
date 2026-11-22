@@ -14,18 +14,17 @@ export type AdminModuleListProps = {
 };
 
 /**
- * アクションモジュールのロード結果の一覧。契約の全項目を出す。
- * 列は名前と ID・バージョン・結果・取得元・読み込んだ日時で、長い値（メッセージ・SHA256）は行の下に出す。
- * 取得元が無い行は空のままにし、由来を断定する文は足さない。操作（再読み込み・削除）は置かない。
- * @param props 表示する行。
- * @returns アクションモジュールの一覧。
+ * アクションモジュール一覧の列（名前と ID・バージョン・結果・取得元・読み込んだ日時）。
+ * 取得元が無い行は空のままにする。
+ * @param text アクションモジュール画面の辞書。
+ * @param dateTimeLocale 日時の書式のロケール。
+ * @returns 列の定義。
  */
-export function AdminModuleList({ modules }: Readonly<AdminModuleListProps>) {
-  const { locale, uiText } = useI18n();
-  const text = uiText.admin.modules;
-  const dateTimeLocale = getDateTimeLocale(locale);
-
-  const columns: readonly DataListColumn<AdminModule>[] = [
+function buildModuleColumns(
+  text: ReturnType<typeof useI18n>["uiText"]["admin"]["modules"],
+  dateTimeLocale: string
+): DataListColumn<AdminModule>[] {
+  return [
     {
       id: "module",
       header: text.moduleColumn,
@@ -58,6 +57,21 @@ export function AdminModuleList({ modules }: Readonly<AdminModuleListProps>) {
       cell: (moduleRow) => formatDateTimeLocalized(moduleRow.loadedAtUtc, dateTimeLocale)
     }
   ];
+}
+
+/**
+ * アクションモジュールのロード結果の一覧。契約の全項目を出す。
+ * 列は名前と ID・バージョン・結果・取得元・読み込んだ日時で、長い値（メッセージ・SHA256）は行の下に出す。
+ * 取得元が無い行は空のままにし、由来を断定する文は足さない。操作（再読み込み・削除）は置かない。
+ * @param props 表示する行。
+ * @returns アクションモジュールの一覧。
+ */
+export function AdminModuleList({ modules }: Readonly<AdminModuleListProps>) {
+  const { locale, uiText } = useI18n();
+  const text = uiText.admin.modules;
+  const dateTimeLocale = getDateTimeLocale(locale);
+
+  const columns = buildModuleColumns(text, dateTimeLocale);
 
   return (
     <DataList
