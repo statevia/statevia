@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.45 |
-| 更新日 | 2026-11-20 |
+| Version | 1.46 |
+| 更新日 | 2026-11-22 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.46（2026-11-22）**: **破壊的な変更**。`GET /v1/admin/modules` の応答から `entryAssemblyPath` を外し、ロード失敗の `message` を例外の本文から固定の文に変える。テナントにサーバーのファイル配置を見せないため。Studio は `/admin/modules`（画面名は「アクションモジュール」）でこの一覧を見せる。画面はテナント管理者だけが使い、`POST /internal/modules/reload` は呼ばない。§4.1.4 の `sourceLabel` の説明を実装に合わせる（filesystem 由来は未設定ではなく `filesystem`）。
 
 **Version 1.45（2026-11-20）**: 文書の修正（契約は変えない）。§3.8 のキャンセルを実装と [execution/wait-cancel.md](execution/wait-cancel.md) に合わせる。204 は work item を積んだ受理で、Engine への適用ではない。`cancelRequested` は受理時、`CANCELED` は Worker の適用後に立つ。Engine に実行が無くても Cancel は 422 にならない。§3.9 の「キャンセルと同様」も直す。
 
@@ -789,7 +791,9 @@ JWT クレーム: `tenant_id`（内部 UUID）、`tenant_key`、`principal_id` /
 | --- | --- | --- |
 | POST | `/internal/modules/reload` | `ModuleHost` へ discover / load を再実行（204） |
 
-Response（`GET /v1/admin/modules` の 1 件）: `moduleId`, `name`, `version`, `status`, `sha256`, `sourceLabel?`, `loadedAtUtc`, `message?`, `entryAssemblyPath`。`sourceLabel` は取得元 Source を示し、filesystem 由来は未設定、OCI 由来は `oci:{registry}/{repository}:{reference}`（`CompositeModuleSource` が複数 Source を集約）。
+Response（`GET /v1/admin/modules` の 1 件。呼び出し元テナントの Module に限る）: `moduleId`, `name`, `version`, `status`, `sha256`, `sourceLabel?`, `loadedAtUtc`, `message?`。サーバーのファイル配置（modules ルートや entry DLL の絶対パス）は返さない。`message` はロード結果ごとの固定の文で、例外の本文やパスを含まない（失敗は `Failed to load module assembly ({例外の型名})` など）。絶対パスと例外は Service API のログに残る。`sourceLabel` は取得元 Source を示し、filesystem 由来は `filesystem`、OCI・S3・Git 由来は各 Source の参照のラベル（OCI は `oci:{registry}/{repository}:{reference}`）。`CompositeModuleSource` が複数 Source を集約する。省略は Source がラベルを付けなかったときだけ。
+
+Studio の `/admin/modules`（画面名は「アクションモジュール」）は、この一覧の全項目を読み取りで出す。画面を使えるのはテナント管理者だけで、`modules.read` だけを持つ利用者は HTTP を使う。画面は reload しない（`POST /internal/modules/reload` のボタンは無く、「一覧を読み直す」は GET を取り直すだけ）。reload は CLI の `statevia module install` のあとに行う。
 
 ### 4.1.2 Runtime API の認証要件
 

@@ -69,7 +69,6 @@ internal sealed class ModuleManagementService : IModuleManagementService
                 SourceLabel = record.SourceLabel,
                 LoadedAtUtc = record.LoadedAtUtc,
                 Message = record.Message,
-                EntryAssemblyPath = record.EntryAssemblyPath,
             })
             .ToList();
     }

@@ -60,6 +60,7 @@ export type UiText = DefinitionsFeatureUiText &
     adminServiceAccounts: string;
     adminActionBindings: string;
     adminNotificationSmtp: string;
+    adminModules: string;
     adminProjects: string;
     account: string;
     logout: string;
@@ -226,6 +227,7 @@ export const uiText: UiText = {
     adminServiceAccounts: "サービスアカウント",
     adminActionBindings: "アクションバインディング",
     adminNotificationSmtp: "通知メールの設定",
+    adminModules: "アクションモジュール",
     adminProjects: "プロジェクト",
     account: "アカウント",
     logout: "ログアウト",

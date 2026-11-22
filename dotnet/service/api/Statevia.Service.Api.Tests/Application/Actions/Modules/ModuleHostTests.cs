@@ -99,6 +99,26 @@ public sealed class ModuleHostTests
         Assert.Contains(host.LoadCatalog.GetRecords(), record => record.Status == ModuleLoadStatus.Loaded);
     }
 
+    /// <summary>壊れた module の失敗理由は固定の文で、例外の本文とファイルのパスを含まない。</summary>
+    [Fact]
+    public async Task LoadAsync_WhenModuleFails_RecordsMessageWithoutPath()
+    {
+        // Arrange
+        var modulesRoot = CreateTempDirectory();
+        var brokenDirectory = Path.Combine(modulesRoot, "default", "broken-module");
+        Directory.CreateDirectory(brokenDirectory);
+        await File.WriteAllTextAsync(Path.Combine(brokenDirectory, "broken-module.dll"), "not-a-dll");
+        var host = CreateHost(modulesRoot);
+
+        // Act
+        await host.Host.LoadAsync(OwnerTenantId, CancellationToken.None, filesystemTenantKey: "default");
+
+        // Assert
+        var failed = Assert.Single(host.LoadCatalog.GetRecords(), record => record.Status == ModuleLoadStatus.Failed);
+        Assert.Equal("Failed to load module assembly (BadImageFormatException)", failed.Message);
+        Assert.DoesNotContain(modulesRoot, failed.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>plugin action を参照する定義がコンパイルできる。</summary>
     [Fact]
     public async Task LoadAsync_WhenDefinitionUsesPluginAction_CompilesForOwnerTenant()

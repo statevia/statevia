@@ -7,6 +7,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Mail,
+  Package,
   Play,
   Plug,
   UserCog,
@@ -43,7 +44,8 @@ export type NavItemId =
   | "adminServiceAccounts"
   | "adminProjects"
   | "adminActionBindings"
-  | "adminNotificationSmtp";
+  | "adminNotificationSmtp"
+  | "adminModules";
 
 /** サイドメニューの 1 項目。 */
 export type NavItem = Readonly<{
@@ -145,6 +147,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         matchPrefixes: ["/admin/notification-smtp"],
         visibility: "tenantAdmin",
         icon: Mail,
+      },
+      {
+        id: "adminModules",
+        href: "/admin/modules",
+        matchPrefixes: ["/admin/modules"],
+        visibility: "tenantAdmin",
+        icon: Package,
       },
     ],
   },

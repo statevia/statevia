@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.18 |
-| 更新日 | 2026-11-01 |
+| Version | 1.19 |
+| 更新日 | 2026-11-22 |
 | 関連 | [getting-started.md](getting-started.md), [action-host.md](action-host.md), [capacity-load-testing.md](capacity-load-testing.md), [operations-logging.md](operations-logging.md), [environment-variables.md](../reference/environment-variables.md) |
 
 ---
+
+**Version 1.19（2026-11-22）**: Action Module の load 状態を Studio の `/admin/modules`（テナント管理者）でも確かめられることを追記。reload は CLI のまま。
 
 **Version 1.18（2026-11-01）**: Service API / Worker をホストの VS Code で動かし、ほかをコンテナのままにするデバッグ手順と `compose/debug-host-api.yml` を追加。
 
@@ -228,7 +230,7 @@ CI ではスコープ `modules.reload` の API キーを `--api-key` または `
 
 ### 運用確認
 
-- `GET /v1/admin/modules`（テナント管理者 JWT または `modules.read`）で **自テナント**の load 状態一覧。
+- `GET /v1/admin/modules`（テナント管理者 JWT または `modules.read`）で **自テナント**の load 状態一覧。テナント管理者は Studio の `/admin/modules`（「アクションモジュール」）でも同じ一覧を見られる。画面は reload しない。
 - `POST /internal/modules/reload`（テナント管理者 JWT または `modules.reload`）で **自テナント**の再 scan / load。
 
 詳細は `docs/architecture/repository-layout.md` と `docs/specifications/actions/module-zip-layout.md` を参照。

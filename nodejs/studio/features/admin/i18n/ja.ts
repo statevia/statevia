@@ -1,4 +1,5 @@
 import { actionBindingText } from "./actionBindingText";
+import { moduleText } from "./moduleText";
 import { notificationSmtpText } from "./notificationSmtpText";
 import { resourceGrantText } from "./resourceGrantText";
 import { serviceAccountText } from "./serviceAccountText";
@@ -116,6 +117,7 @@ export const adminUiTextJa: AdminFeatureUiText = {
       forbidden: "テナント管理者のみ利用できます。",
     },
     actionBindings: actionBindingText("ja"),
+    modules: moduleText("ja"),
     notificationSmtp: notificationSmtpText("ja"),
     serviceAccounts: serviceAccountText("ja"),
     resourceGrants: resourceGrantText("ja"),

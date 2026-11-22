@@ -126,3 +126,32 @@ export type CreatedAdminApiKey = {
   /** 作成日時（ISO 8601）。 */
   createdAt: string;
 };
+
+/**
+ * Module のロード結果のうち、画面が意味を知っている値（`GET /v1/admin/modules` の `status`）。
+ * 契約はこの 4 つだが、型は文字列のままにして未知の値でも落ちないようにする。
+ */
+export type KnownAdminModuleStatus = "Loaded" | "Failed" | "Skipped" | "Duplicate";
+
+/**
+ * `GET /v1/admin/modules` の 1 件。プロセスがロードを試みた Module の結果で、テナントは呼び出し元に限る。
+ * 画面用に項目を削らず、契約の全項目を持つ。契約はサーバーのファイル配置（entry DLL のパス）を返さない。
+ */
+export type AdminModule = {
+  /** Module ID。 */
+  moduleId: string;
+  /** Module の名前。 */
+  name: string;
+  /** Module のバージョン。 */
+  version: string;
+  /** ロード結果。既知の値は `KnownAdminModuleStatus`。それ以外もそのまま持つ。 */
+  status: string;
+  /** entry DLL の SHA256（16 進）。 */
+  sha256: string;
+  /** 取得元のラベル（filesystem 由来は `filesystem`、OCI 由来は `oci:…`）。Source がラベルを付けないときは null。 */
+  sourceLabel?: string | null;
+  /** ロードした日時（ISO 8601、UTC）。 */
+  loadedAtUtc: string;
+  /** 状態の説明。ロード結果ごとの固定の文（例外の本文やパスは含まない）で、無いこともある。 */
+  message?: string | null;
+};

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0 |
-| 更新日 | 2026-10-31 |
+| Version | 1.1 |
+| 更新日 | 2026-11-22 |
 | 関連 | [module-zip-layout.md](../specifications/actions/module-zip-layout.md), [operations-docker.md](operations-docker.md) |
 
 ---
@@ -114,7 +114,7 @@ statevia module install ./order.module.zip --modules-path ./modules --api-base h
 # 反映には Service API 再起動、または内部 reload が必要
 ```
 
-5. **確認**: `GET /admin/modules`（認可必須）で `Status` / `TrustLevel` を確認する。
+5. **確認**: `GET /v1/admin/modules`（テナント管理者 JWT または `modules.read`）で `status` と `message` を確認する。テナント管理者は Studio の `/admin/modules`（「アクションモジュール」）でも見られる。画面は reload しないので、反映は上の CLI の手順で行う。この一覧は TrustLevel を返さない。
 
 ---
 
