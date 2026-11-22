@@ -3,13 +3,15 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.5 |
-| 更新日 | 2026-11-18 |
+| Version | 1.6 |
+| 更新日 | 2026-11-22 |
 | 関連 | [api-http.md](../specifications/api-http.md), [data-integration.md](../specifications/data-integration.md) |
 
 ---
 
 Service API が返す `error.code` の**調べ物**一覧。Normative 契約は [api-http.md](../specifications/api-http.md) §4.3、[data-integration.md](../specifications/data-integration.md) §7 を正とする。
+
+**Version 1.6（2026-11-22）**: `RESOURCE_GRANT_DENIED` をイベント送信（`POST /v1/executions/{id}/events`）にも使う。
 
 **Version 1.5（2026-11-18）**: コードの正本実装を `ApiErrorCodes` に集め、本書の表との一致を CI のテストで確かめる。定期実行の結果のコードは本書の対象外と明記した。
 
@@ -55,7 +57,7 @@ Service API が返す `error.code` の**調べ物**一覧。Normative 契約は 
 | --- | --- | --- |
 | `PERMISSION_DENIED` | semantic permission key 不足 | [permission-keys.md](permission-keys.md) |
 | `PROJECT_ACCESS_DENIED` | プロジェクト `project_accesses` のロール不足（例: Reader のみで Start） | 存在秘匿のため未登録は **404** |
-| `RESOURCE_GRANT_DENIED` | User / ServiceAccount の実行リソース許可に無い project または定義で閲覧、Start、Resume、Cancel、または定期実行へ割り当てた | 行が無い種別は追加制限なし。未所属と未登録の定義は **404** |
+| `RESOURCE_GRANT_DENIED` | User / ServiceAccount の実行リソース許可に無い project または定義で閲覧、Start、Resume、イベント送信、Cancel、または定期実行へ割り当てた | 行が無い種別は追加制限なし。未所属と未登録の定義は **404** |
 | `FORBIDDEN` | テナント管理者必須、テナント非 Active（汎用）、その他拒否 | Admin API 等 |
 | `TENANT_SUSPENDED` | テナント `Suspended` | fail-closed |
 | `TENANT_ARCHIVED` | テナント `Archived` | 復帰不可 |

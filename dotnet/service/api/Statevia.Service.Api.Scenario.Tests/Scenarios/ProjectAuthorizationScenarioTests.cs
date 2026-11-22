@@ -19,6 +19,7 @@ namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
 ///   <item><c>tenant.admin</c> 未所属の定義 GET は 404。自己昇格後は 200</item>
 ///   <item>未所属の Cancel は 404、Reader の Cancel は 403 <c>PROJECT_ACCESS_DENIED</c></item>
 ///   <item>未所属のイベント送信は、子の待機が 2 件で届け先が決まらない実行でも 404</item>
+///   <item>Executor でも実行リソース許可の外なら、イベント送信は 403 <c>RESOURCE_GRANT_DENIED</c> で待機は残る</item>
 /// </list>
 /// </remarks>
 [Trait("Category", "Scenario")]
@@ -225,6 +226,48 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Executor でも実行リソース許可が別の定義だけなら、イベント送信は 403 <c>RESOURCE_GRANT_DENIED</c> になり、待機は残る。
+    /// イベント送信は再開の互換シムなので、再開・取消と同じ名簿で止めることを固定する。
+    /// </summary>
+    [SkippableFact]
+    public async Task PublishEvent_ExecutorOutsideResourceGrant_Returns403AndKeepsWait()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var (projectId, executionId) = await StartOwnedExecutionAsync(suffix);
+        var ownerLogin = await _http.LoginAsync("default", $"owner-{suffix}", "Password1!");
+        using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
+        await ExecutionSettleProbe.WaitUntilAsync(
+            ownerClient,
+            executionId,
+            snapshot => snapshot.Waits.Count == 1,
+            "待機が 1 件");
+        var username = $"outside-grant-{suffix}";
+        var principalId = await _seeder.SeedUserInTenantAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            username,
+            "Password1!",
+            isTenantAdmin: false,
+            permissionKeys: [WellKnownPermissionKeys.DefinitionsRead, WellKnownPermissionKeys.ExecutionsWrite]);
+        await _seeder.GrantProjectRoleAsync(projectId, principalId, ProjectAccessRole.Executor);
+        await _seeder.AddDefinitionResourceGrantAsync(ScenarioTenantIds.DefaultTenantId, principalId, Guid.NewGuid());
+        var login = await _http.LoginAsync("default", username, "Password1!");
+        using var client = _http.CreateAuthenticatedClient(login.AccessToken, "default");
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            $"/v1/executions/{executionId}/events",
+            new { name = "ResumeEvt" });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        await ScenarioHttpClient.AssertErrorCodeAsync(response, "RESOURCE_GRANT_DENIED");
+        var after = await ExecutionSettleProbe.ObserveAsync(ownerClient, executionId);
+        Assert.Single(after.Waits);
     }
 
     /// <summary>Reader は Start と同じく Cancel も 403 <c>PROJECT_ACCESS_DENIED</c> になる。</summary>

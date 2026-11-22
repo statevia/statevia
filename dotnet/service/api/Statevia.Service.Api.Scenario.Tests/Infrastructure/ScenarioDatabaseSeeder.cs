@@ -281,6 +281,25 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Principal の実行リソース許可に、定義 1 件の行を足す。</summary>
+    /// <remarks>定義の種別に行がある Principal は、行に無い定義の閲覧・開始・再開・イベント送信・取消を拒否される。</remarks>
+    /// <param name="tenantId">Principal の所属テナント内部 UUID。</param>
+    /// <param name="principalId">許可を持つ Principal。</param>
+    /// <param name="definitionId">許可する論理定義 ID。存在しない ID でもよい。</param>
+    public async Task AddDefinitionResourceGrantAsync(Guid tenantId, Guid principalId, Guid definitionId)
+    {
+        await using var db = await _factory.CreateDbContextAsync();
+        db.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+        {
+            TenantId = tenantId,
+            PrincipalId = principalId,
+            ResourceKind = PrincipalResourceGrantKinds.Definition,
+            ResourceId = definitionId,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>
     /// プロジェクトを用意し、同一テナントの Principal にロールを付与する。
     /// </summary>
