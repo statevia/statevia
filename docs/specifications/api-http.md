@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.46 |
+| Version | 1.47 |
 | 更新日 | 2026-11-22 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.47（2026-11-22）**: 不具合の修正。`POST …/events` と `POST …/nodes/{nodeId}/resume` で、並列分岐の子の待機への振り替え先の解決を、指定した実行への認可より前に行っていたのを後にする。同じテナントで Project に所属しない呼び出し元が、子 2 つが同じイベント名で待つ実行へ送ると、404 ではなく 422（`Ambiguous Wait delivery …`）が返り、実行の存在・内部の ID・子の待機の件数が見えていた。§3.9・§3.10 に認可と振り替えの順を明記する。認可を通る呼び出し元への応答は変えない。
 
 **Version 1.46（2026-11-22）**: **破壊的な変更**。`GET /v1/admin/modules` の応答から `entryAssemblyPath` を外し、ロード失敗の `message` を例外の本文から固定の文に変える。テナントにサーバーのファイル配置を見せないため。Studio は `/admin/modules`（画面名は「アクションモジュール」）でこの一覧を見せる。画面はテナント管理者だけが使い、`POST /internal/modules/reload` は呼ばない。§4.1.4 の `sourceLabel` の説明を実装に合わせる（filesystem 由来は未設定ではなく `filesystem`）。
 
@@ -572,6 +574,7 @@ Request:
 - `name`: イベント名。必須。ASCII 識別子（1〜64）。不正時は 422。
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
 - 並列分岐の子 execution に待機があるときは、`name` に当てはまる子の待機が **1 件**だけならその子へ振り替える。当てはまる待機が **0 件**（親にも子にも無い）または子で **複数**のときは **422**（`VALIDATION_ERROR`）。`message` は原因の説明（例: `PublishEvent requires exactly one active Wait node (found 0).`、`Ambiguous Wait delivery …`）。
+- 振り替え先の解決は、指定した実行への認可（下記の mutation 認可と Project の所属）の **後** に行う。認可を通らない呼び出し元には、子の待機の件数によらず 404 / 403 を返し、上の 422 は返さない。振り替えた先の子でも同じ認可を行う。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
@@ -594,6 +597,7 @@ Request（JSON）:
 - Engine `ResumeWaitNode` を呼び、許可外・非アクティブ・不明ノードは **422**。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
 - User と ServiceAccount は、所属のあと Live の実行リソース許可を見る。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。終端より先に判定する。Snapshot の許可キーでは決めない。
+- 並列分岐の子 execution の待機への振り替え（§3.9 と同じ）は、ここまでの認可の **後** に行う。振り替えた先の子でも同じ認可を行う。
 - 実行がすでに終端（HTTP の `COMPLETED` / `FAILED` / `CANCELED`。投影の `Completed` / `Failed` / `Cancelled`）なら **204**（遅い Resume。hydrate しない）。
 - 非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（従来どおり）。
 - **X-Idempotency-Key**: 任意だが推奨（キャンセル・イベント発行と同様の冪等・配送抑止）。
