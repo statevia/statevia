@@ -5440,12 +5440,18 @@ public sealed class ExecutionServiceTests
             return Task.CompletedTask;
         }
 
+        /// <summary><see cref="TryResolveChildWaitDeliveryAsync"/> の呼び出し回数。</summary>
+        public int TryResolveChildWaitDeliveryCalls { get; private set; }
+
         public Task<ForkWaitDeliveryTarget?> TryResolveChildWaitDeliveryAsync(
             Guid requestedExecutionId,
             string? nodeId,
             string eventName,
-            CancellationToken ct) =>
-            Task.FromResult<ForkWaitDeliveryTarget?>(null);
+            CancellationToken ct)
+        {
+            TryResolveChildWaitDeliveryCalls++;
+            return Task.FromResult<ForkWaitDeliveryTarget?>(null);
+        }
 
         public Task<string> ComposeReadModelGraphJsonAsync(
             Guid executionId,
@@ -5752,6 +5758,98 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.NotEqual(Guid.Empty, response.ResourceId);
     }
+
+    /// <summary>
+    /// Reader のイベント送信は、子の待機の届け先を解決する前に 403 で止まる。
+    /// 届け先の解決は子の待機の件数を 422 に出すので、認可より前に走らせない。
+    /// </summary>
+    [Fact]
+    public async Task PublishEventAsync_ReaderGrant_ReturnsForbiddenBeforeResolvingChildWait()
+    {
+        // Arrange
+        var (sqlite, defId) = await SeedSharedDefinitionForStartAsync(ProjectAccessRole.Reader);
+        var executionId = Guid.NewGuid();
+        var coordinator = new FakeForkChildCoordinator();
+        var sut = BuildExecutionService(sqlite, CreateWaitEventDepsForProjectAuthorization(sqlite, defId, executionId, coordinator));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.PublishEventAsync(
+                idOrUuid: "X",
+                eventName: "Go",
+                idempotencyKey: null,
+                new CommandRequestContext("POST", "/v1/executions/X/events"),
+                CancellationToken.None));
+
+        // Assert
+        Assert.Equal("PROJECT_ACCESS_DENIED", ex.Code);
+        Assert.Equal(0, coordinator.TryResolveChildWaitDeliveryCalls);
+    }
+
+    /// <summary>
+    /// Reader のノード再開は、子の待機の届け先を解決する前に 403 で止まる。
+    /// </summary>
+    [Fact]
+    public async Task ResumeNodeAsync_ReaderGrant_ReturnsForbiddenBeforeResolvingChildWait()
+    {
+        // Arrange
+        var (sqlite, defId) = await SeedSharedDefinitionForStartAsync(ProjectAccessRole.Reader);
+        var executionId = Guid.NewGuid();
+        var coordinator = new FakeForkChildCoordinator();
+        var sut = BuildExecutionService(sqlite, CreateWaitEventDepsForProjectAuthorization(sqlite, defId, executionId, coordinator));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.ResumeNodeAsync(
+                idOrUuid: "X",
+                nodeId: "wait-1",
+                resumeKey: "Go",
+                idempotencyKey: null,
+                new CommandRequestContext("POST", "/v1/executions/X/nodes/wait-1/resume"),
+                CancellationToken.None));
+
+        // Assert
+        Assert.Equal("PROJECT_ACCESS_DENIED", ex.Code);
+        Assert.Equal(0, coordinator.TryResolveChildWaitDeliveryCalls);
+    }
+
+    /// <summary>実 Project 認可で、実行中の 1 実行に対するイベント送信・再開を試すための依存を作る。</summary>
+    private static ExecutionServiceTestDeps CreateWaitEventDepsForProjectAuthorization(
+        SqliteTestDatabase sqlite,
+        Guid definitionId,
+        Guid executionId,
+        FakeForkChildCoordinator coordinator) =>
+        new()
+        {
+            Engine = new FakeExecutionEngine(),
+            DisplayIds = new FakeDisplayIdService { ResolveResultExecution = executionId },
+            Compiler = new StubDefinitionCompilerService((DummyCompiledDefinition("def"), "{}")),
+            IdGenerator = new FixedIdGenerator(Guid.NewGuid()),
+            DedupService = new FakeCommandDedupService(null),
+            Executions = new FakeExecutionRepository
+            {
+                ByIdResult = new ExecutionRow
+                {
+                    ExecutionId = executionId,
+                    TenantId = TestTenantIds.T1TenantId,
+                    DefinitionId = definitionId,
+                    Status = "Running",
+                    StartedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CancelRequested = false,
+                    RestartLost = false
+                }
+            },
+            Definitions = TestRepositoryFactory.CreateDefinitionRepository(),
+            Dedup = new FakeCommandDedupRepository(),
+            EventStore = new FakeEventStoreRepository(),
+            EventDeliveryDedup = new FakeEventDeliveryDedupRepository(),
+            ProjectAuthorization = new ProjectAuthorizationService(
+                new ProjectRepository(new DefaultIdGenerator()),
+                sqlite.TenantAccessor,
+                new DenyTenantAdminAuthorization()),
+            ForkChildCoordinator = coordinator,
+        };
 
     /// <summary>ChildCompleted Resume で Join Waiting なら親投影を変更しない。</summary>
     [Fact]

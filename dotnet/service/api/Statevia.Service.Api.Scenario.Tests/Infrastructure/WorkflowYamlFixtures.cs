@@ -53,4 +53,41 @@ public static class WorkflowYamlFixtures
               Completed:
                 end: true
         """;
+
+    /// <summary>
+    /// 並列分岐の 2 つの枝が同じイベント名 <c>Go</c> で待つワークフロー定義 YAML を返す。
+    /// </summary>
+    /// <remarks>
+    /// 親の ID へ <c>Go</c> を送ると、当てはまる子の待機が 2 件になり届け先が決まらない（422）。
+    /// 届け先の解決が認可より前に走らないことの確認に使う。
+    /// </remarks>
+    /// <param name="nameSuffix">定義名に付与する一意サフィックス（Guid 推奨）。</param>
+    /// <returns>YAML 文字列。</returns>
+    public static string ForkTwoWaitsSameEventWorkflow(string nameSuffix) => $"""
+        workflow:
+          name: scenario-fork-waits-{nameSuffix}
+        states:
+          Start:
+            on:
+              Completed:
+                fork: [AskA, AskB]
+          AskA:
+            wait:
+              events:
+                Go: Join1
+          AskB:
+            wait:
+              events:
+                Go: Join1
+          Join1:
+            join:
+              all: [AskA, AskB]
+            on:
+              Joined:
+                next: End
+          End:
+            on:
+              Completed:
+                end: true
+        """;
 }

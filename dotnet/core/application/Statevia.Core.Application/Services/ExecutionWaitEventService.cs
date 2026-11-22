@@ -106,6 +106,11 @@ internal sealed class ExecutionWaitEventService(
         if (execution is null)
             throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
 
+        // 振り替え先の解決は子の待機の件数を 422 の本文に出すので、親への認可より後にする。
+        await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
+
         // 親 ID への PublishEvent も子 Wait へ振り替える（分岐 Wait の配送先は子 execution）。
         if (await TryRedirectPublishEventToChildWaitAsync(
                 uuid.Value,
@@ -116,10 +121,6 @@ internal sealed class ExecutionWaitEventService(
         {
             return;
         }
-
-        await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
-        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
-            .ConfigureAwait(false);
 
         await projection.DrainAsync(uuid.Value, ct).ConfigureAwait(false);
 
@@ -330,6 +331,13 @@ internal sealed class ExecutionWaitEventService(
         if (execution is null)
             throw new NotFoundException(ExecutionValidationMessages.ExecutionNotFound);
 
+        // 振り替え先の解決は子の待機の件数を 422 の本文に出すので、親への認可より後にする。
+        await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
+        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
+        await authorization.EnsureResourceGrantForExistingExecutionAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
+
         // 親 ID へ届いた分岐 Wait は子 execution へ振り替える（分岐 Wait の配送先は子 execution）。
         if (await TryRedirectResumeToChildWaitAsync(
                 uuid.Value,
@@ -341,12 +349,6 @@ internal sealed class ExecutionWaitEventService(
         {
             return;
         }
-
-        await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
-        await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
-            .ConfigureAwait(false);
-        await authorization.EnsureResourceGrantForExistingExecutionAsync(tenantId, execution.DefinitionId, ct)
-            .ConfigureAwait(false);
 
         // 終端済みの遅い Resume は hydrate 422 にしない（204 冪等）。
         if (ExecutionProjectionStatuses.IsTerminal(execution.Status))

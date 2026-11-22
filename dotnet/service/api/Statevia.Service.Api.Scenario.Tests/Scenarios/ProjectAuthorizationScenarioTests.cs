@@ -18,6 +18,7 @@ namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
 ///   <item>Executor の Start は 201</item>
 ///   <item><c>tenant.admin</c> 未所属の定義 GET は 404。自己昇格後は 200</item>
 ///   <item>未所属の Cancel は 404、Reader の Cancel は 403 <c>PROJECT_ACCESS_DENIED</c></item>
+///   <item>未所属のイベント送信は、子の待機が 2 件で届け先が決まらない実行でも 404</item>
 /// </list>
 /// </remarks>
 [Trait("Category", "Scenario")]
@@ -189,6 +190,43 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// <c>executions.write</c> があっても、実行の定義の Project に未所属ならイベント送信は 404 になる。
+    /// 子の待機が 2 件で届け先が決まらない実行でも、422 で実行の存在と子の待機の件数を見せないことを固定する。
+    /// </summary>
+    [SkippableFact]
+    public async Task PublishEvent_SameTenantNonMember_WhenChildWaitsAmbiguous_Returns404()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var (_, executionId) = await StartOwnedExecutionAsync(
+            suffix,
+            WorkflowYamlFixtures.ForkTwoWaitsSameEventWorkflow);
+        var ownerLogin = await _http.LoginAsync("default", $"owner-{suffix}", "Password1!");
+        using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
+        await ExecutionSettleProbe.WaitUntilAsync(
+            ownerClient,
+            executionId,
+            snapshot => snapshot.Waits.Count == 2,
+            "子の待機が 2 件");
+        var username = $"nomember-event-{suffix}";
+        await _seeder.SeedUserInTenantAsync(
+            ScenarioTenantIds.DefaultTenantId,
+            username,
+            "Password1!",
+            isTenantAdmin: false,
+            permissionKeys: [WellKnownPermissionKeys.ExecutionsWrite]);
+        var login = await _http.LoginAsync("default", username, "Password1!");
+        using var client = _http.CreateAuthenticatedClient(login.AccessToken, "default");
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/v1/executions/{executionId}/events", new { name = "Go" });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     /// <summary>Reader は Start と同じく Cancel も 403 <c>PROJECT_ACCESS_DENIED</c> になる。</summary>
     [SkippableFact]
     public async Task CancelExecution_WithReaderAccess_Returns403ProjectAccessDenied()
@@ -208,9 +246,12 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
     }
 
     /// <summary>オーナー（Project admin）が定義を作って Start し、Project と実行の表示 ID を返す。</summary>
-    private async Task<(Guid ProjectId, string ExecutionDisplayId)> StartOwnedExecutionAsync(string suffix)
+    /// <remarks>定義は <paramref name="yamlFactory"/> で作る。省略時は <see cref="WorkflowYamlFixtures.WaitWorkflow"/>。</remarks>
+    private async Task<(Guid ProjectId, string ExecutionDisplayId)> StartOwnedExecutionAsync(
+        string suffix,
+        Func<string, string>? yamlFactory = null)
     {
-        var (projectId, definitionId) = await CreateOwnedDefinitionAsync(suffix);
+        var (projectId, definitionId) = await CreateOwnedDefinitionAsync(suffix, yamlFactory);
         var ownerLogin = await _http.LoginAsync("default", $"owner-{suffix}", "Password1!");
         using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
         var startResponse = await ownerClient.PostAsJsonAsync("/v1/executions", new { definitionId });
@@ -219,7 +260,9 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         return (projectId, execution.GetProperty("displayId").GetString()!);
     }
 
-    private async Task<(Guid ProjectId, string DefinitionDisplayId)> CreateOwnedDefinitionAsync(string suffix)
+    private async Task<(Guid ProjectId, string DefinitionDisplayId)> CreateOwnedDefinitionAsync(
+        string suffix,
+        Func<string, string>? yamlFactory = null)
     {
         var ownerUsername = $"owner-{suffix}";
         var ownerPrincipalId = await _seeder.SeedUserAsync(ownerUsername, "Password1!");
@@ -233,7 +276,7 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         var createResponse = await ownerClient.PostAsJsonAsync("/v1/definitions", new
         {
             name = $"scenario-proj-{suffix}",
-            yaml = WorkflowYamlFixtures.WaitWorkflow(suffix),
+            yaml = (yamlFactory ?? WorkflowYamlFixtures.WaitWorkflow)(suffix),
             projectId
         });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
