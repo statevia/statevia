@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.6 |
-| 更新日 | 2026-10-25 |
+| Version | 1.7 |
+| 更新日 | 2026-11-22 |
 
 ---
 
@@ -65,7 +65,7 @@ Runtime API の **semantic permission key** の調べ物。Normative 契約は [
 
 ### 実行リソース許可
 
-専用の permission key は増やさない。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る。対象は定義と実行の閲覧、Start、Resume、Cancel。publish、Project 設定、メンバー、Group は見ない。
+専用の permission key は増やさない。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る。対象は定義と実行の閲覧、Start、Resume、イベント送信、Cancel。publish、Project 設定、メンバー、Group は見ない。
 
 | 順 | 状況 | HTTP | `error.code` |
 | --- | --- | --- | --- |

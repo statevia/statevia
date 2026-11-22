@@ -110,6 +110,9 @@ internal sealed class ExecutionWaitEventService(
         await authorization.EnsureExecutionMutationWriteAsync(execution, ct).ConfigureAwait(false);
         await authorization.EnsureCanMutateOnExecutionProjectAsync(tenantId, execution.DefinitionId, ct)
             .ConfigureAwait(false);
+        // イベント送信は再開の互換シムなので、再開と同じく Live の実行リソース許可を見る。
+        await authorization.EnsureResourceGrantForExistingExecutionAsync(tenantId, execution.DefinitionId, ct)
+            .ConfigureAwait(false);
 
         // 親 ID への PublishEvent も子 Wait へ振り替える（分岐 Wait の配送先は子 execution）。
         if (await TryRedirectPublishEventToChildWaitAsync(

@@ -5466,7 +5466,7 @@ public sealed class ExecutionServiceTests
     }
 
     /// <summary><see cref="BuildExecutionService"/> へ渡すテスト用依存。</summary>
-    private sealed class ExecutionServiceTestDeps
+    private sealed record ExecutionServiceTestDeps
     {
         public required IExecutionEngine Engine { get; init; }
         public required IDisplayIdService DisplayIds { get; init; }
@@ -5486,6 +5486,8 @@ public sealed class ExecutionServiceTests
         public IExecutionWorkQueue? WorkQueue { get; init; }
         public IExecutionCheckpointStore? CheckpointStore { get; init; }
         public ExecutionOwnershipTracker? OwnershipTracker { get; init; }
+        public IPrincipalResourceGrantStore? ResourceGrants { get; init; }
+        public IPrincipalDataAccess? Principals { get; init; }
     }
 
     /// <summary>テスト用の <see cref="ExecutionService"/> を組み立てる。</summary>
@@ -5543,9 +5545,9 @@ public sealed class ExecutionServiceTests
             definitions,
             executor,
             new PrincipalResourceGrantAuthorization(
-                new EmptyPrincipalResourceGrantStore(),
+                deps.ResourceGrants ?? new EmptyPrincipalResourceGrantStore(),
                 sqlite.TenantAccessor,
-                new MissingPrincipalDataAccess()),
+                deps.Principals ?? new MissingPrincipalDataAccess()),
             sqlite.TenantAccessor);
         var checkpointStoreResolved = checkpointStore ?? new FakeExecutionCheckpointStore();
         var engineSession = new ExecutionEngineSession(
@@ -5811,6 +5813,90 @@ public sealed class ExecutionServiceTests
         // Assert
         Assert.Equal("PROJECT_ACCESS_DENIED", ex.Code);
         Assert.Equal(0, coordinator.TryResolveChildWaitDeliveryCalls);
+    }
+
+    /// <summary>
+    /// Executor でも実行リソース許可の外なら、イベント送信は子の待機の届け先を解決する前に 403 で止まる。
+    /// イベント送信は再開の互換シムなので、再開と同じ名簿を見る。
+    /// </summary>
+    [Fact]
+    public async Task PublishEventAsync_ExecutorOutsideResourceGrant_ReturnsResourceGrantDeniedBeforeResolvingChildWait()
+    {
+        // Arrange
+        var (sqlite, defId) = await SeedSharedDefinitionForStartAsync(ProjectAccessRole.Executor);
+        var executionId = Guid.NewGuid();
+        var coordinator = new FakeForkChildCoordinator();
+        var sut = BuildExecutionService(
+            sqlite,
+            CreateWaitEventDepsOutsideResourceGrant(sqlite, defId, executionId, coordinator));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.PublishEventAsync(
+                idOrUuid: "X",
+                eventName: "Go",
+                idempotencyKey: null,
+                new CommandRequestContext("POST", "/v1/executions/X/events"),
+                CancellationToken.None));
+
+        // Assert
+        Assert.Equal("RESOURCE_GRANT_DENIED", ex.Code);
+        Assert.Equal(0, coordinator.TryResolveChildWaitDeliveryCalls);
+    }
+
+    /// <summary>
+    /// Executor でも実行リソース許可の外なら、ノード再開は子の待機の届け先を解決する前に 403 で止まる。
+    /// </summary>
+    [Fact]
+    public async Task ResumeNodeAsync_ExecutorOutsideResourceGrant_ReturnsResourceGrantDeniedBeforeResolvingChildWait()
+    {
+        // Arrange
+        var (sqlite, defId) = await SeedSharedDefinitionForStartAsync(ProjectAccessRole.Executor);
+        var executionId = Guid.NewGuid();
+        var coordinator = new FakeForkChildCoordinator();
+        var sut = BuildExecutionService(
+            sqlite,
+            CreateWaitEventDepsOutsideResourceGrant(sqlite, defId, executionId, coordinator));
+
+        // Act
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() =>
+            sut.ResumeNodeAsync(
+                idOrUuid: "X",
+                nodeId: "wait-1",
+                resumeKey: "Go",
+                idempotencyKey: null,
+                new CommandRequestContext("POST", "/v1/executions/X/nodes/wait-1/resume"),
+                CancellationToken.None));
+
+        // Assert
+        Assert.Equal("RESOURCE_GRANT_DENIED", ex.Code);
+        Assert.Equal(0, coordinator.TryResolveChildWaitDeliveryCalls);
+    }
+
+    /// <summary>
+    /// 実 Project 認可に加え、呼び出し元の User の実行リソース許可を別の定義 1 件だけに絞った依存を作る。
+    /// </summary>
+    private static ExecutionServiceTestDeps CreateWaitEventDepsOutsideResourceGrant(
+        SqliteTestDatabase sqlite,
+        Guid definitionId,
+        Guid executionId,
+        FakeForkChildCoordinator coordinator)
+    {
+        var principalId = sqlite.TenantAccessor.PrincipalId!.Value;
+        var tenantId = sqlite.TenantAccessor.TenantId!.Value;
+        var otherDefinitionGrant = new PrincipalResourceGrantRow
+        {
+            TenantId = tenantId,
+            PrincipalId = principalId,
+            ResourceKind = PrincipalResourceGrantKinds.Definition,
+            ResourceId = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow
+        };
+        return CreateWaitEventDepsForProjectAuthorization(sqlite, definitionId, executionId, coordinator) with
+        {
+            ResourceGrants = new FixedPrincipalResourceGrantStore([otherDefinitionGrant]),
+            Principals = new FixedUserPrincipalDataAccess(principalId, tenantId)
+        };
     }
 
     /// <summary>実 Project 認可で、実行中の 1 実行に対するイベント送信・再開を試すための依存を作る。</summary>

@@ -185,7 +185,7 @@ internal sealed class ExecutionAuthorizationGuard(
             .ConfigureAwait(false);
     }
 
-    /// <summary>既存 execution の Resume / Cancel に、生存中の許可集合を要求する。</summary>
+    /// <summary>既存 execution の Resume / イベント送信 / Cancel に、生存中の許可集合を要求する。</summary>
     /// <remarks>削除済み定義でも所属 project を解決する。セキュリティ snapshot は見ない。</remarks>
     /// <param name="tenantId">テナント ID。</param>
     /// <param name="definitionId">論理定義 ID。</param>

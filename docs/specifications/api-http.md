@@ -3,7 +3,7 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.47 |
+| Version | 1.48 |
 | 更新日 | 2026-11-22 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.48（2026-11-22）**: 不具合の修正。`POST …/events` が実行リソース許可を見ていなかったのを、再開・取消と同じく Live の名簿で判定する。Project の executor でも名簿の外の定義の実行へイベントを送ると、204 で待機を再開できていた。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。§3.9 と所属の節に書く。
 
 **Version 1.47（2026-11-22）**: 不具合の修正。`POST …/events` と `POST …/nodes/{nodeId}/resume` で、並列分岐の子の待機への振り替え先の解決を、指定した実行への認可より前に行っていたのを後にする。同じテナントで Project に所属しない呼び出し元が、子 2 つが同じイベント名で待つ実行へ送ると、404 ではなく 422（`Ambiguous Wait delivery …`）が返り、実行の存在・内部の ID・子の待機の件数が見えていた。§3.9・§3.10 に認可と振り替えの順を明記する。認可を通る呼び出し元への応答は変えない。
 
@@ -144,7 +146,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 **`definitions.project_id` は NOT NULL。** 認可 truth は呼び出し元 Principal の `project_accesses`（`reader` / `executor` / `publisher` / `admin`）。所属が無い Principal は未登録と同じ 404。`tenant.admin` でも所属行が無ければ定義と実行は読めない。Project は現在テナントの中だけ。他テナントへの付与はしない。`UNIQUE(tenant_id, slug)`。
 
-定義の取得・一覧、実行の取得・一覧、publish、Start は現在テナントの所属で評価する。Reader 未満は 404（存在秘匿）。Reader のみの Start は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る（[security-runtime.md](platform/security-runtime.md)）。対象は定義と実行の閲覧、Start、Resume、Cancel。publish、Project 設定、メンバー、Group は見ない。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。project 行と definition 行の両方があるときは両方を満たすものだけ通る。一覧の件数も同じ条件で絞る。System と継承子 Start は見ない。許可は Snapshot に焼かない。
+定義の取得・一覧、実行の取得・一覧、publish、Start は現在テナントの所属で評価する。Reader 未満は 404（存在秘匿）。Reader のみの Start は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る（[security-runtime.md](platform/security-runtime.md)）。対象は定義と実行の閲覧、Start、Resume、イベント送信、Cancel。publish、Project 設定、メンバー、Group は見ない。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。project 行と definition 行の両方があるときは両方を満たすものだけ通る。一覧の件数も同じ条件で絞る。System と継承子 Start は見ない。許可は Snapshot に焼かない。
 
 **publish トランザクション:** `ICoreTransactionExecutor.ExecuteReadCommittedAsync` の 1 コールバック内で `definition_versions` INSERT → `definitions.latest_version` 更新。
 
@@ -574,10 +576,11 @@ Request:
 - `name`: イベント名。必須。ASCII 識別子（1〜64）。不正時は 422。
 - **用途**: Wait 再開の **互換シム**（正本は §3.10）。アクティブ Wait が **1 ノード**かつ許可イベントが **1 件**で、`name` がそのイベントと一致するときのみ成功。それ以外は **422**（[execution/wait-cancel.md](execution/wait-cancel.md)）。
 - 並列分岐の子 execution に待機があるときは、`name` に当てはまる子の待機が **1 件**だけならその子へ振り替える。当てはまる待機が **0 件**（親にも子にも無い）または子で **複数**のときは **422**（`VALIDATION_ERROR`）。`message` は原因の説明（例: `PublishEvent requires exactly one active Wait node (found 0).`、`Ambiguous Wait delivery …`）。
-- 振り替え先の解決は、指定した実行への認可（下記の mutation 認可と Project の所属）の **後** に行う。認可を通らない呼び出し元には、子の待機の件数によらず 404 / 403 を返し、上の 422 は返さない。振り替えた先の子でも同じ認可を行う。
+- 振り替え先の解決は、指定した実行への認可（下記の mutation 認可、Project の所属、実行リソース許可）の **後** に行う。認可を通らない呼び出し元には、子の待機の件数によらず 404 / 403 を返し、上の 422 は返さない。振り替えた先の子でも同じ認可を行う。
 - **X-Idempotency-Key**: 任意だが推奨。再送・重複排除の扱いはキャンセルと同様（`command_dedup` + `event_delivery_dedup` / `client_event_id`）。
 - Response: 204 No Content。
 - mutation 認可のあと、実行の定義が属する Project に Live で executor 以上の所属を要求する。未所属は **404**、Reader は **403**（`PROJECT_ACCESS_DENIED`）。Owner でも開始時の所属では決めない。
+- User と ServiceAccount は、所属のあと Live の実行リソース許可を見る（§3.10 の再開と同じ）。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。Snapshot の許可キーでは決めない。
 - HTTP が同期で Engine へ適用するため、非終端なのに Engine 未ロードかつ runtime checkpoint が無い場合は **422**（`ArgumentException`。データ連携契約のセクション7）。Cancel は受理のみなので、この 422 は起きない（§3.8）。
 
 ### 3.10 ノード再開（Wait 正本）

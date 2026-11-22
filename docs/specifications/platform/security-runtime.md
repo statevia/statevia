@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.6 |
-| 更新日 | 2026-10-29 |
+| Version | 1.2.7 |
+| 更新日 | 2026-11-22 |
 | 関連 | [decisions/action-module-signing.md](../../decisions/action-module-signing.md), [actions/platform.md](../actions/platform.md) |
 
 ---
@@ -134,7 +134,7 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 
 ## Principal の実行リソース許可
 
-User と ServiceAccount は、所属のあとに `principal_resource_grants` を評価する。対象は定義と実行の閲覧、`POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行、Resume、Cancel。publish、Project 設定、メンバー、Group には付けない。
+User と ServiceAccount は、所属のあとに `principal_resource_grants` を評価する。対象は定義と実行の閲覧、`POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行、Resume、イベント送信、Cancel。publish、Project 設定、メンバー、Group には付けない。
 
 | project の行 | definition の行 | 追加で許される対象 |
 | --- | --- | --- |
