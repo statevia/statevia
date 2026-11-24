@@ -156,12 +156,16 @@ internal sealed class ExecutionWaitRepository(
         Guid tenantId,
         string topic,
         string correlationKey,
+        Guid evaluatedPrincipalId,
         CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
         ArgumentNullException.ThrowIfNull(correlationKey);
 
         var db = uow.GetDb();
+        var executableDefinitionIds = await ExecutionDefinitionAccessScope
+            .BuildAsync(db, tenantId, evaluatedPrincipalId, ProjectAccessRole.Executor, ct)
+            .ConfigureAwait(false);
         return await (
             from subscription in db.ExecutionWaitSubscriptions.AsNoTracking()
             join execution in db.Executions.AsNoTracking()
@@ -173,7 +177,8 @@ internal sealed class ExecutionWaitRepository(
             select new MatchingWaitSubscription(
                 subscription.ExecutionId,
                 subscription.NodeId,
-                subscription.ResumeEventName))
+                subscription.ResumeEventName,
+                executableDefinitionIds.Contains(execution.DefinitionId)))
             .ToListAsync(ct)
             .ConfigureAwait(false);
     }
@@ -182,6 +187,7 @@ internal sealed class ExecutionWaitRepository(
     public async Task<IReadOnlyList<EventSubscriptionCandidate>> ListDistinctSubscriptionCandidatesAsync(
         ICoreUnitOfWork uow,
         Guid tenantId,
+        Guid principalId,
         int limit,
         CancellationToken ct)
     {
@@ -189,11 +195,15 @@ internal sealed class ExecutionWaitRepository(
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
 
         var db = uow.GetDb();
+        var readableDefinitionIds = await ExecutionDefinitionAccessScope
+            .BuildAsync(db, tenantId, principalId, ProjectAccessRole.Reader, ct)
+            .ConfigureAwait(false);
         return await (
             from subscription in db.ExecutionWaitSubscriptions.AsNoTracking()
             join execution in db.Executions.AsNoTracking()
                 on subscription.ExecutionId equals execution.ExecutionId
             where execution.TenantId == tenantId
+                && readableDefinitionIds.Contains(execution.DefinitionId)
             group subscription by new { subscription.Topic, subscription.CorrelationKey }
                 into grouped
             orderby grouped.Key.Topic, grouped.Key.CorrelationKey

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.20 |
-| 更新日 | 2026-11-13 |
+| Version | 1.5.21 |
+| 更新日 | 2026-11-23 |
 | 関連 | [concepts/definition.md](../concepts/definition.md), [execution/wait-cancel.md](execution/wait-cancel.md), [execution/fork-join.md](execution/fork-join.md) |
 
 ---
@@ -25,6 +25,8 @@
 - **禁止**: 公開 DSL / HTTP / UI に `exit` / `exits` 語彙を出さない（`events` / `allowedEvents` / `resumeKey` を使う）。
 
 背景・動機は [Concept: 定義](../concepts/definition.md) を参照。
+
+**Version 1.5.21（2026-11-23）**: `event.publish` は、発行した実行を開始した Principal が executor 以上で所属し、実行リソース許可に入る実行の購読だけを再開する。開始者が無効化・削除されていれば照合しない（output は変わらない）。
 
 **Version 1.5.20（2026-11-13）**: `workflow.invoke` の output の `status` は HTTP と同じ実行ステータスの契約の値（通常は `ACTIVE`）にした。これまでは投影の値（`Running`）だった。
 
@@ -238,6 +240,7 @@ signal は Wait を再開できなかったため退役した。
 
 - **input**: `{ topic, key?, payload? }` — `topic` 必須。`key` は任意（省略・空白は `""`）。`payload` は任意（この段階では Wait 再開値に反映しない）
 - **output**: `{ topic, dispatched: true }` — 一致購読が 0 件でも成功（HTTP `POST /v1/events` の 204 と同じ受理）
+- **照合の範囲**: 発行した実行を開始した Principal（定期実行は run-as の ServiceAccount、`workflow.invoke` の子は親の開始者）が、購読の実行の定義の Project に executor 以上で所属し、実行リソース許可に入る購読だけを再開する。範囲の外の購読は黙って除く（0 件と同じ）。開始者が無効化・削除されていれば照合しない。定義を開始して、開始者の権限より広い待機を再開させないため
 - **配送**: Application の `IEventIngressService`（HTTP events と同じ照合）。`wait.subscribe` のアクティブ購読を topic / key の厳密一致で再開する。Signal モード（`wait.events`）は対象外。外部メッセージバスには接続しない
 - **制約**: 親子専用 Resume ではない。一致が複数なら 1:N。短名 `publish` は受理しない
 

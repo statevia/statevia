@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Statevia.Core.Application.Services;
 using Statevia.Core.Engine.Abstractions;
 using Statevia.Infrastructure.Persistence;
@@ -13,24 +14,26 @@ namespace Statevia.Service.Api.Tests.Application.Actions.Builtins;
 /// <summary><see cref="PublishActionState"/> の ingress 接続と購読再開。</summary>
 public sealed class PublishActionStateTests
 {
-    /// <summary>ingress が呼ばれ、PublishTopic には配送を任せない。</summary>
+    /// <summary>発行した実行の ID を添えて ingress を呼び、PublishTopic には配送を任せない。</summary>
     [Fact]
-    public async Task ExecuteAsync_WhenTopicPresent_CallsIngressAndDoesNotPublishTopic()
+    public async Task ExecuteAsync_WhenTopicPresent_CallsIngressWithPublishingExecutionAndDoesNotPublishTopic()
     {
         // Arrange
         var ingress = new CapturingEventIngressService();
         var events = new TrackingEventProvider();
         var sut = new PublishActionState(BuildScopeFactory(ingress));
         var input = JsonSerializer.SerializeToElement(new { topic = "payment.completed" });
+        var publishingExecutionId = Guid.NewGuid();
 
         // Act
-        var result = await sut.ExecuteAsync(MakeContext(events), input, CancellationToken.None);
+        var result = await sut.ExecuteAsync(MakeContext(events, publishingExecutionId), input, CancellationToken.None);
 
         // Assert
         var map = Assert.IsType<Dictionary<string, object?>>(result);
         Assert.Equal("payment.completed", map["topic"]);
         Assert.True(Assert.IsType<bool>(map["dispatched"]));
         Assert.Equal(1, ingress.CallCount);
+        Assert.Equal(publishingExecutionId, ingress.LastPublishingExecutionId);
         Assert.Equal("payment.completed", ingress.LastTopic);
         Assert.Equal(string.Empty, ingress.LastKey);
         Assert.Equal(0, events.PublishTopicCalls);
@@ -46,7 +49,7 @@ public sealed class PublishActionStateTests
         var input = JsonSerializer.SerializeToElement(new { topic = "orders.updated" });
 
         // Act
-        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), Guid.NewGuid()), input, CancellationToken.None);
 
         // Assert
         Assert.Equal(string.Empty, ingress.LastKey);
@@ -62,7 +65,7 @@ public sealed class PublishActionStateTests
         var input = JsonSerializer.SerializeToElement(new { topic = "orders.updated", key = "SKU-1" });
 
         // Act
-        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), Guid.NewGuid()), input, CancellationToken.None);
 
         // Assert
         Assert.Equal("SKU-1", ingress.LastKey);
@@ -78,36 +81,52 @@ public sealed class PublishActionStateTests
         var input = JsonSerializer.SerializeToElement(new { key = "SKU-1" });
 
         // Act
-        var ex = await Assert.ThrowsAsync<ArgumentException>(
-            () => sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None));
+        var act = () => sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), Guid.NewGuid()), input, CancellationToken.None);
 
         // Assert
-        Assert.Contains("topic", ex.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.ThrowsAnyAsync<ArgumentException>(act);
         Assert.Equal(0, ingress.CallCount);
     }
 
-    /// <summary>subscribe Wait が publish で Resume ワークを受ける。</summary>
+    /// <summary>実行 ID が UUID でなければ、開始者を引けないので ingress を呼ばずに失敗する。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenExecutionIdIsNotGuid_ThrowsAndDoesNotCallIngress()
+    {
+        // Arrange
+        var ingress = new CapturingEventIngressService();
+        var sut = new PublishActionState(BuildScopeFactory(ingress));
+        var input = JsonSerializer.SerializeToElement(new { topic = "payment.completed" });
+        var context = new StateContext
+        {
+            Events = new TrackingEventProvider(),
+            Store = new NoopStore(),
+            ExecutionId = "not-a-guid",
+            StateName = "Publish"
+        };
+
+        // Act
+        var act = () => sut.ExecuteAsync(context, input, CancellationToken.None);
+
+        // Assert
+        await Assert.ThrowsAsync<ArgumentException>(act);
+        Assert.Equal(0, ingress.CallCount);
+    }
+
+    /// <summary>開始者が所属する Project の subscribe Wait が、publish で Resume ワークを受ける。</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSubscriptionMatches_EnqueuesResume()
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
+        var publisher = await SeedPublisherAsync(db.Factory);
         var workQueue = new CapturingWorkQueue();
-        var sut = CreateSutWithIngress(db, workQueue);
+        var sut = CreateSutWithIngress(db.Factory, workQueue, publisher);
         var executionId = Guid.NewGuid();
-        await SeedSubscriptionAsync(
-            db,
-            new SubscriptionSeed(
-                executionId,
-                TestTenantIds.T1TenantId,
-                "WaitNode",
-                "inventory.received",
-                "SKU-1",
-                "statevia.event.subscribe.0"));
+        await SeedSubscriptionAsync(db.Factory, new SubscriptionSeed(executionId, TestTenantIds.T1TenantId, publisher.DefinitionId, "WaitNode", "inventory.received", "SKU-1", "statevia.event.subscribe.0"));
         var input = JsonSerializer.SerializeToElement(new { topic = "inventory.received", key = "SKU-1" });
 
         // Act
-        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
 
         // Assert
         var map = Assert.IsType<Dictionary<string, object?>>(result);
@@ -123,12 +142,13 @@ public sealed class PublishActionStateTests
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
+        var publisher = await SeedPublisherAsync(db.Factory);
         var workQueue = new CapturingWorkQueue();
-        var sut = CreateSutWithIngress(db, workQueue);
+        var sut = CreateSutWithIngress(db.Factory, workQueue, publisher);
         var input = JsonSerializer.SerializeToElement(new { topic = "missing.topic" });
 
         // Act
-        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
 
         // Assert
         var map = Assert.IsType<Dictionary<string, object?>>(result);
@@ -142,37 +162,45 @@ public sealed class PublishActionStateTests
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
+        var publisher = await SeedPublisherAsync(db.Factory);
         var workQueue = new CapturingWorkQueue();
-        var sut = CreateSutWithIngress(db, workQueue);
+        var sut = CreateSutWithIngress(db.Factory, workQueue, publisher);
         var execution1 = Guid.NewGuid();
         var execution2 = Guid.NewGuid();
-        await SeedSubscriptionAsync(
-            db,
-            new SubscriptionSeed(
-                execution1,
-                TestTenantIds.T1TenantId,
-                "wait-a",
-                "inventory.received",
-                "SKU-1",
-                "statevia.event.subscribe.0"));
-        await SeedSubscriptionAsync(
-            db,
-            new SubscriptionSeed(
-                execution2,
-                TestTenantIds.T1TenantId,
-                "wait-b",
-                "inventory.received",
-                "SKU-1",
-                "statevia.event.subscribe.0"));
+        await SeedSubscriptionAsync(db.Factory, new SubscriptionSeed(execution1, TestTenantIds.T1TenantId, publisher.DefinitionId, "wait-a", "inventory.received", "SKU-1", "statevia.event.subscribe.0"));
+        await SeedSubscriptionAsync(db.Factory, new SubscriptionSeed(execution2, TestTenantIds.T1TenantId, publisher.DefinitionId, "wait-b", "inventory.received", "SKU-1", "statevia.event.subscribe.0"));
         var input = JsonSerializer.SerializeToElement(new { topic = "inventory.received", key = "SKU-1" });
 
         // Act
-        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, workQueue.Items.Count);
         Assert.Contains(workQueue.Items, item => item.ExecutionId == execution1);
         Assert.Contains(workQueue.Items, item => item.ExecutionId == execution2);
+    }
+
+    /// <summary>開始者が所属しない Project の購読は、publish しても Resume を積まない（Action は成功する）。</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenSubscriptionOutsideStarterProjects_DoesNotEnqueue()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var publisher = await SeedPublisherAsync(db.Factory);
+        var otherProject = await SeedPublisherAsync(db.Factory);
+        var workQueue = new CapturingWorkQueue();
+        var sut = CreateSutWithIngress(db.Factory, workQueue, publisher);
+        var otherExecution = Guid.NewGuid();
+        await SeedSubscriptionAsync(db.Factory, new SubscriptionSeed(otherExecution, TestTenantIds.T1TenantId, otherProject.DefinitionId, "wait-a", "inventory.received", "SKU-1", "statevia.event.subscribe.0"));
+        var input = JsonSerializer.SerializeToElement(new { topic = "inventory.received", key = "SKU-1" });
+
+        // Act
+        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
+
+        // Assert
+        var map = Assert.IsType<Dictionary<string, object?>>(result);
+        Assert.True(Assert.IsType<bool>(map["dispatched"]));
+        Assert.Empty(workQueue.Items);
     }
 
     /// <summary>wait.events のみの Wait は購読照合の対象にならない。</summary>
@@ -181,13 +209,14 @@ public sealed class PublishActionStateTests
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
+        var publisher = await SeedPublisherAsync(db.Factory);
         var workQueue = new CapturingWorkQueue();
-        var sut = CreateSutWithIngress(db, workQueue);
+        var sut = CreateSutWithIngress(db.Factory, workQueue, publisher);
         var executionId = Guid.NewGuid();
         var now = DateTime.UtcNow;
-        await SeedExecutionAsync(db, executionId, TestTenantIds.T1TenantId, now);
-        await using (var ctx = new CoreDbContext(db.Options))
+        await using (var ctx = db.Factory.CreateDbContext())
         {
+            ctx.Executions.Add(CreateExecution(executionId, TestTenantIds.T1TenantId, publisher.DefinitionId, now));
             ctx.ExecutionWaits.Add(new ExecutionWaitRow
             {
                 ExecutionId = executionId,
@@ -202,7 +231,7 @@ public sealed class PublishActionStateTests
         var input = JsonSerializer.SerializeToElement(new { topic = "child.done", key = "parent-1" });
 
         // Act
-        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        var result = await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
 
         // Assert
         var map = Assert.IsType<Dictionary<string, object?>>(result);
@@ -210,7 +239,7 @@ public sealed class PublishActionStateTests
         Assert.Empty(workQueue.Items);
     }
 
-    /// <summary>他テナントの購読は現在テナントの publish では進まない。</summary>
+    /// <summary>他テナントの購読は現在テナントの publish では進まない（範囲に入る定義 ID を持っていても、テナントの条件で除く）。</summary>
     [Fact]
     public async Task ExecuteAsync_WhenOtherTenantSubscription_DoesNotEnqueue()
     {
@@ -221,36 +250,18 @@ public sealed class PublishActionStateTests
             .Options;
         var disabledFactory = new FilterToggleDbContextFactory(options, tenantAccessor, filterEnabled: false);
         var enabledFactory = new FilterToggleDbContextFactory(options, tenantAccessor, filterEnabled: true);
-        var now = DateTime.UtcNow;
+        var publisher = await SeedPublisherAsync(disabledFactory);
         var t1Execution = Guid.NewGuid();
         var otherExecution = Guid.NewGuid();
-        await SeedSubscriptionAsync(
-            disabledFactory,
-            new SubscriptionSeed(
-                t1Execution,
-                TestTenantIds.T1TenantId,
-                "t1-wait",
-                "shared.topic",
-                "k1",
-                "statevia.event.subscribe.0",
-                now));
-        await SeedSubscriptionAsync(
-            disabledFactory,
-            new SubscriptionSeed(
-                otherExecution,
-                TestTenantIds.OtherTenantId,
-                "other-wait",
-                "shared.topic",
-                "k1",
-                "statevia.event.subscribe.0",
-                now));
+        await SeedSubscriptionAsync(disabledFactory, new SubscriptionSeed(t1Execution, TestTenantIds.T1TenantId, publisher.DefinitionId, "t1-wait", "shared.topic", "k1", "statevia.event.subscribe.0"));
+        await SeedSubscriptionAsync(disabledFactory, new SubscriptionSeed(otherExecution, TestTenantIds.OtherTenantId, publisher.DefinitionId, "other-wait", "shared.topic", "k1", "statevia.event.subscribe.0"));
         tenantAccessor.Set(TestTenantIds.T1Context);
         var workQueue = new CapturingWorkQueue();
-        var sut = CreateSutWithIngress(enabledFactory, workQueue);
+        var sut = CreateSutWithIngress(enabledFactory, workQueue, publisher);
         var input = JsonSerializer.SerializeToElement(new { topic = "shared.topic", key = "k1" });
 
         // Act
-        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider()), input, CancellationToken.None);
+        await sut.ExecuteAsync(MakeContext(new TrackingEventProvider(), publisher.ExecutionId), input, CancellationToken.None);
 
         // Assert
         Assert.Single(workQueue.Items);
@@ -258,40 +269,30 @@ public sealed class PublishActionStateTests
         Assert.DoesNotContain(workQueue.Items, item => item.ExecutionId == otherExecution);
     }
 
-    private static PublishActionState CreateSutWithIngress(InMemoryTestDatabase db, CapturingWorkQueue workQueue)
-    {
-        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
-        var transactions = new TestCoreTransactionExecutor(uowFactory);
-        var waits = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
-        var ingress = CreateIngressService(transactions, waits, workQueue);
-        return new PublishActionState(BuildScopeFactory(ingress));
-    }
+    /// <summary>発行した実行と、その開始者が実行者として所属する Project・定義。</summary>
+    /// <param name="ExecutionId">発行した実行。</param>
+    /// <param name="DefinitionId">開始者が所属する Project の定義。</param>
+    /// <param name="StarterPrincipalId">発行した実行の開始者。</param>
+    private sealed record Publisher(Guid ExecutionId, Guid DefinitionId, Guid StarterPrincipalId);
 
     private static PublishActionState CreateSutWithIngress(
         IDbContextFactory<CoreDbContext> dbFactory,
-        CapturingWorkQueue workQueue)
+        CapturingWorkQueue workQueue,
+        Publisher publisher)
     {
-        var uowFactory = new TestCoreUnitOfWorkFactory(dbFactory);
-        var transactions = new TestCoreTransactionExecutor(uowFactory);
-        var waits = new ExecutionWaitRepository(dbFactory, new DefaultIdGenerator());
-        var ingress = CreateIngressService(transactions, waits, workQueue);
-        return new PublishActionState(BuildScopeFactory(ingress));
-    }
-
-    private static EventIngressService CreateIngressService(
-        ICoreTransactionExecutor transactions,
-        IExecutionWaitRepository waits,
-        CapturingWorkQueue workQueue)
-    {
-        var accessor = new SettableTenantContextAccessor();
-        accessor.Set(TestTenantIds.T1Context);
-        return new EventIngressService(
-            transactions,
-            waits,
+        var workerContext = new SettableTenantContextAccessor();
+        workerContext.Set(TestTenantIds.T1Context);
+        var ingress = new EventIngressService(
+            new TestCoreTransactionExecutor(new TestCoreUnitOfWorkFactory(dbFactory)),
+            new ExecutionWaitRepository(dbFactory, new DefaultIdGenerator()),
+            new ExecutionRepository(),
+            new FixedUserPrincipalDataAccess(publisher.StarterPrincipalId, TestTenantIds.T1TenantId),
             workQueue,
             new DefaultIdGenerator(),
             new AllowAllRuntimePermissionAuthorization(),
-            accessor);
+            workerContext,
+            NullLogger<EventIngressService>.Instance);
+        return new PublishActionState(BuildScopeFactory(ingress));
     }
 
     private static IServiceScopeFactory BuildScopeFactory(IEventIngressService ingress)
@@ -301,69 +302,86 @@ public sealed class PublishActionStateTests
         return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 
-    private static StateContext MakeContext(IEventProvider events) =>
+    private static StateContext MakeContext(IEventProvider events, Guid executionId) =>
         new()
         {
             Events = events,
             Store = new NoopStore(),
-            ExecutionId = Guid.NewGuid().ToString("D"),
+            ExecutionId = executionId.ToString("D"),
             StateName = "Publish"
         };
+
+    /// <summary>T1 に Project・定義・実行者の User と、その User が開始した実行（Snapshot つき）を作る。</summary>
+    private static async Task<Publisher> SeedPublisherAsync(IDbContextFactory<CoreDbContext> factory)
+    {
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        var executionId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        await using var ctx = factory.CreateDbContext();
+        ctx.Projects.Add(new ProjectRow
+        {
+            ProjectId = projectId,
+            TenantId = TestTenantIds.T1TenantId,
+            Slug = $"p-{projectId:N}",
+            DisplayName = "project",
+            CreatedAt = now
+        });
+        DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.T1TenantId, definitionId, $"def-{definitionId:N}", projectId);
+        var starterPrincipalId = ProjectTestData.AddMemberPrincipal(ctx, TestTenantIds.T1TenantId, projectId, ProjectAccessRole.Executor);
+        var execution = CreateExecution(executionId, TestTenantIds.T1TenantId, definitionId, now);
+        execution.SecuritySnapshotJson = ExecutionSecuritySnapshotJson.Serialize(CreateSnapshot(starterPrincipalId, now));
+        ctx.Executions.Add(execution);
+        await ctx.SaveChangesAsync();
+        return new Publisher(executionId, definitionId, starterPrincipalId);
+    }
+
+    private static ExecutionSecuritySnapshot CreateSnapshot(Guid startedByPrincipalId, DateTime capturedAt)
+    {
+        var keys = new[] { WellKnownPermissionKeys.ExecutionsWrite };
+        return new ExecutionSecuritySnapshot
+        {
+            TenantId = TestTenantIds.T1TenantId,
+            StartedByPrincipalId = startedByPrincipalId,
+            PrincipalType = "User",
+            EffectivePermissionKeys = keys,
+            PermissionSetHash = PermissionSetHash.Compute(keys),
+            AuthorizationContext = new AuthorizationContextSnapshot
+            {
+                ProjectId = Guid.NewGuid(),
+                ProjectRole = "executor",
+                GroupSnapshots = Array.Empty<GroupSnapshot>(),
+                IsTenantAdmin = false
+            },
+            EvaluationMode = SecurityEvaluationMode.Snapshot,
+            CapturedAt = capturedAt
+        };
+    }
 
     /// <summary>購読シードの入力。</summary>
     /// <param name="ExecutionId">対象 execution。</param>
     /// <param name="TenantId">execution のテナント。</param>
+    /// <param name="DefinitionId">execution の定義。</param>
     /// <param name="NodeId">Wait ノード ID。</param>
     /// <param name="Topic">購読トピック。</param>
     /// <param name="CorrelationKey">購読 key。</param>
     /// <param name="ResumeEventName">Resume に渡す内部イベント名。</param>
-    /// <param name="CreatedAt">行の作成時刻。未指定時は UtcNow。</param>
     private sealed record SubscriptionSeed(
         Guid ExecutionId,
         Guid TenantId,
+        Guid DefinitionId,
         string NodeId,
         string Topic,
         string CorrelationKey,
-        string ResumeEventName,
-        DateTime? CreatedAt = null);
+        string ResumeEventName);
 
-    private static async Task SeedSubscriptionAsync(InMemoryTestDatabase db, SubscriptionSeed seed)
+    private static async Task SeedSubscriptionAsync(IDbContextFactory<CoreDbContext> factory, SubscriptionSeed seed)
     {
-        var createdAt = seed.CreatedAt ?? DateTime.UtcNow;
-        await SeedExecutionAsync(db, seed.ExecutionId, seed.TenantId, createdAt);
-        await using var ctx = new CoreDbContext(db.Options);
-        AddWaitAndSubscription(ctx, seed, createdAt);
-        await ctx.SaveChangesAsync();
-    }
-
-    private static async Task SeedSubscriptionAsync(
-        IDbContextFactory<CoreDbContext> factory,
-        SubscriptionSeed seed)
-    {
-        var createdAt = seed.CreatedAt ?? DateTime.UtcNow;
+        var createdAt = DateTime.UtcNow;
         await using var ctx = factory.CreateDbContext();
         if (!await ctx.Executions.IgnoreQueryFilters().AnyAsync(x => x.ExecutionId == seed.ExecutionId))
-        {
-            ctx.Executions.Add(new ExecutionRow
-            {
-                ExecutionId = seed.ExecutionId,
-                TenantId = seed.TenantId,
-                DefinitionId = Guid.NewGuid(),
-                DefinitionVersionId = Guid.NewGuid(),
-                Status = "Running",
-                StartedAt = createdAt,
-                UpdatedAt = createdAt,
-                CancelRequested = false,
-                RestartLost = false
-            });
-        }
+            ctx.Executions.Add(CreateExecution(seed.ExecutionId, seed.TenantId, seed.DefinitionId, createdAt));
 
-        AddWaitAndSubscription(ctx, seed, createdAt);
-        await ctx.SaveChangesAsync();
-    }
-
-    private static void AddWaitAndSubscription(CoreDbContext ctx, SubscriptionSeed seed, DateTime createdAt)
-    {
         ctx.ExecutionWaits.Add(new ExecutionWaitRow
         {
             ExecutionId = seed.ExecutionId,
@@ -382,32 +400,22 @@ public sealed class PublishActionStateTests
             ResumeEventName = seed.ResumeEventName,
             CreatedAt = createdAt
         });
+        await ctx.SaveChangesAsync();
     }
 
-    private static async Task SeedExecutionAsync(
-        InMemoryTestDatabase db,
-        Guid executionId,
-        Guid tenantId,
-        DateTime createdAt)
-    {
-        await using var ctx = new CoreDbContext(db.Options);
-        if (await ctx.Executions.AnyAsync(x => x.ExecutionId == executionId))
-            return;
-
-        ctx.Executions.Add(new ExecutionRow
+    private static ExecutionRow CreateExecution(Guid executionId, Guid tenantId, Guid definitionId, DateTime createdAt) =>
+        new()
         {
             ExecutionId = executionId,
             TenantId = tenantId,
-            DefinitionId = Guid.NewGuid(),
+            DefinitionId = definitionId,
             DefinitionVersionId = Guid.NewGuid(),
             Status = "Running",
             StartedAt = createdAt,
             UpdatedAt = createdAt,
             CancelRequested = false,
             RestartLost = false
-        });
-        await ctx.SaveChangesAsync();
-    }
+        };
 
     private sealed class FilterToggleDbContextFactory(
         DbContextOptions<CoreDbContext> options,
@@ -426,15 +434,21 @@ public sealed class PublishActionStateTests
             Task.FromResult(CreateDbContext());
     }
 
+    /// <summary>Builtin が呼ぶ <see cref="IEventIngressService.PublishFromExecutionAsync"/> を記録する。HTTP 用の入口は呼ばれない想定。</summary>
     private sealed class CapturingEventIngressService : IEventIngressService
     {
+        public Guid? LastPublishingExecutionId { get; private set; }
         public string? LastTopic { get; private set; }
         public string? LastKey { get; private set; }
         public int CallCount { get; private set; }
 
-        public Task PublishAsync(string topic, string key, CancellationToken ct)
+        public Task PublishAsync(string topic, string key, CancellationToken ct) =>
+            throw new InvalidOperationException("event.publish must not use the HTTP entry point.");
+
+        public Task PublishFromExecutionAsync(Guid publishingExecutionId, string topic, string key, CancellationToken ct)
         {
             CallCount++;
+            LastPublishingExecutionId = publishingExecutionId;
             LastTopic = topic;
             LastKey = key;
             return Task.CompletedTask;

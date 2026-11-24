@@ -55,6 +55,34 @@ public static class WorkflowYamlFixtures
         """;
 
     /// <summary>
+    /// <c>wait.subscribe</c> で、指定した topic / key の集合配送を待つ最小ワークフロー定義 YAML を返す。
+    /// </summary>
+    /// <remarks>集合配送（<c>POST /v1/events</c>）が届くと <c>End</c> へ進んで完了する。</remarks>
+    /// <param name="nameSuffix">定義名に付与する一意サフィックス（Guid 推奨）。</param>
+    /// <param name="topic">購読する topic。</param>
+    /// <param name="key">購読する key。</param>
+    /// <returns>YAML 文字列。</returns>
+    public static string SubscribeWorkflow(string nameSuffix, string topic, string key) => $"""
+        workflow:
+          name: scenario-subscribe-{nameSuffix}
+        states:
+          Start:
+            on:
+              Completed:
+                next: WaitNode
+          WaitNode:
+            wait:
+              subscribe:
+                - topic: {topic}
+                  key: {key}
+                  next: End
+          End:
+            on:
+              Completed:
+                end: true
+        """;
+
+    /// <summary>
     /// 並列分岐の 2 つの枝が同じイベント名 <c>Go</c> で待つワークフロー定義 YAML を返す。
     /// </summary>
     /// <remarks>

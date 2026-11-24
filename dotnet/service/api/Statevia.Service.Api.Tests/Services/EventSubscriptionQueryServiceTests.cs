@@ -8,12 +8,98 @@ namespace Statevia.Service.Api.Tests.Services;
 /// <summary><see cref="EventSubscriptionQueryService"/> が read 権限のあとで候補を列挙する。</summary>
 public sealed class EventSubscriptionQueryServiceTests
 {
-    /// <summary>executions.read を要求し、テナント内の候補を返す。</summary>
+    /// <summary>executions.read を要求し、呼び出し元が閲覧者として所属する Project の実行の候補を返す。</summary>
     [Fact]
     public async Task ListActiveAsync_RequiresRead_AndReturnsCandidates()
     {
         // Arrange
         using var db = new InMemoryTestDatabase();
+        var (definitionId, readerPrincipalId) = await SeedReaderProjectAsync(db);
+        await SeedSubscriptionAsync(db, definitionId);
+
+        var authorization = new RecordingPermissionAuthorization();
+        var service = CreateService(db, authorization, CallerContext(readerPrincipalId));
+
+        // Act
+        var candidates = await service.ListActiveAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(RuntimePermissionRequirements.ExecutionsRead, authorization.PermissionKey);
+        Assert.Equal([new EventSubscriptionCandidate("orders.updated", "")], candidates);
+    }
+
+    /// <summary>どの Project にも所属しない呼び出し元には、テナント内に購読があっても空を返す。</summary>
+    [Fact]
+    public async Task ListActiveAsync_WhenCallerHasNoMembership_ReturnsEmpty()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var (definitionId, _) = await SeedReaderProjectAsync(db);
+        await SeedSubscriptionAsync(db, definitionId);
+        var outsiderPrincipalId = Guid.NewGuid();
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            ProjectTestData.AddPrincipal(ctx, TestTenantIds.T1TenantId, outsiderPrincipalId);
+            await ctx.SaveChangesAsync();
+        }
+
+        var service = CreateService(db, new RecordingPermissionAuthorization(), CallerContext(outsiderPrincipalId));
+
+        // Act
+        var candidates = await service.ListActiveAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(candidates);
+    }
+
+    /// <summary>テナント文脈に Principal が無いと範囲を絞れないので、空を返す。</summary>
+    [Fact]
+    public async Task ListActiveAsync_WhenPrincipalMissing_ReturnsEmpty()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var (definitionId, _) = await SeedReaderProjectAsync(db);
+        await SeedSubscriptionAsync(db, definitionId);
+        var tenant = new SettableTenantContextAccessor();
+        tenant.Set(TestTenantIds.T1Context);
+        var service = CreateService(db, new RecordingPermissionAuthorization(), tenant);
+
+        // Act
+        var candidates = await service.ListActiveAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Empty(candidates);
+    }
+
+    /// <summary>T1 に Project・定義・その Project の閲覧者を作る。</summary>
+    private static async Task<(Guid DefinitionId, Guid ReaderPrincipalId)> SeedReaderProjectAsync(InMemoryTestDatabase db)
+    {
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        await using var ctx = new CoreDbContext(db.Options);
+        ctx.Projects.Add(new ProjectRow
+        {
+            ProjectId = projectId,
+            TenantId = TestTenantIds.T1TenantId,
+            Slug = $"p-{projectId:N}",
+            DisplayName = "project",
+            CreatedAt = DateTime.UtcNow
+        });
+        DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.T1TenantId, definitionId, $"def-{definitionId:N}", projectId);
+        var readerPrincipalId = ProjectTestData.AddMemberPrincipal(ctx, TestTenantIds.T1TenantId, projectId, ProjectAccessRole.Reader);
+        await ctx.SaveChangesAsync();
+        return (definitionId, readerPrincipalId);
+    }
+
+    private static ITenantContextAccessor CallerContext(Guid principalId)
+    {
+        var tenant = new SettableTenantContextAccessor();
+        tenant.Set(new TenantContextState(TestTenantIds.T1TenantId, "t1", principalId, TenantLifecycle.Active));
+        return tenant;
+    }
+
+    private static async Task SeedSubscriptionAsync(InMemoryTestDatabase db, Guid definitionId)
+    {
         var executionId = Guid.NewGuid();
         var now = DateTime.UtcNow;
         await using (var ctx = new CoreDbContext(db.Options))
@@ -22,7 +108,7 @@ public sealed class EventSubscriptionQueryServiceTests
             {
                 ExecutionId = executionId,
                 TenantId = TestTenantIds.T1TenantId,
-                DefinitionId = Guid.NewGuid(),
+                DefinitionId = definitionId,
                 DefinitionVersionId = Guid.NewGuid(),
                 Status = "Running",
                 StartedAt = now,
@@ -42,18 +128,6 @@ public sealed class EventSubscriptionQueryServiceTests
             });
             await ctx.SaveChangesAsync();
         }
-
-        var authorization = new RecordingPermissionAuthorization();
-        var tenant = new SettableTenantContextAccessor();
-        tenant.Set(TestTenantIds.T1Context);
-        var service = CreateService(db, authorization, tenant);
-
-        // Act
-        var candidates = await service.ListActiveAsync(CancellationToken.None);
-
-        // Assert
-        Assert.Equal(RuntimePermissionRequirements.ExecutionsRead, authorization.PermissionKey);
-        Assert.Equal([new EventSubscriptionCandidate("orders.updated", "")], candidates);
     }
 
     /// <summary>テナント未解決では空を返し、他テナントの購読は読まない。</summary>

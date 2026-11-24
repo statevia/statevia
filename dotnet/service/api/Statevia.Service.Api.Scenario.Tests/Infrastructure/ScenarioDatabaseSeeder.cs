@@ -351,6 +351,45 @@ public sealed class ScenarioDatabaseSeeder(string connectionString)
         return projectId;
     }
 
+    /// <summary>
+    /// 既定の Project とは別の Project を新しく作り、同一テナントの Principal にロールを付与する。
+    /// </summary>
+    /// <remarks>
+    /// <see cref="SeedProjectWithAccessAsync"/> はテナントの既定の Project を使い回すので、
+    /// Project をまたぐ認可（所属しない Project の実行が見えない、など）の確認にはこちらを使う。
+    /// </remarks>
+    /// <param name="ownerTenantId">Project 所属テナント内部 UUID。</param>
+    /// <param name="principalId">付与先 Principal。</param>
+    /// <param name="role">付与するロール。</param>
+    /// <returns>作成したプロジェクト ID。</returns>
+    public async Task<Guid> SeedSeparateProjectWithAccessAsync(
+        Guid ownerTenantId,
+        Guid principalId,
+        ProjectAccessRole role)
+    {
+        var projectId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await using var db = await _factory.CreateDbContextAsync();
+        db.Projects.Add(new ProjectRow
+        {
+            ProjectId = projectId,
+            TenantId = ownerTenantId,
+            Slug = $"scenario-{projectId:N}"[..32],
+            DisplayName = "Scenario Separate Project",
+            CreatedAt = now
+        });
+        db.ProjectAccesses.Add(new ProjectAccessRow
+        {
+            ProjectId = projectId,
+            PrincipalId = principalId,
+            Role = role,
+            CreatedAt = now
+        });
+        await db.SaveChangesAsync();
+        return projectId;
+    }
+
     private static NpgsqlScenarioDbContextFactory CreateFactory(string connectionString)
     {
         var options = new DbContextOptionsBuilder<CoreDbContext>()

@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.48 |
-| 更新日 | 2026-11-22 |
+| Version | 1.49 |
+| 更新日 | 2026-11-23 |
 | 関連 | [reference/api-openapi.md](../reference/api-openapi.md), [concepts/platform.md](../concepts/platform.md), [execution/wait-cancel.md](execution/wait-cancel.md) |
 
 ---
@@ -12,8 +12,8 @@
 ## Normative 要約
 
 - **MUST**: Runtime API（`/v1/definitions` / `/v1/executions` / `/v1/projects` / `/v1/schedules` / `/v1/events` / `/v1/event-subscriptions` / `/v1/actions`）は Principal 必須（JWT または `X-Api-Key`）+ `X-Tenant-Id`。
-- **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。成功は **204**（一致 0 件でも）。
-- **MUST**: `GET /v1/event-subscriptions` は `executions.read` 必須。成功は **200**。候補は現在テナントの一意な topic / key（最大 500）。
+- **MUST**: `POST /v1/events` は `executions.write` 必須。不足は **403**（`PERMISSION_DENIED`）。照合するのは、呼び出し元が定義の Project に executor 以上で所属し、実行リソース許可に入る実行の購読だけ。成功は **204**（一致 0 件でも、範囲の外の購読を除いても）。
+- **MUST**: `GET /v1/event-subscriptions` は `executions.read` 必須。成功は **200**。候補は、呼び出し元が閲覧できる実行（reader 以上の所属と実行リソース許可）の購読の一意な topic / key（最大 500）。
 - **MUST**: 定義版は immutable。`PUT /v1/definitions/{definitionId}` は新版 INSERT のみ（既存版の上書き禁止）。
 - **MUST**: 実行は開始時の `definition_version_id` に固定する。
 - **MUST**: 入力検証失敗は **422**、`error.code = VALIDATION_ERROR`（[data-integration.md](data-integration.md) §7）。
@@ -27,6 +27,8 @@
 ---
 
 Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
+
+**Version 1.49（2026-11-23）**: **破壊的な変更**。集合配送（`POST /v1/events`）が、Project の所属も実行リソース許可も見ずに、テナント内のすべての購読を照合していたのを直す。照合するのは、呼び出し元が定義の Project に executor 以上で所属し、実行リソース許可に入る実行の購読だけにする（実行へのイベント送信・再開と同じ Live の判定）。範囲の外の購読は黙って除き、204 のまま返す（範囲の外に購読があるかを応答から読めないようにする）。`executions.write` だけを持ち、Project に所属しない API キーでは待機を再開しなくなる。連携の API キー（サービスアカウント）を、待機する実行の定義の Project に executor 以上で所属させること。Builtin `event.publish` も、発行した実行の開始者の所属と実行リソース許可で同じように絞る（[definition.md](definition.md)）。`GET /v1/event-subscriptions` の候補も、呼び出し元が閲覧できる実行の購読だけにする。§3.11 と所属の節に書く。
 
 **Version 1.48（2026-11-22）**: 不具合の修正。`POST …/events` が実行リソース許可を見ていなかったのを、再開・取消と同じく Live の名簿で判定する。Project の executor でも名簿の外の定義の実行へイベントを送ると、204 で待機を再開できていた。外れていれば **403**（`RESOURCE_GRANT_DENIED`）。§3.9 と所属の節に書く。
 
@@ -146,7 +148,7 @@ Service API（C#、`dotnet/service/api/`）の HTTP 契約。実装に準拠。
 
 **`definitions.project_id` は NOT NULL。** 認可 truth は呼び出し元 Principal の `project_accesses`（`reader` / `executor` / `publisher` / `admin`）。所属が無い Principal は未登録と同じ 404。`tenant.admin` でも所属行が無ければ定義と実行は読めない。Project は現在テナントの中だけ。他テナントへの付与はしない。`UNIQUE(tenant_id, slug)`。
 
-定義の取得・一覧、実行の取得・一覧、publish、Start は現在テナントの所属で評価する。Reader 未満は 404（存在秘匿）。Reader のみの Start は 403（`PROJECT_ACCESS_DENIED`）。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る（[security-runtime.md](platform/security-runtime.md)）。対象は定義と実行の閲覧、Start、Resume、イベント送信、Cancel。publish、Project 設定、メンバー、Group は見ない。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。project 行と definition 行の両方があるときは両方を満たすものだけ通る。一覧の件数も同じ条件で絞る。System と継承子 Start は見ない。許可は Snapshot に焼かない。
+定義の取得・一覧、実行の取得・一覧、publish、Start は現在テナントの所属で評価する。Reader 未満は 404（存在秘匿）。Reader のみの Start は 403（`PROJECT_ACCESS_DENIED`）。集合配送（`POST /v1/events`）は executor 以上、その候補（`GET /v1/event-subscriptions`）は reader 以上の所属がある Project の実行の購読だけを扱い、範囲の外は応答を変えずに除く（§3.11）。User と ServiceAccount は、所属のあと `principal_resource_grants` を見る（[security-runtime.md](platform/security-runtime.md)）。対象は定義と実行の閲覧、Start、Resume、イベント送信、集合配送とその候補、Cancel。publish、Project 設定、メンバー、Group は見ない。不一致は 403（`RESOURCE_GRANT_DENIED`）。行が無い種別は追加制限なし。project 行と definition 行の両方があるときは両方を満たすものだけ通る。一覧の件数も同じ条件で絞る。System と継承子 Start は見ない。許可は Snapshot に焼かない。
 
 **publish トランザクション:** `ICoreTransactionExecutor.ExecuteReadCommittedAsync` の 1 コールバック内で `definition_versions` INSERT → `definitions.latest_version` 更新。
 
@@ -623,13 +625,15 @@ Request:
 - `topic`: 必須。ASCII 識別子（1〜256）。`key` 省略・空白は `""`。非空 `key` も ASCII 識別子（1〜256）。`payload` はこの段階では再開値に反映しない（文字種検査なし）。
 - **必須**: Principal（JWT または `X-Api-Key`）と **`executions.write`**。不足は **403**（`PERMISSION_DENIED`）。Resume work item を積まない。
 - 照合は現在テナントの購読だけ（他テナントへ Resume は乗らない）。
-- Response: **204 No Content**（一致 0 件でも 204。成功パスは維持）。
+- 照合するのは、呼び出し元が購読の実行の定義の Project に executor 以上で所属し、User / ServiceAccount ならその定義が実行リソース許可に入る購読だけ。判定は Live（実行へのイベント送信・再開と同じ）。`tenant.admin` でも所属が無ければ範囲の外。並列分岐の子 execution の購読は、親と同じ定義で判定する。
+- 範囲の外の購読は黙って除き、Resume work item を積まない。状態コードと本文は変えない（範囲の外に購読があるかを応答から読めないようにする）。除いた件数は運用者向けのログ（EventId 30501）に残す。
+- Response: **204 No Content**（一致 0 件でも、範囲の外を除いても 204。成功パスは維持）。
 - 詳細は [execution/wait-cancel.md](execution/wait-cancel.md)。
 
 **GET /v1/event-subscriptions**
 
 - **必須**: Principal と **`executions.read`**。不足は **403**（`PERMISSION_DENIED`）。未認証は **401**。
-- 現在テナントのアクティブ購読から、一意な `(topic, key)` を topic・key の昇順で最大 **500** 件返す。Hosted 子実行の購読も含む。他テナントは含まない。
+- 呼び出し元が閲覧できる実行（定義の Project に reader 以上で所属し、User / ServiceAccount なら実行リソース許可に入る実行）のアクティブ購読から、一意な `(topic, key)` を topic・key の昇順で最大 **500** 件返す。範囲で絞ってから上限を掛ける。範囲に入る Hosted 子実行の購読も含む。他テナントは含まない。所属が無ければ空配列。
 - Response: **200**。`subscriptions` は `{ topic, key }` の配列。`key` が無い購読は `""`。displayId、nodeId、内部イベント名、payload は返さない。
 - テナントが解決できないときは、権限確認のあと空配列（照合の意味論は変えない）。
 

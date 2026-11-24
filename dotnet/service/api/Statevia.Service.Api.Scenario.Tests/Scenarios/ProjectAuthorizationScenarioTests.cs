@@ -20,6 +20,8 @@ namespace Statevia.Service.Api.Scenario.Tests.Scenarios;
 ///   <item>未所属の Cancel は 404、Reader の Cancel は 403 <c>PROJECT_ACCESS_DENIED</c></item>
 ///   <item>未所属のイベント送信は、子の待機が 2 件で届け先が決まらない実行でも 404</item>
 ///   <item>Executor でも実行リソース許可の外なら、イベント送信は 403 <c>RESOURCE_GRANT_DENIED</c> で待機は残る</item>
+///   <item>集合配送は呼び出し元が所属する Project の待機だけを再開し、所属しない Project の待機は待機のまま（どちらも 204）</item>
+///   <item>集合配送の候補に、所属しない Project の実行の topic / key は出ない</item>
 /// </list>
 /// </remarks>
 [Trait("Category", "Scenario")]
@@ -270,6 +272,72 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
         Assert.Single(after.Waits);
     }
 
+    /// <summary>
+    /// 2 つの Project の実行が同じ topic / key を待つとき、片方の所有者の集合配送は 204 で、自分の Project の待機だけを再開する。
+    /// 所属しない Project の待機は、topic と key を知っていても再開できないことを固定する。
+    /// </summary>
+    [SkippableFact]
+    public async Task PublishTopic_ResumesOnlyCallerProjectWaits()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffixA = Guid.NewGuid().ToString("N")[..8];
+        var suffixB = Guid.NewGuid().ToString("N")[..8];
+        var topic = $"scenario.ingress.{suffixA}";
+        var key = $"k{suffixA}";
+        var (_, executionA) = await StartOwnedExecutionAsync(suffixA, s => WorkflowYamlFixtures.SubscribeWorkflow(s, topic, key), separateProject: true);
+        var (_, executionB) = await StartOwnedExecutionAsync(suffixB, s => WorkflowYamlFixtures.SubscribeWorkflow(s, topic, key), separateProject: true);
+        var ownerALogin = await _http.LoginAsync("default", $"owner-{suffixA}", "Password1!");
+        using var ownerAClient = _http.CreateAuthenticatedClient(ownerALogin.AccessToken, "default");
+        var ownerBLogin = await _http.LoginAsync("default", $"owner-{suffixB}", "Password1!");
+        using var ownerBClient = _http.CreateAuthenticatedClient(ownerBLogin.AccessToken, "default");
+        await ExecutionSettleProbe.WaitUntilAsync(ownerAClient, executionA, snapshot => snapshot.Waits.Count == 1, "A の待機が 1 件");
+        await ExecutionSettleProbe.WaitUntilAsync(ownerBClient, executionB, snapshot => snapshot.Waits.Count == 1, "B の待機が 1 件");
+
+        // Act
+        var response = await ownerAClient.PostAsJsonAsync("/v1/events", new { topic, key });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        await ExecutionSettleProbe.WaitUntilAsync(ownerAClient, executionA, snapshot => snapshot.Waits.Count == 0, "A の待機が再開");
+        var afterB = await ExecutionSettleProbe.ObserveAsync(ownerBClient, executionB);
+        Assert.Single(afterB.Waits);
+    }
+
+    /// <summary>集合配送の候補に、呼び出し元が所属しない Project の実行の topic / key は出ない。</summary>
+    [SkippableFact]
+    public async Task ListEventSubscriptions_ExcludesOtherProjectPairs()
+    {
+        // Arrange
+        SkipIfDockerUnavailable();
+        var suffixA = Guid.NewGuid().ToString("N")[..8];
+        var suffixB = Guid.NewGuid().ToString("N")[..8];
+        var topic = $"scenario.candidates.{suffixA}";
+        var keyA = $"a{suffixA}";
+        var keyB = $"b{suffixB}";
+        var (_, executionA) = await StartOwnedExecutionAsync(suffixA, s => WorkflowYamlFixtures.SubscribeWorkflow(s, topic, keyA), separateProject: true);
+        var (_, executionB) = await StartOwnedExecutionAsync(suffixB, s => WorkflowYamlFixtures.SubscribeWorkflow(s, topic, keyB), separateProject: true);
+        var ownerALogin = await _http.LoginAsync("default", $"owner-{suffixA}", "Password1!");
+        using var ownerAClient = _http.CreateAuthenticatedClient(ownerALogin.AccessToken, "default");
+        var ownerBLogin = await _http.LoginAsync("default", $"owner-{suffixB}", "Password1!");
+        using var ownerBClient = _http.CreateAuthenticatedClient(ownerBLogin.AccessToken, "default");
+        await ExecutionSettleProbe.WaitUntilAsync(ownerAClient, executionA, snapshot => snapshot.Waits.Count == 1, "A の待機が 1 件");
+        await ExecutionSettleProbe.WaitUntilAsync(ownerBClient, executionB, snapshot => snapshot.Waits.Count == 1, "B の待機が 1 件");
+
+        // Act
+        var response = await ownerAClient.GetAsync(new Uri("/v1/event-subscriptions", UriKind.Relative));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var pairs = body.GetProperty("subscriptions")
+            .EnumerateArray()
+            .Select(item => (Topic: item.GetProperty("topic").GetString(), Key: item.GetProperty("key").GetString()))
+            .ToList();
+        Assert.Contains((topic, keyA), pairs);
+        Assert.DoesNotContain((topic, keyB), pairs);
+    }
+
     /// <summary>Reader は Start と同じく Cancel も 403 <c>PROJECT_ACCESS_DENIED</c> になる。</summary>
     [SkippableFact]
     public async Task CancelExecution_WithReaderAccess_Returns403ProjectAccessDenied()
@@ -290,11 +358,15 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
 
     /// <summary>オーナー（Project admin）が定義を作って Start し、Project と実行の表示 ID を返す。</summary>
     /// <remarks>定義は <paramref name="yamlFactory"/> で作る。省略時は <see cref="WorkflowYamlFixtures.WaitWorkflow"/>。</remarks>
+    /// <param name="suffix">ユーザー名と定義名の一意サフィックス。</param>
+    /// <param name="yamlFactory">定義 YAML を作る関数。</param>
+    /// <param name="separateProject">true なら既定の Project ではなく、オーナーだけが所属する別の Project に定義を作る。</param>
     private async Task<(Guid ProjectId, string ExecutionDisplayId)> StartOwnedExecutionAsync(
         string suffix,
-        Func<string, string>? yamlFactory = null)
+        Func<string, string>? yamlFactory = null,
+        bool separateProject = false)
     {
-        var (projectId, definitionId) = await CreateOwnedDefinitionAsync(suffix, yamlFactory);
+        var (projectId, definitionId) = await CreateOwnedDefinitionAsync(suffix, yamlFactory, separateProject);
         var ownerLogin = await _http.LoginAsync("default", $"owner-{suffix}", "Password1!");
         using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
         var startResponse = await ownerClient.PostAsJsonAsync("/v1/executions", new { definitionId });
@@ -305,14 +377,20 @@ public sealed class ProjectAuthorizationScenarioTests : ScenarioTestBase
 
     private async Task<(Guid ProjectId, string DefinitionDisplayId)> CreateOwnedDefinitionAsync(
         string suffix,
-        Func<string, string>? yamlFactory = null)
+        Func<string, string>? yamlFactory = null,
+        bool separateProject = false)
     {
         var ownerUsername = $"owner-{suffix}";
         var ownerPrincipalId = await _seeder.SeedUserAsync(ownerUsername, "Password1!");
-        var projectId = await _seeder.SeedProjectWithAccessAsync(
-            ScenarioTenantIds.DefaultTenantId,
-            ownerPrincipalId,
-            ProjectAccessRole.Admin);
+        var projectId = separateProject
+            ? await _seeder.SeedSeparateProjectWithAccessAsync(
+                ScenarioTenantIds.DefaultTenantId,
+                ownerPrincipalId,
+                ProjectAccessRole.Admin)
+            : await _seeder.SeedProjectWithAccessAsync(
+                ScenarioTenantIds.DefaultTenantId,
+                ownerPrincipalId,
+                ProjectAccessRole.Admin);
         var ownerLogin = await _http.LoginAsync("default", ownerUsername, "Password1!");
         using var ownerClient = _http.CreateAuthenticatedClient(ownerLogin.AccessToken, "default");
 

@@ -754,6 +754,7 @@ public sealed class ExecutionServiceTests
             Guid tenantId,
             string topic,
             string correlationKey,
+            Guid evaluatedPrincipalId,
             CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<MatchingWaitSubscription>>(Array.Empty<MatchingWaitSubscription>());
 
@@ -761,6 +762,7 @@ public sealed class ExecutionServiceTests
         public Task<IReadOnlyList<EventSubscriptionCandidate>> ListDistinctSubscriptionCandidatesAsync(
             ICoreUnitOfWork uow,
             Guid tenantId,
+            Guid principalId,
             int limit,
             CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<EventSubscriptionCandidate>>([]);
