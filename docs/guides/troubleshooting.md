@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Guide |
-| Version | 1.0 |
-| 更新日 | 2026-11-18 |
+| Version | 1.1 |
+| 更新日 | 2026-11-23 |
 | 関連 | [getting-started.md](getting-started.md), [operations-docker.md](operations-docker.md), [../reference/error-codes.md](../reference/error-codes.md), [ui-user-guide.md](ui-user-guide.md) |
 
 ---
@@ -58,6 +58,8 @@ API と Studio を使っていて詰まったときに、症状から原因と�
 | 実行が `ACTIVE` のまま進まず、応答の `waiting` が true | Wait でイベントを待っている | `GET /v1/executions/{id}/waits` で待っているノードと `allowedEvents` を確かめ、`POST .../nodes/{nodeId}/resume` で進める。Studio では実行詳細の「イベントを送信」 |
 | 実行が `ACTIVE` のまま進まず、`waiting` も false | 実行を進める Worker が動いていない。Worker を分ける構成（`compose/split-runtime.yml`）で `worker` コンテナが止まっているか、台数が 0 | `docker compose ps` で `worker` を確かめて起動する（[operations-docker.md](operations-docker.md) のランタイム分離）。既定の構成では Worker は Service API の中で動く |
 | 再開（`resume`）が 422 | `resumeKey` がそのノードの `allowedEvents` に無い、ノードがもう待機中でない、または名前の形が不正 | `waits` の `allowedEvents` にあるイベント名を送る。終端した実行への再開は 204 で、何も起きない |
+| 集合配送（`POST /v1/events`）が 204 なのに待機が再開しない | topic / key が購読と違う、または送り手が待機する実行の定義の Project に実行者以上で所属していない、もしくは操作できる定義の外。範囲の外の購読は、応答を変えずに除かれる | `GET /v1/event-subscriptions` に、その topic / key が出るかを送り手の資格情報で確かめる（出なければ範囲の外）。API キーなら、紐づくサービスアカウントを定義の Project に実行者以上で追加し、操作できる定義も確かめる。運用者は Service API のログの EventId 30501（範囲の外を除いた件数）で、除かれたことを確かめられる |
+| `event.publish` が成功するのに別の実行の待機が再開しない | 発行した実行の開始者（定期実行は run-as のサービスアカウント）が、待機する実行の定義の Project に実行者以上で所属していない、または操作できる定義の外。開始者が無効化されているときは照合しない | 開始者の所属と操作できる定義を確かめる。開始者が無効なときはログに EventId 30502 が出る |
 | イベント名の送信（`POST /v1/executions/{id}/events`）が 422 | 当てはまる待機が無い、または複数ある。1 つの待機が複数のイベントを受け付けるときも受け付けない | 正本の `resume` でノードを指定して送る |
 
 ## 次に読むもの

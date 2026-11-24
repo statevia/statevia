@@ -59,5 +59,8 @@ public sealed class EventsControllerTests
             CallCount++;
             return Task.CompletedTask;
         }
+
+        public Task PublishFromExecutionAsync(Guid publishingExecutionId, string topic, string key, CancellationToken ct) =>
+            throw new InvalidOperationException("The HTTP controller must not use the event.publish entry point.");
     }
 }

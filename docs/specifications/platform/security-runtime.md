@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.2.7 |
-| 更新日 | 2026-11-22 |
+| Version | 1.2.8 |
+| 更新日 | 2026-11-23 |
 | 関連 | [decisions/action-module-signing.md](../../decisions/action-module-signing.md), [actions/platform.md](../actions/platform.md) |
 
 ---
@@ -129,12 +129,13 @@ Start 成功時に `ExecutionSecuritySnapshot` を `executions.security_snapshot
 - **Operator** = Owner 以外。常に Live の `executions.write` を要求。人間が定期実行の Resume / Cancel をするときは Operator。
 - 定期実行の run-as の ServiceAccount も、ユーザーと同じく定義の Project の所属で認可する。定期実行だけ所属を免除する経路は無い。発火の Start は run-as を呼び出し元にするため、run-as は定義の Project に executor 以上で所属している必要がある。有効なスケジュールの保存と手動実行の前に同じ条件を確かめ、満たさなければ 422（`field=runAsPrincipalId`）にする（[api-http.md](../api-http.md) §3.12）。
 - スケジュールの一覧と取得は、定義の Project での reader 以上の所属と実行リソース許可で絞る。`tenant.admin` でも所属が無ければ見えない。
+- 集合配送（`POST /v1/events`）は、呼び出し元が executor 以上で所属し実行リソース許可に入る実行の購読だけを照合する。Builtin `event.publish` は、発行した実行の開始者（`startedByPrincipalId`）で同じ判定をする。開始者が無効なら照合しない。範囲の外の購読は応答を変えずに除く。候補（`GET /v1/event-subscriptions`）は reader 以上の所属と実行リソース許可で絞る。
 - スナップショット未保存の execution（移行前データ）は Resume / Cancel で **Live** にフォールバック。
 - Principal 無効化（`disabled_at` / `deleted_at` / `is_active=false`）は Identity で **403**（`PRINCIPAL_INACTIVE`）。
 
 ## Principal の実行リソース許可
 
-User と ServiceAccount は、所属のあとに `principal_resource_grants` を評価する。対象は定義と実行の閲覧、`POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行、Resume、イベント送信、Cancel。publish、Project 設定、メンバー、Group には付けない。
+User と ServiceAccount は、所属のあとに `principal_resource_grants` を評価する。対象は定義と実行の閲覧、`POST /v1/executions`、API キー（紐づく ServiceAccount）、定期実行の発火と手動実行、Resume、イベント送信、集合配送（`POST /v1/events` と Builtin `event.publish`）とその候補（`GET /v1/event-subscriptions`）、Cancel。publish、Project 設定、メンバー、Group には付けない。
 
 | project の行 | definition の行 | 追加で許される対象 |
 | --- | --- | --- |

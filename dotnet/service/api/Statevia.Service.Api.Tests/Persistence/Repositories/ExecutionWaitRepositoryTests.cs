@@ -298,9 +298,9 @@ public sealed class ExecutionWaitRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var emptyKeyMatches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "orders.updated", "", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "orders.updated", "", Guid.NewGuid(), CancellationToken.None);
         var keyedMatches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "orders.updated", "order-1", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "orders.updated", "order-1", Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Single(emptyKeyMatches);
@@ -318,12 +318,13 @@ public sealed class ExecutionWaitRepositoryTests
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
         var now = DateTime.UtcNow;
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Reader);
         var parentId = Guid.NewGuid();
         var childId = Guid.NewGuid();
         var otherTenantExecutionId = Guid.NewGuid();
-        await SeedSubscriptionAsync(db, parentId, "parent-wait", "orders.updated", "", "statevia.event.subscribe.0", now);
-        await SeedSubscriptionAsync(db, childId, "child-wait", "orders.updated", "", "statevia.event.subscribe.0", now.AddMinutes(1));
-        await SeedSubscriptionAsync(db, childId, "child-wait-b", "zeta.ready", "box", "statevia.event.subscribe.1", now.AddMinutes(2));
+        await SeedSubscriptionAsync(db, parentId, "parent-wait", "orders.updated", "", "statevia.event.subscribe.0", now, definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, childId, "child-wait", "orders.updated", "", "statevia.event.subscribe.0", now.AddMinutes(1), definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, childId, "child-wait-b", "zeta.ready", "box", "statevia.event.subscribe.1", now.AddMinutes(2), definitionId: member.DefinitionId);
         await SeedSubscriptionAsync(
             db,
             otherTenantExecutionId,
@@ -332,13 +333,15 @@ public sealed class ExecutionWaitRepositoryTests
             "hidden",
             "statevia.event.subscribe.0",
             now,
-            TestTenantIds.OtherTenantId);
+            TestTenantIds.OtherTenantId,
+            member.DefinitionId);
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var candidates = await repo.ListDistinctSubscriptionCandidatesAsync(
             uow,
             TestTenantIds.T1TenantId,
+            member.PrincipalId,
             limit: 10,
             CancellationToken.None);
 
@@ -360,16 +363,18 @@ public sealed class ExecutionWaitRepositoryTests
         var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
         var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
         var now = DateTime.UtcNow;
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Reader);
         var executionId = Guid.NewGuid();
-        await SeedSubscriptionAsync(db, executionId, "wait-a", "alpha.ready", "sku", "statevia.event.subscribe.0", now);
-        await SeedSubscriptionAsync(db, executionId, "wait-b", "orders.updated", "", "statevia.event.subscribe.1", now);
-        await SeedSubscriptionAsync(db, executionId, "wait-c", "zeta.ready", "box", "statevia.event.subscribe.2", now);
+        await SeedSubscriptionAsync(db, executionId, "wait-a", "alpha.ready", "sku", "statevia.event.subscribe.0", now, definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, executionId, "wait-b", "orders.updated", "", "statevia.event.subscribe.1", now, definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, executionId, "wait-c", "zeta.ready", "box", "statevia.event.subscribe.2", now, definitionId: member.DefinitionId);
 
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var candidates = await repo.ListDistinctSubscriptionCandidatesAsync(
             uow,
             TestTenantIds.T1TenantId,
+            member.PrincipalId,
             limit: 2,
             CancellationToken.None);
 
@@ -404,11 +409,11 @@ public sealed class ExecutionWaitRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var keyedMatches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "orders.updated", "order-1", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "orders.updated", "order-1", Guid.NewGuid(), CancellationToken.None);
         var emptyKeyMatches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "orders.updated", "", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "orders.updated", "", Guid.NewGuid(), CancellationToken.None);
         var otherKeyMatches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "orders.updated", "order-2", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "orders.updated", "order-2", Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Single(keyedMatches);
@@ -436,7 +441,7 @@ public sealed class ExecutionWaitRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var matches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "inventory.received", "SKU-1", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "inventory.received", "SKU-1", Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Equal(2, matches.Count);
@@ -491,19 +496,257 @@ public sealed class ExecutionWaitRepositoryTests
         // Act
         await using var uow = await uowFactory.CreateAsync();
         var matches = await repo.ListMatchingSubscriptionsAsync(
-            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", CancellationToken.None);
+            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Single(matches);
         Assert.Equal(t1Execution, matches[0].ExecutionId);
     }
 
-    private static ExecutionRow CreateExecution(Guid executionId, DateTime now, Guid? tenantId = null) =>
+    /// <summary>実行者として所属する Project の定義の購読だけが範囲に入り、所属の無い Project の購読は範囲の外になる。</summary>
+    [Fact]
+    public async Task ListMatchingSubscriptionsAsync_MarksOnlyMemberProjectSubscriptionsInScope()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Executor);
+        var otherProject = await SeedProjectMemberAsync(db, ProjectAccessRole.Executor);
+        var memberExecution = Guid.NewGuid();
+        var otherExecution = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, memberExecution, "wait-a", "shared.topic", "k1", "statevia.event.subscribe.0", now, definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, otherExecution, "wait-b", "shared.topic", "k1", "statevia.event.subscribe.0", now.AddSeconds(1), definitionId: otherProject.DefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var matches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", member.PrincipalId, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2, matches.Count);
+        Assert.True(matches.Single(m => m.ExecutionId == memberExecution).InScope);
+        Assert.False(matches.Single(m => m.ExecutionId == otherExecution).InScope);
+    }
+
+    /// <summary>閲覧者だけの所属では、その Project の購読も範囲の外になる（集合配送は実行者以上が要る）。</summary>
+    [Fact]
+    public async Task ListMatchingSubscriptionsAsync_WhenReaderOnly_MarksOutOfScope()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var reader = await SeedProjectMemberAsync(db, ProjectAccessRole.Reader);
+        var executionId = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, executionId, "wait-a", "shared.topic", "k1", "statevia.event.subscribe.0", DateTime.UtcNow, definitionId: reader.DefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var matches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", reader.PrincipalId, CancellationToken.None);
+
+        // Assert
+        Assert.False(Assert.Single(matches).InScope);
+    }
+
+    /// <summary>操作できる定義が定義 X だけのとき、同じ Project の定義 Y の購読は範囲の外になる。</summary>
+    [Fact]
+    public async Task ListMatchingSubscriptionsAsync_WhenDefinitionNotGranted_MarksOutOfScope()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Executor);
+        var otherDefinitionId = await SeedDefinitionAsync(db, member.ProjectId);
+        await GrantDefinitionAsync(db, member.PrincipalId, member.DefinitionId);
+        var grantedExecution = Guid.NewGuid();
+        var notGrantedExecution = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, grantedExecution, "wait-a", "shared.topic", "k1", "statevia.event.subscribe.0", now, definitionId: member.DefinitionId);
+        await SeedSubscriptionAsync(db, notGrantedExecution, "wait-b", "shared.topic", "k1", "statevia.event.subscribe.0", now.AddSeconds(1), definitionId: otherDefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var matches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", member.PrincipalId, CancellationToken.None);
+
+        // Assert
+        Assert.True(matches.Single(m => m.ExecutionId == grantedExecution).InScope);
+        Assert.False(matches.Single(m => m.ExecutionId == notGrantedExecution).InScope);
+    }
+
+    /// <summary>
+    /// どの Project にも所属しない Principal では、すべての購読が範囲の外になる。
+    /// テナント管理者もリポジトリでは特別扱いしないので、所属が無ければ同じ結果になる。
+    /// </summary>
+    [Fact]
+    public async Task ListMatchingSubscriptionsAsync_WhenPrincipalHasNoMembership_MarksAllOutOfScope()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Admin);
+        var outsiderPrincipalId = await SeedPrincipalAsync(db);
+        await SeedSubscriptionAsync(db, Guid.NewGuid(), "wait-a", "shared.topic", "k1", "statevia.event.subscribe.0", DateTime.UtcNow, definitionId: member.DefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var matches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "shared.topic", "k1", outsiderPrincipalId, CancellationToken.None);
+
+        // Assert
+        Assert.False(Assert.Single(matches).InScope);
+    }
+
+    /// <summary>
+    /// 並列分岐の物理子の購読は、親と同じ定義（Project）で判定される。
+    /// 子の実行の行は親の definition_id を写すので、子の定義で判定すればルートで判定したのと同じになる。
+    /// </summary>
+    [Fact]
+    public async Task ListMatchingSubscriptionsAsync_WhenSubscriptionOnForkChild_JudgesByParentDefinition()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var member = await SeedProjectMemberAsync(db, ProjectAccessRole.Executor);
+        var outsider = await SeedProjectMemberAsync(db, ProjectAccessRole.Executor);
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+        await using (var ctx = new CoreDbContext(db.Options))
+        {
+            ctx.Executions.Add(CreateExecution(parentId, now, definitionId: member.DefinitionId));
+            ctx.ExecutionBranches.Add(new ExecutionBranchRow
+            {
+                ParentExecutionId = parentId,
+                ExecutionId = childId,
+                ForkNodeId = "fork",
+                JoinState = "join",
+                BranchState = "branch-a",
+                Status = ExecutionBranchStatuses.Running,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await ctx.SaveChangesAsync();
+        }
+        await SeedSubscriptionAsync(db, childId, "child-wait", "approval.needed", "req-1", "statevia.event.subscribe.0", now, definitionId: member.DefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var memberMatches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "approval.needed", "req-1", member.PrincipalId, CancellationToken.None);
+        var outsiderMatches = await repo.ListMatchingSubscriptionsAsync(
+            uow, TestTenantIds.T1TenantId, "approval.needed", "req-1", outsider.PrincipalId, CancellationToken.None);
+
+        // Assert
+        var memberMatch = Assert.Single(memberMatches);
+        Assert.Equal(childId, memberMatch.ExecutionId);
+        Assert.True(memberMatch.InScope);
+        Assert.False(Assert.Single(outsiderMatches).InScope);
+    }
+
+    /// <summary>候補は閲覧者として所属する範囲だけから作り、範囲の外の topic / key は上限の枠を使わない。</summary>
+    [Fact]
+    public async Task ListDistinctSubscriptionCandidatesAsync_ExcludesOutOfScopePairsBeforeLimit()
+    {
+        // Arrange
+        using var db = new InMemoryTestDatabase();
+        var uowFactory = new TestCoreUnitOfWorkFactory(db.Factory);
+        var repo = new ExecutionWaitRepository(db.Factory, new DefaultIdGenerator());
+        var now = DateTime.UtcNow;
+        var reader = await SeedProjectMemberAsync(db, ProjectAccessRole.Reader);
+        var otherProject = await SeedProjectMemberAsync(db, ProjectAccessRole.Reader);
+        var otherExecution = Guid.NewGuid();
+        var readerExecution = Guid.NewGuid();
+        await SeedSubscriptionAsync(db, otherExecution, "wait-a", "aaa.secret", "order-1", "statevia.event.subscribe.0", now, definitionId: otherProject.DefinitionId);
+        await SeedSubscriptionAsync(db, otherExecution, "wait-b", "aab.secret", "order-2", "statevia.event.subscribe.1", now, definitionId: otherProject.DefinitionId);
+        await SeedSubscriptionAsync(db, readerExecution, "wait-c", "zeta.ready", "box", "statevia.event.subscribe.0", now, definitionId: reader.DefinitionId);
+
+        // Act
+        await using var uow = await uowFactory.CreateAsync();
+        var candidates = await repo.ListDistinctSubscriptionCandidatesAsync(
+            uow,
+            TestTenantIds.T1TenantId,
+            reader.PrincipalId,
+            limit: 1,
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal([new EventSubscriptionCandidate("zeta.ready", "box")], candidates);
+    }
+
+    private sealed record ProjectMember(Guid ProjectId, Guid DefinitionId, Guid PrincipalId);
+
+    /// <summary>T1 に Project・定義・その Project に所属する User を 1 つずつ作る。</summary>
+    private static async Task<ProjectMember> SeedProjectMemberAsync(InMemoryTestDatabase db, ProjectAccessRole role)
+    {
+        var projectId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        await using var ctx = new CoreDbContext(db.Options);
+        ctx.Projects.Add(new ProjectRow
+        {
+            ProjectId = projectId,
+            TenantId = TestTenantIds.T1TenantId,
+            Slug = $"p-{projectId:N}",
+            DisplayName = "project",
+            CreatedAt = DateTime.UtcNow
+        });
+        DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.T1TenantId, definitionId, $"def-{definitionId:N}", projectId);
+        var principalId = ProjectTestData.AddMemberPrincipal(ctx, TestTenantIds.T1TenantId, projectId, role);
+        await ctx.SaveChangesAsync();
+        return new ProjectMember(projectId, definitionId, principalId);
+    }
+
+    /// <summary>既存の Project に定義を 1 つ足す。</summary>
+    private static async Task<Guid> SeedDefinitionAsync(InMemoryTestDatabase db, Guid projectId)
+    {
+        var definitionId = Guid.NewGuid();
+        await using var ctx = new CoreDbContext(db.Options);
+        DefinitionTestData.AddDefinitionWithVersion(ctx, TestTenantIds.T1TenantId, definitionId, $"def-{definitionId:N}", projectId);
+        await ctx.SaveChangesAsync();
+        return definitionId;
+    }
+
+    /// <summary>どの Project にも所属しない User を作る。</summary>
+    private static async Task<Guid> SeedPrincipalAsync(InMemoryTestDatabase db)
+    {
+        var principalId = Guid.NewGuid();
+        await using var ctx = new CoreDbContext(db.Options);
+        ProjectTestData.AddPrincipal(ctx, TestTenantIds.T1TenantId, principalId);
+        await ctx.SaveChangesAsync();
+        return principalId;
+    }
+
+    /// <summary>Principal の操作できる定義に、定義を 1 つ足す。</summary>
+    private static async Task GrantDefinitionAsync(InMemoryTestDatabase db, Guid principalId, Guid definitionId)
+    {
+        await using var ctx = new CoreDbContext(db.Options);
+        ctx.PrincipalResourceGrants.Add(new PrincipalResourceGrantRow
+        {
+            TenantId = TestTenantIds.T1TenantId,
+            PrincipalId = principalId,
+            ResourceKind = PrincipalResourceGrantKinds.Definition,
+            ResourceId = definitionId,
+            CreatedAt = DateTime.UtcNow
+        });
+        await ctx.SaveChangesAsync();
+    }
+
+    private static ExecutionRow CreateExecution(
+        Guid executionId,
+        DateTime now,
+        Guid? tenantId = null,
+        Guid? definitionId = null) =>
         new()
         {
             ExecutionId = executionId,
             TenantId = tenantId ?? TestTenantIds.T1TenantId,
-            DefinitionId = Guid.NewGuid(),
+            DefinitionId = definitionId ?? Guid.NewGuid(),
             DefinitionVersionId = Guid.NewGuid(),
             Status = "Running",
             StartedAt = now,
@@ -520,11 +763,12 @@ public sealed class ExecutionWaitRepositoryTests
         string correlationKey,
         string resumeEventName,
         DateTime createdAt,
-        Guid? tenantId = null)
+        Guid? tenantId = null,
+        Guid? definitionId = null)
     {
         await using var ctx = new CoreDbContext(db.Options);
         if (!await ctx.Executions.AnyAsync(x => x.ExecutionId == executionId))
-            ctx.Executions.Add(CreateExecution(executionId, createdAt, tenantId));
+            ctx.Executions.Add(CreateExecution(executionId, createdAt, tenantId, definitionId));
 
         if (!await ctx.ExecutionWaits.AnyAsync(x => x.ExecutionId == executionId && x.NodeId == nodeId))
         {

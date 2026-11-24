@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Specification |
-| Version | 1.5.11 |
-| 更新日 | 2026-11-20 |
+| Version | 1.5.12 |
+| 更新日 | 2026-11-23 |
 | 関連 | [fsm.md](fsm.md), [../definition.md](../definition.md), [fork-join.md](fork-join.md), [concepts/execution-model.md](../../concepts/execution-model.md) |
 
 ---
@@ -21,6 +21,8 @@
 - **禁止**: 利用者向け文書に `exit` 語彙を出さない。
 
 ---
+
+**Version 1.5.12（2026-11-23）**: 集合配送（`POST /v1/events`・Builtin `event.publish`）は、Project の所属と実行リソース許可の範囲に入る購読だけを照合する。範囲の外の購読は黙って除く。Subscribe による子→親の合成は、発行した実行の開始者が所属する範囲でだけ届く。
 
 **Version 1.5.11（2026-11-20）**: Cancel の 204 は受理のみで、Engine に実行が無くても未開始でも 422 にならないことを明記する（契約は変えない）。
 
@@ -64,13 +66,13 @@ Hosted では分岐が物理子 execution になるため、分岐上の Wait �
 
 ### Topic / key ingress（Subscribe）
 
-`POST /v1/events` は `{ topic, key?, payload? }` を受け付けます（`topic` 必須。`event` は送らない）。Principal と **`executions.write`** が必須です。不足は **403**（`PERMISSION_DENIED`）で、Resume work item を積みません。照合は現在テナントの購読だけです（他テナントへは乗りません）。照合は `execution_wait_subscriptions` で、正規化後の **topic かつ key の厳密一致**です。`key` 省略・空白は `""` です。一致した各購読の `resume_event_name` で Resume ワークを投入し、対象が 0 件でも `204 No Content` を返します。`payload` は将来の Wait 入力拡張のため受理しますが、この段階では再開値に反映しません。builtin `event.publish` も同じ `IEventIngressService` を呼び、HTTP を踏まずに同一の照合へ届きます。
+`POST /v1/events` は `{ topic, key?, payload? }` を受け付けます（`topic` 必須。`event` は送らない）。Principal と **`executions.write`** が必須です。不足は **403**（`PERMISSION_DENIED`）で、Resume work item を積みません。照合は現在テナントの購読だけです（他テナントへは乗りません）。照合は `execution_wait_subscriptions` で、正規化後の **topic かつ key の厳密一致**です。`key` 省略・空白は `""` です。照合するのは、呼び出し元が購読の実行の定義の Project に executor 以上で所属し、User / ServiceAccount ならその定義が実行リソース許可に入る購読だけです（実行へのイベント送信・再開と同じ Live の判定）。範囲の外の購読は黙って除きます。範囲に入る各購読の `resume_event_name` で Resume ワークを投入し、対象が 0 件でも、範囲の外を除いても `204 No Content` を返します。`payload` は将来の Wait 入力拡張のため受理しますが、この段階では再開値に反映しません。builtin `event.publish` も同じ `IEventIngressService` を呼び、HTTP を踏まずに同一の照合へ届きます。このとき範囲を判定するのは、発行した実行を開始した Principal です（定期実行は run-as、子のワークフローは親の開始者）。開始者が無効化・削除されていれば照合しません。
 
 Wait 定義側は `wait.subscribe`（topic 必須・key 任意・next 必須）。Signal モード（`wait.events` のみ）は本 API の対象外で、execution-scoped Resume を使います。
 
-候補の列挙は `GET /v1/event-subscriptions`（`executions.read`。一意な topic / key、最大 500。displayId / nodeId は返さない）。Studio の実行一覧はページ操作から `POST /v1/events` を呼ぶ（行ボタンや詳細フォームではない。payload は送らない）。ノード Resume は実行詳細の副操作で、この実行だけを内部イベント名で再開する。
+候補の列挙は `GET /v1/event-subscriptions`（`executions.read`。呼び出し元が閲覧できる実行の購読の一意な topic / key、最大 500。displayId / nodeId は返さない）。Studio の実行一覧はページ操作から `POST /v1/events` を呼ぶ（行ボタンや詳細フォームではない。payload は送らない）。ノード Resume は実行詳細の副操作で、この実行だけを内部イベント名で再開する。
 
-Subscribe は入れ子ワークフローの **公式な子→親 Resume ではない**。同じ topic / key を子や外部が発行すれば親 wait を進められる、という合成にすぎません。一致した購読が複数あれば **1:N** で再開します。1:1 に抑えたい場合は作者が key を十分一意にしてください。専用 Action `execution.resume` は提供しません。
+Subscribe は入れ子ワークフローの **公式な子→親 Resume ではない**。同じ topic / key を子や外部が発行すれば親 wait を進められる、という合成にすぎません。一致した購読が複数あれば **1:N** で再開します。1:1 に抑えたい場合は作者が key を十分一意にしてください。発行が届くのは、発行した実行の開始者（外部からの HTTP なら呼び出し元）が executor 以上で所属する Project の待機だけです。別の Project の待機は、同じ topic / key でも再開しません。専用 Action `execution.resume` は提供しません。
 
 ## Cancel（キャンセル）
 

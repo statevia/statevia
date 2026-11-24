@@ -34,12 +34,21 @@ public sealed class ExecutionWaitSubscriptionRow
 }
 
 /// <summary>
-/// 集合配送照合で見つかった再開対象。
+/// 集合配送の照合で topic / key が一致した購読。
 /// </summary>
+/// <remarks>
+/// 範囲の外の購読も返すのは、除いた件数を運用者向けのログに残すためである。
+/// 範囲の外の購読の値（実行 ID・ノード ID）は Application の外へ出さない。
+/// </remarks>
 /// <param name="ExecutionId">対象実行 ID。</param>
 /// <param name="NodeId">Wait ノード ID。</param>
 /// <param name="ResumeEventName">Resume に渡す内部イベント名。</param>
+/// <param name="InScope">
+/// 判定する Principal が、購読の実行の定義の Project に実行者以上で所属し、
+/// かつその定義が操作できる定義に入るとき <see langword="true"/>。Resume を積むのは true の購読だけ。
+/// </param>
 public sealed record MatchingWaitSubscription(
     Guid ExecutionId,
     string NodeId,
-    string ResumeEventName);
+    string ResumeEventName,
+    bool InScope);

@@ -3,11 +3,13 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.1 |
-| 更新日 | 2026-10-25 |
+| Version | 1.2 |
+| 更新日 | 2026-11-23 |
 | 関連 | [logging-operations.md](../specifications/platform/logging-operations.md) |
 
 ---
+
+**Version 1.2（2026-11-23）**: 領域「集合配送」（`30501`–`30599`、`EventIngressLogMessages`）を足す。範囲の外の購読を除いた件数と、`event.publish` の開始者が無効なことを記録する。
 
 **Version 1.1（2026-10-25）**: EventId を5桁（層・領域・連番）で割り当て、コードの番号を本表へ移す。採番を検査するテストを足す。新規ログの重大度の選び方を追加する。
 
@@ -64,6 +66,7 @@ Id は `10000` 以上 `99999` 以下の5桁とする。左からの意味は次�
 | システムスケジュール | `30201`–`30299` | `SystemScheduleEnsureLogMessages` |
 | Fork 展開 | `30301`–`30399` | `ForkExpansionLogMessages` |
 | 定義コンパイル | `30401`–`30499` | `DefinitionCompilerLogMessages` |
+| 集合配送 | `30501`–`30599` | `EventIngressLogMessages` |
 | テナント管理 | `31001`–`31099` | `TenantAdministrationLogMessages` |
 | Project メンバー | `31101`–`31199` | `ProjectMemberLogMessages` |
 | 実行エンジン | `50001`–`50099` | `ExecutionEngine.LogMessages` |

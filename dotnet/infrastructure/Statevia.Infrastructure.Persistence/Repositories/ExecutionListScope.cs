@@ -31,7 +31,8 @@ internal sealed record ExecutionScopeFilter(
 /// 実行の一覧と件数が使う、範囲と絞り込みを済ませたクエリを組み立てる。
 /// </summary>
 /// <remarks>
-/// 範囲はテナント、呼び出し元が Reader 以上の Project、実行リソース許可（<see cref="ResourceGrantListScope"/>）。
+/// 範囲は <see cref="ExecutionDefinitionAccessScope"/>（テナント、呼び出し元が Reader 以上の Project、操作できる定義）。
+/// 集合配送の照合と候補の一覧も同じ範囲を使う。
 /// 物理子 Execution（<c>execution_branches.execution_id</c> にある実行）は除き、ルートの実行だけを返す。
 /// 一覧と件数が同じ部品を通るため、件数に範囲の外が混ざらない。
 /// </remarks>
@@ -51,18 +52,10 @@ internal static class ExecutionListScope
         ExecutionScopeFilter filter,
         CancellationToken ct)
     {
-        var query = QueryExecutionsWithDisplayIds(db, tenantId, principalId);
-        var grantScope = await ResourceGrantListScope.LoadAsync(db, principalId, ct).ConfigureAwait(false);
-        if (grantScope.ProjectIds is { } grantedProjectIds)
-        {
-            var grantedDefinitionIds = db.Definitions.AsNoTracking()
-                .Where(definition => grantedProjectIds.Contains(definition.ProjectId))
-                .Select(definition => definition.DefinitionId);
-            query = query.Where(x => grantedDefinitionIds.Contains(x.Execution.DefinitionId));
-        }
-
-        if (grantScope.DefinitionIds is { } grantedDefinitionIdList)
-            query = query.Where(x => grantedDefinitionIdList.Contains(x.Execution.DefinitionId));
+        var accessibleDefinitionIds = await ExecutionDefinitionAccessScope
+            .BuildAsync(db, tenantId, principalId, ProjectAccessRole.Reader, ct)
+            .ConfigureAwait(false);
+        var query = QueryExecutionsWithDisplayIds(db, tenantId, accessibleDefinitionIds);
 
         if (!string.IsNullOrWhiteSpace(filter.StatusFilter))
             query = query.Where(x => x.Execution.Status == filter.StatusFilter);
@@ -98,12 +91,8 @@ internal static class ExecutionListScope
     private static IQueryable<ExecutionWithDisplay> QueryExecutionsWithDisplayIds(
         CoreDbContext db,
         Guid tenantId,
-        Guid principalId)
+        IQueryable<Guid> accessibleDefinitionIds)
     {
-        var accessibleProjectIds = ProjectAccessQueries.AccessibleProjectIds(db, principalId, ProjectAccessRole.Reader);
-        var accessibleDefinitionIds = db.Definitions.AsNoTracking()
-            .Where(definition => accessibleProjectIds.Contains(definition.ProjectId))
-            .Select(definition => definition.DefinitionId);
         var displayIdsForExecution = db.DisplayIds.Where(x => x.Kind == "execution");
         return from w in db.Executions.AsNoTracking()
                    .Where(x => x.TenantId == tenantId && accessibleDefinitionIds.Contains(x.DefinitionId))

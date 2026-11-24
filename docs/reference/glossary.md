@@ -3,8 +3,8 @@
 | 項目 | 値 |
 | --- | --- |
 | 種別 | Reference |
-| Version | 1.6 |
-| 更新日 | 2026-11-22 |
+| Version | 1.7 |
+| 更新日 | 2026-11-23 |
 | 関連 | [../concepts/README.md](../concepts/README.md), [../architecture/domain-model-boundaries.md](../architecture/domain-model-boundaries.md) |
 
 ---
@@ -45,6 +45,8 @@ Statevia の主な用語と、それぞれを API・YAML・コードでどう書
 | Fork / Join | 並列分岐 / 合流（Parallel / Join） | 並列分岐と合流を表す制御ノード。状態そのものではない | 定義 YAML の `fork` / `join` | — |
 | 物理子 Execution | — | Hosted Runtime が Fork の分岐ごとに作る子の Execution。親子の関係は `execution_branches` が正本 | `execution_branches`、`ForkChildExecutionCoordinator` | `workflow.invoke` で起動する子ワークフローとは別（[2 種類の子 Execution](#2-種類の子-execution)） |
 | Wait | 待機、待機キー | 外部イベントや再開を待つ、永続化される待機 | `EventWait`、`waitKey`、`execution_waits` テーブル | — |
+| 購読 | 購読 | `wait.subscribe` の Wait が、topic と key で集合配送を待っている状態。Wait 1 つにつき topic / key の組ごとに 1 つ | 定義 YAML の `wait.subscribe`、`execution_wait_subscriptions` テーブル | Wait そのものとは区別する。Signal の Wait（`wait.events`）には購読が無い |
+| 集合配送 | 集合配送 | topic と key を送り、一致した購読の Wait をテナントの中で 1:N に再開すること。実行を指定しない。照合するのは、送り手（Builtin では発行した実行の開始者）が所属し、操作できる定義に入る実行の購読だけ | `POST /v1/events`、Builtin `event.publish`、`IEventIngressService` | 実行へのイベント送信（`POST /v1/executions/{id}/events`）とは別の経路。「発行」だけで書くと定義の publish と紛らわしい |
 | 待機イベント | イベント、イベント名 | Wait を再開させる外部からの入力。配送すると監査イベント `EventPublished` が残る | `POST /v1/executions/{id}/events`、`POST /v1/events`、`POST /v1/executions/{id}/nodes/{nodeId}/resume`、`ExecutionWaitEventService` | Fact ではない（再開後に状態が出す結果が Fact）。監査イベントの記録そのものとも別 |
 | 待機中（の実行） | 待機中 | 自身または子孫の物理子 Execution が、人や外部の入力を待つ Wait（`EventWait` / `CallbackWait`）を 1 つ以上持つ、`ACTIVE` のルートの Execution。実行ステータスの値ではない | `GET /v1/executions` のクエリと応答の `waiting`、`ExecutionWaitingQueries` | 実行ステータスに `WAITING` は無い。画面は `ACTIVE` のバッジに「待機中」の印を足す。期限で自動に再開する `DelayWait` だけの実行は待機中にしない |
 | 要対応（の実行） | 要対応 | 待機中の Execution と、`FAILED` の Execution を合わせたもの。`FAILED` は期間で区切らない | `GET /v1/executions` のクエリ `needsAttention`、`GET /v1/executions/counts` の `needsAttention` | 「アラート」「インシデント」は使わない |
