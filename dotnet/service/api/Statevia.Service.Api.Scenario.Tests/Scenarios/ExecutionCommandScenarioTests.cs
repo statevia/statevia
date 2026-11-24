@@ -71,6 +71,11 @@ public sealed class ExecutionCommandScenarioTests : ScenarioTestBase
     }
 
     /// <summary>Wait 1 ノードの定義を Start すると、収束後にノードが WAITING で waits が 1 件（nodeId と許可イベント）になる。</summary>
+    /// <remarks>
+    /// <see cref="ExecutionSettleProbe.ObserveAsync"/> は graph を waits より先に別の GET で読む。
+    /// そのあいだにスナップショットが進むと、1 回の観測で waits は 1 件なのに graph にはまだ待機のノードが無いことがある。
+    /// 収束の条件にグラフ側のノードも含め、断言する対象とそろえる。
+    /// </remarks>
     [SkippableFact]
     public async Task Start_WaitWorkflow_ConvergesToSingleWaitingNode()
     {
@@ -83,8 +88,9 @@ public sealed class ExecutionCommandScenarioTests : ScenarioTestBase
         var settled = await ExecutionSettleProbe.WaitUntilAsync(
             arrangement.Client,
             started.DisplayId,
-            snapshot => snapshot.Waits.Count == 1,
-            "waits が 1 件");
+            snapshot => snapshot.Waits is [var onlyWait]
+                && snapshot.Nodes.Any(node => node.NodeId == onlyWait.NodeId),
+            "waits が 1 件で、グラフにその待機のノードがある");
 
         // Assert
         var wait = Assert.Single(settled.Waits);
