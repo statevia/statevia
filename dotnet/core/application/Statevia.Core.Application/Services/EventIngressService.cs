@@ -23,6 +23,10 @@ namespace Statevia.Core.Application.Services;
 /// <param name="runtimeAuth">Runtime permission 認可。</param>
 /// <param name="tenantContext">現在テナント文脈。</param>
 /// <param name="logger">集合配送のログ。</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S107:Methods should not have too many parameters",
+    Justification = "DI による明示的コンストラクタ注入。")]
 internal sealed class EventIngressService(
     ICoreTransactionExecutor transactions,
     IExecutionWaitRepository waits,
